@@ -1,12 +1,6 @@
-# -*- coding: utf-8 -*-
-#版本 1.02
-#作者：晓天
-#时间：12/11/2021
-'''
-import numpy as np
 import numpy.random as nr
-import scipy.special as sp
-'''
+
+
 class neuralNetwork:
     def __init__(self,inputnodes,hiddennodes,outputnodes,learningrate):
         #定义输入层 隐藏层 输出层节点数，及学习率
@@ -137,43 +131,3 @@ class Queue_bylist():
 
     def print_queue(self):
         print(self.entries)
-
-from threading import Thread
-class MyThread(Thread):
-    def __init__(self, func, args):
-        '''
-        :param func: 可调用的对象
-        :param args: 可调用对象的参数
-        '''
-        Thread.__init__(self)
-        self.func = func
-        self.args = args
-        self.result = None
-
-        self.exitcode = True
-        self.exception = None
-        self.exc_traceback = ''
-
-    def run(self):
-        try:
-            self.result = self.func(*self.args)
-        except Exception as e:
-            import sys,traceback
-            self.exitcode = False
-            # 如果线程异常退出，将该标志位设置为False，正常退出为True
-            self.exception = e
-            self.exc_traceback = ''.join(traceback.format_exception(*sys.exc_info()))
-            #在改成员变量中记录异常信息
-
-    def getResult(self):
-        return self.result
-        
-if __name__ == '__main__':
-    queue = Queue()
-    queue.enqueue(44)
-    queue.enqueue(99)
-    queue.enqueue("BB")
-    queue.print_queue()
-    print(queue.dequeue())
-    print(queue.peek())
-
