@@ -3,7 +3,7 @@ from os import listdir
 from os.path import getsize
 from html import unescape
 from urllib.parse import quote,unquote
-import common_functions as cf
+from ..tools import pro_slash
 
 
 class Suber:
@@ -45,7 +45,7 @@ class Suber:
                 try:
                     book_text = f.read()
                 except Exception as e:
-                    print('清理失败')
+                    print(f'{book_path}清理失败')
                     continue
             book_text = self.clear_texts(book_text)  
                 
@@ -55,7 +55,7 @@ class Suber:
             print('清理完毕')
 
     def clear_texts(self, texts, dicts = {}):
-        texts = cf.pro_slash(texts)
+        texts = pro_slash(texts)
         texts = unquote(unescape(texts))
         
         for sub in self.sub_list:

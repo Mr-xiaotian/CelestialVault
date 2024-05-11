@@ -3,22 +3,20 @@
 #作者：晓天
 
 from itertools import zip_longest
-import common_functions as cf
+from ..tools import strings_split
 
 class Findiffer:
-    def __init__(self, string_a, string_b, split_str = '\n') -> None:
-        self.string_a = string_a
-        self.string_b = string_b
-        self.split_str = split_str
+    def __init__(self) -> None:
+        pass
 
-    def fd_str(self):
+    def fd_str(self, string_a, string_b, split_str = '\n'):
         # 打印出a和b的长度
-        print(f'len(a):{len(self.string_a)}, len(b):{len(self.string_b)}\n')
+        print(f'len(a):{len(string_a)}, len(b):{len(string_b)}\n')
         # 打印出a和b不同的地方
-        print(f'a与b不同的地方为(以{self.split_str}为划分):')
+        print(f'a与b不同的地方为(以{split_str}为划分):')
 
-        # 以self.split_str为分割符将a和b分割成多行
-        a,b = cf.strings_split(self.string_a, self.string_b, split_str=self.split_str)
+        # 以split_str为分割符将a和b分割成多行
+        a,b = strings_split(string_a, string_b, split_str=split_str)
         
         # 比较a和b的每一行
         for i in range(min(len(a),len(b))):

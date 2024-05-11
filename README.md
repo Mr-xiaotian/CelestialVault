@@ -32,7 +32,9 @@ ThreadManager 是一个线程管理器，可以并行、串行或异步地执行
 以下是一个简单的使用示例：
 
 ```
-import find_differ as fd
+from CelestialVault import Findiffer
+
+fd = Findiffer()
 
 # 使用字符串对比函数
 str_a = "Hello, World!"

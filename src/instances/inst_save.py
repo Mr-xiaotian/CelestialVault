@@ -4,9 +4,8 @@ from os import walk,listdir,rename
 from os.path import splitext, join, exists
 import asyncio
 import my_thread
-import common_functions as cf
 from .inst_fetch import Fetcher
-        
+from ..tools import creat_folder
 
 class FetchThread(my_thread.ThreadManager):
     def get_args(self, obj: object):
@@ -49,13 +48,13 @@ class Saver(object):
         self.add_path = ''
 
     def set_base_path(self, base_path):
-        self.base_path = cf.creat_folder(base_path)
+        self.base_path = creat_folder(base_path)
 
     def set_add_path(self, add_path):
         self.add_path = add_path
 
     def get_path(self, file_name, suffix_name):
-        middle_path = cf.creat_folder(self.base_path + '\\' + self.add_path)
+        middle_path = creat_folder(self.base_path + '\\' + self.add_path)
         path = join(middle_path, file_name)
         
         if splitext(path)[1] == '':

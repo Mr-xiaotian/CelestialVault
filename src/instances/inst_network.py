@@ -3,7 +3,7 @@ import numpy.random as nr
 import scipy.special as sp
 
 
-class neuralNetwork:
+class NeuralNetwork:
     def __init__(self,inputnodes,hiddennodes,outputnodes,learningrate):
         #定义输入层 隐藏层 输出层节点数，及学习率
         self.inodes = inputnodes
