@@ -1,0 +1,78 @@
+2024-05-11T16:10:25.645308+0800 INFO src.instances.my_thread desk prepare start by serial.
+2024-05-11T16:10:26.664741+0800 INFO Task completed successfully.
+2024-05-11T16:10:26.869009+0800 INFO Task completed successfully.
+2024-05-11T16:10:26.978158+0800 INFO Task completed successfully.
+2024-05-11T16:10:27.190084+0800 INFO Task completed successfully.
+2024-05-11T16:10:27.191227+0800 INFO src.instances.my_thread desk prepare start by serial.
+2024-05-11T16:10:27.191794+0800 INFO Task failed and has been requeued.
+2024-05-11T16:10:27.192701+0800 INFO Task failed and has been requeued.
+2024-05-11T16:10:27.193342+0800 INFO Task failed and has been requeued.
+2024-05-11T16:10:27.194343+0800 INFO Task failed and has been requeued.
+2024-05-11T16:10:27.195045+0800 INFO Task failed and has been requeued.
+2024-05-11T16:10:27.195045+0800 INFO Task failed and has been requeued.
+2024-05-11T16:10:27.196066+0800 INFO Task failed and has been requeued.
+2024-05-11T16:10:27.196066+0800 INFO Task failed and has been requeued.
+2024-05-11T16:10:27.197065+0800 INFO Task failed and has been requeued.
+2024-05-11T16:10:27.198064+0800 INFO Task failed and has been requeued.
+2024-05-11T16:10:27.199074+0800 INFO Task failed and has been requeued.
+2024-05-11T16:10:27.199074+0800 INFO Task failed and has been requeued.
+2024-05-11T16:10:27.201090+0800 INFO Task failed and reached the retry limit.
+2024-05-11T16:10:27.201090+0800 INFO Task failed and reached the retry limit.
+2024-05-11T16:10:27.202090+0800 INFO Task failed and reached the retry limit.
+2024-05-11T16:10:27.203095+0800 INFO Task failed and reached the retry limit.
+2024-05-11T16:10:27.204095+0800 ERROR Error in task 0:
+Traceback (most recent call last):
+  File "Q:\Project\CelestialVault\src\instances\my_thread.py", line 222, in run_in_serial
+    result = self.func(*self.get_args(d))
+  File "Q:\Project\CelestialVault\src\instances\inst_save.py", line 80, in download_content
+    f.write(content)
+TypeError: a bytes-like object is required, not 'Response'
+
+Task: 0
+2024-05-11T16:10:27.205095+0800 ERROR Error in task 1:
+Traceback (most recent call last):
+  File "Q:\Project\CelestialVault\src\instances\my_thread.py", line 222, in run_in_serial
+    result = self.func(*self.get_args(d))
+  File "Q:\Project\CelestialVault\src\instances\inst_save.py", line 80, in download_content
+    f.write(content)
+TypeError: a bytes-like object is required, not 'Response'
+
+Task: 1
+2024-05-11T16:10:27.206092+0800 ERROR Error in task 2:
+Traceback (most recent call last):
+  File "Q:\Project\CelestialVault\src\instances\my_thread.py", line 222, in run_in_serial
+    result = self.func(*self.get_args(d))
+  File "Q:\Project\CelestialVault\src\instances\inst_save.py", line 80, in download_content
+    f.write(content)
+TypeError: a bytes-like object is required, not 'Response'
+
+Task: 2
+2024-05-11T16:10:27.207090+0800 ERROR Error in task 3:
+Traceback (most recent call last):
+  File "Q:\Project\CelestialVault\src\instances\my_thread.py", line 222, in run_in_serial
+    result = self.func(*self.get_args(d))
+  File "Q:\Project\CelestialVault\src\instances\inst_save.py", line 80, in download_content
+    f.write(content)
+TypeError: a bytes-like object is required, not 'Response'
+
+Task: 3
+2024-05-11T16:12:53.621134+0800 INFO src.instances.my_thread desk prepare start by serial.
+2024-05-11T16:12:54.546968+0800 INFO Task completed successfully.
+2024-05-11T16:12:54.653103+0800 INFO Task completed successfully.
+2024-05-11T16:12:54.757733+0800 INFO Task completed successfully.
+2024-05-11T16:12:54.863989+0800 INFO Task completed successfully.
+2024-05-11T16:12:54.864988+0800 INFO src.instances.my_thread desk prepare start by serial.
+2024-05-11T16:12:54.866991+0800 INFO Task completed successfully.
+2024-05-11T16:12:54.867999+0800 INFO Task completed successfully.
+2024-05-11T16:12:54.869001+0800 INFO Task completed successfully.
+2024-05-11T16:12:54.870517+0800 INFO Task completed successfully.
+2024-05-11T16:13:28.019539+0800 INFO src.instances.my_thread desk prepare start by serial.
+2024-05-11T16:13:28.853559+0800 INFO Task completed successfully.
+2024-05-11T16:13:28.959867+0800 INFO Task completed successfully.
+2024-05-11T16:13:29.066699+0800 INFO Task completed successfully.
+2024-05-11T16:13:29.244731+0800 INFO Task completed successfully.
+2024-05-11T16:13:29.245757+0800 INFO src.instances.my_thread desk prepare start by serial.
+2024-05-11T16:13:29.246757+0800 INFO Task completed successfully.
+2024-05-11T16:13:29.247753+0800 INFO Task completed successfully.
+2024-05-11T16:13:29.248752+0800 INFO Task completed successfully.
+2024-05-11T16:13:29.249756+0800 INFO Task completed successfully.

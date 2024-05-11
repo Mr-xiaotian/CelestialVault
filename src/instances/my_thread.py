@@ -353,6 +353,7 @@ class ExampleThreadManager(ThreadManager):
         error_dict = self.error_dict
         for num,(d, error) in enumerate(error_dict.items()):
             print(f"Error in task {num}:\n{error}\nTask: {d[0]}")
+            logger.error(f"Error in task {num}:\n{error}\nTask: {d[0]}")
             self.result_dict[d] = 'None'
 
 async def generate_new_tasks(n):

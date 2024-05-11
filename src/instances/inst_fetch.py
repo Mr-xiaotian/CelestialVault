@@ -38,22 +38,34 @@ class Fetcher(object):
         '''
 
         return 1, (response.status_code, response_text), ''
+    
+    def obtainContent(self, func: object, *args, **kwargs):
+        response = func(*args, **kwargs)
+        return 1, (response.status_code, response.content), ''
 
-    def getHtml(self, url: str, *args, **kwargs) -> (int, object, str):
+    def getText(self, url: str, *args, **kwargs) -> (int, object, str):
         return self.obtainHtml(self.cl.get, url=url,
                                *args, **kwargs)[1][1]
 
-    def postHtml(self, url: str, *args, **kwargs) -> (int, object, str):
+    def postText(self, url: str, *args, **kwargs) -> (int, object, str):
         return self.obtainHtml(self.cl.post, url=url, 
                                *args, **kwargs)[1][1]
     
+    def getContent(self, url: str, *args, **kwargs) -> (int, object, str):
+        return self.obtainContent(self.cl.get, url=url,
+                               *args, **kwargs)[1][1]
+
+    def postText(self, url: str, *args, **kwargs) -> (int, object, str):
+        return self.obtainContent(self.cl.post, url=url, 
+                               *args, **kwargs)[1][1]
+    
     # 以下为异步代码, 需要结合my_thread中的start_async与run_in_async使用
-    async def getHtml_async_text(self, url, encoding='utf-8'):
+    async def getText_async(self, url, encoding='utf-8'):
         async with self.se_async.get(url) as response:
             content = await response.text(encoding=encoding)
         return unquote(unescape(content))
     
-    async def getHtml_async_content(self, url):
+    async def getContent_async(self, url):
         async with self.se_async.get(url) as response:
             content = await response.read()
         return content
