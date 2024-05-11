@@ -1,5 +1,6 @@
 import time
 import httpx
+from typing import Tuple, Any
 from html import unescape
 from urllib.parse import quote,unquote
 from aiohttp import ClientSession
@@ -26,7 +27,7 @@ class Fetcher(object):
         self.headers = headers
         self.cl = httpx.Client(headers=self.headers, timeout=self._wait_time)
 
-    def obtainHtml(self, func: object, *args, **kwargs) -> (int, object, str):
+    def obtainHtml(self, func: object, *args, **kwargs) -> Tuple[int, Any, str]:
         response = func(*args, **kwargs)
         response_text = response.content.decode(self._text_encoding, 'ignore')
         # print(response_text)
@@ -39,23 +40,23 @@ class Fetcher(object):
 
         return 1, (response.status_code, response_text), ''
     
-    def obtainContent(self, func: object, *args, **kwargs):
+    def obtainContent(self, func: object, *args, **kwargs) -> Tuple[int, Any, str]:
         response = func(*args, **kwargs)
         return 1, (response.status_code, response.content), ''
 
-    def getText(self, url: str, *args, **kwargs) -> (int, object, str):
+    def getText(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
         return self.obtainHtml(self.cl.get, url=url,
                                *args, **kwargs)[1][1]
 
-    def postText(self, url: str, *args, **kwargs) -> (int, object, str):
+    def postText(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
         return self.obtainHtml(self.cl.post, url=url, 
                                *args, **kwargs)[1][1]
     
-    def getContent(self, url: str, *args, **kwargs) -> (int, object, str):
+    def getContent(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
         return self.obtainContent(self.cl.get, url=url,
                                *args, **kwargs)[1][1]
 
-    def postText(self, url: str, *args, **kwargs) -> (int, object, str):
+    def postText(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
         return self.obtainContent(self.cl.post, url=url, 
                                *args, **kwargs)[1][1]
     

@@ -1,8 +1,12 @@
 import os
 import shutil
-from PIL import Image
+from pathlib import Path
 from tqdm import tqdm
-from pillow_heif import register_heif_opener
+
+from .ImageProcessing import compress_img
+from .VideoProcessing import compress_video
+from .DocumentConversion import compress_pdf
+from ..constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 
 def creat_folder(path: str) -> str:
     """
@@ -34,70 +38,49 @@ def get_all_file_paths(directory):
 
     return file_paths
 
-def compress_fold(folder_path):
-    register_heif_opener()
-    Image.LOAD_TRUNCATED_IMAGES = True
-    Image.MAX_IMAGE_PIXELS = None
-    
-    # 创建新文件夹
-    new_folder_path = os.path.join(os.path.dirname(folder_path), os.path.basename(folder_path) + "_re")
-    os.makedirs(new_folder_path, exist_ok=True)
+def handle_file(source, destination, action):
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if not destination.exists():
+        action(source, destination)
+    else:
+        print(f"File {destination} already exists. Skipping...")
+
+def compress_folder(folder_path):
+    """
+    遍历指定文件夹，根据文件后缀名对文件进行压缩处理，并将处理后的文件存储到新的目录中。支持的文件类型包括图片、视频和PDF。不属于这三种类型的文件将被直接复制到新目录中。
+    压缩后的文件会保持原始的目录结构。如果目标文件已存在，则会跳过处理。处理过程中遇到的任何错误都会被记录并返回。
+
+    :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
+    :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
+    """
+
+    folder_path = Path(folder_path)
+    new_folder_path = folder_path.parent / (folder_path.name + "_re")
     error_list = []
-    img_snuffix = ["jpg", "png", "jpeg", 'heic', 'webp', "JPG", "PNG", "JPEG", "HEIC", "WEBP"] # 'heic', "HEIC"
-    video_snuffix = ["mp4", "avi", "mov", "mkv", 'divx', "mpg", "flv", "rm", "rmvb", "mpeg", "wmv", "3gp", "vob", "ogm", "ogv", "asf", 'ts', 'webm',
-                     "MP4", "AVI", "MOV", "MKV", 'DIVX', "MPG", "FLV", "RM", "RMVB", "MPEG", "WMV", "3GP", "VOB", "OGM", "OGV", "ASF", "TS", 'WEBM']
 
     # 遍历文件夹
-    for root, dirs, files in tqdm(os.walk(folder_path)):
-        for filename in files:
-            # 如果是图片
-            if filename.split('.')[-1] in img_snuffix:
-                old_img_path = os.path.join(root, filename)
-                new_img_path = os.path.join(new_folder_path, 
-                                            os.path.relpath(old_img_path, folder_path))
-                
-                # 如果已经存在，则跳过
-                if os.path.exists(new_img_path):
-                    continue
-                os.makedirs(os.path.dirname(new_img_path), exist_ok=True)
-                
-                try:
-                    # 打开图片并压缩
-                    img = Image.open(old_img_path)
-                    img.save(new_img_path, optimize=True, quality=50)
-                except OSError as e:
-                    error_list.append((old_img_path,e))
-                    shutil.copy(old_img_path, new_img_path)
-                    continue
-            # 如果是视频
-            elif filename.split('.')[-1] in video_snuffix:
-                old_video_path = os.path.join(root, filename)
-                new_video_path = os.path.join(new_folder_path, 
-                                              '_'.join(os.path.relpath(old_video_path, folder_path).split('.')[:-1])).replace('_compressed', '')
-                new_video_path += '_compressed.mp4'
-                os.makedirs(os.path.dirname(new_video_path), exist_ok=True)
-                
-                # 如果已经存在，则跳过
-                if os.path.exists(new_video_path):
-#                     print(new_video_path)
-                    continue
-                # 如果已经是压缩后的视频，则复制过去
-                elif '_compressed.mp4' in filename:
-                    shutil.copy(old_video_path, new_video_path)
-                    continue
-                    
-                # 使用ffmpeg压缩视频
-                os.system(f'ffmpeg -i "{old_video_path}" -vcodec libx264 -crf 24 "{new_video_path}"')
-            # 如果是其他文件，则直接复制
+    for file_path in tqdm(list(folder_path.glob('**/*'))):
+        if not file_path.is_file():
+            continue
+
+        rel_path = file_path.relative_to(folder_path)
+        new_file_path = new_folder_path / rel_path
+        try:
+            if file_path.suffix.lower() in IMG_SUFFIXES:
+                handle_file(file_path, new_file_path, compress_img)
+            elif file_path.suffix.lower() in VIDEO_SUFFIXES:
+                new_video_path = new_file_path.with_suffix('_compressed.mp4')
+                handle_file(file_path, new_video_path, compress_video)
+            elif file_path.suffix.lower() == 'pdf':
+                new_pdf_path = new_file_path.with_suffix('_compressed.pdf')
+                handle_file(file_path, new_pdf_path, compress_pdf)
             else:
-                old_file_path = os.path.join(root, filename)
-                new_file_path = os.path.join(new_folder_path, os.path.relpath(old_file_path, folder_path))
-                
-                # 如果已经存在，则跳过
-                if os.path.exists(new_file_path):
-                    continue
-                    
-                os.makedirs(os.path.dirname(new_file_path), exist_ok=True)
-                shutil.copy(old_file_path, new_file_path)
+                handle_file(file_path, new_file_path, shutil.copy)
+        except OSError as e:
+                error_list.append((file_path, e))
+                try:
+                    shutil.copy(file_path, new_file_path)
+                except OSError as e:
+                    error_list.append((file_path, e))
 
     return error_list

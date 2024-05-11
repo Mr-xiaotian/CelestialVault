@@ -2,8 +2,9 @@
 from moviepy.editor import *
 from moviepy.config import change_settings
 
-def compress_video():
-    pass
+def compress_video(old_video_path, new_video_path):
+    # 使用ffmpeg压缩视频
+    os.system(f'ffmpeg -i "{old_video_path}" -vcodec libx264 -crf 24 "{new_video_path}"')
 
 def join_and_label_videos(video_path1, video_path2, output_path):
     change_settings({"IMAGEMAGICK_BINARY": r"G:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"})

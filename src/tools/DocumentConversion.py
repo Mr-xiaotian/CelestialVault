@@ -25,17 +25,16 @@ def md_to_pdf(input_directory, output_directory):
 
         print(f"Converted {md_file} to PDF")
 
-def compress_pdf(pdf_path):
+def compress_pdf(old_pdf_path, new_pdf_path):
     """
     将PDF文件的每一页转换为单独的图片文件。
     :param pdf_path: PDF文件的路径。
     :return: 图片文件的路径列表。
     """
-    doc = fitz.open(pdf_path)
+    doc = fitz.open(old_pdf_path)
     image_paths = []
     
-    temp_path = os.path.dirname(pdf_path) + '/temp'
-    out_path = pdf_path.replace('.pdf', '_compressed.pdf')
+    temp_path = os.path.dirname(old_pdf_path) + '/temp'
     creat_folder(temp_path)
     os.makedirs(os.path.dirname(temp_path), exist_ok=True)
     
@@ -46,7 +45,7 @@ def compress_pdf(pdf_path):
         image_paths.append(temp_path)
 
     doc.close()
-    combine_images_to_pdf(temp_path, out_path)
+    combine_images_to_pdf(temp_path, new_pdf_path)
     shutil.rmtree(temp_path)
 
 if __name__ == '__main__':

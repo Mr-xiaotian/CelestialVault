@@ -5,6 +5,7 @@ import pytest
 import logging
 from src.tools.TextTools import string_split
 from src.tools.ListDictTools import list_removes
+from src.tools.FileOperations import compress_folder
 
 
 def test_string_split():
@@ -22,3 +23,6 @@ def test_list_removes():
     logging.info("Expected output: [1, 3, 4]")
     logging.info("Actual output: %s", result)
     assert result == [1, 3, 4], "Should remove all 2s from the list"
+
+def test_compress_folder():
+    pass

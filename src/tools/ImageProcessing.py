@@ -1,9 +1,17 @@
 import re, os
 from PIL import Image
+from pillow_heif import register_heif_opener
 from .FileOperations import get_all_file_paths
 
-def compress_img():
-    pass
+def compress_img(old_img_path, new_img_path):
+    register_heif_opener()
+    Image.LOAD_TRUNCATED_IMAGES = True
+    Image.MAX_IMAGE_PIXELS = None
+
+    # 打开图片并压缩
+    img = Image.open(old_img_path)
+    img.save(new_img_path, optimize=True, quality=50)
+    
 
 def combine_images_to_pdf(image_directory, output_pdf_path):
     """
