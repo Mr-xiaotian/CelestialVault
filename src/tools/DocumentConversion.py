@@ -2,8 +2,8 @@ import os
 import shutil, fitz
 import markdown
 import pdfkit
-from .FileOperations import creat_folder
-from .ImageProcessing import combine_images_to_pdf
+from PIL import Image
+
 
 def md_to_pdf(input_directory, output_directory):
     # 获取所有的 .md 文件
@@ -31,6 +31,9 @@ def compress_pdf(old_pdf_path, new_pdf_path):
     :param pdf_path: PDF文件的路径。
     :return: 图片文件的路径列表。
     """
+    from .FileOperations import creat_folder
+    from .ImageProcessing import combine_images_to_pdf
+
     doc = fitz.open(old_pdf_path)
     image_paths = []
     
@@ -41,7 +44,9 @@ def compress_pdf(old_pdf_path, new_pdf_path):
     for page_num in range(len(doc)):
         page = doc.load_page(page_num)  # 加载页面
         pix = page.get_pixmap(matrix=fitz.Matrix(150/72, 150/72))  # 将页面渲染为图片
-        pix.save(f'{temp_path}/{page_num+1}.jpg')  # 保存为PNG格式的图片
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples) # 将 Pixmap 转换为 PIL Image
+        
+        img.save(f'{temp_path}/{page_num+1}.jpg', quality=50) # 使用 PIL 保存图像
         image_paths.append(temp_path)
 
     doc.close()
@@ -58,8 +63,4 @@ if __name__ == '__main__':
     # r'F:\下载\魔法擦除_20230731_1(1)\temp\chf3_prob3_stab_thm2.mp4',
     # r'F:\下载\魔法擦除_20230731_1(1)\temp\mix.mp4'
     #                     )
-    # for i in [r'G:\Project\Spider\xxgirls\download', r'F:\下载\BaiduNetdiskDownload\原神视频\人物']:
-    #     compress_fold(i)
-    
-    # compress_pdf(r'F:\下载\test\服务协议.pdf')
-    combine_images_to_pdf(r'Z:\Photo\temp', r'Z:\Photo\temp\output.pdf')
+    pass

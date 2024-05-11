@@ -1,7 +1,7 @@
 import re, os
 from PIL import Image
 from pillow_heif import register_heif_opener
-from .FileOperations import get_all_file_paths
+
 
 def compress_img(old_img_path, new_img_path):
     register_heif_opener()
@@ -27,6 +27,7 @@ def combine_images_to_pdf(image_directory, output_pdf_path):
         match = re.search(r'\d+', file_name)
         return int(match.group()) if match else 0
     
+    from .FileOperations import get_all_file_paths
     image_paths = get_all_file_paths(image_directory)
     image_paths = sorted(image_paths, key=lambda f: extract_number(os.path.basename(f)))
 

@@ -1,12 +1,9 @@
 import os
 import shutil
+import logging
 from pathlib import Path
 from tqdm import tqdm
 
-from .ImageProcessing import compress_img
-from .VideoProcessing import compress_video
-from .DocumentConversion import compress_pdf
-from ..constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 
 def creat_folder(path: str) -> str:
     """
@@ -43,7 +40,7 @@ def handle_file(source, destination, action):
     if not destination.exists():
         action(source, destination)
     else:
-        print(f"File {destination} already exists. Skipping...")
+        logging.info(f"File {destination} already exists. Skipping...")
 
 def compress_folder(folder_path):
     """
@@ -53,6 +50,10 @@ def compress_folder(folder_path):
     :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
+    from .ImageProcessing import compress_img
+    from .VideoProcessing import compress_video
+    from .DocumentConversion import compress_pdf
+    from ..constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 
     folder_path = Path(folder_path)
     new_folder_path = folder_path.parent / (folder_path.name + "_re")
@@ -65,14 +66,17 @@ def compress_folder(folder_path):
 
         rel_path = file_path.relative_to(folder_path)
         new_file_path = new_folder_path / rel_path
+        file_suffix = file_path.suffix.lower()[1:]
         try:
-            if file_path.suffix.lower() in IMG_SUFFIXES:
+            if file_suffix in IMG_SUFFIXES:
                 handle_file(file_path, new_file_path, compress_img)
-            elif file_path.suffix.lower() in VIDEO_SUFFIXES:
-                new_video_path = new_file_path.with_suffix('_compressed.mp4')
+            elif file_suffix in VIDEO_SUFFIXES:
+                name = new_file_path.stem.replace("_compressed", "")
+                new_video_path = new_folder_path / Path(name + '_compressed.mp4')
                 handle_file(file_path, new_video_path, compress_video)
-            elif file_path.suffix.lower() == 'pdf':
-                new_pdf_path = new_file_path.with_suffix('_compressed.pdf')
+            elif file_suffix == 'pdf':
+                name = new_file_path.stem.replace("_compressed", "")
+                new_pdf_path = new_folder_path / Path(name + '_compressed.pdf')
                 handle_file(file_path, new_pdf_path, compress_pdf)
             else:
                 handle_file(file_path, new_file_path, shutil.copy)
