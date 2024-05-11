@@ -295,7 +295,7 @@ class ThreadManager:
     
     def get_error_dict(self):
         """
-        获取错误列表
+        获取错误字典
         """
         return self.error_dict
     

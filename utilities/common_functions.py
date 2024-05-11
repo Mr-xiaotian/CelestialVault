@@ -162,7 +162,7 @@ def find_tuple(lst: List[Tuple[Tuple[str, int], str]], target: str) -> Tuple[str
     """
     return next((item for item in lst if item[0] == target), None)
 
-def strings_spit(*strs, split_str = '\n'):
+def strings_split(*strs, split_str = '\n'):
     li = []
     for num,st in enumerate(strs):
         li.append(st.split(split_str))
