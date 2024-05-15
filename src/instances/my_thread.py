@@ -340,8 +340,8 @@ class ExampleThreadManager(ThreadManager):
         """
         result_dict = self.get_result_dict()
         for task, result in result_dict.items():
-            print(f"Task {task}: {result}")
-            logger.error(f"Task {task}: {result}")
+            print(f"Task {self.get_task_info(task)}: {result}")
+            logger.error(f"Task {self.get_task_info(task)}: {result}")
 
     def handle_error(self):
         """
@@ -352,7 +352,8 @@ class ExampleThreadManager(ThreadManager):
         if not self.get_error_list():
             return
         error_dict = self.get_error_dict()
-        for num,(d, error) in enumerate(error_dict.items()):
-            print(f"Error in Task {d}(index:{num}):\n{error}\n")
-            logger.error(f"Error in Task {d}(index:{num}):\n{error}\n")
-            self.result_dict[d] = 'None'
+        error_len = len(error_dict)
+        for num,(task, error) in enumerate(error_dict.items()):
+            print(f"Error in Task {self.get_task_info(task)}(index:{num}/{error_len}):\n{error}\n")
+            logger.error(f"Error in Task {self.get_task_info(task)}(index:{num}/{error_len}):\n{error}\n")
+            self.result_dict[task] = 'None'
