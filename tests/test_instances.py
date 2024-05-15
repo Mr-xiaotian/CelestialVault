@@ -5,8 +5,7 @@ import pytest, logging
 from src.instances import Saver
 
 def test_saver():
-    logging.info("Starting the test")
-    saver = Saver(r'Q:\Project\test')
+    saver = Saver(r'../test')
     saver.set_add_path('test_jpg')
 
     li = ['https://ttzytp.com/dongman/xvhu6d.jpg',
@@ -37,6 +36,6 @@ def test_saver():
         # 'https://ttzytp.com/dongman/xyd87f.jpg'
         ]
 
-    saver.download_urls([(num, i, '.jpg') for num,i in enumerate(li)])
+    saver.download_urls([(num, i, '.jpg') for num,i in enumerate(li)], 'parallel')
 
 

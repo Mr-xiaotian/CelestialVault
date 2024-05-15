@@ -29,7 +29,7 @@ class SaveThread(ExampleThreadManager):
         return (obj[0], obj[1], obj[2])
     
     def process_result(self, dictory_len, path):
-        # logger(f'{dictory_len}个文件已下载至{path}')
+        logging.info(f'{dictory_len} files has saved to {path}.')
         return
     
 
@@ -75,19 +75,19 @@ class Saver(object):
 
     def download_content(self, file_name, content, suffix_name='.dat'):
         path = self.get_path(file_name, suffix_name)
-        logging.info(f'start save {file_name} in {path}')
+        logging.info(f'save {file_name} in {path}')
         with open(path, 'wb') as f:
             f.write(content)
 
     def download_urls(self, url_list:list[tuple[str,str,str]], start_type="serial"):
-        logging.info('start download urls')
+        logging.info(f'Start download {len(url_list)} urls by {start_type}.')
         self.fetch_threader.start(url_list, start_type)
         error_text = self.fetch_threader.handle_error()
         content_list = self.fetch_threader.process_result()
         if error_text != '':
             self.download_text('fetcher_error', error_text, suffix_name='.txt')
 
-        logging.info(f'start save urls')
+        logging.info(f'Start save {len(content_list)} urls by {start_type}.')
         self.save_threader.start(content_list, start_type = start_type)
         self.save_threader.handle_error()
         self.save_threader.process_result(

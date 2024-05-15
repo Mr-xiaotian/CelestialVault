@@ -16,11 +16,11 @@ from tqdm.asyncio import tqdm as tqdm_asy
 
 # Configure logging
 logger.remove()  # remove the default handler
-logger.add("thread_manager.log", format="{time} {level} {message}")
+logger.add("thread_manager.log", format="{time:YYYY-MM-DD HH:mm:ss} {level} {message}")
 
 # We redefine the ThreadWorker class
 class ThreadWorker(Thread):
-    def __init__(self, func, args, result_queue=None, task=None, new_task_queue=None):
+    def __init__(self, func, args, result_queue=None, task=None):
         """
         初始化 ThreadWorker
 
@@ -29,14 +29,12 @@ class ThreadWorker(Thread):
         args: 可调用对象的参数
         result_queue: 存储处理结果的队列
         task: 任务对象
-        new_task_queue: 存储新任务的队列
         """
         super().__init__()
         self.func = func
         self.args = args
         self.result_queue = result_queue
         self.task = task
-        self.new_task_queue = new_task_queue
         self.exception = None
         self.exc_traceback = ""
 
@@ -48,9 +46,6 @@ class ThreadWorker(Thread):
             result = self.func(*self.args)
             if self.result_queue is not None:
                 self.result_queue.put({self.task: result})
-            # if isinstance(result, list) and self.new_task_queue is not None:
-            #     for new_task in result:
-            #         self.new_task_queue.put(new_task)
         except Exception as e:
             self.exception = e
             self.exc_traceback = "".join(
@@ -67,7 +62,7 @@ class ThreadWorker(Thread):
 
 # We redefine the ThreadManager class
 class ThreadManager:
-    def __init__(self, func, pool=None, thread_num=50, max_retries=3, 
+    def __init__(self, func, pool=None, thread_num=50, max_retries=3, max_info=50,
                  tqdm_desc="Processing", show_progress=False):
         """
         初始化 ThreadManager
@@ -84,6 +79,7 @@ class ThreadManager:
         self.pool = pool
         self.thread_num = thread_num
         self.max_retries = max_retries
+        self.max_info = max_info
 
         self.set_start()
 
@@ -92,13 +88,12 @@ class ThreadManager:
 
     def set_start(self):
         self.result_queue = Queue()
-        self.new_task_queue = Queue()
         self.dictory_queue = Queue()
 
         self.result_dict = {}
         self.error_list = []
         self.error_dict = {}
-        self.retries_dict = {}
+        self.retry_time_dict = {}
 
     def get_args(self, obj):
         """
@@ -123,6 +118,17 @@ class ThreadManager:
         这是一个抽象方法，需要由子类实现
         """
         raise NotImplementedError("This method should be overridden")
+    
+    def get_task_info(self, task):
+        info_list = []
+        for arg in self.get_args(task):
+            arg = str(arg)
+            if len(arg) < self.max_info:
+                info_list.append(f"{arg}")
+            else:
+                info_list.append(f"{arg[:self.max_info]}...")
+        return "(" + ", ".join(info_list) + ")"
+        
 
     def start(self, dictory, start_type="serial"):
         """
@@ -133,12 +139,12 @@ class ThreadManager:
         start_type: 启动类型，可以是 'serial'、'parallel' 或 'async'
         """
         self.set_start()
-        logger.info(f"{__name__} desk prepare start by {start_type}.")
+        logger.info(f"'{self.func.__name__}' start {len(dictory)} tasks by {start_type}.")
 
         # Convert dictory to a Queue
         for item in dictory:
             self.dictory_queue.put(item)
-            self.retries_dict[item] = 0
+            self.retry_time_dict[item] = 0
     
         while not self.dictory_queue.empty():
             chunk = []
@@ -162,12 +168,12 @@ class ThreadManager:
         dictory: 任务列表
         """
         self.set_start()
-        logger.info(f"{__name__} desk prepare start by async(await).")
+        logger.info(f"'{self.func.__name__}' start {len(dictory)} tasks by async(await).")
 
         # Convert dictory to a Queue
         for item in dictory:
             self.dictory_queue.put(item)
-            self.retries_dict[item] = 0
+            self.retry_time_dict[item] = 0
 
         while not self.dictory_queue.empty():
             chunk = []
@@ -187,7 +193,7 @@ class ThreadManager:
         threads = []
         for d in dictory:
             thread = ThreadWorker(self.func, self.get_args(d), 
-                                  self.result_queue, d, self.new_task_queue)
+                                  self.result_queue, d)
             threads.append(thread)
             thread.start()
 
@@ -195,16 +201,16 @@ class ThreadManager:
         for thread, d in zip(threads, dictory):
             thread.join()
             if thread.get_exception()[0] is not None:
-                if self.retries_dict[d] < self.max_retries:
+                if self.retry_time_dict[d] < self.max_retries:
                     self.dictory_queue.put(d)
-                    self.retries_dict[d] += 1
-                    logger.info(f"Task {thread} failed and has been requeued.")
+                    self.retry_time_dict[d] += 1
+                    logger.info(f"Task {self.get_task_info(d)} failed {self.retry_time_dict[d]} times and try again.")
                 else:
                     self.error_list.append(d)
                     self.error_dict[d] = thread.get_exception()
-                    logger.info(f"Task {thread} failed and reached the retry limit.")
+                    logger.info(f"Task {self.get_task_info(d)} failed and reached the retry limit.")
             else:
-                logger.info(f"Task {thread} completed successfully.")
+                logger.info(f"Task {self.get_task_info(d)} completed successfully.")
             progress_bar.update(1) if self.show_progress else None
 
         progress_bar.close() if self.show_progress else None
@@ -217,26 +223,23 @@ class ThreadManager:
         dictory: 任务列表
         """
         progress_bar = tqdm(total=len(dictory), desc=self.tqdm_desc) if self.show_progress else None
-        for d in dictory:
+        for num,d in enumerate(dictory):
             try:
                 result = self.func(*self.get_args(d))
                 self.result_dict[d] = result
-                # if isinstance(result, list):
-                #     for new_task in result:
-                #         self.new_task_queue.put(new_task)
             except Exception as e:
-                if self.retries_dict[d] < self.max_retries:
+                if self.retry_time_dict[d] < self.max_retries:
                     self.dictory_queue.put(d)
-                    self.retries_dict[d] += 1
-                    logger.info(f"Task failed and has been requeued.")
+                    self.retry_time_dict[d] += 1
+                    logger.info(f"Task {self.get_task_info(d)} failed {self.retry_time_dict[d]} times and try again.")
                 else:
                     self.error_list.append(d)
                     self.error_dict[d] = "".join(
                         traceback.format_exception(*sys.exc_info())
                         )
-                    logger.info(f"Task failed and reached the retry limit.")
+                    logger.info(f"Task {self.get_task_info(d)} failed and reached the retry limit.")
             else:
-                logger.info(f"Task completed successfully.")
+                logger.info(f"Task {self.get_task_info(d)} completed successfully.")
             progress_bar.update(1) if self.show_progress else None
 
         progress_bar.close() if self.show_progress else None
@@ -259,14 +262,11 @@ class ThreadManager:
             try:
                 result = await task
                 self.result_dict[d] = result
-                # if isinstance(result, list):
-                #     for new_task in result:
-                #         self.new_task_queue.put(new_task)
             except Exception as e:
-                if self.retries_dict[d] < self.max_retries:
+                if self.retry_time_dict[d] < self.max_retries:
                     self.dictory_queue.put(d)
-                    self.retries_dict[d] += 1
-                    logger.info(f"Task {task} failed and has been requeued.")
+                    self.retry_time_dict[d] += 1
+                    logger.info(f"Task {task} failed {self.retry_time_dict[d]} times and try again.")
                 else:
                     self.error_list.append(d)
                     self.error_dict[d] = "".join(
@@ -341,6 +341,7 @@ class ExampleThreadManager(ThreadManager):
         result_dict = self.get_result_dict()
         for task, result in result_dict.items():
             print(f"Task {task}: {result}")
+            logger.error(f"Task {task}: {result}")
 
     def handle_error(self):
         """
@@ -350,32 +351,8 @@ class ExampleThreadManager(ThreadManager):
         """
         if not self.get_error_list():
             return
-        error_dict = self.error_dict
+        error_dict = self.get_error_dict()
         for num,(d, error) in enumerate(error_dict.items()):
-            print(f"Error in task {num}:\n{error}\nTask: {d[0]}")
-            logger.error(f"Error in task {num}:\n{error}\nTask: {d[0]}")
+            print(f"Error in Task {d}(index:{num}):\n{error}\n")
+            logger.error(f"Error in Task {d}(index:{num}):\n{error}\n")
             self.result_dict[d] = 'None'
-
-async def generate_new_tasks(n):
-    return [i for i in range(n, n+5)]
-
-
-if __name__ == "__main__":
-    # We instantiate the ThreadManager
-    manager = ExampleThreadManager(generate_new_tasks, thread_num=10, 
-                                   show_progress=False)
-
-    # We start the threads
-    manager.start(range(100), start_type="parallel")
-
-    # # We process the results
-    # manager.process_result()
-
-    # # We handle the errors
-    # manager.handle_error()
-
-    # Assuming dictory is the list of tasks you want to test
-    from pprint import pprint
-    results = manager.test_methods(range(10))
-    pprint(results)
-
