@@ -8,6 +8,9 @@ from tqdm import tqdm
 def creat_folder(path: str) -> str:
     """
     判断系统是否存在该路径，没有则创建。
+
+    :param path: 要创建的文件夹路径。
+    :return: 创建或存在的文件夹路径。
     """
     while True:
         try:
@@ -20,7 +23,7 @@ def creat_folder(path: str) -> str:
             continue
     return path
 
-def get_all_file_paths(directory):
+def get_all_file_paths(directory) -> list:
     """
     获取给定目录下所有文件的绝对路径。
     
@@ -36,13 +39,20 @@ def get_all_file_paths(directory):
     return file_paths
 
 def handle_file(source, destination, action):
+    """
+    处理文件，如果目标文件不存在则执行指定的操作。
+    
+    :param source: 源文件路径。
+    :param destination: 目标文件路径。
+    :param action: 处理文件的函数或方法。
+    """
     destination.parent.mkdir(parents=True, exist_ok=True)
     if not destination.exists():
         action(source, destination)
     else:
-        logging.info(f"File {destination} already exists. Skipping...")
+        logging.warn(f"File {destination} already exists. Skipping...")
 
-def compress_folder(folder_path):
+def compress_folder(folder_path) -> list:
     """
     遍历指定文件夹，根据文件后缀名对文件进行压缩处理，并将处理后的文件存储到新的目录中。支持的文件类型包括图片、视频和PDF。不属于这三种类型的文件将被直接复制到新目录中。
     压缩后的文件会保持原始的目录结构。如果目标文件已存在，则会跳过处理。处理过程中遇到的任何错误都会被记录并返回。
@@ -81,10 +91,10 @@ def compress_folder(folder_path):
             else:
                 handle_file(file_path, new_file_path, shutil.copy)
         except OSError as e:
+            error_list.append((file_path, e))
+            try:
+                shutil.copy(file_path, new_file_path)
+            except OSError as e:
                 error_list.append((file_path, e))
-                try:
-                    shutil.copy(file_path, new_file_path)
-                except OSError as e:
-                    error_list.append((file_path, e))
 
     return error_list

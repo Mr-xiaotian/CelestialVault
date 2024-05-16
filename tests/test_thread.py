@@ -23,9 +23,7 @@ def test_thread_manager():
     # manager.handle_error()
 
     # Assuming dictory is the list of tasks you want to test
-    from pprint import pprint
-    results = manager.test_methods(range(10))
+    results = manager.test_methods(range(100))
     logging.info(results)
 
-    pass
 

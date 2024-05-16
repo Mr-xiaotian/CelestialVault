@@ -13,10 +13,11 @@ from queue import Queue
 from threading import Thread
 from tqdm import tqdm
 from tqdm.asyncio import tqdm as tqdm_asy
+from ..tools import get_now_time
 
 # Configure logging
 logger.remove()  # remove the default handler
-logger.add("thread_manager.log", format="{time:YYYY-MM-DD HH:mm:ss} {level} {message}")
+logger.add(f"logs/thread_manager({get_now_time()}).log", format="{time:YYYY-MM-DD HH:mm:ss} {level} {message}")
 
 # We redefine the ThreadWorker class
 class ThreadWorker(Thread):
@@ -43,15 +44,20 @@ class ThreadWorker(Thread):
         运行线程，并将结果存储在结果队列中
         """
         try:
-            result = self.func(*self.args)
+            self.result = self.func(*self.args)
             if self.result_queue is not None:
-                self.result_queue.put({self.task: result})
+                self.result_queue.put({self.task: self.result})
         except Exception as e:
             self.exception = e
             self.exc_traceback = "".join(
                 traceback.format_exception(*sys.exc_info())
                 )
-
+            
+    def get_result(self):
+        """
+        获取结果
+        """
+        return self.result
 
     def get_exception(self):
         """
@@ -122,14 +128,20 @@ class ThreadManager:
     def get_task_info(self, task):
         info_list = []
         for arg in self.get_args(task):
-            arg = str(arg)
+            arg = f'{arg}'
             if len(arg) < self.max_info:
                 info_list.append(f"{arg}")
             else:
                 info_list.append(f"{arg[:self.max_info]}...")
         return "(" + ", ".join(info_list) + ")"
+    
+    def get_result_info(self, result):
+        result = f"{result}"
+        if len(result) < self.max_info:
+            return result
+        else:
+            return f"{result[:self.max_info]}..."
         
-
     def start(self, dictory, start_type="serial"):
         """
         根据 start_type 的值，选择串行、并行或异步执行任务
@@ -204,13 +216,14 @@ class ThreadManager:
                 if self.retry_time_dict[d] < self.max_retries:
                     self.dictory_queue.put(d)
                     self.retry_time_dict[d] += 1
-                    logger.info(f"Task {self.get_task_info(d)} failed {self.retry_time_dict[d]} times and try again.")
+                    logger.warning(f"Task {self.get_task_info(d)} failed {self.retry_time_dict[d]} times and try again.")
                 else:
                     self.error_list.append(d)
                     self.error_dict[d] = thread.get_exception()
-                    logger.info(f"Task {self.get_task_info(d)} failed and reached the retry limit.")
+                    logger.error(f"Task {self.get_task_info(d)} failed and reached the retry limit.")
             else:
-                logger.info(f"Task {self.get_task_info(d)} completed successfully.")
+                result = thread.get_result()
+                logger.success(f"Task {self.get_task_info(d)} completed successfully. Result is {self.get_result_info(result)}.")
             progress_bar.update(1) if self.show_progress else None
 
         progress_bar.close() if self.show_progress else None
@@ -231,20 +244,19 @@ class ThreadManager:
                 if self.retry_time_dict[d] < self.max_retries:
                     self.dictory_queue.put(d)
                     self.retry_time_dict[d] += 1
-                    logger.info(f"Task {self.get_task_info(d)} failed {self.retry_time_dict[d]} times and try again.")
+                    logger.warning(f"Task {self.get_task_info(d)} failed {self.retry_time_dict[d]} times and try again.")
                 else:
                     self.error_list.append(d)
                     self.error_dict[d] = "".join(
                         traceback.format_exception(*sys.exc_info())
                         )
-                    logger.info(f"Task {self.get_task_info(d)} failed and reached the retry limit.")
+                    logger.error(f"Task {self.get_task_info(d)} failed and reached the retry limit.")
             else:
-                logger.info(f"Task {self.get_task_info(d)} completed successfully.")
+                logger.success(f"Task {self.get_task_info(d)} completed successfully. Result is {self.get_result_info(result)}.")
             progress_bar.update(1) if self.show_progress else None
 
         progress_bar.close() if self.show_progress else None
                 
-
     async def run_in_async(self, dictory):
         """
         异步地执行任务
@@ -266,15 +278,15 @@ class ThreadManager:
                 if self.retry_time_dict[d] < self.max_retries:
                     self.dictory_queue.put(d)
                     self.retry_time_dict[d] += 1
-                    logger.info(f"Task {task} failed {self.retry_time_dict[d]} times and try again.")
+                    logger.warning(f"Task {task} failed {self.retry_time_dict[d]} times and try again.")
                 else:
                     self.error_list.append(d)
                     self.error_dict[d] = "".join(
                         traceback.format_exception(*sys.exc_info())
                         )
-                    logger.info(f"Task {task} failed and reached the retry limit.")
+                    logger.error(f"Task {task} failed and reached the retry limit.")
             else:
-                logger.info(f"Task {task} completed successfully.")
+                logger.success(f"Task {task} completed successfully. Result is {self.get_result_info(result)}.")
             progress_bar.update(1) if self.show_progress else None
 
         progress_bar.close() if self.show_progress else None
@@ -304,16 +316,19 @@ class ThreadManager:
         results = {}
 
         # Test run_in_serial
+        logger.info(f"'{self.func.__name__}' start {len(dictory)} tasks by serial.")
         start = time()
         self.run_in_serial(dictory)
         results['run_in_serial  '] = time() - start
 
         # Test run_in_parallel
+        logger.info(f"'{self.func.__name__}' start {len(dictory)} tasks by parallel.")
         start = time()
         self.run_in_parallel(dictory)
         results['run_in_parallel'] = time() - start
 
         # Test run_in_async
+        logger.info(f"'{self.func.__name__}' start {len(dictory)} tasks by async.")
         start = time()
         asyncio.run(self.run_in_async(dictory))
         results['run_in_async   '] = time() - start
@@ -340,8 +355,8 @@ class ExampleThreadManager(ThreadManager):
         """
         result_dict = self.get_result_dict()
         for task, result in result_dict.items():
-            print(f"Task {self.get_task_info(task)}: {result}")
-            logger.error(f"Task {self.get_task_info(task)}: {result}")
+            # print(f"Task {self.get_task_info(task)}: {self.get_result_info(result)}")
+            logger.info(f"Task {self.get_task_info(task)}: {self.get_result_info(result)}")
 
     def handle_error(self):
         """
@@ -354,6 +369,6 @@ class ExampleThreadManager(ThreadManager):
         error_dict = self.get_error_dict()
         error_len = len(error_dict)
         for num,(task, error) in enumerate(error_dict.items()):
-            print(f"Error in Task {self.get_task_info(task)}(index:{num}/{error_len}):\n{error}\n")
-            logger.error(f"Error in Task {self.get_task_info(task)}(index:{num}/{error_len}):\n{error}\n")
+            # print(f"Error in Task {self.get_task_info(task)}(index:{num}/{error_len}):\n{error}\n")
+            logger.error(f"Error in Task {self.get_task_info(task)}(index:{num+1}/{error_len}):\n{error}")
             self.result_dict[task] = 'None'

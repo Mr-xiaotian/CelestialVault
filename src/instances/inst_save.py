@@ -6,7 +6,7 @@ from .my_thread import ThreadManager, ExampleThreadManager
 from .inst_fetch import Fetcher
 from ..tools import creat_folder
 
-class FetchThread(ThreadManager):
+class FetchThread(ExampleThreadManager):
     def get_args(self, obj: object):
         return (obj[1], )
     
@@ -14,15 +14,6 @@ class FetchThread(ThreadManager):
         result_dict = self.get_result_dict()
         return [(d[0], result_dict[d], d[2]) for d in result_dict]
     
-    def handle_error(self):
-        if not self.get_error_list():
-            return ''
-        # print(f'Some Error Happen', end='')
-        error_text_list = []
-        for error in self.get_error_list():
-            error_text_list.append(f'{error}')
-
-        return '\n'.join(error_text_list)
     
 class SaveThread(ExampleThreadManager):
     def get_args(self, obj: object):
@@ -82,16 +73,15 @@ class Saver(object):
     def download_urls(self, url_list:list[tuple[str,str,str]], start_type="serial"):
         logging.info(f'Start download {len(url_list)} urls by {start_type}.')
         self.fetch_threader.start(url_list, start_type)
-        error_text = self.fetch_threader.handle_error()
+        self.fetch_threader.handle_error()
         content_list = self.fetch_threader.process_result()
-        if error_text != '':
-            self.download_text('fetcher_error', error_text, suffix_name='.txt')
 
         logging.info(f'Start save {len(content_list)} urls by {start_type}.')
         self.save_threader.start(content_list, start_type = start_type)
         self.save_threader.handle_error()
         self.save_threader.process_result(
-            len(content_list), self.base_path + '\\' + self.add_path)
+            len(content_list), self.base_path + '\\' + self.add_path
+            )
         
     async def download_urls_async(self, url_list:list[tuple[str,str,str]]):
         # await self.fetcher.start_session()
