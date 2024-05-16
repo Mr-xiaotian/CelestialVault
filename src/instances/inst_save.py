@@ -44,7 +44,7 @@ class Saver(object):
         self.add_path = add_path
 
     def get_path(self, file_name, suffix_name):
-        middle_path = creat_folder(self.base_path + '\\' + self.add_path)
+        middle_path = creat_folder(f'{self.base_path}/{self.add_path}')
         path = join(middle_path, str(file_name))
         
         if splitext(path)[1] == '':

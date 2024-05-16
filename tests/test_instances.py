@@ -9,9 +9,10 @@ def test_saver():
     saver.set_add_path('test_jpg')
 
     li = ['https://ttzytp.com/dongman/xvhu6d.jpg',
-        'https://ttzytp.com/dongman/xvjq0t.jpg',
-        'https://ttzytp.com/dongman/xvlwc7.jpg',
-        'https://ttzytp.com/dongman/xvoi5z.jpg',
+        'dfgdfgdfgdfg',
+        # 'https://ttzytp.com/dongman/xvjq0t.jpg',
+        # 'https://ttzytp.com/dongman/xvlwc7.jpg',
+        # 'https://ttzytp.com/dongman/xvoi5z.jpg',
         # 'https://ttzytp.com/dongman/xvznus.jpg',
         # 'https://ttzytp.com/dongman/xw2j01.jpg',
         # 'https://ttzytp.com/dongman/xw4svq.jpg',
@@ -34,8 +35,8 @@ def test_saver():
         # 'https://ttzytp.com/dongman/xy0965.jpg',
         # 'https://ttzytp.com/dongman/xy26a8.jpg',
         # 'https://ttzytp.com/dongman/xyd87f.jpg'
-        ]
+    ]
 
-    saver.download_urls([(num, i, '.jpg') for num,i in enumerate(li)], 'parallel')
+    saver.download_urls([(num, i, '.jpg') for num,i in enumerate(li)], 'serial')
 
 

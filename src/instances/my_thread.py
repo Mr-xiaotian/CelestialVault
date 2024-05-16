@@ -63,7 +63,13 @@ class ThreadWorker(Thread):
         """
         获取异常信息
         """
-        return self.exception, self.exc_traceback
+        return self.exception
+    
+    def get_exc_traceback(self):
+        """
+        获取异常堆栈信息
+        """
+        return self.exc_traceback
 
 
 # We redefine the ThreadManager class
@@ -212,7 +218,7 @@ class ThreadManager:
         progress_bar = tqdm(total=len(dictory), desc=self.tqdm_desc) if self.show_progress else None
         for thread, d in zip(threads, dictory):
             thread.join()
-            if thread.get_exception()[0] is not None:
+            if thread.get_exception() is not None:
                 if self.retry_time_dict[d] < self.max_retries:
                     self.dictory_queue.put(d)
                     self.retry_time_dict[d] += 1
@@ -247,9 +253,7 @@ class ThreadManager:
                     logger.warning(f"Task {self.get_task_info(d)} failed {self.retry_time_dict[d]} times and try again.")
                 else:
                     self.error_list.append(d)
-                    self.error_dict[d] = "".join(
-                        traceback.format_exception(*sys.exc_info())
-                        )
+                    self.error_dict[d] = e
                     logger.error(f"Task {self.get_task_info(d)} failed and reached the retry limit.")
             else:
                 logger.success(f"Task {self.get_task_info(d)} completed successfully. Result is {self.get_result_info(result)}.")
@@ -281,9 +285,7 @@ class ThreadManager:
                     logger.warning(f"Task {task} failed {self.retry_time_dict[d]} times and try again.")
                 else:
                     self.error_list.append(d)
-                    self.error_dict[d] = "".join(
-                        traceback.format_exception(*sys.exc_info())
-                        )
+                    self.error_dict[d] = e
                     logger.error(f"Task {task} failed and reached the retry limit.")
             else:
                 logger.success(f"Task {task} completed successfully. Result is {self.get_result_info(result)}.")
@@ -370,5 +372,4 @@ class ExampleThreadManager(ThreadManager):
         error_len = len(error_dict)
         for num,(task, error) in enumerate(error_dict.items()):
             # print(f"Error in Task {self.get_task_info(task)}(index:{num}/{error_len}):\n{error}\n")
-            logger.error(f"Error in Task {self.get_task_info(task)}(index:{num+1}/{error_len}):\n{error}")
-            self.result_dict[task] = 'None'
+            logger.error(f"Task {self.get_task_info(task)}(index:{num+1}/{error_len}): {error}")

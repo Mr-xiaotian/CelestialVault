@@ -44,3 +44,92 @@
 2024-05-16 22:22:20 WARNING Task (https://ttzytp.com/dongman/xvhu6d.jpg) failed 3 times and try again.
 2024-05-16 22:22:31 SUCCESS Task (https://ttzytp.com/dongman/xvjq0t.jpg) completed successfully. Result is b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00....
 2024-05-16 22:22:31 SUCCESS Task (https://ttzytp.com/dongman/xvoi5z.jpg) completed successfully. Result is b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00....
+2024-05-16 22:22:45 ERROR Task (https://ttzytp.com/dongman/xvhu6d.jpg) failed and reached the retry limit.
+2024-05-16 22:22:45 ERROR Error in Task (https://ttzytp.com/dongman/xvhu6d.jpg)(index:1/1):
+(ReadTimeout('The read operation timed out'), 'Traceback (most recent call last):\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpx\\_transports\\default.py", line 69, in map_httpcore_exceptions\n    yield\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpx\\_transports\\default.py", line 113, in __iter__\n    for part in self._httpcore_stream:\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpcore\\_sync\\connection_pool.py", line 367, in __iter__\n    raise exc from None\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpcore\\_sync\\connection_pool.py", line 363, in __iter__\n    for part in self._stream:\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpcore\\_sync\\http11.py", line 349, in __iter__\n    raise exc\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpcore\\_sync\\http11.py", line 341, in __iter__\n    for chunk in self._connection._receive_response_body(**kwargs):\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpcore\\_sync\\http11.py", line 210, in _receive_response_body\n    event = self._receive_event(timeout=timeout)\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpcore\\_sync\\http11.py", line 224, in _receive_event\n    data = self._network_stream.read(\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpcore\\_backends\\sync.py", line 124, in read\n    with map_exceptions(exc_map):\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\contextlib.py", line 153, in __exit__\n    self.gen.throw(typ, value, traceback)\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpcore\\_exceptions.py", line 14, in map_exceptions\n    raise to_exc(exc) from exc\nhttpcore.ReadTimeout: The read operation timed out\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File "G:\\Project\\CelestialVault\\src\\instances\\my_thread.py", line 47, in run\n    self.result = self.func(*self.args)\n  File "G:\\Project\\CelestialVault\\src\\instances\\inst_fetch.py", line 56, in getContent\n    return self.obtainContent(self.cl.get, url=url,\n  File "G:\\Project\\CelestialVault\\src\\instances\\inst_fetch.py", line 44, in obtainContent\n    response = func(*args, **kwargs)\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpx\\_client.py", line 1054, in get\n    return self.request(\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpx\\_client.py", line 827, in request\n    return self.send(request, auth=auth, follow_redirects=follow_redirects)\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpx\\_client.py", line 928, in send\n    raise exc\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpx\\_client.py", line 922, in send\n    response.read()\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpx\\_models.py", line 813, in read\n    self._content = b"".join(self.iter_bytes())\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpx\\_models.py", line 829, in iter_bytes\n    for raw_bytes in self.iter_raw():\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpx\\_models.py", line 883, in iter_raw\n    for raw_stream_bytes in self.stream:\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpx\\_client.py", line 126, in __iter__\n    for chunk in self._stream:\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpx\\_transports\\default.py", line 112, in __iter__\n    with map_httpcore_exceptions():\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\contextlib.py", line 153, in __exit__\n    self.gen.throw(typ, value, traceback)\n  File "G:\\ProgramData\\miniforge3\\envs\\toolenv\\lib\\site-packages\\httpx\\_transports\\default.py", line 86, in map_httpcore_exceptions\n    raise mapped_exc(message) from exc\nhttpx.ReadTimeout: The read operation timed out\n')
+
+2024-05-16 22:22:45 INFO 'download_content' start 4 tasks by parallel.
+2024-05-16 22:22:45 WARNING Task (0, None, .jpg) failed 1 times and try again.
+2024-05-16 22:22:45 SUCCESS Task (2, b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00..., .jpg) completed successfully. Result is None.
+2024-05-16 22:22:45 SUCCESS Task (3, b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00..., .jpg) completed successfully. Result is None.
+2024-05-16 22:22:46 SUCCESS Task (1, b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00..., .jpg) completed successfully. Result is None.
+2024-05-16 22:22:46 WARNING Task (0, None, .jpg) failed 2 times and try again.
+2024-05-16 22:22:46 WARNING Task (0, None, .jpg) failed 3 times and try again.
+2024-05-16 22:22:46 ERROR Task (0, None, .jpg) failed and reached the retry limit.
+2024-05-16 22:22:46 ERROR Error in Task (0, None, .jpg)(index:1/1):
+(TypeError("a bytes-like object is required, not 'str'"), 'Traceback (most recent call last):\n  File "G:\\Project\\CelestialVault\\src\\instances\\my_thread.py", line 47, in run\n    self.result = self.func(*self.args)\n  File "G:\\Project\\CelestialVault\\src\\instances\\inst_save.py", line 71, in download_content\n    f.write(content)\nTypeError: a bytes-like object is required, not \'str\'\n')
+
+2024-05-16 22:31:25 INFO 'getContent' start 4 tasks by parallel.
+2024-05-16 22:31:35 WARNING Task (https://ttzytp.com/dongman/xvhu6d.jpg) failed 1 times and try again.
+2024-05-16 22:31:35 WARNING Task (https://ttzytp.com/dongman/xvjq0t.jpg) failed 1 times and try again.
+2024-05-16 22:31:35 WARNING Task (https://ttzytp.com/dongman/xvlwc7.jpg) failed 1 times and try again.
+2024-05-16 22:31:35 SUCCESS Task (https://ttzytp.com/dongman/xvoi5z.jpg) completed successfully. Result is b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00....
+2024-05-16 22:31:37 SUCCESS Task (https://ttzytp.com/dongman/xvhu6d.jpg) completed successfully. Result is b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00....
+2024-05-16 22:31:43 SUCCESS Task (https://ttzytp.com/dongman/xvjq0t.jpg) completed successfully. Result is b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00....
+2024-05-16 22:31:50 WARNING Task (https://ttzytp.com/dongman/xvlwc7.jpg) failed 2 times and try again.
+2024-05-16 22:31:57 WARNING Task (https://ttzytp.com/dongman/xvlwc7.jpg) failed 3 times and try again.
+2024-05-16 22:32:02 ERROR Task (https://ttzytp.com/dongman/xvlwc7.jpg) failed and reached the retry limit.
+2024-05-16 22:32:02 ERROR Error in Task (https://ttzytp.com/dongman/xvlwc7.jpg)(index:1/1):
+_ssl.c:990: The handshake operation timed out
+2024-05-16 22:32:02 INFO 'download_content' start 4 tasks by parallel.
+2024-05-16 22:32:02 WARNING Task (2, None, .jpg) failed 1 times and try again.
+2024-05-16 22:32:02 SUCCESS Task (3, b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00..., .jpg) completed successfully. Result is None.
+2024-05-16 22:32:02 SUCCESS Task (0, b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00..., .jpg) completed successfully. Result is None.
+2024-05-16 22:32:02 SUCCESS Task (1, b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00..., .jpg) completed successfully. Result is None.
+2024-05-16 22:32:02 WARNING Task (2, None, .jpg) failed 2 times and try again.
+2024-05-16 22:32:02 WARNING Task (2, None, .jpg) failed 3 times and try again.
+2024-05-16 22:32:02 ERROR Task (2, None, .jpg) failed and reached the retry limit.
+2024-05-16 22:32:02 ERROR Error in Task (2, None, .jpg)(index:1/1):
+a bytes-like object is required, not 'str'
+2024-05-16 22:53:05 INFO 'getContent' start 4 tasks by serial.
+2024-05-16 22:53:11 WARNING Task (https://ttzytp.com/dongman/xvhu6d.jpg) failed 1 times and try again.
+2024-05-16 22:53:18 SUCCESS Task (https://ttzytp.com/dongman/xvjq0t.jpg) completed successfully. Result is b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00....
+2024-05-16 22:53:25 SUCCESS Task (https://ttzytp.com/dongman/xvlwc7.jpg) completed successfully. Result is b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00....
+2024-05-16 22:53:33 SUCCESS Task (https://ttzytp.com/dongman/xvoi5z.jpg) completed successfully. Result is b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00....
+2024-05-16 22:53:41 SUCCESS Task (https://ttzytp.com/dongman/xvhu6d.jpg) completed successfully. Result is b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00....
+2024-05-16 22:53:41 INFO 'download_content' start 4 tasks by serial.
+2024-05-16 22:53:41 SUCCESS Task (1, b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00..., .jpg) completed successfully. Result is None.
+2024-05-16 22:53:41 SUCCESS Task (2, b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00..., .jpg) completed successfully. Result is None.
+2024-05-16 22:53:41 SUCCESS Task (3, b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00..., .jpg) completed successfully. Result is None.
+2024-05-16 22:53:41 SUCCESS Task (0, b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00..., .jpg) completed successfully. Result is None.
+2024-05-16 22:54:28 INFO 'getContent' start 4 tasks by serial.
+2024-05-16 22:54:43 WARNING Task (https://ttzytp.com/dongman/xvhu6d.jpg) failed 1 times and try again.
+2024-05-16 22:54:51 WARNING Task (https://ttzytp.com/dongman/xvjq0t.jpg) failed 1 times and try again.
+2024-05-16 22:54:56 WARNING Task (https://ttzytp.com/dongman/xvlwc7.jpg) failed 1 times and try again.
+2024-05-16 22:54:56 WARNING Task (dfgdfgdfgdfg) failed 1 times and try again.
+2024-05-16 22:55:06 SUCCESS Task (https://ttzytp.com/dongman/xvhu6d.jpg) completed successfully. Result is b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00....
+2024-05-16 22:55:14 WARNING Task (https://ttzytp.com/dongman/xvjq0t.jpg) failed 2 times and try again.
+2024-05-16 22:55:19 SUCCESS Task (https://ttzytp.com/dongman/xvlwc7.jpg) completed successfully. Result is b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00....
+2024-05-16 22:55:19 WARNING Task (dfgdfgdfgdfg) failed 2 times and try again.
+2024-05-16 22:55:27 WARNING Task (https://ttzytp.com/dongman/xvjq0t.jpg) failed 3 times and try again.
+2024-05-16 22:55:27 WARNING Task (dfgdfgdfgdfg) failed 3 times and try again.
+2024-05-16 22:55:42 ERROR Task (https://ttzytp.com/dongman/xvjq0t.jpg) failed and reached the retry limit.
+2024-05-16 22:55:42 ERROR Task (dfgdfgdfgdfg) failed and reached the retry limit.
+2024-05-16 22:55:42 ERROR Error in Task (https://ttzytp.com/dongman/xvjq0t.jpg)(index:1/2):
+The read operation timed out
+2024-05-16 22:55:42 ERROR Error in Task (dfgdfgdfgdfg)(index:2/2):
+Request URL is missing an 'http://' or 'https://' protocol.
+2024-05-16 22:55:42 INFO 'download_content' start 4 tasks by serial.
+2024-05-16 22:55:42 SUCCESS Task (0, b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00..., .jpg) completed successfully. Result is None.
+2024-05-16 22:55:42 SUCCESS Task (2, b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00..., .jpg) completed successfully. Result is None.
+2024-05-16 22:55:42 WARNING Task (1, None, .jpg) failed 1 times and try again.
+2024-05-16 22:55:42 WARNING Task (3, None, .jpg) failed 1 times and try again.
+2024-05-16 22:55:42 WARNING Task (1, None, .jpg) failed 2 times and try again.
+2024-05-16 22:55:42 WARNING Task (3, None, .jpg) failed 2 times and try again.
+2024-05-16 22:55:42 WARNING Task (1, None, .jpg) failed 3 times and try again.
+2024-05-16 22:55:42 WARNING Task (3, None, .jpg) failed 3 times and try again.
+2024-05-16 22:55:42 ERROR Task (1, None, .jpg) failed and reached the retry limit.
+2024-05-16 22:55:42 ERROR Task (3, None, .jpg) failed and reached the retry limit.
+2024-05-16 22:55:42 ERROR Error in Task (1, None, .jpg)(index:1/2):
+a bytes-like object is required, not 'str'
+2024-05-16 22:55:42 ERROR Error in Task (3, None, .jpg)(index:2/2):
+a bytes-like object is required, not 'str'
+2024-05-16 23:06:42 INFO 'getContent' start 2 tasks by serial.
+2024-05-16 23:06:48 SUCCESS Task (https://ttzytp.com/dongman/xvhu6d.jpg) completed successfully. Result is b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00....
+2024-05-16 23:06:48 WARNING Task (dfgdfgdfgdfg) failed 1 times and try again.
+2024-05-16 23:06:48 WARNING Task (dfgdfgdfgdfg) failed 2 times and try again.
+2024-05-16 23:06:48 WARNING Task (dfgdfgdfgdfg) failed 3 times and try again.
+2024-05-16 23:06:48 ERROR Task (dfgdfgdfgdfg) failed and reached the retry limit.
+2024-05-16 23:06:48 ERROR Task (dfgdfgdfgdfg)(index:1/1): Request URL is missing an 'http://' or 'https://' protocol.
+2024-05-16 23:06:48 INFO 'download_content' start 1 tasks by serial.
+2024-05-16 23:06:48 SUCCESS Task (0, b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00..., .jpg) completed successfully. Result is None.
