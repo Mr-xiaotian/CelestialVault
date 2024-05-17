@@ -18,7 +18,7 @@ def list_replace(lists: List[str], replace_list: List[Tuple[str, str]]) -> List[
         new_list.append(l)
     return new_list
 
-def dictkey_mix(dict_a: dict, dict_b: dict):
+def dictkey_mix(dict_a: dict, dict_b: dict) -> Tuple[list, list, list, list]:
     key_a = list(dict_a.keys())
     key_b = list(dict_b.keys())
 

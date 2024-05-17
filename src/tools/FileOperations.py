@@ -3,6 +3,7 @@ import shutil
 import logging
 from pathlib import Path
 from tqdm import tqdm
+from typing import Callable
 
 
 def creat_folder(path: str) -> str:
@@ -23,7 +24,7 @@ def creat_folder(path: str) -> str:
             continue
     return path
 
-def get_all_file_paths(directory) -> list:
+def get_all_file_paths(directory: str) -> list:
     """
     获取给定目录下所有文件的绝对路径。
     
@@ -38,7 +39,7 @@ def get_all_file_paths(directory) -> list:
 
     return file_paths
 
-def handle_file(source, destination, action):
+def handle_file(source: Path, destination: Path, action: Callable[[Path, Path], None]):
     """
     处理文件，如果目标文件不存在则执行指定的操作。
     
@@ -50,9 +51,9 @@ def handle_file(source, destination, action):
     if not destination.exists():
         action(source, destination)
     else:
-        logging.warn(f"File {destination} already exists. Skipping...")
+        logging.warning(f"File {destination} already exists. Skipping...")
 
-def compress_folder(folder_path) -> list:
+def compress_folder(folder_path: str) -> list:
     """
     遍历指定文件夹，根据文件后缀名对文件进行压缩处理，并将处理后的文件存储到新的目录中。支持的文件类型包括图片、视频和PDF。不属于这三种类型的文件将被直接复制到新目录中。
     压缩后的文件会保持原始的目录结构。如果目标文件已存在，则会跳过处理。处理过程中遇到的任何错误都会被记录并返回。

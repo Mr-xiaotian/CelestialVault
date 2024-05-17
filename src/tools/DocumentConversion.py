@@ -5,53 +5,73 @@ import pdfkit
 from PIL import Image
 
 
-def md_to_pdf(input_directory, output_directory):
-    # 获取所有的 .md 文件
+def md_to_pdf(input_directory: str, output_directory: str):
+    """
+    将输入目录中的Markdown文件转换为PDF文件
+
+    :param input_directory: 输入目录
+    :param output_directory: 输出目录
+    :return: None
+    """
+    # 获取输入目录中的所有Markdown文件
     md_files = [f for f in os.listdir(input_directory) if f.endswith('.md')]
 
+    # 遍历所有Markdown文件
     for md_file in md_files:
+        # 获取输入路径和输出路径
         input_path = os.path.join(input_directory, md_file)
         output_path = os.path.join(output_directory, md_file.replace('.md', '.pdf'))
 
-        # 读取 Markdown 文件内容
+        # 读取Markdown文件内容
         with open(input_path, 'r', encoding='utf-8') as file:
             md_content = file.read()
 
-        # 使用 markdown 库转换为 HTML
+        # 将Markdown文件内容转换为HTML
         html_content = markdown.markdown(md_content)
-
-        # 使用 pdfkit 将 HTML 转换为 PDF
+        # 将HTML文件转换为PDF
         pdfkit.from_string(html_content, output_path)
+        # print(f"Converted {md_file} to PDF")
 
-        print(f"Converted {md_file} to PDF")
-
-def compress_pdf(old_pdf_path, new_pdf_path):
+def transfer_pdf_to_img(pdf_path: str, img_path: str):
     """
-    将PDF文件的每一页转换为单独的图片文件。
-    :param pdf_path: PDF文件的路径。
-    :return: 图片文件的路径列表。
-    """
-    from .FileOperations import creat_folder
-    from .ImageProcessing import combine_images_to_pdf
+    将PDF文件转换为图片文件
 
-    doc = fitz.open(old_pdf_path)
+    :param pdf_path: PDF文件路径
+    :param img_path: 图片文件路径
+    :return: None
+    """
     image_paths = []
-    
-    temp_path = os.path.dirname(old_pdf_path) + '/temp'
-    creat_folder(temp_path)
-    os.makedirs(os.path.dirname(temp_path), exist_ok=True)
-    
+
+    doc = fitz.open(pdf_path)
     for page_num in range(len(doc)):
         page = doc.load_page(page_num)  # 加载页面
         pix = page.get_pixmap(matrix=fitz.Matrix(150/72, 150/72))  # 将页面渲染为图片
         img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples) # 将 Pixmap 转换为 PIL Image
         
-        img.save(f'{temp_path}/{page_num+1}.jpg', quality=50) # 使用 PIL 保存图像
-        image_paths.append(temp_path)
+        img.save(f'{img_path}/{page_num+1}.jpg', quality=50) # 使用 PIL 保存图像
+        image_paths.append(img_path)
 
     doc.close()
-    combine_images_to_pdf(temp_path, new_pdf_path)
-    shutil.rmtree(temp_path)
+
+
+def compress_pdf(old_pdf_path: str, new_pdf_path: str):
+    '''
+    压缩PDF，即将PDF转换为jpg图片，再将图片合并为PDF
+
+    :param old_pdf_path: 原PDF路径
+    :param new_pdf_path: 新PDF路径
+    :return: None
+    '''
+    from .FileOperations import creat_folder
+    from .ImageProcessing import combine_images_to_pdf
+
+    temp_img_path = os.path.dirname(old_pdf_path) + '/temp'
+    creat_folder(temp_img_path)
+    os.makedirs(os.path.dirname(temp_img_path), exist_ok=True)
+    
+    transfer_pdf_to_img(old_pdf_path, temp_img_path)
+    combine_images_to_pdf(temp_img_path, new_pdf_path)
+    shutil.rmtree(temp_img_path)
 
 if __name__ == '__main__':
     # a = '(W//R\S/H\\U)'

@@ -3,7 +3,7 @@ from PIL import Image
 from pillow_heif import register_heif_opener
 
 
-def compress_img(old_img_path, new_img_path):
+def compress_img(old_img_path: str, new_img_path: str):
     register_heif_opener()
     Image.LOAD_TRUNCATED_IMAGES = True
     Image.MAX_IMAGE_PIXELS = None
@@ -13,7 +13,7 @@ def compress_img(old_img_path, new_img_path):
     img.save(new_img_path, optimize=True, quality=50)
     
 
-def combine_images_to_pdf(image_directory, output_pdf_path):
+def combine_images_to_pdf(image_directory: str, output_pdf_path: str) -> str:
     """
     将JPEG图片组合成单个PDF文件。
     :param image_paths: JPEG图片所在的保存文件夹。
