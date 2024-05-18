@@ -1,7 +1,9 @@
 # CelestialVault
-一些常用的辅助代码，主要包括一个用于辅助同步编程的库my_thread与正在完成中的爬虫框架my_spider。
+一些常用的辅助代码，主要包括放置常用工具函数的tools, 常用类的instances与常量的constants。以下各自介绍他们中最有用的部分内容:
 
-## my_thread
+## instances
+
+### my_thread
 这个代码库包含三个类：ThreadWorker ThreadManager和ExampleThreadManager。
 
 ThreadWorker 是一个继承自 threading.Thread 的类，它接受一个可调用对象 func 和一个参数列表 args。当线程运行时，它会尝试调用 func 并保存结果。如果在调用过程中抛出异常，它会保存异常信息。
@@ -21,7 +23,7 @@ ThreadManager 是一个线程管理器，可以并行、串行或异步地执行
 
 该程序还包括一个 ExampleThreadManager 类，这是 ThreadManager 类的子类，作为一个使用示例。ExampleThreadManager 类定义了如何从任务对象中获取函数参数、如何处理结果和错误等具体细节。
 
-## find_differ
+### inst_findiff
 这是一个用于对比字符串或字典的Python脚本。它包括以下主要函数：
 
 - fd_str(a, b, split_str='\n')：此函数接收两个字符串（a和b）以及一个可选的分隔符（默认为换行符）作为输入。然后，它调用compare_strings打印出两个字符串的长度和不同之处（根据提供的分隔符进行划分）。
