@@ -6,7 +6,7 @@ from tqdm import tqdm
 from typing import Callable
 
 
-def creat_folder(path: str) -> str:
+def creat_folder(path: str | Path) -> str:
     """
     判断系统是否存在该路径，没有则创建。
 
@@ -24,7 +24,7 @@ def creat_folder(path: str) -> str:
             continue
     return path
 
-def get_all_file_paths(directory: str) -> list:
+def get_all_file_paths(directory: str | Path) -> list:
     """
     获取给定目录下所有文件的绝对路径。
     
@@ -53,7 +53,7 @@ def handle_file(source: Path, destination: Path, action: Callable[[Path, Path], 
     else:
         logging.warning(f"File {destination} already exists. Skipping...")
 
-def compress_folder(folder_path: str) -> list:
+def compress_folder(folder_path: str | Path) -> list:
     """
     遍历指定文件夹，根据文件后缀名对文件进行压缩处理，并将处理后的文件存储到新的目录中。支持的文件类型包括图片、视频和PDF。不属于这三种类型的文件将被直接复制到新目录中。
     压缩后的文件会保持原始的目录结构。如果目标文件已存在，则会跳过处理。处理过程中遇到的任何错误都会被记录并返回。
@@ -83,11 +83,13 @@ def compress_folder(folder_path: str) -> list:
                 handle_file(file_path, new_file_path, compress_img)
             elif file_suffix in VIDEO_SUFFIXES:
                 name = new_file_path.stem.replace("_compressed", "")
-                new_video_path = new_folder_path / Path(name + '_compressed.mp4')
+                parent = new_file_path.parent
+                new_video_path = parent / Path(name + '_compressed.mp4')
                 handle_file(file_path, new_video_path, compress_video)
             elif file_suffix == 'pdf':
                 name = new_file_path.stem.replace("_compressed", "")
-                new_pdf_path = new_folder_path / Path(name + '_compressed.pdf')
+                parent = new_file_path.parent
+                new_pdf_path = parent / Path(name + '_compressed.pdf')
                 handle_file(file_path, new_pdf_path, compress_pdf)
             else:
                 handle_file(file_path, new_file_path, shutil.copy)

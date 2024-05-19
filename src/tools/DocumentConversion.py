@@ -3,9 +3,10 @@ import shutil, fitz
 import markdown
 import pdfkit
 from PIL import Image
+from pathlib import Path
 
 
-def md_to_pdf(input_directory: str, output_directory: str):
+def md_to_pdf(input_directory: str | Path, output_directory: str | Path):
     """
     将输入目录中的Markdown文件转换为PDF文件
 
@@ -32,7 +33,7 @@ def md_to_pdf(input_directory: str, output_directory: str):
         pdfkit.from_string(html_content, output_path)
         # print(f"Converted {md_file} to PDF")
 
-def transfer_pdf_to_img(pdf_path: str, img_path: str):
+def transfer_pdf_to_img(pdf_path: str | Path, img_path: str | Path):
     """
     将PDF文件转换为图片文件
 
@@ -54,7 +55,7 @@ def transfer_pdf_to_img(pdf_path: str, img_path: str):
     doc.close()
 
 
-def compress_pdf(old_pdf_path: str, new_pdf_path: str):
+def compress_pdf(old_pdf_path: str | Path, new_pdf_path: str | Path):
     '''
     压缩PDF，即将PDF转换为jpg图片，再将图片合并为PDF
 
@@ -62,15 +63,14 @@ def compress_pdf(old_pdf_path: str, new_pdf_path: str):
     :param new_pdf_path: 新PDF路径
     :return: None
     '''
-    from .FileOperations import creat_folder
-    from .ImageProcessing import combine_images_to_pdf
+    from .ImageProcessing import combine_img_to_pdf
 
-    temp_img_path = os.path.dirname(old_pdf_path) + '/temp'
-    creat_folder(temp_img_path)
-    os.makedirs(os.path.dirname(temp_img_path), exist_ok=True)
+    old_pdf_path = Path(old_pdf_path)
+    temp_img_path = old_pdf_path.parent.joinpath('temp')
+    temp_img_path.mkdir(parents=True, exist_ok=True)
     
     transfer_pdf_to_img(old_pdf_path, temp_img_path)
-    combine_images_to_pdf(temp_img_path, new_pdf_path)
+    combine_img_to_pdf(temp_img_path, new_pdf_path)
     shutil.rmtree(temp_img_path)
 
 if __name__ == '__main__':
