@@ -1,4 +1,3 @@
-import os
 import shutil
 import logging
 from pathlib import Path
@@ -6,36 +5,42 @@ from tqdm import tqdm
 from typing import Callable
 
 
-def creat_folder(path: str | Path) -> str:
+def create_folder(path: str | Path) -> Path:
     """
-    判断系统是否存在该路径，没有则创建。
+    判断系统是否存在该路径,没有则创建。
 
     :param path: 要创建的文件夹路径。
     :return: 创建或存在的文件夹路径。
     """
+    path = Path(path)  # 将输入路径转换为Path对象
+
     while True:
         try:
-            if not os.path.exists(path):
-                os.makedirs(path)
+            if not path.exists():
+                path.mkdir(parents=True)  # 创建目录,包括任何必要的父目录
             break
         except FileNotFoundError as e:
             print(e, path)
-            path = path[:-1]
+            path = path.parent  # 移除最后一个路径组件
             continue
+
     return path
 
-def get_all_file_paths(directory: str | Path) -> list:
+def get_all_file_paths(folder_path: str | Path) -> list:
     """
     获取给定目录下所有文件的绝对路径。
     
     :param directory: 要遍历的目录路径。
     :return: 所有文件的绝对路径列表。
     """
+    folder_path = Path(folder_path)
     file_paths = []  # 存储文件路径的列表
-    for root, dirs, files in os.walk(directory):
-        for file in files:
-            file_path = os.path.join(root, file)  # 构建文件的绝对路径
-            file_paths.append(file_path)  # 添加到列表中
+
+    # 遍历文件夹
+    for file_path in list(folder_path.glob('**/*')):
+        if not file_path.is_file():
+            continue
+        file_paths.append(file_path)
 
     return file_paths
 

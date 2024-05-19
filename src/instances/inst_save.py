@@ -2,9 +2,9 @@
 
 import logging
 from os.path import splitext, join, exists
-from .my_thread import ThreadManager, ExampleThreadManager
+from .my_thread import ExampleThreadManager
 from .inst_fetch import Fetcher
-from ..tools import creat_folder
+from ..tools import create_folder
 
 class FetchThread(ExampleThreadManager):
     def get_args(self, obj: object):
@@ -38,13 +38,13 @@ class Saver(object):
         self.add_path = ''
 
     def set_base_path(self, base_path):
-        self.base_path = creat_folder(base_path)
+        self.base_path = create_folder(base_path)
 
     def set_add_path(self, add_path):
         self.add_path = add_path
 
     def get_path(self, file_name, suffix_name):
-        middle_path = creat_folder(f'{self.base_path}/{self.add_path}')
+        middle_path = create_folder(f'{self.base_path}/{self.add_path}')
         path = join(middle_path, str(file_name))
         
         if splitext(path)[1] == '':

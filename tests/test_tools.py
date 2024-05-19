@@ -5,7 +5,7 @@ import pytest
 import logging
 from src.tools.TextTools import string_split
 from src.tools.ListDictTools import list_removes
-from src.tools.FileOperations import compress_folder
+from src.tools.FileOperations import compress_folder, get_all_file_paths
 
 
 def test_string_split():
@@ -26,3 +26,7 @@ def test_list_removes():
 
 def test_compress_folder():
     pass
+
+def test_get_all_file_paths():
+    file_path = get_all_file_paths('.')
+    logging.info(file_path)
