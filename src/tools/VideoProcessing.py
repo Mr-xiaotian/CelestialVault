@@ -3,7 +3,13 @@ from moviepy.editor import *
 from moviepy.config import change_settings
 
 def compress_video(old_video_path: str, new_video_path: str):
-    # 使用ffmpeg压缩视频
+    """
+    使用ffmpeg压缩视频
+    
+    参数:
+    old_video_path: 原始视频文件路径
+    new_video_path: 压缩后视频文件路径
+    """
     os.system(f'ffmpeg -i "{old_video_path}" -vcodec libx264 -crf 24 "{new_video_path}"')
 
 def join_and_label_videos(video_path1: str, video_path2: str, output_path: str):

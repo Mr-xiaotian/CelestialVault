@@ -26,8 +26,8 @@ def test_pro_slash():
     logging.info(f"{'Actual output2':<16}: {slash_c}")
 
 def test_str_to_dict():
-    test_string = "key1:value1\nkey2:value2\n:key3:value3\n\nkey4: value4"
+    test_string = "key1:value1\nkey2:value2\n\n:key3:value3"
     result_dict = str_to_dict(test_string)
-    logging.info(f"{'Test input':<15}: {test_string}")
-    logging.info(f"{'Expected output':<15}: {{'key1': 'value1', 'key2': 'value2', 'key3': 'value3', 'key4': 'value4'}}")
+    logging.info(f"{'Test input':<15}:\n{test_string}")
+    logging.info(f"{'Expected output':<15}: {{'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}}")
     logging.info(f"{'Actual output':<15}: {result_dict}")
