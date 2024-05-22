@@ -1,11 +1,19 @@
 from pprint import pprint
 from typing import List, Dict, Union, Tuple
-from .ListDictTools import list_removes
 
-def pro_slash(strs: str) -> str:
+
+def pro_slash(input_str: str) -> str:
     """
-    消除字符串中多余的转义符。
+    移除字符串中多余的转义符。
+
+    参数:
+    input_str (str): 要处理的字符串。
+
+    返回值:
+    str: 移除多余转义符后的字符串。
     """
+    '''
+    old:
     re_strs = repr(strs)
     while '\\\\' in re_strs:
         re_strs = re_strs.replace('\\\\', '\\')
@@ -19,22 +27,42 @@ def pro_slash(strs: str) -> str:
     except Exception as e:
         print(e)
         return strs
-
-def str_to_dict(strs: str) -> Dict[str, str]:
-    """
-    将字符串转化为字典。
-    """
-    header = strs.split('\n')
-    headers = {}
+    '''
+    if not input_str:
+        return input_str
     
-    while '' in header:
-        header.remove('')
+    # 替换多余的转义符
+    result_str = input_str.replace('\\\\', '\\')
+    
+    # 替换其他转义符
+    result_str = result_str.replace(r'\/', '/')
+    
+    return result_str
 
-    for h in header:
-        if h[0] == ':':
-            h = h[1:]
-        sp = h.partition(':')
-        headers[sp[0]] = sp[2].strip()
+def str_to_dict(string: str, spli_str: str = "\n") -> Dict[str, str]:
+    """
+    将字符串转化为字典，每行格式为 `key:value`，以指定的分隔符分隔行。
+
+    参数:
+    string (str): 包含键值对的字符串，每行一个键值对。
+    spli_str (str): 用于分隔行的字符串，默认是换行符。
+
+    返回值:
+    Dict[str, str]: 转化后的字典。
+    """
+    # 使用列表推导式去除空字符串
+    string_list = [line for line in string.split(spli_str) if line.strip()]
+
+    headers = {}
+
+    for line in string_list:
+        # 去掉行首的冒号
+        if line.startswith(':'):
+            line = line[1:]
+        
+        # 分割键和值
+        key, _, value = line.partition(':')
+        headers[key.strip()] = value.strip()
 
     return headers
 
@@ -51,7 +79,7 @@ def str_removes(strs: str, _remove: str) -> str:
     """
     return strs.replace(_remove, '')
 
-def str_replaces(strs: str, replace_list: list) -> str:
+def str_replaces(strs: str, replace_list: list[Tuple[str, str]]) -> str:
     for r in replace_list:
         strs = strs.replace(r[0], r[1])
     return strs
@@ -75,6 +103,9 @@ def iprint(obj: Union[List, Dict], start='', end=''):
     print(end, end='')
 
 def deal_cookie(*cookies):
+    """
+    处理cookie，将cookie字符串转化为字典。
+    """
     cookie_dicts = []
     for cookie in cookies:
         #cookie += '; '
@@ -89,13 +120,13 @@ def deal_cookie(*cookies):
 
     return cookie_dicts
 
-def string_split(string, split_str='\n'):
+def string_split(string: str, split_str: str='\n') -> list[str]:
     """
     将字符串按指定分隔符分割，返回一个列表，每个元素是分割后非空的子字符串。
     """
     return [s for s in string.split(split_str) if s]
 
-def strings_split(string_list, split_str='\n'):
+def strings_split(string_list: list[str], split_str: str='\n') -> list[list[str]]:
     """
     将多个字符串按指定分隔符分割，返回一个列表，每个元素是分割后非空的子字符串列表。
     """

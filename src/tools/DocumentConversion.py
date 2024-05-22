@@ -76,10 +76,6 @@ def compress_pdf(old_pdf_path: str | Path, new_pdf_path: str | Path):
     shutil.rmtree(temp_img_path)
 
 if __name__ == '__main__':
-    # a = '(W//R\S/H\\U)'
-    # b = "https:\/\/m10.music.126.net\/20211221203525\/cb633fbb6fd0423417ef492e2225ba45\/ymusic\/7dbe\/b17e\/1937\/9982bb924f5c3adc6f85679fcf221418.mp3"
-    #t = pro_slash(a)
-
     # join_and_label_videos(
     # r'F:\下载\魔法擦除_20230731_1(1)\temp\chf3_prob3.mp4', 
     # r'F:\下载\魔法擦除_20230731_1(1)\temp\chf3_prob3_stab_thm2.mp4',

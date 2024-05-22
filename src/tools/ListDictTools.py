@@ -50,8 +50,10 @@ def list_replace(lists: List[Any], replace_list: List[Tuple[Any, Any]]) -> List[
         # 如果元素是字符串且替换列表中的第一个元素在该字符串中，则进行替换
         if all_elements_are_type([element, *replacement], str) and replacement[0] in element:
             return element.replace(replacement[0], replacement[1])
+        # 如果元素与替换列表中的第一个元素类型相同且内容相同，则进行替换
         elif all_elements_same_type([element, replacement[0]]) and str(element) == str(replacement[0]):
             return replacement[1]
+        # 如果元素是函数且与替换列表中的第一个元素相同，则进行替换
         elif all_elements_are_type([element, replacement[0]], Callable) and functions_are_equal(element, replacement[0]):
             return replacement[1]
         # 如果元素不是字符串但等于替换列表中的第一个元素，则进行替换

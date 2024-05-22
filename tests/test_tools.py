@@ -14,11 +14,6 @@ def test_string_split():
 
     logging.info(result)
 
-
-
-
-
-
 def test_compress_folder():
     pass
 
