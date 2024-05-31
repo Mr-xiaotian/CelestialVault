@@ -1,4 +1,3 @@
-
 from moviepy.editor import *
 from moviepy.config import change_settings
 
