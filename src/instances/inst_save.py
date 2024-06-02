@@ -1,6 +1,7 @@
 # _*_ coding: utf-8 _*_
 
 import logging
+import subprocess
 from os.path import splitext, join, exists
 from .my_thread import ExampleThreadManager
 from .inst_fetch import Fetcher
@@ -88,6 +89,16 @@ class Saver(object):
         # await self.fetch_threader.start_async(url_list)
         # await self.fetcher.close_session()
         pass
+
+    def download_m3u8(self, m3u8_file_path, m3u8_url):
+        command = [
+            'ffmpeg',
+            '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
+            '-i', m3u8_url,
+            '-c', 'copy',
+            m3u8_file_path
+            ]
+        subprocess.run(command)
 
     def download_texts(self, text_list, encoding = 'utf-8', suffix_name = '.md'):
         for file_name,text in text_list:
