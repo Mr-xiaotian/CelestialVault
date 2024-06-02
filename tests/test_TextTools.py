@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import pytest
 import logging
-from src.tools.TextTools import pro_slash, str_to_dict
+from src.tools.TextTools import pro_slash, str_to_dict, language_fingerprint
 
 def test_pro_slash():
     string_a = '(W//R\S/H\\U)'
@@ -31,3 +31,9 @@ def test_str_to_dict():
     logging.info(f"{'Test input':<15}:\n{test_string}")
     logging.info(f"{'Expected output':<15}: {{'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}}")
     logging.info(f"{'Actual output':<15}: {result_dict}")
+
+def test_language_fingerprint():
+    with open(r'G:\Project\test\寻找走丢的舰娘(34653).txt', 'r', encoding = 'utf-8') as f:
+        text = f.read()
+    fingerprint = language_fingerprint(text)
+    logging.info(f"{'fingerprint':<15}:\n{fingerprint}")
