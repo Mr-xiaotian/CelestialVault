@@ -90,13 +90,13 @@ class Saver(object):
         # await self.fetcher.close_session()
         pass
 
-    def download_m3u8(self, m3u8_file_path, m3u8_url):
+    def download_m3u8(self, output_path, m3u8_url):
         command = [
             'ffmpeg',
             '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
             '-i', m3u8_url,
             '-c', 'copy',
-            m3u8_file_path
+            output_path
             ]
         subprocess.run(command)
 
