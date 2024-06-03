@@ -1,8 +1,9 @@
-# 忽略日志文件
+# 忽略日志
+logs/
 *.log
 
-# 忽略日志目录
-logs/
 
-# 忽略所有 .pyc 文件
-*.pyc
+# 忽略Byte编译的文件
+__pycache__/
+*.py[cod]
+*$py.class
