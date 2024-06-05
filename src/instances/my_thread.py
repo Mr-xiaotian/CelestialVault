@@ -7,11 +7,11 @@
 import sys
 import asyncio
 import traceback
-from time import time
-from loguru import logger
 from queue import Queue
 from threading import Thread
 from tqdm import tqdm
+from time import time
+from loguru import logger
 from tqdm.asyncio import tqdm as tqdm_asy
 from ..tools import get_now_time
 
