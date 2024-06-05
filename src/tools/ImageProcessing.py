@@ -1,4 +1,4 @@
-import re
+import re, io
 from PIL import Image
 from pathlib import Path
 from pillow_heif import register_heif_opener
@@ -45,3 +45,16 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
     images = [img.convert('RGB') for img in images]
     # 将所有图片保存为单个PDF
     images[0].save(pdf_path, save_all=True, append_images=images[1:])
+
+
+def img_to_binary(img: Image.Image) -> bytes:
+    # 将图片转换为二进制形式
+    buffered = io.BytesIO()
+    img.save(buffered, format="PNG")
+    binary_img = buffered.getvalue()
+    return binary_img
+
+def binary_to_img(binary_img: bytes) -> Image.Image:
+    # 将二进制数据转换为Image对象
+    img = Image.open(io.BytesIO(binary_img))
+    return img

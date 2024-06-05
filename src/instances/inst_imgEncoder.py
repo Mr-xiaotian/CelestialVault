@@ -1,5 +1,6 @@
+import base64
 import math
-from PIL import Image
+from PIL import Image, PngImagePlugin
 from tqdm import tqdm
 from itertools import product
 
@@ -88,7 +89,38 @@ class ImgEncoder:
             else:
                 x += 1
         return img
+    
+    def base64_to_img(self, base64_str: str) -> Image.Image:
+        from ..tools import binary_to_img
+        # 将Base64文本解码回二进制数据
+        binary_data = base64.b64decode(base64_str)
 
+        # 将二进制数据转换为Image对象
+        img = binary_to_img(binary_data)
+
+        return img
+    
+    def add_message_after_binary(self, binary_img: bytes, message: str) -> bytes:
+        # 将消息以二进制形式附加到PNG图像文件的末尾
+        binary_message = message.encode('utf-8')
+        binary_data = binary_img + binary_message
+
+        return binary_data
+    
+    def add_message_in_img(self, img: Image.Image, message_dict: dict[str: str]) -> Image.Image:
+        # 将文本字典添加到图像
+        for key in message_dict:
+            img.info[key] = message_dict[key]
+
+        return img
+    
+    def create_image_with_text_chunk(message: str, img: Image.Image, output_path: str):
+        # 打开图像文件并添加文本块
+        meta = PngImagePlugin.PngInfo()
+        meta.add_text("Message", message)
+
+        # 保存带有文本块的图像
+        img.save(output_path, "PNG", pnginfo=meta)
 
 class ImgDecoder:
     def decode_image(self, img_path: str, mode: str='grey') -> None:
@@ -114,14 +146,12 @@ class ImgDecoder:
         '''
         width, height = img.size
         text = ""
-        progress_len = height * math.ceil(width / 2)
+        progress_len = (height * width) // 2
         progress_bar = tqdm(total=progress_len, desc='Decoding img(grey):')
-        for i in range(0, progress_len, 2):  # 两个像素表示一个字符
-            high = img.getpixel((i%width, i//height))  # 获取high
-            if i+1 < progress_len:  # 如果还有像素，获取low
-                low = img.getpixel(((i+1)%width, (i+1)//height))
-            else:
-                low = 0
+        for i in range(0, progress_len*2, 2):  # 两个像素表示一个字符
+            high = img.getpixel((i%width, i//width))  # 获取high
+            low = img.getpixel(((i+1)%width, (i+1)//width))
+            
             index = high * 256 + low  # 还原index
             text += chr(index)  # 转化为字符
             progress_bar.update(1)
@@ -169,22 +199,19 @@ class ImgDecoder:
 
         progress_bar.close()
         return ''.join(chars)
-
-
-if __name__ == "__main__":
-    text_path = r'Q:\Project\test\text_img.txt'
-    image_path_grey = r'Q:\Project\test\text_img(grey).png'
-    image_path_rgba = r'Q:\Project\test\text_img(rgba).png'
-    image_path_rgba_full = r'Q:\Project\test\text_img(rgba_full).png'
-
-    # 编码
-    # encoder = ImgEncoder()
-    # encoder.encode_text(text_path, mode='grey')
-    # encoder.encode_text(text_path, mode='rgba')
-    # encoder.encode_text(text_path, mode='rgba_full')
     
-    # 解码
-    decoder = ImgDecoder()
-    decoder.decode_image(image_path_grey, mode='grey')
-    # decoder.decode_image(image_path_rgba, mode='rgba')
-    # decoder.decode_image(image_path_rgba_full, mode='rgba_full')
+    def img_to_base64(self, img: Image.Image) -> str:
+        from ..tools import img_to_binary
+        # 将Image数据转换为二进制数据
+        binary_data = img_to_binary(img)
+
+        # 将二进制数据编码成Base64文本
+        encoded_text = base64.b64encode(binary_data).decode('utf-8')
+
+        return encoded_text
+    
+    def read_message_from_binary(self, binary_data: bytes) -> str:
+        from ..tools import binary_to_img, img_to_binary
+
+        img_len = len(img_to_binary(binary_to_img(binary_data)))
+        return binary_data[img_len:]
