@@ -222,3 +222,29 @@ def delete_files(file_path: str | Path):
             shutil.rmtree(file)
             
     logging.info(f'删除完成:{file_path}')
+
+def print_directory_structure(start_path: str='.', indent: str='', exclude_dirs: list=[], exclude_exts: list=[]):
+    """
+    打印指定文件夹的目录结构。
+    
+    :param start_path: 起始文件夹的路径，默认为当前目录。
+    :param indent: 缩进字符串，用于格式化输出。
+    :param exclude_dirs: 要排除的目录列表，默认为空。
+    :param exclude_exts: 要排除的文件扩展名列表，默认为空。
+    """
+    start_path = Path(start_path)
+    
+    for item in start_path.iterdir():
+        # 排除指定的目录
+        if item.is_dir() and item.name in exclude_dirs:
+            continue
+        
+        # 排除指定的文件类型
+        if item.is_file() and any(item.suffix == ext for ext in exclude_exts):
+            continue
+        
+        if item.is_dir():
+            print(f"{indent}📁 {item.name}/")
+            print_directory_structure(item, indent + '    ', exclude_dirs, exclude_exts)
+        else:
+            print(f"{indent}📄 {item.name}")
