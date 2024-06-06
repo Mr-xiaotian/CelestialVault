@@ -3,8 +3,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import pytest
 import logging
-from src.tools.TextTools import string_split
-from src.tools.FileOperations import compress_folder, get_all_file_paths
+from tools.TextTools import string_split
+from tools.FileOperations import compress_folder, get_all_file_paths
 
 
 def test_string_split():

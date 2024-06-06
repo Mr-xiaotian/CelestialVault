@@ -223,7 +223,7 @@ def delete_files(file_path: str | Path):
             
     logging.info(f'删除完成:{file_path}')
 
-def print_directory_structure(start_path: str='.', indent: str='', exclude_dirs: list=None, exclude_exts: list=None):
+def print_directory_structure(start_path: str='.', indent: str='', exclude_dirs: list=None, exclude_exts: list=None, max_depth: int=3):
     """
     打印指定文件夹的目录结构。
     
@@ -232,11 +232,13 @@ def print_directory_structure(start_path: str='.', indent: str='', exclude_dirs:
     :param exclude_dirs: 要排除的目录列表，默认为空列表。
     :param exclude_exts: 要排除的文件扩展名列表，默认为空列表。
     """
-    from ..constants import FILE_ICONS
+    from constants import FILE_ICONS
     if exclude_dirs is None:
         exclude_dirs = []
     if exclude_exts is None:
         exclude_exts = []
+    if max_depth < 1:
+        return
 
     start_path: Path = Path(start_path)
     
@@ -251,7 +253,7 @@ def print_directory_structure(start_path: str='.', indent: str='', exclude_dirs:
         
         if item.is_dir():
             print(f"{indent}📁 {item.name}/")
-            print_directory_structure(item, indent + '    ', exclude_dirs, exclude_exts)
+            print_directory_structure(item, indent + '    ', exclude_dirs, exclude_exts, max_depth-1)
         else:
             icon = FILE_ICONS.get(item.suffix, FILE_ICONS['default'])
             print(f"{indent}{icon} {item.name}")

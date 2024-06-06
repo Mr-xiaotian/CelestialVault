@@ -2,7 +2,7 @@ import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest, logging
-from src.instances import ImgEncoder, ImgDecoder
+from instances import ImgEncoder, ImgDecoder
 
 def test_imgEncoder():
     text_path = r'G:\Project\test\寻找走丢的舰娘(34653).txt'

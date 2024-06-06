@@ -2,7 +2,7 @@ import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest, logging
-from src.instances import ThreadManager, ExampleThreadManager
+from instances import ThreadManager, ExampleThreadManager
 
 
 async def generate_new_tasks(n):

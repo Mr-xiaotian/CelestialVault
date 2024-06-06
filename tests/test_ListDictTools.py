@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import pytest
 import logging
-from src.tools.ListDictTools import list_removes, list_replace, multi_loop_generator, dictkey_mix
+from tools.ListDictTools import list_removes, list_replace, multi_loop_generator, dictkey_mix
 
 def test_list_removes():
     input_list = [1, 2, 3, 2, 4, 2]

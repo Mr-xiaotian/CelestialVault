@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import pytest
 import logging
-from src.tools.TextTools import pro_slash, str_to_dict, language_fingerprint
+from tools.TextTools import pro_slash, str_to_dict, language_fingerprint
 
 def test_pro_slash():
     string_a = '(W//R\S/H\\U)'
