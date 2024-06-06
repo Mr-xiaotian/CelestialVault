@@ -20,7 +20,7 @@ EMAIL_REGEX_2 = re.compile(r"[\w!#$%&'*+/=?^_`{|}~-]+(?:\.[\w!#$%&'*+/=?^_`{|}~-
 
 # 匹配网址URL
 URL_REGEX_0 = re.compile(r'(https?|ftp)://[^\s/$.?#].[^\s]*')
-URL_REGEX_1 = re.compile(r'[a-zA-z]+://[^\s]*')
+URL_REGEX_1 = re.compile(r'[a-zA-z]+://\S*')
 
 # 匹配国内电话号码
 PHONE_REGEX_0 = re.compile(r'(\(\d{3,4}\)|\d{3,4}-|\s)?\d{7,14}')
