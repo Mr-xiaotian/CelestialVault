@@ -9,4 +9,4 @@ def test_print_directory_structure():
     exclude_dirs = ['.git', '.pytest_cache', '__pycache__']
     exclude_exts = ['.pyc', '.pyo']
     print()
-    print_directory_structure(r'.', exclude_dirs = exclude_dirs, exclude_exts = exclude_exts)
+    print_directory_structure(r'Q:\Project\data', exclude_dirs = exclude_dirs, exclude_exts = exclude_exts)
