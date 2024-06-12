@@ -132,6 +132,9 @@ class ThreadManager:
         raise NotImplementedError("This method should be overridden")
     
     def get_task_info(self, task):
+        """
+        获取任务信息
+        """
         info_list = []
         for arg in self.get_args(task):
             arg = f'{arg}'
@@ -142,6 +145,9 @@ class ThreadManager:
         return "(" + ", ".join(info_list) + ")"
     
     def get_result_info(self, result):
+        """
+        获取结果信息
+        """
         result = f"{result}"
         if len(result) < self.max_info:
             return result

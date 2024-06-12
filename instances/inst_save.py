@@ -30,10 +30,12 @@ class Saver(object):
         self.fetcher = Fetcher(**kwargs)
         self.fetch_threader = FetchThread(
             self.fetcher.getContent, 
-            tqdm_desc='urlsFetchProcess', show_progress=show_progress)
+            tqdm_desc='urlsFetchProcess', 
+            show_progress=show_progress)
         self.save_threader = SaveThread(
             self.download_content, 
-            tqdm_desc='urlsSaveProcess', show_progress=False)
+            tqdm_desc='urlsSaveProcess', 
+            show_progress=False)
 
         self.set_base_path(base_path)
         self.add_path = ''
