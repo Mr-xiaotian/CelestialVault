@@ -3,13 +3,13 @@
 #作者：晓天
 
 from itertools import zip_longest
-from ..tools import strings_split
 
 class Findiffer:
     def __init__(self) -> None:
         pass
 
     def fd_str(self, string_a, string_b, split_str = '\n'):
+        from ..tools import strings_split
         # 打印出a和b的长度
         print(f'len(a):{len(string_a)}, len(b):{len(string_b)}\n')
         # 打印出a和b不同的地方

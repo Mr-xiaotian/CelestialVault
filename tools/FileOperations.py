@@ -1,6 +1,5 @@
 import shutil
 import logging
-import os
 import zipfile, rarfile, py7zr
 from pathlib import Path
 from tqdm import tqdm

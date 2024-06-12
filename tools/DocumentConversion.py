@@ -1,4 +1,4 @@
-import shutil, fitz
+import fitz, shutil
 import markdown
 import pdfkit
 from PIL import Image

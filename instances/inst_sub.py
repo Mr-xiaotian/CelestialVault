@@ -3,7 +3,6 @@ from os import listdir
 from os.path import getsize
 from html import unescape
 from urllib.parse import quote,unquote
-from ..tools import pro_slash
 
 
 class Suber:
@@ -55,6 +54,7 @@ class Suber:
             print('清理完毕')
 
     def clear_texts(self, texts, dicts = {}):
+        from ..tools import pro_slash
         texts = pro_slash(texts)
         texts = unquote(unescape(texts))
         
