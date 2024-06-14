@@ -18,7 +18,9 @@ from tqdm.asyncio import tqdm as tqdm_asy
 # Configure logging
 logger.remove()  # remove the default handler
 now_time = strftime("%Y-%m-%d", localtime())
-logger.add(f"logs/thread_manager({now_time}).log", format="{time:YYYY-MM-DD HH:mm:ss} {level} {message}")
+logger.add(f"logs/thread_manager({now_time}).log", 
+           format="{time:YYYY-MM-DD HH:mm:ss} {level} {message}", 
+           level="INFO")
 
 # We redefine the ThreadWorker class
 class ThreadWorker(Thread):
@@ -261,6 +263,7 @@ class ThreadManager:
         progress_bar = tqdm(total=len(dictory), desc=self.tqdm_desc) if self.show_progress else None
         for num,d in enumerate(dictory):
             try:
+                start_time = time.time()
                 result = self.func(*self.get_args(d))
                 self.result_dict[d] = result
             except Exception as e:
@@ -273,7 +276,7 @@ class ThreadManager:
                     self.error_dict[d] = e
                     logger.error(f"Task {self.get_task_info(d)} failed and reached the retry limit.")
             else:
-                logger.success(f"Task {self.get_task_info(d)} completed by serial. Result is {self.get_result_info(result)}.")
+                logger.success(f"Task {self.get_task_info(d)} completed by serial. Result is {self.get_result_info(result)}. Used {time.time() - start_time: .2f} seconds.")
             progress_bar.update(1) if self.show_progress else None
 
         progress_bar.close() if self.show_progress else None
@@ -286,6 +289,7 @@ class ThreadManager:
         dictory: 任务列表
         """
         threads = []
+        start_time = time.time()
         for d in dictory:
             thread = ThreadWorker(self.func, self.get_args(d), 
                                   self.result_queue, d)
@@ -306,7 +310,7 @@ class ThreadManager:
                     logger.error(f"Task {self.get_task_info(d)} failed and reached the retry limit.")
             else:
                 result = thread.get_result()
-                logger.success(f"Task {self.get_task_info(d)} completed by parallel. Result is {self.get_result_info(result)}.")
+                logger.success(f"Task {self.get_task_info(d)} completed by parallel. Result is {self.get_result_info(result)}. Used {time.time() - start_time: .2f} seconds.")
             progress_bar.update(1) if self.show_progress else None
 
         progress_bar.close() if self.show_progress else None
@@ -319,6 +323,7 @@ class ThreadManager:
         dictory: 任务列表
         """
         tasks = []
+        start_time = time.time()
         for d in dictory:
             task = asyncio.create_task(self.func(*self.get_args(d)))
             tasks.append(task)
@@ -338,7 +343,7 @@ class ThreadManager:
                     self.error_dict[d] = e
                     logger.error(f"Task {task} failed and reached the retry limit.")
             else:
-                logger.success(f"Task {task} completed by async. Result is {self.get_result_info(result)}.")
+                logger.success(f"Task {task} completed by async. Result is {self.get_result_info(result)}. Used {time.time() - start_time: .2f} seconds.")
             progress_bar.update(1) if self.show_progress else None
 
         progress_bar.close() if self.show_progress else None
@@ -352,6 +357,7 @@ class ThreadManager:
         """
         processes = []
         result_queue = MPQueue()
+        start_time = time.time()
 
         for d in dictory:
             process = ProcessWorker(self.func, self.get_args(d), result_queue, d)
@@ -377,7 +383,7 @@ class ThreadManager:
                         self.error_dict[task] = output
                         logger.error(f"Task {self.get_task_info(task)} failed and reached the retry limit.")
                 else:
-                    logger.success(f"Task {self.get_task_info(task)} completed by multiprocessing. Result is {self.get_result_info(output)}.")
+                    logger.success(f"Task {self.get_task_info(task)} completed by multiprocessing. Result is {self.get_result_info(output)}. Used {time.time() - start_time: .2f} seconds.")
                     self.result_dict[task] = output
             
     def get_result_dict(self):

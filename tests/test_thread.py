@@ -29,7 +29,7 @@ def test_thread_manager():
                                    show_progress=False)
 
     # Assuming dictory is the list of tasks you want to test
-    results = manager.test_methods(range(10, 16))
+    results = manager.test_methods([50,])
     logging.info(results)
 
 # def test_multiprocessing():
