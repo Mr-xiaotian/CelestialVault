@@ -70,7 +70,7 @@ def compress_folder(folder_path: str | Path) -> list:
     from .ImageProcessing import compress_img
     from .VideoProcessing import compress_video
     from .DocumentConversion import compress_pdf
-    from ..constants import IMG_SUFFIXES, VIDEO_SUFFIXES
+    from constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 
     folder_path = Path(folder_path)
     new_folder_path = folder_path.parent / (folder_path.name + "_re")
