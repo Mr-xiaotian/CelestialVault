@@ -279,7 +279,6 @@ def detect_identical_files(folder_path: str | Path):
     :param folder_path: 要检测的文件夹路径。
     """
     folder_path = Path(folder_path)
-    max_name_len = 0
     
     # 根据文件大小进行初步筛选
     size_dict = defaultdict(list)
@@ -291,13 +290,12 @@ def detect_identical_files(folder_path: str | Path):
     
     # 对于相同大小的文件，进一步计算哈希值
     hash_dict = defaultdict(list)
-    for size, files in size_dict.items():
+    for size, files in tqdm(size_dict.items()):
         if len(files) < 2:
             continue
         for file_path in files:
             file_hash_value = file_hash(file_path)
             file_path_str = str(file_path)
-            max_name_len = max(max_name_len, len(file_path_str))
             hash_dict[(file_hash_value, size)].append(file_path_str)
     
     # 找出哈希值相同的文件
@@ -307,54 +305,31 @@ def detect_identical_files(folder_path: str | Path):
         print("Identical files found:")
         for (hash_value,file_size), file_list in identical_files.items():
             print(f"Hash: {hash_value}")
+            max_name_len = max(len(file) for file in file_list)
             for file in file_list:
-                print(f" - {str(file):<{max_name_len}} (Size: {file_size} bytes)")
+                print(f" - {file:<{max_name_len}} (Size: {file_size} bytes)")
     else:
         print("No identical files found.")
 
+def delete_identical_files(folder_path: str | Path, delete_size: int, delete_hash: str):
+    """
+    删除文件夹中相同内容的文件。
 
-def detect_identical_files_v1(folder_path: str | Path):
-    hash_dict = {}
-    max_name_len = 0
+    :param folder_path: 要删除的文件夹路径。
+    :param delete_size: 要删除的文件大小。
+    :param delete_hash: 要删除的文件哈希值。
+    """
     folder_path = Path(folder_path)
-    for file_path in list(folder_path.glob('**/*')):
+    
+    delete_list = []
+    for file_path in tqdm(list(folder_path.glob('**/*'))):
         if not file_path.is_file():
             continue
-
-        file_hash_value = file_hash(file_path)
-        file_size = file_path.stat().st_size
-        max_name_len = max(max_name_len, len(str(file_path)))
-
-        if file_hash_value in hash_dict:
-            hash_dict[file_hash_value].append((file_path, file_size))
-        else:
-            hash_dict[file_hash_value] = [(file_path, file_size)]
-    
-    identical_files = {k: v for k, v in hash_dict.items() if len(v) > 1}
-    
-    return identical_files
-
-def detect_identical_files_v2(folder_path: str | Path):
-    folder_path = Path(folder_path)
-    max_name_len = 0
-
-    size_dict = defaultdict(list)
-    for file_path in list(folder_path.glob('**/*')):
-        if not file_path.is_file():
+        if file_path.stat().st_size != delete_size:
             continue
-        file_size = file_path.stat().st_size
-        size_dict[file_size].append(file_path)
-    
-    hash_dict = defaultdict(list)
-    for size, files in size_dict.items():
-        if len(files) < 2:
+        if file_hash(file_path) != delete_hash:
             continue
-        for file_path in files:
-            file_hash_value = file_hash(file_path)
-            file_path_str = str(file_path)
-            max_name_len = max(max_name_len, len(file_path_str))
-            hash_dict[(file_hash_value, size)].append(file_path_str)
-    
-    identical_files = {k: v for k, v in hash_dict.items() if len(v) > 1}
-    
-    return identical_files
+        file_path.unlink()
+        delete_list.append(file_path)
+
+    return delete_list
