@@ -335,8 +335,10 @@ def detect_identical_files_v1(folder_path: str | Path):
     return identical_files
 
 def detect_identical_files_v2(folder_path: str | Path):
-    size_dict = defaultdict(list)
     folder_path = Path(folder_path)
+    max_name_len = 0
+
+    size_dict = defaultdict(list)
     for file_path in list(folder_path.glob('**/*')):
         if not file_path.is_file():
             continue
@@ -349,7 +351,9 @@ def detect_identical_files_v2(folder_path: str | Path):
             continue
         for file_path in files:
             file_hash_value = file_hash(file_path)
-            hash_dict[file_hash_value].append((file_path, file_path.stat().st_size))
+            file_path_str = str(file_path)
+            max_name_len = max(max_name_len, len(file_path_str))
+            hash_dict[(file_hash_value, size)].append(file_path_str)
     
     identical_files = {k: v for k, v in hash_dict.items() if len(v) > 1}
     
