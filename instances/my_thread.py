@@ -4,7 +4,7 @@
 #时间：30/7/2023
 
 # We import the necessary modules
-import asyncio
+import sys,asyncio
 import traceback
 from queue import Queue
 from threading import Thread
