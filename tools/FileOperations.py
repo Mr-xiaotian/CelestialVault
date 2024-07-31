@@ -323,7 +323,8 @@ def duplicate_files_report(identical_files: Dict[Tuple[str, int], List[Path]]):
                 report.append(f" - {str(file):<{max_name_len}} (Size: {file_size} bytes)")
     else:
         report.append("No identical files found.")
-    return "\n".join(report)
+        
+    print("\n".join(report))
 
 def delete_identical_files(identical_files: Dict[Tuple[str, int], List[Path]]):
     """
@@ -355,8 +356,9 @@ def move_identical_files(identical_files: Dict[Tuple[str, int], List[Path]], tar
     """
     target_folder = Path(target_folder)
     moved_files = []
+    report = []
 
-    for (hash_value, file_size), file_list in identical_files.items():
+    for (hash_value, file_size), file_list in tqdm(identical_files.items()):
         for file in file_list:
             if size_threshold is not None and file_size <= size_threshold:
                 continue
@@ -367,20 +369,22 @@ def move_identical_files(identical_files: Dict[Tuple[str, int], List[Path]], tar
 
             # 如果文件已经在目标路径，跳过
             if file.resolve() == target_path.resolve():
-                print(f"File {file} is already in the target path.")
+                report.append(f"File {file} is already in the target path.")
                 continue
             
             # 仅保留一个相同名称的文件
             if target_path.exists():
-                print(f"File {target_path} already exists. Skipping {file}.")
+                report.append(f"File {target_path} already exists. Skipping {file}.")
                 file.unlink()  # 删除重复文件
                 continue
 
             try:
                 file.rename(target_path)
                 moved_files.append((file, target_path))
-                print(f"Moved: {file} -> {target_path}")
+                report.append(f"Moved: {file} -> {target_path}")
             except Exception as e:
-                print(f"Error moving {file} to {target_path}: {e}")
+                report.append(f"Error moving {file} to {target_path}: {e}")
     
+    print("\n".join(report))
+
     return moved_files
