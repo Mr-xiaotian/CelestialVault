@@ -216,7 +216,7 @@ def delete_files(file_path: str | Path):
     file_path = Path(file_path)
     logging.info(f'开始删除:{file_path}')
     
-    for file in tqdm(list(file_path.glob('**/*'))):
+    for file in tqdm(list(file_path.iterdir())):
         if file.is_file():
             file.unlink()
         elif file.is_dir():
@@ -358,17 +358,29 @@ def move_identical_files(identical_files: Dict[Tuple[str, int], List[Path]], tar
 
     for (hash_value, file_size), file_list in identical_files.items():
         for file in file_list:
-            if size_threshold is None or file_size > size_threshold:
-                target_subfolder = target_folder / hash_value
-                if not target_subfolder.exists():
-                    target_subfolder.mkdir(parents=True)
-                target_path = target_subfolder / file.name
+            if size_threshold is not None and file_size <= size_threshold:
+                continue
+            target_subfolder = target_folder / hash_value
+            if not target_subfolder.exists():
+                target_subfolder.mkdir(parents=True)
+            target_path = target_subfolder / file.name
 
-                try:
-                    file.rename(target_path)
-                    moved_files.append((file, target_path))
-                    print(f"Moved: {file} -> {target_path}")
-                except Exception as e:
-                    print(f"Error moving {file} to {target_path}: {e}")
+            # 如果文件已经在目标路径，跳过
+            if file.resolve() == target_path.resolve():
+                print(f"File {file} is already in the target path.")
+                continue
+            
+            # 仅保留一个相同名称的文件
+            if target_path.exists():
+                print(f"File {target_path} already exists. Skipping {file}.")
+                file.unlink()  # 删除重复文件
+                continue
+
+            try:
+                file.rename(target_path)
+                moved_files.append((file, target_path))
+                print(f"Moved: {file} -> {target_path}")
+            except Exception as e:
+                print(f"Error moving {file} to {target_path}: {e}")
     
     return moved_files
