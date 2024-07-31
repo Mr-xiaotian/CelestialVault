@@ -4,7 +4,7 @@ import hashlib
 import zipfile, rarfile, py7zr
 from pathlib import Path
 from tqdm import tqdm
-from typing import Callable
+from typing import Callable, Dict, Tuple, List
 from collections import defaultdict
 
 
@@ -224,26 +224,30 @@ def delete_files(file_path: str | Path):
             
     logging.info(f'删除完成:{file_path}')
 
-def print_directory_structure(start_path: str='.', indent: str='', exclude_dirs: list=None, exclude_exts: list=None, max_depth: int=3):
+def print_directory_structure(folder_path: str='.', indent: str='', exclude_dirs: list=None, exclude_exts: list=None, max_depth: int=3):
     """
     打印指定文件夹的目录结构。
     
-    :param start_path: 起始文件夹的路径，默认为当前目录。
+    :param folder_path: 起始文件夹的路径，默认为当前目录。
     :param indent: 缩进字符串，用于格式化输出。
     :param exclude_dirs: 要排除的目录列表，默认为空列表。
     :param exclude_exts: 要排除的文件扩展名列表，默认为空列表。
+    :param max_depth: 最大递归深度，默认为3。
     """
     from constants import FILE_ICONS
+    folder_path: Path = Path(folder_path)
     if exclude_dirs is None:
         exclude_dirs = []
     if exclude_exts is None:
         exclude_exts = []
     if max_depth < 1:
         return
+    if not any(folder_path.iterdir()):
+        return
 
-    start_path: Path = Path(start_path)
+    max_name_len = max(len(str(item.name)) for item in folder_path.iterdir() if item.is_file())
     
-    for item in start_path.iterdir():
+    for item in folder_path.iterdir():
         # 排除指定的目录
         if item.is_dir() and item.name in exclude_dirs:
             continue
@@ -257,7 +261,7 @@ def print_directory_structure(start_path: str='.', indent: str='', exclude_dirs:
             print_directory_structure(item, indent + '    ', exclude_dirs, exclude_exts, max_depth-1)
         else:
             icon = FILE_ICONS.get(item.suffix, FILE_ICONS['default'])
-            print(f"{indent}{icon} {item.name}")
+            print(f"{indent}{icon} {item.name:<{max_name_len}} \t({item.stat().st_size} bytes)")
 
 def file_hash(file_path: Path) -> str:
     """
@@ -272,11 +276,12 @@ def file_hash(file_path: Path) -> str:
             hash_algo.update(chunk)
     return hash_algo.hexdigest()
 
-def detect_identical_files(folder_path: str | Path):
+def detect_identical_files(folder_path: str | Path) -> Dict[Tuple[str, int], List[Path]]:
     """
     检测文件夹中是否存在相同内容的文件，并在文件名后添加文件大小。
 
     :param folder_path: 要检测的文件夹路径。
+    :return: 相同文件的字典，键为文件大小和哈希值，值为文件路径列表。
     """
     folder_path = Path(folder_path)
     
@@ -295,41 +300,75 @@ def detect_identical_files(folder_path: str | Path):
             continue
         for file_path in files:
             file_hash_value = file_hash(file_path)
-            file_path_str = str(file_path)
-            hash_dict[(file_hash_value, size)].append(file_path_str)
+            hash_dict[(file_hash_value, size)].append(file_path)
     
     # 找出哈希值相同的文件
     identical_files = {k: v for k, v in hash_dict.items() if len(v) > 1}
     
+    return identical_files
+
+def duplicate_files_report(identical_files: Dict[Tuple[str, int], List[Path]]):
+    """
+    生成一个详细报告，列出所有重复的文件及其位置。
+
+    :param identical_files: 相同文件的字典，由 detect_identical_files 函数返回。
+    """
+    report = []
     if identical_files:
-        print("Identical files found:")
+        report.append("Identical files found:")
         for (hash_value,file_size), file_list in identical_files.items():
-            print(f"Hash: {hash_value}")
-            max_name_len = max(len(file) for file in file_list)
+            report.append(f"Hash: {hash_value}")
+            max_name_len = max(len(str(file)) for file in file_list)
             for file in file_list:
-                print(f" - {file:<{max_name_len}} (Size: {file_size} bytes)")
+                report.append(f" - {str(file):<{max_name_len}} (Size: {file_size} bytes)")
     else:
-        print("No identical files found.")
+        report.append("No identical files found.")
+    return "\n".join(report)
 
-def delete_identical_files(folder_path: str | Path, delete_size: int, delete_hash: str):
+def delete_identical_files(identical_files: Dict[Tuple[str, int], List[Path]]):
     """
-    删除文件夹中相同内容的文件。
+    删除文件夹中所有相同内容的文件。
 
-    :param folder_path: 要删除的文件夹路径。
-    :param delete_size: 要删除的文件大小。
-    :param delete_hash: 要删除的文件哈希值。
+    :param identical_files: 相同文件的字典，由 detect_identical_files 函数返回。
+    :return: 删除的文件列表。
     """
-    folder_path = Path(folder_path)
-    
     delete_list = []
-    for file_path in tqdm(list(folder_path.glob('**/*'))):
-        if not file_path.is_file():
-            continue
-        if file_path.stat().st_size != delete_size:
-            continue
-        if file_hash(file_path) != delete_hash:
-            continue
-        file_path.unlink()
-        delete_list.append(file_path)
+    for (hash_value,file_size), file_list in identical_files.items():
+        for file in file_list:
+            try:
+                file.unlink()
+                delete_list.append(file)
+                print(f"Deleted: {file}")
+            except Exception as e:
+                print(f"Error deleting {file}: {e}")
 
     return delete_list
+
+def move_identical_files(identical_files: Dict[Tuple[str, int], List[Path]], target_folder: str | Path, size_threshold: int = None):
+    """
+    将相同内容的文件移动到指定的目标文件夹。
+
+    :param identical_files: 相同文件的字典，由 detect_identical_files 函数返回。
+    :param target_folder: 目标文件夹路径。
+    :param size_threshold: 文件大小阈值，只有大于此阈值的文件会被移动。如果为 None，则不限制文件大小。
+    :return: 移动的文件列表。
+    """
+    target_folder = Path(target_folder)
+    moved_files = []
+
+    for (hash_value, file_size), file_list in identical_files.items():
+        for file in file_list:
+            if size_threshold is None or file_size > size_threshold:
+                target_subfolder = target_folder / hash_value
+                if not target_subfolder.exists():
+                    target_subfolder.mkdir(parents=True)
+                target_path = target_subfolder / file.name
+
+                try:
+                    file.rename(target_path)
+                    moved_files.append((file, target_path))
+                    print(f"Moved: {file} -> {target_path}")
+                except Exception as e:
+                    print(f"Error moving {file} to {target_path}: {e}")
+    
+    return moved_files
