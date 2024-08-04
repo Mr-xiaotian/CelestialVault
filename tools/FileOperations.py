@@ -55,6 +55,9 @@ def handle_file(source: Path, destination: Path, action: Callable[[Path, Path], 
     :param destination: 目标文件路径。
     :param action: 处理文件的函数或方法。
     """
+    if destination.exists():
+        return
+    
     destination.parent.mkdir(parents=True, exist_ok=True)
     if not destination.exists():
         action(source, destination)
@@ -70,7 +73,7 @@ def compress_folder(folder_path: str | Path) -> list:
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
     from .ImageProcessing import compress_img
-    from .VideoProcessing import compress_video
+    from .VideoProcessing import compress_video, gif_to_video
     from .DocumentConversion import compress_pdf
     from constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 
@@ -94,11 +97,16 @@ def compress_folder(folder_path: str | Path) -> list:
                 parent = new_file_path.parent
                 new_video_path = parent / Path(name + '_compressed.mp4')
                 handle_file(file_path, new_video_path, compress_video)
-            elif file_suffix == 'pdf':
+            elif file_suffix in ['pdf', 'PDF'] :
                 name = new_file_path.stem.replace("_compressed", "")
                 parent = new_file_path.parent
                 new_pdf_path = parent / Path(name + '_compressed.pdf')
                 handle_file(file_path, new_pdf_path, compress_pdf)
+            elif file_suffix in ['gif', 'GIF']:
+                name = new_file_path.stem.replace("_compressed", "")
+                parent = new_file_path.parent
+                new_video_path = parent / Path(name + '_compressed.mp4')
+                handle_file(file_path, new_video_path, gif_to_video)
             else:
                 handle_file(file_path, new_file_path, shutil.copy)
         except OSError as e:

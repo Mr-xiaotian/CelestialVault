@@ -1,5 +1,8 @@
 from moviepy.editor import *
+from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
 from moviepy.config import change_settings
+import subprocess
+
 
 def compress_video(old_video_path: str, new_video_path: str):
     """
@@ -37,3 +40,26 @@ def join_and_label_videos(video_path1: str, video_path2: str, output_path: str):
 
     # 保存结果
     final_video.write_videofile(output_path, fps=24)
+
+
+def gif_to_video(gif_path, output_path):
+    """
+    将GIF文件转换为MP4视频文件
+
+    参数:
+    gif_path: GIF文件路径
+    output_path: 输出MP4文件路径
+    """
+    # 将路径转换为字符串
+    gif_path = str(gif_path)
+    output_path = str(output_path)
+    
+    # 使用FFmpeg命令进行转换
+    command = [
+        'ffmpeg', '-y', '-i', gif_path,
+        '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+        '-movflags', 'faststart', '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+        output_path
+    ]
+    
+    subprocess.run(command, check=True)
