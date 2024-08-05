@@ -74,11 +74,3 @@ def compress_pdf(old_pdf_path: str | Path, new_pdf_path: str | Path):
     transfer_pdf_to_img(old_pdf_path, temp_img_path)
     combine_imgs_to_pdf(temp_img_path, new_pdf_path)
     shutil.rmtree(temp_img_path)
-
-if __name__ == '__main__':
-    # join_and_label_videos(
-    # r'F:\下载\魔法擦除_20230731_1(1)\temp\chf3_prob3.mp4', 
-    # r'F:\下载\魔法擦除_20230731_1(1)\temp\chf3_prob3_stab_thm2.mp4',
-    # r'F:\下载\魔法擦除_20230731_1(1)\temp\mix.mp4'
-    #                     )
-    pass

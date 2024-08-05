@@ -46,7 +46,6 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
     # 将所有图片保存为单个PDF
     images[0].save(pdf_path, save_all=True, append_images=images[1:])
 
-
 def img_to_binary(img: Image.Image) -> bytes:
     # 将图片转换为二进制形式
     buffered = io.BytesIO()

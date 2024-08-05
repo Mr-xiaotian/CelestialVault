@@ -295,7 +295,7 @@ def detect_identical_files(folder_path: str | Path) -> Dict[Tuple[str, int], Lis
     
     # 根据文件大小进行初步筛选
     size_dict = defaultdict(list)
-    for file_path in tqdm(list(folder_path.glob('**/*'))):
+    for file_path in tqdm(list(folder_path.glob('**/*')), desc='Scanning files'):
         if not file_path.is_file():
             continue
         file_size = file_path.stat().st_size
@@ -303,7 +303,7 @@ def detect_identical_files(folder_path: str | Path) -> Dict[Tuple[str, int], Lis
     
     # 对于相同大小的文件，进一步计算哈希值
     hash_dict = defaultdict(list)
-    for size, files in tqdm(size_dict.items()):
+    for size, files in tqdm(size_dict.items(), desc='Calculating file hashes'):
         if len(files) < 2:
             continue
         for file_path in files:
