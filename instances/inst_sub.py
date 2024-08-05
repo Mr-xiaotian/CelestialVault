@@ -1,4 +1,4 @@
-import re, chardet
+import re, chardet, tqdm
 from os import listdir
 from os.path import getsize
 from html import unescape
@@ -19,8 +19,9 @@ class Suber:
                          ('(?<!\n)```', '\n```'),
                          ('```(?!\n)', '```\n'),
                          ('(?<!\n)\n(?!\n)', '\n\n'),
-                         ('\s{3,}', '\n\n'),
-                         
+                         ('\s{3,}', '\n\n'), ('', ''),
+                         ('　', '')
+                         (r'(?<![.!?。！？])\n', '')
                          ]
                          
         self.sub_name_list = [('：','_'), (':','_'), (r'\\','_'), ('/','_'),
@@ -31,6 +32,8 @@ class Suber:
 
     def clear_books(self, base_path):
         book_list = listdir(base_path)
+        error_list = []
+
         for book in book_list:
             print(book.split('.')[0], end = '')
             book_path = base_path + '\\' + book
@@ -40,22 +43,24 @@ class Suber:
             if 'GB' in detect:
                 detect = 'GB18030'
             
-            with open(book_path, 'r', encoding = detect) as f:
-                try:
+            try:
+                with open(book_path, 'r', encoding = detect) as f:
                     book_text = f.read()
-                except Exception as e:
-                    print(f'{book_path}清理失败')
-                    continue
-            book_text = self.clear_texts(book_text)  
+                book_text = self.clear_texts(book_text)  
                 
-            with open(base_path + '\\' + book, 'w', encoding = 'utf-8') as f:
-                f.write(book_text)
-            
-            print('清理完毕')
+                with open(base_path + '\\' + book, 'w', encoding = 'utf-8') as f:
+                    f.write(book_text)
+
+                print('成功')
+            except Exception as e:
+                print(f'清理失败')
+                error_list.append((book_path, e))
+                
+        return error_list
 
     def clear_texts(self, texts, dicts = {}):
-        from ..tools import pro_slash
-        texts = pro_slash(texts)
+        # from ..tools import pro_slash
+        # texts = pro_slash(texts)
         texts = unquote(unescape(texts))
         
         for sub in self.sub_list:
