@@ -15,6 +15,14 @@ def compress_video(old_video_path: str, new_video_path: str):
     os.system(f'ffmpeg -i "{old_video_path}" -vcodec libx264 -crf 24 "{new_video_path}"')
 
 def join_and_label_videos(video_path1: str, video_path2: str, output_path: str):
+    """
+    将两个视频拼接，并在左上角添加文本标签
+
+    参数:
+    video_path1: 第一个视频文件路径
+    video_path2: 第二个视频文件路径
+    output_path: 输出视频文件路径
+    """
     change_settings({"IMAGEMAGICK_BINARY": r"G:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"})
 
     # 加载视频，设置持续时间为10秒
