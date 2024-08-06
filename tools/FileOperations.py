@@ -47,23 +47,6 @@ def get_all_file_paths(folder_path: str | Path) -> list:
 
     return file_paths
 
-def handle_file(source: Path, destination: Path, action: Callable[[Path, Path], None]):
-    """
-    处理文件，如果目标文件不存在则执行指定的操作。
-    
-    :param source: 源文件路径。
-    :param destination: 目标文件路径。
-    :param action: 处理文件的函数或方法。
-    """
-    if destination.exists():
-        return
-    
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    if not destination.exists():
-        action(source, destination)
-    else:
-        logging.warning(f"File {destination} already exists. Skipping...")
-
 def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path, Path], None], Callable[[Path], Path]]]) -> List[Tuple[Path, Exception]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行处理，并将处理后的文件存储到新的目录中。
@@ -85,10 +68,7 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
         if destination.exists():
             return
         
-        if destination.is_file():
-            destination.parent.mkdir(parents=True, exist_ok=True)
-        else:
-            destination.mkdir(parents=True, exist_ok=True)
+        destination.parent.mkdir(parents=True, exist_ok=True)
         action(source, destination)
 
     folder_path = Path(folder_path)

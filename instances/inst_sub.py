@@ -8,7 +8,7 @@ from pathlib import Path
 class Suber:
     def __init__(self):
         self.special_character_removal = [
-            ('(\t|\r|\f|\v|\0|　|)+', ''),  # 移除制表符、回车符、换页符、垂直制表符、空字符、全角空格和特殊符号
+            ('(\t|\r|\f|\v|\0|　|| )+', ''),  # 移除制表符、回车符、换页符、垂直制表符、空字符、全角空格和特殊符号
             ('\~', '-'),  # 将波浪号替换为连字符
         ]
 
@@ -52,7 +52,15 @@ class Suber:
         detect = chardet.detect(raw)['encoding']
         if not detect:
             raise ValueError("无法检测到编码")
-        if 'GB' in detect:
+        if 'GBK' in detect:
+            detect = 'GB18030'
+        elif 'ISO-8859' in detect:
+            detect = 'GB18030'
+        elif "IBM" in detect:
+            detect = 'GB18030'
+        elif "Windows" in detect:
+            detect = 'GB18030'
+        elif "EUC" in detect:
             detect = 'GB18030'
     
         book_text = book_path.read_text(encoding=detect)
