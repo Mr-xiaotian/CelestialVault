@@ -125,12 +125,12 @@ def compress_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]:
     :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
-    def rename_mp4(file_path: Path):
+    def rename_mp4(file_path: Path) -> Path:
         name = file_path.stem.replace("_compressed", "")
         parent = file_path.parent
         return parent / Path(name + '_compressed.mp4')
     
-    def rename_pdf(file_path: Path):
+    def rename_pdf(file_path: Path) -> Path:
         name = file_path.stem.replace("_compressed", "")
         parent = file_path.parent
         return parent / Path(name + '_compressed.pdf')
@@ -140,7 +140,7 @@ def compress_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]:
     from tools.DocumentConversion import compress_pdf
     from constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 
-    rules = {suffix: (compress_img, lambda a: a) for suffix in IMG_SUFFIXES}
+    rules = {suffix: (compress_img, lambda x: x) for suffix in IMG_SUFFIXES}
     rules.update({suffix: (compress_video,rename_mp4) for suffix in VIDEO_SUFFIXES})
     rules.update({suffix: (gif_to_video, rename_mp4) for suffix in ['gif', 'GIF']})
     rules.update({suffix: (compress_pdf,rename_pdf) for suffix in ['pdf', 'PDF']})
@@ -157,14 +157,12 @@ def unzip_zip_file(zip_file: Path) -> bool:
         with zipfile.ZipFile(zip_file) as zip_file:
             zip_file.extractall(zip_file.parent)
         logging.info(f"{zip_file} 解压缩成功")
-        return True
     except zipfile.BadZipFile:
-        logging.error(f"{zip_file} 不是一个有效的 zip 文件")
+        raise ValueError(f"{zip_file} 不是一个有效的 zip 文件")
     except zipfile.LargeZipFile:
-        logging.error(f"{zip_file} 太大了，无法解压缩")
+        raise ValueError(f"{zip_file} 太大了，无法解压缩")
     except RuntimeError:
-        logging.error("{zip_file} 受密码保护，无法解压缩")
-    return False
+        raise ValueError("{zip_file} 受密码保护，无法解压缩")
 
 def unzip_rar_file(rar_file: Path) -> bool:
     """
@@ -176,14 +174,12 @@ def unzip_rar_file(rar_file: Path) -> bool:
         with rarfile.RarFile(rar_file) as rar_file:
             rar_file.extractall(rar_file.parent)
         logging.info(f"{rar_file} 解压缩成功")
-        return True
     except rarfile.BadRarFile:
-        logging.error(f"{rar_file} 不是一个有效的 rar 文件")
+        raise ValueError(f"{rar_file} 不是一个有效的 rar 文件")
     except rarfile.LargeRarFile:
-        logging.error(f"{rar_file} 太大了，无法解压缩")
+        raise ValueError(f"{rar_file} 太大了，无法解压缩")
     except rarfile.PasswordRequired:
-        logging.error(f"{rar_file} 受密码保护，无法解压缩")
-    return False
+        raise ValueError(f"{rar_file} 受密码保护，无法解压缩")
 
 def unzip_7z_file(seven_zip_file: Path) -> bool:
     """
@@ -195,54 +191,24 @@ def unzip_7z_file(seven_zip_file: Path) -> bool:
         with py7zr.SevenZipFile(seven_zip_file, mode='r') as seven_zip_file:
             seven_zip_file.extractall(seven_zip_file.parent)
         logging.info(f"{seven_zip_file} 解压缩成功")
-        return True
     except py7zr.Bad7zFile:
-        logging.error(f"{seven_zip_file} 不是一个有效的 7z 文件")
+        raise ValueError(f"{seven_zip_file} 不是一个有效的 7z 文件")
     except py7zr.Large7zFile:
-        logging.error(f"{seven_zip_file} 太大了，无法解压缩")
+        raise ValueError(f"{seven_zip_file} 太大了，无法解压缩")
     except py7zr.PasswordRequired:
-        logging.error(f"{seven_zip_file} 受密码保护，无法解压缩")
-    return False
+        raise ValueError(f"{seven_zip_file} 受密码保护，无法解压缩")
     
-def unzip_files(folder_path: str | Path):
+def unzip_folder(folder_path: str | Path):
     """
     遍历指定文件夹，解压缩所有支持的压缩文件。支持的文件类型包括 zip 和 rar。
     
     :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
     """
-    folder_path = Path(folder_path)
-    logging.info(f'开始解压:{folder_path}')
-    successful_list = []
-    unsuccessful_list = []
+    rules = {'zip': (unzip_zip_file, lambda x: x)}
+    rules.update({'rar': (unzip_rar_file,lambda x: x)})
+    rules.update({'7z': (unzip_7z_file, lambda x: x)})
 
-    # 遍历文件夹
-    for file_path in tqdm(list(folder_path.glob('**/*'))):
-        if not file_path.is_file():
-            continue
-
-        file_suffix = file_path.suffix.lower()[1:]
-
-        if file_suffix == 'zip':
-            if unzip_zip_file(file_path):
-                successful_list.append(file_path)
-            else:
-                unsuccessful_list.append(file_path)
-        elif file_suffix == 'rar':
-            if unzip_rar_file(file_path):
-                successful_list.append(file_path)
-            else:
-                unsuccessful_list.append(file_path)
-        elif file_suffix == '7z':
-            if unzip_7z_file(file_path):
-                successful_list.append(file_path)
-            else:
-                unsuccessful_list.append(file_path)
-            
-    logging.info(f'解压完成:{folder_path}')
-    logging.info(f'成功解压文件: {successful_list}')
-    logging.info(f'解压失败文件: {unsuccessful_list}')
-    
-    return successful_list, unsuccessful_list
+    return handle_folder(folder_path, rules)
 
 def delete_files(file_path: str | Path):
     """
