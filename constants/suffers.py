@@ -4,6 +4,9 @@ VIDEO_SUFFIXES = ["mp4", "avi", "mov", "mkv", 'divx', "mpg", "flv", "rm", "rmvb"
                   "MP4", "AVI", "MOV", "MKV", 'DIVX', "MPG", "FLV", "RM", "RMVB", "MPEG", "WMV", "3GP", "VOB", "OGM", "OGV", "ASF", 'TS', 'WEBM'"TS", 'WEBM']
 ZIP_SUFFIXES = ['zip', 'rar', '7z',
                 "ZIP", "RAR", "7Z"]
+TXT_SUFFIXES = ['txt', 'md', 'json', 'xml', 'csv', 'tsv', 'yaml', 'yml', 'ini', 'conf', 'config', 'properties', 'prop', 'props',
+                "TXT", "MD", "JSON", "XML", "CSV", "TSV", "YAML", "YML", "INI", "CONF", "CONFIG", "PROPERTIES", "PROP", "PROPS"
+]
 
 FILE_ICONS = {
     '.py': '🐍',
