@@ -21,7 +21,7 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
     :param output_pdf_path: 输出的PDF文件路径。
     :return: None
     """
-    from ..constants import IMG_SUFFIXES
+    from constants import IMG_SUFFIXES
     def extract_number(file_name: Path) -> int:
         """
         从文件名中提取数字。
@@ -47,13 +47,17 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
     images[0].save(pdf_path, save_all=True, append_images=images[1:])
 
 def img_to_binary(img: Image.Image) -> bytes:
-    # 将图片转换为二进制形式
+    """
+    将Image对象转换为二进制数据。
+    """
     buffered = io.BytesIO()
     img.save(buffered, format="PNG")
     binary_img = buffered.getvalue()
     return binary_img
 
 def binary_to_img(binary_img: bytes) -> Image.Image:
-    # 将二进制数据转换为Image对象
+    """
+    将二进制数据转换为Image对象
+    """
     img = Image.open(io.BytesIO(binary_img))
     return img

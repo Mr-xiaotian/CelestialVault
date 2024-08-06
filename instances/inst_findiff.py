@@ -9,7 +9,7 @@ class Findiffer:
         pass
 
     def fd_str(self, string_a, string_b, split_str = '\n'):
-        from ..tools import strings_split
+        from tools.TextTools import strings_split
         # 打印出a和b的长度
         print(f'len(a):{len(string_a)}, len(b):{len(string_b)}\n')
         # 打印出a和b不同的地方

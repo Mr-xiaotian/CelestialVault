@@ -91,7 +91,7 @@ class ImgEncoder:
         return img
     
     def base64_to_img(self, base64_str: str) -> Image.Image:
-        from ..tools import binary_to_img
+        from tools.ImageProcessing import binary_to_img
         # 将Base64文本解码回二进制数据
         binary_data = base64.b64decode(base64_str)
 
@@ -201,7 +201,7 @@ class ImgDecoder:
         return ''.join(chars)
     
     def img_to_base64(self, img: Image.Image) -> str:
-        from ..tools import img_to_binary
+        from tools.ImageProcessing import img_to_binary
         # 将Image数据转换为二进制数据
         binary_data = img_to_binary(img)
 
@@ -211,7 +211,7 @@ class ImgDecoder:
         return encoded_text
     
     def read_message_from_binary(self, binary_data: bytes) -> str:
-        from ..tools import binary_to_img, img_to_binary
+        from tools.ImageProcessing import binary_to_img, img_to_binary
 
         img_len = len(img_to_binary(binary_to_img(binary_data)))
         return binary_data[img_len:]

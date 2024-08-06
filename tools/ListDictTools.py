@@ -45,7 +45,7 @@ def list_replace(lists: List[Any], replace_list: List[Tuple[Any, Any]]) -> List[
     :param replace_list: 替换规则的列表，每个规则是一个包含两个元素的元组，第一个是要被替换的元素，第二个是替换后的元素
     :return: 替换后的列表
     """
-    from .Utilities import functions_are_equal
+    from tools.Utilities import functions_are_equal
     def replace_element(element: Any, replacement: Tuple[Any, Any]) -> Any:
         # 如果元素是字符串且替换列表中的第一个元素在该字符串中，则进行替换
         if all_elements_are_type([element, *replacement], str) and replacement[0] in element:

@@ -72,9 +72,9 @@ def compress_folder(folder_path: str | Path) -> list:
     :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
-    from .ImageProcessing import compress_img
-    from .VideoProcessing import compress_video, gif_to_video
-    from .DocumentConversion import compress_pdf
+    from tools.ImageProcessing import compress_img
+    from tools.VideoProcessing import compress_video, gif_to_video
+    from tools.DocumentConversion import compress_pdf
     from constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 
     folder_path = Path(folder_path)
@@ -253,7 +253,9 @@ def print_directory_structure(folder_path: str='.', indent: str='', exclude_dirs
     if not any(folder_path.iterdir()):
         return
 
-    max_name_len = max(len(str(item.name)) for item in folder_path.iterdir() if item.is_file())
+    # 计算文件名的最大长度，如果没有文件，设置默认长度
+    files = [item for item in folder_path.iterdir() if item.is_file()]
+    max_name_len = max((len(str(item.name)) for item in files), default=0)
     
     for item in folder_path.iterdir():
         # 排除指定的目录

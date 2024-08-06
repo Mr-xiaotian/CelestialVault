@@ -65,7 +65,7 @@ def compress_pdf(old_pdf_path: str | Path, new_pdf_path: str | Path):
     :param new_pdf_path: 新PDF路径
     :return: None
     '''
-    from .ImageProcessing import combine_imgs_to_pdf
+    from tools.ImageProcessing import combine_imgs_to_pdf
 
     old_pdf_path = Path(old_pdf_path)
     new_pdf_path = Path(new_pdf_path)
