@@ -1,10 +1,11 @@
+import subprocess
+from pathlib import Path
 from moviepy.editor import *
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
 from moviepy.config import change_settings
-import subprocess
 
 
-def compress_video(old_video_path: str, new_video_path: str):
+def compress_video(old_video_path: Path, new_video_path: Path):
     """
     使用ffmpeg压缩视频
     

@@ -13,9 +13,9 @@ class Suber:
         ]
 
         self.newline_handling = [
-            ('(?<!－|#|＊|◆|\*|=|＝|…|～|。|]|』|」|】|》|\)|）|!|！|\?|？|—|”|"|_|\.)\n', ''),  # 移除不在某些标点符号后的空格
+            ('(?<!－|#|＊|◆|\*|=|＝|…|～|。|]|』|」|】|》|\)|）|!|！|\?|？|—|”|"|_|\.)\n', ''),  # 移除不在某些标点符号后的换行符
             ('(?<!\n)\n(?!\n)', '\n\n'),  # 确保单独的换行符前后有两个换行符
-            ('(\n){3,}', '\n\n'),  # 限制连续换行符的数量为最多3个
+            ('(\n){3,}', '\n\n'),  # 限制连续换行符的数量为最多2个
         ]
 
         self.html_md_handling = [
@@ -38,47 +38,39 @@ class Suber:
             (r'\t', '_'),('\.+', '_'), ('<', '_'), ('>', '_'),
         ]
 
-    def clear_books(self, base_path):
+    def clear_books(self, folder_path):
+        from tools.FileOperations import handle_folder
         from constants import TXT_SUFFIXES
-        base_path = Path(base_path)
-        book_list = list(base_path.iterdir())
-        error_list = []
 
-        for book in tqdm(book_list, desc="处理书籍"):
-            file_suffix = book.suffix.lower()[1:]
-            if file_suffix not in TXT_SUFFIXES:
-                continue
-            
-            try:
-                sample_len = min(100, book.stat().st_size)
-                raw = book.read_bytes()[:sample_len]
-                detect = chardet.detect(raw)['encoding']
-                if not detect:
-                    raise ValueError("无法检测到编码")
-                if 'GB' in detect:
-                    detect = 'GB18030'
-            
-                book_text = book.read_text(encoding=detect)
-                book_text = self.clear_texts(book_text)
-                book.write_text(book_text, encoding='utf-8')
+        rules = {suffix: (self.clear_book, lambda a: a) for suffix in TXT_SUFFIXES}
 
-            except Exception as e:
-                error_list.append((book, e))
-                
-        return error_list
+        return handle_folder(folder_path, rules)
+        
+    def clear_book(self, book_path, new_path):
+        sample_len = min(100, book_path.stat().st_size)
+        raw = book_path.read_bytes()[:sample_len]
+        detect = chardet.detect(raw)['encoding']
+        if not detect:
+            raise ValueError("无法检测到编码")
+        if 'GB' in detect:
+            detect = 'GB18030'
+    
+        book_text = book_path.read_text(encoding=detect)
+        book_text = self.clear_text(book_text)
+        new_path.write_text(book_text, encoding='utf-8')
 
-    def clear_texts(self, texts):
+    def clear_text(self, text):
         from tools.TextTools import pro_slash
-        texts = pro_slash(texts)
-        texts = unquote(unescape(texts))
+        text = pro_slash(text)
+        text = unquote(unescape(text))
         
         for sub in self.sub_list:
-            texts = re.sub(sub[0], sub[1], texts, flags = re.S)
+            text = re.sub(sub[0], sub[1], text, flags = re.S)
 
         #re_png = '<([0-9a-z]+)>'
-        #png_list = re.findall(re_png, texts)
+        #png_list = re.findall(re_png, text)
         
-        return texts
+        return text
 
     def sub_name(self, name):
         for sub in self.sub_name_list:

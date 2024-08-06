@@ -64,18 +64,32 @@ def handle_file(source: Path, destination: Path, action: Callable[[Path, Path], 
     else:
         logging.warning(f"File {destination} already exists. Skipping...")
 
-def compress_folder(folder_path: str | Path) -> list:
+def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path, Path], None], Callable[[Path], Path]]]) -> List[Tuple[Path, Exception]]:
     """
-    遍历指定文件夹，根据文件后缀名对文件进行压缩处理，并将处理后的文件存储到新的目录中。支持的文件类型包括图片、视频和PDF。不属于这三种类型的文件将被直接复制到新目录中。
-    压缩后的文件会保持原始的目录结构。如果目标文件已存在，则会跳过处理。处理过程中遇到的任何错误都会被记录并返回。
+    遍历指定文件夹，根据文件后缀名对文件进行处理，并将处理后的文件存储到新的目录中。
+    不属于指定后缀的文件将被直接复制到新目录中。处理后的文件会保持原始的目录结构。
+    如果目标文件已存在，则会跳过处理。处理过程中遇到的任何错误都会被记录并返回。
 
     :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
+    :param rules: 一个字典，键为文件后缀，值为处理该类型文件的函数和重命名函数的元组。
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
-    from tools.ImageProcessing import compress_img
-    from tools.VideoProcessing import compress_video, gif_to_video
-    from tools.DocumentConversion import compress_pdf
-    from constants import IMG_SUFFIXES, VIDEO_SUFFIXES
+    def handle_file(source: Path, destination: Path, action: Callable[[Path, Path], None]):
+        """
+        处理文件，如果目标文件不存在则执行指定的操作。
+        
+        :param source: 源文件路径。
+        :param destination: 目标文件路径。
+        :param action: 处理文件的函数或方法。
+        """
+        if destination.exists():
+            return
+        
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if not destination.exists():
+            action(source, destination)
+        else:
+            logging.warning(f"File {destination} already exists. Skipping...")
 
     folder_path = Path(folder_path)
     new_folder_path = folder_path.parent / (folder_path.name + "_re")
@@ -90,33 +104,48 @@ def compress_folder(folder_path: str | Path) -> list:
         new_file_path = new_folder_path / rel_path
         file_suffix = file_path.suffix.lower()[1:]
         try:
-            if file_suffix in IMG_SUFFIXES:
-                handle_file(file_path, new_file_path, compress_img)
-            elif file_suffix in VIDEO_SUFFIXES:
-                name = new_file_path.stem.replace("_compressed", "")
-                parent = new_file_path.parent
-                new_video_path = parent / Path(name + '_compressed.mp4')
-                handle_file(file_path, new_video_path, compress_video)
-            elif file_suffix in ['pdf', 'PDF'] :
-                name = new_file_path.stem.replace("_compressed", "")
-                parent = new_file_path.parent
-                new_pdf_path = parent / Path(name + '_compressed.pdf')
-                handle_file(file_path, new_pdf_path, compress_pdf)
-            elif file_suffix in ['gif', 'GIF']:
-                name = new_file_path.stem.replace("_compressed", "")
-                parent = new_file_path.parent
-                new_video_path = parent / Path(name + '_compressed.mp4')
-                handle_file(file_path, new_video_path, gif_to_video)
-            else:
-                handle_file(file_path, new_file_path, shutil.copy)
-        except OSError as e:
+            action, rename_func = rules.get(file_suffix, (shutil.copy, lambda x: x))
+            final_path = rename_func(new_file_path)
+            handle_file(file_path, final_path, action)
+        except Exception as e:
             error_list.append((file_path, e))
             try:
                 shutil.copy(file_path, new_file_path)
-            except OSError as e:
+            except Exception as e:
                 error_list.append((file_path, e))
 
     return error_list
+
+def compress_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]:
+    """
+    遍历指定文件夹，根据文件后缀名对文件进行压缩处理，并将处理后的文件存储到新的目录中。
+    支持的文件类型包括图片、视频和PDF。不属于这三种类型的文件将被直接复制到新目录中。
+    压缩后的文件会保持原始的目录结构。如果目标文件已存在，则会跳过处理。处理过程中遇到的任何错误都会被记录并返回。
+
+    :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
+    :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
+    """
+    def rename_mp4(file_path: Path):
+        name = file_path.stem.replace("_compressed", "")
+        parent = file_path.parent
+        return parent / Path(name + '_compressed.mp4')
+    
+    def rename_pdf(file_path: Path):
+        name = file_path.stem.replace("_compressed", "")
+        parent = file_path.parent
+        return parent / Path(name + '_compressed.pdf')
+
+    from tools.ImageProcessing import compress_img
+    from tools.VideoProcessing import compress_video, gif_to_video
+    from tools.DocumentConversion import compress_pdf
+    from constants import IMG_SUFFIXES, VIDEO_SUFFIXES
+
+    rules = {suffix: (compress_img, lambda a: a) for suffix in IMG_SUFFIXES}
+    rules.update({suffix: (compress_video,rename_mp4) for suffix in VIDEO_SUFFIXES})
+    rules.update({suffix: (gif_to_video, rename_mp4) for suffix in ['gif', 'GIF']})
+    rules.update({suffix: (compress_pdf,rename_pdf) for suffix in ['pdf', 'PDF']})
+
+    return handle_folder(folder_path, rules)
 
 def unzip_zip_file(zip_file: Path) -> bool:
     """
