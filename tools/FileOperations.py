@@ -85,11 +85,11 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
         if destination.exists():
             return
         
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        if not destination.exists():
-            action(source, destination)
+        if destination.is_file():
+            destination.parent.mkdir(parents=True, exist_ok=True)
         else:
-            logging.warning(f"File {destination} already exists. Skipping...")
+            destination.mkdir(parents=True, exist_ok=True)
+        action(source, destination)
 
     folder_path = Path(folder_path)
     new_folder_path = folder_path.parent / (folder_path.name + "_re")
@@ -147,7 +147,7 @@ def compress_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]:
 
     return handle_folder(folder_path, rules)
 
-def unzip_zip_file(zip_file: Path) -> bool:
+def unzip_zip_file(zip_file: Path, destination: Path):
     """
     解压缩指定的 zip 文件。
     
@@ -155,8 +155,8 @@ def unzip_zip_file(zip_file: Path) -> bool:
     """
     try:
         with zipfile.ZipFile(zip_file) as zip_file:
-            zip_file.extractall(zip_file.parent)
-        logging.info(f"{zip_file} 解压缩成功")
+            zip_file.extractall(destination)
+        # logging.info(f"{zip_file} 解压缩成功")
     except zipfile.BadZipFile:
         raise ValueError(f"{zip_file} 不是一个有效的 zip 文件")
     except zipfile.LargeZipFile:
@@ -164,7 +164,7 @@ def unzip_zip_file(zip_file: Path) -> bool:
     except RuntimeError:
         raise ValueError("{zip_file} 受密码保护，无法解压缩")
 
-def unzip_rar_file(rar_file: Path) -> bool:
+def unzip_rar_file(rar_file: Path, destination: Path):
     """
     解压缩指定的 rar 文件。
     
@@ -172,8 +172,8 @@ def unzip_rar_file(rar_file: Path) -> bool:
     """
     try:
         with rarfile.RarFile(rar_file) as rar_file:
-            rar_file.extractall(rar_file.parent)
-        logging.info(f"{rar_file} 解压缩成功")
+            rar_file.extractall(destination)
+        # logging.info(f"{rar_file} 解压缩成功")
     except rarfile.BadRarFile:
         raise ValueError(f"{rar_file} 不是一个有效的 rar 文件")
     except rarfile.LargeRarFile:
@@ -181,7 +181,7 @@ def unzip_rar_file(rar_file: Path) -> bool:
     except rarfile.PasswordRequired:
         raise ValueError(f"{rar_file} 受密码保护，无法解压缩")
 
-def unzip_7z_file(seven_zip_file: Path) -> bool:
+def unzip_7z_file(seven_zip_file: Path, destination: Path):
     """
     解压缩指定的 7z 文件。
     
@@ -189,8 +189,8 @@ def unzip_7z_file(seven_zip_file: Path) -> bool:
     """
     try:
         with py7zr.SevenZipFile(seven_zip_file, mode='r') as seven_zip_file:
-            seven_zip_file.extractall(seven_zip_file.parent)
-        logging.info(f"{seven_zip_file} 解压缩成功")
+            seven_zip_file.extractall(destination)
+        # logging.info(f"{seven_zip_file} 解压缩成功")
     except py7zr.Bad7zFile:
         raise ValueError(f"{seven_zip_file} 不是一个有效的 7z 文件")
     except py7zr.Large7zFile:
@@ -204,9 +204,14 @@ def unzip_folder(folder_path: str | Path):
     
     :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
     """
-    rules = {'zip': (unzip_zip_file, lambda x: x)}
-    rules.update({'rar': (unzip_rar_file,lambda x: x)})
-    rules.update({'7z': (unzip_7z_file, lambda x: x)})
+    def rename_unzip(file_path: Path) -> Path:
+        name = file_path.stem
+        parent = file_path.parent
+        return parent / Path(name + '_unzip')
+    
+    rules = {'zip': (unzip_zip_file, rename_unzip)}
+    rules.update({'rar': (unzip_rar_file, rename_unzip)})
+    rules.update({'7z': (unzip_7z_file, rename_unzip)})
 
     return handle_folder(folder_path, rules)
 
