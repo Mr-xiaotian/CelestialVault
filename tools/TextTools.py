@@ -171,9 +171,9 @@ def language_fingerprint(text: str) -> dict:
     
     return fingerprint
 
-def is_valid_chinese_text(text: str, threshold: int=0.8):
+def caculate_valid_chinese_text(text: str):
     """
-    判断文本是否为中文，即文本中中文字符的比例是否大于阈值。
+    计算文本中中文字符的比例。
     """
     # 定义一个正则表达式来匹配中文字符
     chinese_char_pattern = re.compile(r'[\u4e00-\u9fff'
@@ -182,12 +182,15 @@ def is_valid_chinese_text(text: str, threshold: int=0.8):
     
     # 计算中文字符的数量
     chinese_char_count = len(chinese_char_pattern.findall(text))
+    # print(chinese_char_count / len(text))
     
     # 计算文本中中文字符的比例
-    print(chinese_char_count / len(text))
-    return chinese_char_count / len(text) > threshold
+    return chinese_char_count / len(text)
 
-def is_valid_text(text: str, threshold: int=0.9):
+def caculate_valid_text(text: str):
+    """
+    计算文本中有效字符的比例。
+    """
     # 定义一个正则表达式来匹配所有常见语言字符和标点符号
     valid_char_pattern = re.compile(r'[\u4e00-\u9fff'
                                     r'。，、？！《》“”‘’：（）【】'
@@ -195,7 +198,19 @@ def is_valid_text(text: str, threshold: int=0.9):
     
     # 计算有效字符的数量
     valid_char_count = len(valid_char_pattern.findall(text))
+    # print(valid_char_count / len(text))
     
     # 计算文本中有效字符的比例
-    print(valid_char_count / len(text))
-    return valid_char_count / len(text) > threshold
+    return valid_char_count / len(text)
+
+def is_valid_chinese_text(text: str, threshold: int=0.8):
+    """
+    判断文本是否为有效文本，即文本中有效字符的比例是否大于阈值。
+    """
+    return caculate_valid_chinese_text(text) > threshold
+
+def is_valid_text(text: str, threshold: int=0.9):
+    """
+    判断文本是否为有效文本，即文本中有效字符的比例是否大于阈值。
+    """
+    return caculate_valid_text(text) > threshold

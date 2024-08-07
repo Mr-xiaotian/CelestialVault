@@ -41,7 +41,7 @@ class Suber:
         from tools.FileOperations import handle_folder
         from constants import TXT_SUFFIXES
 
-        rules = {suffix: (self.clear_book, lambda a: a) for suffix in TXT_SUFFIXES}
+        rules = {"txt": (self.clear_book, lambda a: a)}
 
         return handle_folder(folder_path, rules)
         
