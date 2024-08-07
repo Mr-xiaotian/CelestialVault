@@ -1,8 +1,7 @@
-import re, chardet
-from tqdm import tqdm
+import re, charset_normalizer
+from pathlib import Path
 from html import unescape
 from urllib.parse import unquote
-from pathlib import Path
 
 
 class Suber:
@@ -46,24 +45,33 @@ class Suber:
 
         return handle_folder(folder_path, rules)
         
-    def clear_book(self, book_path, new_path):
-        sample_len = min(100, book_path.stat().st_size)
-        raw = book_path.read_bytes()[:sample_len]
-        detect = chardet.detect(raw)['encoding']
-        if not detect:
-            raise ValueError("无法检测到编码")
-        if 'GBK' in detect:
-            detect = 'GB18030'
-        elif 'ISO-8859' in detect:
-            detect = 'GB18030'
-        elif "IBM" in detect:
-            detect = 'GB18030'
-        elif "Windows" in detect:
-            detect = 'GB18030'
-        elif "EUC" in detect:
-            detect = 'GB18030'
-    
-        book_text = book_path.read_text(encoding=detect)
+    def clear_book(self, book_path: Path, new_path: Path):
+        from tools.TextTools import is_valid_text
+        # 读取整个文件以进行编码检测
+        raw = book_path.read_bytes()
+        
+        # 使用 charset-normalizer 进行编码检测
+        results = charset_normalizer.from_bytes(raw)
+        
+        # 获取所有可能的编码及其置信度，并按置信度排序
+        encodings = sorted(results, key=lambda x: x.fingerprint().confidence, reverse=True)
+        
+        book_text = None
+        for encoding_result in encodings:
+            try:
+                # 尝试使用当前编码解码文本
+                decoded_text = raw.decode(encoding_result.encoding)
+                # 验证解码后的文本是否合理
+                if is_valid_text(decoded_text):
+                    book_text = decoded_text
+                    break  # 如果成功解码并验证通过，跳出循环
+            except UnicodeDecodeError:
+                continue  # 如果解码失败，尝试下一个编码
+        
+        if book_text is None:
+            raise ValueError("无法使用检测到的编码解码文件")
+        
+        # 清理文本并写入新文件
         book_text = self.clear_text(book_text)
         new_path.write_text(book_text, encoding='utf-8')
 
