@@ -52,21 +52,19 @@ class Suber:
         
         # 使用 charset-normalizer 进行编码检测
         results = charset_normalizer.from_bytes(raw)
-        encodling_list = []
-        if results:
-            encodling_list.append(results.best().encoding)
-        encodling_list += ['gbk', 'gb2312', 'gb18030', 'utf-8']
+        encoding_list = [results.best().encoding] if results else []
+        encoding_list += ['gb18030', 'big5', 'utf-8', 'utf-16', 'latin-1']
 
         book_text = None
-        for encoding in encodling_list:
+        for encoding in encoding_list:
             try:
                 # 尝试使用当前编码解码文本, 并验证解码后的文本是否合理
-                decoded_text = raw.decode(encoding, errors='ignore')
+                decoded_text = raw.decode(encoding, errors='replace')
 
                 if is_valid_text(decoded_text):
                     book_text = decoded_text
                     break
-            except UnicodeDecodeError:
+            except (UnicodeDecodeError, TypeError):
                 continue  # 如果解码失败，尝试下一个编码
 
         if book_text is None:
