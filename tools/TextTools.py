@@ -209,7 +209,7 @@ def is_valid_chinese_text(text: str, threshold: int=0.8):
     """
     return calculate_valid_chinese_text(text) > threshold
 
-def is_valid_text(text: str, threshold: int=0.9):
+def is_valid_text(text: str, threshold: int=0.8):
     """
     判断文本是否为有效文本，即文本中有效字符的比例是否大于阈值。
     """

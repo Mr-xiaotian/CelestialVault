@@ -46,23 +46,30 @@ class Suber:
         return handle_folder(folder_path, rules)
         
     def clear_book(self, book_path: Path, new_path: Path):
-        from tools.TextTools import calculate_valid_text
+        from tools.TextTools import calculate_valid_text, is_valid_text
         # 读取整个文件以进行编码检测
         raw = book_path.read_bytes()
         
         # 使用 charset-normalizer 进行编码检测
         results = charset_normalizer.from_bytes(raw)
-        if not results:
-            raise ValueError("无法检测文件编码")
-        encoding_result = results.best()
+        encodling_list = []
+        if results:
+            encodling_list.append(results.best().encoding)
+        encodling_list += ['gbk', 'gb2312', 'gb18030', 'utf-8']
 
-        # 尝试使用当前编码解码文本
-        decoded_text = raw.decode(encoding_result.encoding)
+        book_text = None
+        for encoding in encodling_list:
+            try:
+                # 尝试使用当前编码解码文本, 并验证解码后的文本是否合理
+                decoded_text = raw.decode(encoding, errors='ignore')
 
-        # 验证解码后的文本是否合理
-        if calculate_valid_text(decoded_text) > 0.8:
-            book_text = decoded_text
-        else:
+                if is_valid_text(decoded_text):
+                    book_text = decoded_text
+                    break
+            except UnicodeDecodeError:
+                continue  # 如果解码失败，尝试下一个编码
+
+        if book_text is None:
             raise ValueError("无法使用检测到的编码解码文件")
         
         # 清理文本并写入新文件
