@@ -73,7 +73,7 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
 
     folder_path = Path(folder_path)
     new_folder_path = folder_path.parent / (folder_path.name + "_re")
-    error_list = []
+    error_dict = defaultdict(list)
 
     # 遍历文件夹
     for file_path in tqdm(list(folder_path.glob('**/*'))):
@@ -88,13 +88,13 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
             final_path = rename_func(new_file_path)
             handle_file(file_path, final_path, action)
         except Exception as e:
-            error_list.append((file_path, e))
+            error_dict[e].append(file_path)
             try:
                 shutil.copy(file_path, new_file_path)
             except Exception as e:
-                error_list.append((file_path, e))
+                error_dict[e].append(file_path)
 
-    return error_list
+    return error_dict
 
 def compress_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]:
     """
