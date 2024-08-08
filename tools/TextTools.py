@@ -171,7 +171,7 @@ def language_fingerprint(text: str) -> dict:
     
     return fingerprint
 
-def caculate_valid_chinese_text(text: str):
+def calculate_valid_chinese_text(text: str):
     """
     计算文本中中文字符的比例。
     """
@@ -187,7 +187,7 @@ def caculate_valid_chinese_text(text: str):
     # 计算文本中中文字符的比例
     return chinese_char_count / len(text)
 
-def caculate_valid_text(text: str):
+def calculate_valid_text(text: str):
     """
     计算文本中有效字符的比例。
     """
@@ -207,10 +207,10 @@ def is_valid_chinese_text(text: str, threshold: int=0.8):
     """
     判断文本是否为有效文本，即文本中有效字符的比例是否大于阈值。
     """
-    return caculate_valid_chinese_text(text) > threshold
+    return calculate_valid_chinese_text(text) > threshold
 
 def is_valid_text(text: str, threshold: int=0.9):
     """
     判断文本是否为有效文本，即文本中有效字符的比例是否大于阈值。
     """
-    return caculate_valid_text(text) > threshold
+    return calculate_valid_text(text) > threshold
