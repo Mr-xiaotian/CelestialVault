@@ -13,7 +13,25 @@ def compress_video(old_video_path: Path, new_video_path: Path):
     old_video_path: 原始视频文件路径
     new_video_path: 压缩后视频文件路径
     """
-    os.system(f'ffmpeg -i "{old_video_path}" -vcodec libx264 -crf 24 "{new_video_path}"')
+    # command = [
+    #     'ffmpeg', 
+    #     '-i', str(old_video_path), 
+    #     '-vcodec', 'libx264', 
+    #     '-crf', '24', 
+    #     str(new_video_path)
+    # ]
+
+    command = [
+        'ffmpeg', 
+        '-i', str(old_video_path), 
+        '-vcodec', 'libx265', 
+        '-crf', '28', 
+        '-preset', 'medium',
+        '-acodec', 'aac',
+        str(new_video_path)
+    ]
+
+    subprocess.run(command, check=True)
 
 def join_and_label_videos(video_path1: str, video_path2: str, output_path: str):
     """

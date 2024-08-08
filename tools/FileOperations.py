@@ -29,24 +29,6 @@ def create_folder(path: str | Path) -> Path:
 
     return path
 
-def get_all_file_paths(folder_path: str | Path) -> list:
-    """
-    获取给定目录下所有文件的绝对路径。
-    
-    :param directory: 要遍历的目录路径。
-    :return: 所有文件的绝对路径列表。
-    """
-    folder_path = Path(folder_path)
-    file_paths = []  # 存储文件路径的列表
-
-    # 遍历文件夹
-    for file_path in list(folder_path.glob('**/*')):
-        if not file_path.is_file():
-            continue
-        file_paths.append(file_path)
-
-    return file_paths
-
 def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path, Path], None], Callable[[Path], Path]]]) -> Dict[Exception, List[Path]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行处理，并将处理后的文件存储到新的目录中。
@@ -68,7 +50,11 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
         if destination.exists():
             return
         
-        destination.parent.mkdir(parents=True, exist_ok=True)
+        # 判断 destination 是文件还是文件夹
+        if destination.suffix:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            destination.mkdir(parents=True, exist_ok=True)
         action(source, destination)
 
     folder_path = Path(folder_path)
