@@ -8,7 +8,6 @@ class ImgEncoder:
     def __init__(self, text_encoder=None) -> None:
         self.text_encoder = text_encoder
         
-        
     def encode_text(self, text_path: str, mode: str='grey') -> None:
         with open(text_path, 'r', encoding = "utf-8") as f:
             text = f.read()
@@ -23,6 +22,8 @@ class ImgEncoder:
             raise ValueError(f'Unsupported mode: {mode}')
         
         img.save(text_path.replace('.txt', f'({mode}).png'))
+
+        return img
 
     def encodes_gray(self, text: str) -> Image.Image:
         str_len = len(text)
@@ -137,6 +138,8 @@ class ImgDecoder:
         
         with open(img_path.replace(f'.png', '.txt'), 'w', encoding='utf-8') as f:
             f.write(text)
+
+        return text
 
     def decodes_gray(self, img: Image.Image) -> str:
         '''

@@ -1,4 +1,4 @@
-import jieba, re, string
+import jieba, re, string, zlib
 from jieba import analyse 
 from pprint import pprint
 from typing import List, Dict, Union, Tuple
@@ -214,3 +214,29 @@ def is_valid_text(text: str, threshold: int=0.8):
     判断文本是否为有效文本，即文本中有效字符的比例是否大于阈值。
     """
     return calculate_valid_text(text) > threshold
+
+def encode_crc(text: str) -> str:
+    """
+    在文本开头添加CRC32校验和。
+    """
+    # 计算CRC32校验和
+    crc = zlib.crc32(text.encode('utf-8'))
+    crc_bytes = crc.to_bytes(4, 'big')  # 4字节的CRC32
+
+    # 将校验和附加到文本开头
+    text = crc_bytes.decode('latin1') + text
+
+    return text
+    
+def decode_crc(decoded_text: str) -> str:
+    """
+    从文本中提取CRC32校验和并验证。
+    """
+    # 提取校验和和实际文本
+    crc_received = int.from_bytes(decoded_text[:4].encode('latin1'), 'big')
+    actual_text = decoded_text[4:]
+
+    # 计算校验和并验证
+    crc_calculated = zlib.crc32(actual_text.encode('utf-8'))
+    if crc_received != crc_calculated:
+        raise ValueError("CRC check failed. Data might be corrupted.")
