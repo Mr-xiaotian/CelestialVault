@@ -15,36 +15,53 @@ def compress_img(old_img_path: str | Path, new_img_path: str | Path):
 
 def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
     """
-    将JPEG图片组合成单个PDF文件。
+    将指定文件夹中的JPEG图片组合成单个PDF文件。
 
-    :param image_paths: JPEG图片所在的保存文件夹。
-    :param output_pdf_path: 输出的PDF文件路径。
+    :param image_path: 包含JPEG图片的文件夹路径。
+    :param pdf_path: 输出的PDF文件路径。
     :return: None
     """
     from constants import IMG_SUFFIXES
+    
     def extract_number(file_name: Path) -> int:
         """
-        从文件名中提取数字。
+        从文件名中提取数字，用于排序。
         """
         match = re.search(r'\d+', file_name.name)
         return int(match.group()) if match else 0
 
+    # 转换路径为 Path 对象
     image_path = Path(image_path)
     pdf_path = Path(pdf_path)
     
+    if not image_path.is_dir():
+        raise ValueError(f"The provided image path {image_path} is not a directory.")
+    
+    # 收集所有图片路径
     image_paths = []
-    IMG_SUFFIXES.append('gif')
-    for ext in IMG_SUFFIXES:
-        image_paths += list(image_path.glob(f'*.{ext}'))
-    image_paths = [p for p in image_paths if p.is_file()]
-    image_paths = list(set(image_paths))
-    image_paths = sorted(image_paths, key=extract_number)
+    valid_suffixes = IMG_SUFFIXES.copy()
 
-    images = [Image.open(img_path) for img_path in image_paths]
-    # 将所有图片转换为相同的模式以保证兼容性
-    images = [img.convert('RGB') for img in images]
-    # 将所有图片保存为单个PDF
-    images[0].save(pdf_path, save_all=True, append_images=images[1:])
+    for ext in valid_suffixes:
+        image_paths += list(image_path.glob(f'*.{ext}'))
+
+    image_paths = [p for p in image_paths if p.is_file()]
+    image_paths = list(set(image_paths))  # 去重
+    image_paths = sorted(image_paths, key=extract_number)  # 按文件名中的数字排序
+
+    if not image_paths:
+        raise ValueError(f"No images found in {image_path} with suffixes: {valid_suffixes}")
+
+    # 打开所有图片并转换为 RGB 模式
+    try:
+        images = [Image.open(img_path).convert('RGB') for img_path in image_paths]
+    except Exception as e:
+        raise ValueError(f"Error loading images: {e}")
+
+    # 将图片保存为单个PDF
+    try:
+        images[0].save(pdf_path, save_all=True, append_images=images[1:])
+    except Exception as e:
+        raise ValueError(f"Error saving PDF: {e}")
 
 def img_to_binary(img: Image.Image) -> bytes:
     """
