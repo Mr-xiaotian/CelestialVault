@@ -237,7 +237,9 @@ def decode_crc(decoded_text: str) -> str:
     # 计算校验和并验证
     crc_calculated = zlib.crc32(actual_text.encode('utf-8'))
     if crc_received != crc_calculated:
-        raise ValueError("CRC check failed. Data might be corrupted.")
+        return False
+    
+    return True
     
 def compress_to_base64(text: str) -> str:
     # Step 1: Compress the text

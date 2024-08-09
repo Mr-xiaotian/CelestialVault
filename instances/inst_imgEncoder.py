@@ -8,17 +8,20 @@ class ImgEncoder:
         self.text_encoder = text_encoder
         
     def encode_text(self, text_path: str, mode: str='grey') -> None:
+        from tools.TextTools import encode_crc
+
         with open(text_path, 'r', encoding = "utf-8") as f:
             text = f.read()
+        crc_text = encode_crc(text)
 
         if mode == 'grey':
-            img = self.encode_gray(text)
+            img = self.encode_gray(crc_text)
         elif mode == 'rgba':
-            img = self.encode_rgba(text)
+            img = self.encode_rgba(crc_text)
         elif mode == 'rgba_full':
-            img = self.encode_rgba_full(text)
+            img = self.encode_rgba_full(crc_text)
         elif mode == 'rgb':
-            img = self.encode_rgb(text)
+            img = self.encode_rgb(crc_text)
         else:
             raise ValueError(f'Unsupported mode: {mode}')
         
@@ -28,7 +31,7 @@ class ImgEncoder:
 
     def encode_gray(self, text: str) -> Image.Image:
         """
-        将文本编码为灰度图像
+        将文本编码为灰度图像(unsafe)
         :param text: 要编码的文本
         :return: 编码后的灰度图像
         """
@@ -61,7 +64,7 @@ class ImgEncoder:
 
     def encode_rgba(self, text: str) -> Image.Image:
         """
-        将文本编码为RGBA图像
+        将文本编码为RGBA图像(unsafe)
         :param text: 要编码的文本
         :return: 编码后的RGBA图像
         """
@@ -87,7 +90,7 @@ class ImgEncoder:
 
     def encode_rgba_full(self, text: str) -> Image.Image:
         """
-        将文本编码为RGBA图像，每个字符占用一个像素
+        将文本编码为RGBA图像，每个字符占用一个像素(safe)
         :param text: 要编码的文本
         :return: 编码后的RGBA图像
         """
@@ -109,7 +112,7 @@ class ImgEncoder:
     
     def encode_rgb(self, text: str) -> Image.Image:
         """
-        将文本编码为RGB图像
+        将文本编码为RGB图像(safe)
         :param text: 要编码的文本
         :return: 编码后的RGB图像
         """
@@ -173,23 +176,29 @@ class ImgEncoder:
 
 class ImgDecoder:
     def decode_image(self, img_path: str, mode: str='grey') -> None:
+        from tools.TextTools import decode_crc
+
         img = Image.open(img_path)
 
         if mode == 'grey':
-            text = self.decode_gray(img)
+            crc_text = self.decode_gray(img)
         elif mode == 'rgba':
-            text = self.decode_rgba(img)
+            crc_text = self.decode_rgba(img)
         elif mode == 'rgba_full':
-            text = self.decode_rgba_full(img)
+            crc_text = self.decode_rgba_full(img)
         elif mode == 'rgb':
-            text = self.decode_rgb(img)
+            crc_text = self.decode_rgb(img)
         else:
             raise ValueError(f'Unsupported mode: {mode}')
         
-        with open(img_path.replace(f'.png', '.txt'), 'w', encoding='utf-8') as f:
-            f.write(text)
+        if not decode_crc(crc_text):
+            print('CRC校验失败')
 
-        return text
+        actual_text = crc_text[4:]
+        with open(img_path.replace(f'.png', '.txt'), 'w', encoding='utf-8') as f:
+            f.write(actual_text)
+
+        return actual_text
 
     def decode_gray(self, img: Image.Image) -> str:
         '''
@@ -199,14 +208,15 @@ class ImgDecoder:
         '''
         width, height = img.size
         text = ""
+
         progress_len = (height * width) // 2
         progress_bar = tqdm(total=progress_len, desc='Decoding img(grey):')
         for i in range(0, progress_len*2, 2):  # 两个像素表示一个字符
-            high = img.getpixel((i%width, i//width))  # 获取high
+            high = img.getpixel((i%width, i//width))
             low = img.getpixel(((i+1)%width, (i+1)//width))
             
             index = high * 256 + low  # 还原index
-            text += chr(index)  # 转化为字符
+            text += chr(index)  if index != 0 else '' # 转化为字符
             progress_bar.update(1)
             
         progress_bar.close()
@@ -247,7 +257,8 @@ class ImgDecoder:
         for y, x in product(range(height), range(width)):
             rgba = pixels[x, y]
             unicode_value = (rgba[0] << 24) + (rgba[1] << 16) + (rgba[2] << 8) + rgba[3]
-            chars.append(chr(unicode_value))
+            char = chr(unicode_value) if unicode_value != 0 else ''
+            chars.append(char)
             progress_bar.update(1)
 
         progress_bar.close()
