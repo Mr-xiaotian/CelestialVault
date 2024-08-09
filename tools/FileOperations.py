@@ -4,7 +4,7 @@ import hashlib
 import zipfile, rarfile, py7zr
 from pathlib import Path
 from tqdm import tqdm
-from typing import Callable, Dict, Tuple, List
+from typing import Callable, Tuple, Dict, List
 from collections import defaultdict
 
 
@@ -102,13 +102,12 @@ def compress_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]:
         return parent / Path(name + '_compressed.pdf')
 
     from tools.ImageProcessing import compress_img
-    from tools.VideoProcessing import compress_video, gif_to_video
+    from tools.VideoProcessing import compress_video
     from tools.DocumentConversion import compress_pdf
     from constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 
     rules = {suffix: (compress_img, lambda x: x) for suffix in IMG_SUFFIXES}
     rules.update({suffix: (compress_video,rename_mp4) for suffix in VIDEO_SUFFIXES})
-    rules.update({suffix: (gif_to_video, rename_mp4) for suffix in ['gif', 'GIF']})
     rules.update({suffix: (compress_pdf,rename_pdf) for suffix in ['pdf', 'PDF']})
 
     return handle_folder(folder_path, rules)

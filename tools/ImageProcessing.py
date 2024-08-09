@@ -1,4 +1,4 @@
-import re, io
+import re, io, base64
 from PIL import Image
 from pathlib import Path
 from pillow_heif import register_heif_opener
@@ -78,3 +78,23 @@ def binary_to_img(binary_img: bytes) -> Image.Image:
     """
     img = Image.open(io.BytesIO(binary_img))
     return img
+
+def base64_to_img(self, base64_str: str) -> Image.Image:
+    from tools.ImageProcessing import binary_to_img
+    # 将Base64文本解码回二进制数据
+    binary_data = base64.b64decode(base64_str)
+
+    # 将二进制数据转换为Image对象
+    img = binary_to_img(binary_data)
+
+    return img
+    
+def img_to_base64(self, img: Image.Image) -> str:
+    from tools.ImageProcessing import img_to_binary
+    # 将Image数据转换为二进制数据
+    binary_data = img_to_binary(img)
+
+    # 将二进制数据编码成Base64文本
+    encoded_text = base64.b64encode(binary_data).decode('utf-8')
+
+    return encoded_text

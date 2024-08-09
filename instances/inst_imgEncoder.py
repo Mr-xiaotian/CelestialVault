@@ -1,4 +1,3 @@
-import base64
 import math
 from PIL import Image, PngImagePlugin
 from tqdm import tqdm
@@ -13,11 +12,13 @@ class ImgEncoder:
             text = f.read()
 
         if mode == 'grey':
-            img = self.encodes_gray(text)
+            img = self.encode_gray(text)
         elif mode == 'rgba':
-            img = self.encodes_rgba(text)
+            img = self.encode_rgba(text)
         elif mode == 'rgba_full':
-            img = self.encodes_rgba_full(text)
+            img = self.encode_rgba_full(text)
+        elif mode == 'rgb':
+            img = self.encode_rgb(text)
         else:
             raise ValueError(f'Unsupported mode: {mode}')
         
@@ -25,7 +26,12 @@ class ImgEncoder:
 
         return img
 
-    def encodes_gray(self, text: str) -> Image.Image:
+    def encode_gray(self, text: str) -> Image.Image:
+        """
+        将文本编码为灰度图像
+        :param text: 要编码的文本
+        :return: 编码后的灰度图像
+        """
         str_len = len(text)
         total_pixels_needed = str_len * 2  # 每个字符需要两个像素表示
         width = math.ceil(math.sqrt(total_pixels_needed))
@@ -53,7 +59,12 @@ class ImgEncoder:
                 x += 1
         return img
 
-    def encodes_rgba(self, text: str) -> Image.Image:
+    def encode_rgba(self, text: str) -> Image.Image:
+        """
+        将文本编码为RGBA图像
+        :param text: 要编码的文本
+        :return: 编码后的RGBA图像
+        """
         str_len = len(text)
         total_pixels_needed = str_len // 2 + str_len % 2
         width = math.ceil(math.sqrt(total_pixels_needed))
@@ -62,9 +73,9 @@ class ImgEncoder:
         img = Image.new("RGBA", (width, height), (0,0,0,0))
 
         x,y = 0,0
-        for i in tqdm(range(0, len(text), 2), desc='Encoding text(rgba):'):
+        for i in tqdm(range(0, str_len, 2), desc='Encoding text(rgba):'):
             index1 = ord(text[i])
-            index2 = ord(text[i+1]) if i+1 < len(text) else 0
+            index2 = ord(text[i+1]) if i+1 < str_len else 0
             rgba = (index1 >> 8, index1 & 0xFF, index2 >> 8, index2 & 0xFF)
             img.putpixel((x, y), rgba)
             if x == width - 1:
@@ -74,7 +85,12 @@ class ImgEncoder:
                 x += 1
         return img
 
-    def encodes_rgba_full(self, text: str) -> Image.Image:
+    def encode_rgba_full(self, text: str) -> Image.Image:
+        """
+        将文本编码为RGBA图像，每个字符占用一个像素
+        :param text: 要编码的文本
+        :return: 编码后的RGBA图像
+        """
         str_len = len(text)
         width = math.ceil(math.sqrt(str_len))
         img = Image.new("RGBA", (width, width), (0,0,0,0))
@@ -91,14 +107,46 @@ class ImgEncoder:
                 x += 1
         return img
     
-    def base64_to_img(self, base64_str: str) -> Image.Image:
-        from tools.ImageProcessing import binary_to_img
-        # 将Base64文本解码回二进制数据
-        binary_data = base64.b64decode(base64_str)
+    def encode_rgb(self, text: str) -> Image.Image:
+        """
+        将文本编码为RGB图像
+        :param text: 要编码的文本
+        :return: 编码后的RGB图像
+        """
+        from tools.TextTools import compress_to_base64
 
-        # 将二进制数据转换为Image对象
-        img = binary_to_img(binary_data)
+        base64_text = compress_to_base64(text)
+        str_len = len(base64_text)
+        
+        total_pixels_needed = math.ceil(str_len / 4)
+        width = math.ceil(math.sqrt(total_pixels_needed))
+        height = math.ceil(total_pixels_needed / width)
+        
+        img = Image.new("RGB", (width, height), (0, 0, 0))
+        
+        base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+        char_to_value = {char: index for index, char in enumerate(base64_chars)}
+        
+        x, y = 0, 0
+        for i in tqdm(range(0, str_len, 4), desc='Encoding text(rgb):'):
+            chars = base64_text[i:i+4]
+        
+            val1 = char_to_value[chars[0]]
+            val2 = char_to_value[chars[1]]
+            val3 = char_to_value[chars[2]]
+            val4 = char_to_value[chars[3]]
 
+            r = (val1 << 2) | (val2 >> 4)
+            g = ((val2 & 0xF) << 4) | (val3 >> 2)
+            b = ((val3 & 0x3) << 6) | val4
+            
+            img.putpixel((x, y), (r, g, b))
+            if x == width - 1:
+                x = 0
+                y += 1
+            else:
+                x += 1
+        
         return img
     
     def add_message_after_binary(self, binary_img: bytes, message: str) -> bytes:
@@ -128,11 +176,13 @@ class ImgDecoder:
         img = Image.open(img_path)
 
         if mode == 'grey':
-            text = self.decodes_gray(img)
+            text = self.decode_gray(img)
         elif mode == 'rgba':
-            text = self.decodes_rgba(img)
+            text = self.decode_rgba(img)
         elif mode == 'rgba_full':
-            text = self.decodes_rgba_full(img)
+            text = self.decode_rgba_full(img)
+        elif mode == 'rgb':
+            text = self.decode_rgb(img)
         else:
             raise ValueError(f'Unsupported mode: {mode}')
         
@@ -141,7 +191,7 @@ class ImgDecoder:
 
         return text
 
-    def decodes_gray(self, img: Image.Image) -> str:
+    def decode_gray(self, img: Image.Image) -> str:
         '''
         将gray图像解码为字符串
         :param im: 图像对象
@@ -162,7 +212,7 @@ class ImgDecoder:
         progress_bar.close()
         return text
 
-    def decodes_rgba(self, img: Image.Image) -> str:
+    def decode_rgba(self, img: Image.Image) -> str:
         '''
         将rgba图像解码为字符串
         :param img: 图像对象
@@ -183,7 +233,7 @@ class ImgDecoder:
         progress_bar.close()
         return ''.join(chars)
     
-    def decodes_rgba_full(self, img: Image.Image) -> str:
+    def decode_rgba_full(self, img: Image.Image) -> str:
         '''
         将rgba图像解码为字符串
         :param img: 图像对象
@@ -203,15 +253,34 @@ class ImgDecoder:
         progress_bar.close()
         return ''.join(chars)
     
-    def img_to_base64(self, img: Image.Image) -> str:
-        from tools.ImageProcessing import img_to_binary
-        # 将Image数据转换为二进制数据
-        binary_data = img_to_binary(img)
-
-        # 将二进制数据编码成Base64文本
-        encoded_text = base64.b64encode(binary_data).decode('utf-8')
-
-        return encoded_text
+    def decode_rgb(self, img: Image.Image) -> str:
+        '''
+        将rgb图像解码为字符串
+        :param img: 图像对象
+        :return: 解码后的字符串
+        '''
+        from tools.TextTools import decode_from_base64
+        width, height = img.size
+        base64_text = []
+        
+        base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+        value_to_char = {index: char for index, char in enumerate(base64_chars)}
+        
+        progress_bar = tqdm(total=height * width, desc='Decoding img(rgb):')
+        for y, x in product(range(height), range(width)):
+            r, g, b = img.getpixel((x, y))
+            
+            char1 = value_to_char[r >> 2]
+            char2 = value_to_char[((r & 0x3) << 4) | (g >> 4)]
+            char3 = value_to_char[((g & 0xF) << 2) | (b >> 6)]
+            char4 = value_to_char[b & 0x3F]
+            
+            base64_text.extend([char1, char2, char3, char4])
+            progress_bar.update(1)
+        
+        base64_text = ''.join(base64_text)
+        
+        return decode_from_base64(base64_text)
     
     def read_message_from_binary(self, binary_data: bytes) -> str:
         from tools.ImageProcessing import binary_to_img, img_to_binary

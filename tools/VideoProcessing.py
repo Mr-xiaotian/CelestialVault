@@ -1,8 +1,8 @@
-import subprocess
+import subprocess, os
 from pathlib import Path
-from moviepy.editor import *
-from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
+from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip, clips_array
 from moviepy.config import change_settings
+from typing import Tuple, List
 
 
 def compress_video(old_video_path: Path, new_video_path: Path):
@@ -69,7 +69,7 @@ def join_and_label_videos(video_path1: str, video_path2: str, output_path: str):
     final_video.write_videofile(output_path, fps=24)
 
 
-def gif_to_video(gif_path, output_path):
+def transfer_gif_to_video(gif_path, output_path):
     """
     将GIF文件转换为MP4视频文件
 
@@ -90,3 +90,14 @@ def gif_to_video(gif_path, output_path):
     ]
     
     subprocess.run(command, check=True)
+
+def transfer_gifs(folder_path: str | Path) -> List[Tuple[Path, Exception]]:
+    def rename_mp4(file_path: Path) -> Path:
+        name = file_path.stem.replace("_compressed", "")
+        parent = file_path.parent
+        return parent / Path(name + '_compressed.mp4')
+    
+    from tools.FileOperations import handle_folder
+
+    rules = {'gif': (transfer_gif_to_video, rename_mp4)}
+    return handle_folder(folder_path, rules)

@@ -1,5 +1,5 @@
-import jieba, re, string, zlib
-from jieba import analyse 
+import jieba, re, string, zlib, base64
+from jieba import analyse
 from pprint import pprint
 from typing import List, Dict, Union, Tuple
 
@@ -182,7 +182,6 @@ def calculate_valid_chinese_text(text: str):
     
     # 计算中文字符的数量
     chinese_char_count = len(chinese_char_pattern.findall(text))
-    # print(chinese_char_count / len(text))
     
     # 计算文本中中文字符的比例
     return chinese_char_count / len(text)
@@ -198,7 +197,6 @@ def calculate_valid_text(text: str):
     
     # 计算有效字符的数量
     valid_char_count = len(valid_char_pattern.findall(text))
-    # print(valid_char_count / len(text))
     
     # 计算文本中有效字符的比例
     return valid_char_count / len(text)
@@ -240,3 +238,26 @@ def decode_crc(decoded_text: str) -> str:
     crc_calculated = zlib.crc32(actual_text.encode('utf-8'))
     if crc_received != crc_calculated:
         raise ValueError("CRC check failed. Data might be corrupted.")
+    
+def compress_to_base64(text: str) -> str:
+    # Step 1: Compress the text
+    compressed_data = zlib.compress(text.encode('utf-8'))
+    
+    # Step 2: Adjust the length of compressed data to avoid "=" in Base64 output
+    # We calculate the required padding to make the length a multiple of 3.
+    padding_length = (3 - len(compressed_data) % 3) % 3
+    compressed_data += b'\0' * padding_length  # Add null bytes for padding
+    
+    # Step 3: Encode the compressed data with Base64
+    base64_text = base64.b64encode(compressed_data).decode('utf-8')
+    
+    return base64_text
+
+def decode_from_base64(base64_text: str) -> str:
+    # Decode the Base64 text to get the compressed data
+    compressed_data = base64.b64decode(base64_text.encode('utf-8')).rstrip(b'\0')
+    
+    # Decompress the data to get the original text
+    original_text = zlib.decompress(compressed_data).decode('utf-8')
+
+    return original_text
