@@ -8,10 +8,9 @@ class ImgEncoder:
         self.text_encoder = text_encoder
         
     def encode_text(self, text_path: str, mode: str='grey') -> None:
-        from tools.TextTools import encode_crc
+        from tools.TextTools import encode_crc, safe_open_txt
 
-        with open(text_path, 'r', encoding = "utf-8") as f:
-            text = f.read()
+        text = safe_open_txt(text_path)
         crc_text = encode_crc(text)
 
         if mode == 'grey':

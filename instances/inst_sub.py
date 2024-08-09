@@ -1,4 +1,4 @@
-import re, charset_normalizer
+import re
 from pathlib import Path
 from html import unescape
 from urllib.parse import unquote
@@ -45,26 +45,9 @@ class Suber:
         return handle_folder(folder_path, rules)
         
     def clear_book(self, book_path: Path, new_path: Path):
-        from tools.TextTools import calculate_valid_text, is_valid_text
-        # 读取整个文件以进行编码检测
-        raw = book_path.read_bytes()
+        from tools.TextTools import safe_open_txt
         
-        # 使用 charset-normalizer 进行编码检测
-        results = charset_normalizer.from_bytes(raw)
-        encoding_list = [results.best().encoding] if results else []
-        encoding_list += ['gb18030', 'big5', 'utf-8', 'utf-16', 'latin-1']
-
-        book_text = None
-        for encoding in encoding_list:
-            try:
-                # 尝试使用当前编码解码文本, 并验证解码后的文本是否合理
-                decoded_text = raw.decode(encoding, errors='replace')
-
-                if is_valid_text(decoded_text):
-                    book_text = decoded_text
-                    break
-            except (UnicodeDecodeError, TypeError):
-                continue  # 如果解码失败，尝试下一个编码
+        book_text = safe_open_txt(book_path)
 
         if book_text is None:
             raise ValueError("无法使用检测到的编码解码文件")

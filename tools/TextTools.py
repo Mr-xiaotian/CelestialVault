@@ -1,7 +1,8 @@
-import jieba, re, string, zlib, base64
+import jieba, re, string, zlib, base64, charset_normalizer
 from jieba import analyse
 from pprint import pprint
 from typing import List, Dict, Union, Tuple
+from pathlib import Path
 
 
 def pro_slash(input_str: str) -> str:
@@ -263,3 +264,32 @@ def decode_from_base64(base64_text: str) -> str:
     original_text = zlib.decompress(compressed_data).decode('utf-8')
 
     return original_text
+
+def safe_open_txt(file_path: str | Path) -> str:
+    from tools.TextTools import is_valid_text
+
+    # 读取整个文件以进行编码检测
+    file_path = Path(file_path)
+    raw = file_path.read_bytes()
+    
+    # 使用 charset-normalizer 进行编码检测
+    results = charset_normalizer.from_bytes(raw)
+    encoding_list = [results.best().encoding] if results else []
+    encoding_list += ['gb18030', 'big5', 'utf-8', 'utf-16', 'latin-1']
+
+    book_text = None
+    for encoding in encoding_list:
+        try:
+            # 尝试使用当前编码解码文本, 并验证解码后的文本是否合理
+            decoded_text = raw.decode(encoding, errors='replace')
+
+            if is_valid_text(decoded_text):
+                book_text = decoded_text
+                break
+        except (UnicodeDecodeError, TypeError):
+            continue  # 如果解码失败，尝试下一个编码
+
+    if book_text is None:
+        raise ValueError("无法使用检测到的编码解码文件")
+    
+    return book_text

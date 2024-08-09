@@ -5,7 +5,7 @@ import pytest, logging
 from instances.inst_imgEncoder import ImgEncoder, ImgDecoder
 
 def test_imgEncoder():
-    text_path = r"Q:\Project\test\text_re\test.txt"
+    text_path = r"Q:\Project\test\text\test.txt"
     image_path_grey = text_path.replace('.txt', '(grey).png')
     image_path_rgba = text_path.replace('.txt', '(rgba).png')
     image_path_rgba_full = text_path.replace('.txt', '(rgba_full).png')
