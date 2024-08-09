@@ -56,7 +56,6 @@ def transfer_pdf_to_img(pdf_path: str | Path, img_path: str | Path):
 
     doc.close()
 
-
 def compress_pdf(old_pdf_path: str | Path, new_pdf_path: str | Path):
     '''
     压缩PDF，即将PDF转换为jpg图片，再将图片合并为PDF

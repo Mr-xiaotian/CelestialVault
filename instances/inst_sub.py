@@ -39,7 +39,6 @@ class Suber:
 
     def clear_books(self, folder_path):
         from tools.FileOperations import handle_folder
-        from constants import TXT_SUFFIXES
 
         rules = {"txt": (self.clear_book, lambda a: a)}
 
