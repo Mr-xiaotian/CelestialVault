@@ -1,9 +1,10 @@
-import re, io, base64
+import re, io, base64, math
 import numpy as np
+import matplotlib.pyplot as plt
 from PIL import Image
 from pathlib import Path
 from pillow_heif import register_heif_opener
-from colorsys import rgb_to_hsv, hsv_to_rgb
+from colorsys import hsv_to_rgb
 
 
 def compress_img(old_img_path: str | Path, new_img_path: str | Path):
@@ -101,109 +102,91 @@ def img_to_base64(img: Image.Image) -> str:
 
     return encoded_text
 
-def generate_morandi_colors(n=256, random_seed=0):
-    colors = []
+def generate_palette(n=256, random_seed=0, saturation_range=(0.1, 0.3), value_range=(0.7, 0.9)):
+    """
+    生成调色板，默认为Morandi 色系，并确保颜色唯一。
+
+    :param n: 要生成的颜色数量
+    :param random_seed: 随机种子，确保颜色生成的可重复性
+    :param saturation_range: 饱和度的范围，控制颜色的柔和度
+    :param value_range: 亮度的范围，控制颜色的明度
+    :return: 颜色列表，以 0-255 范围的 RGB 值表示
+    """
     np.random.seed(random_seed)
-    
-    for _ in range(n):
-        # 随机生成低饱和度的颜色
+    colors = set()
+
+    while len(colors) < n:
         h = np.random.uniform(0, 1)  # 随机色调
-        s = np.random.uniform(0.1, 0.3)  # 低饱和度
-        v = np.random.uniform(0.7, 0.9)  # 较高亮度
+        s = np.random.uniform(*saturation_range)  # 低饱和度
+        v = np.random.uniform(*value_range)  # 较高亮度
         
         r, g, b = hsv_to_rgb(h, s, v)
-        colors += [int(r*255), int(g*255), int(b*255)]
+        color = (int(r*255), int(g*255), int(b*255))
+        colors.add(color) # 尝试将颜色添加到集合中，确保唯一性
+
+    # 将颜色集转换为列表形式，并展开为单个数值列表
+    return [value for color in colors for value in color]
+
+def display_palette(palette, block_size=1):
+    """
+    展示调色板。
+
+    :param palette: 一个包含 RGB 颜色的平铺列表或元组，形如 [r, g, b, r, g, b, ...]
+    :param block_size: 每个颜色块的大小，默认为1
+    """
+    total_colors = len(palette) // 3  # 计算颜色的数量
     
-    return colors
+    n_cols = math.ceil(math.sqrt(total_colors))
+    n_rows = math.ceil(total_colors / n_cols)
+    
+    # 调整图像大小以适应颜色块
+    fig, ax = plt.subplots(figsize=(n_cols * block_size, n_rows * block_size))
+    
+    # 设置坐标轴的范围与颜色块的数量完全匹配
+    ax.set_xlim(0, n_cols)
+    ax.set_ylim(0, n_rows)
+    
+    # 关闭坐标轴
+    ax.axis('off')
+    
+    for i in range(total_colors):
+        r, g, b = palette[3 * i], palette[3 * i + 1], palette[3 * i + 2]
+        hex_color = '#%02x%02x%02x' % (r, g, b)
+        ax.add_patch(plt.Rectangle(
+            (i % n_cols, n_rows - 1 - i // n_cols), 
+            block_size, block_size, 
+            color=hex_color,
+            linewidth=0
+        ))
+    
+    plt.show()
 
 def expand_image(image: Image.Image, n: int=50) -> Image.Image:
     """
     将图像中的每个像素点扩大为n x n的块
     """
-    width, height = image.size
-    new_width = width * n
-    new_height = height * n
+    if n <= 0:
+        raise ValueError("n must be a positive integer")
     
-    # 创建一个新图像，大小是原图的n倍
-    expanded_image = Image.new(image.mode, (new_width, new_height))
+    new_width = image.width * n
+    new_height = image.height * n
     
-    for x in range(width):
-        for y in range(height):
-            # 获取原图中的像素值
-            pixel = image.getpixel((x, y))
-            
-            # 在新图中创建n x n的块
-            for i in range(n):
-                for j in range(n):
-                    expanded_image.putpixel((x * n + i, y * n + j), pixel)
+    # 直接使用resize方法来扩展图像
+    expanded_image = image.resize((new_width, new_height), Image.NEAREST)
     
     return expanded_image
 
-def expand_palette_image(image: Image.Image, n: int=50) -> Image.Image:
+def restore_expanded_image(expanded_image: Image.Image, n: int) -> Image.Image:
     """
-    将调色板模式图像中的每个像素点扩大为n x n的块
+    将扩展后的图像恢复为原始大小
     """
-    # 将图像转换为RGB模式
-    rgb_image = image.convert("RGB")
+    if n <= 0:
+        raise ValueError("n must be a positive integer")
     
-    # 获取原图像的尺寸
-    width, height = rgb_image.size
-    new_width = width * n
-    new_height = height * n
+    width = expanded_image.width // n
+    height = expanded_image.height // n
     
-    # 创建一个新图像，大小是原图的n倍
-    expanded_image = Image.new("RGB", (new_width, new_height))
-    
-    for x in range(width):
-        for y in range(height):
-            # 获取原图中的像素值
-            pixel = rgb_image.getpixel((x, y))
-            
-            # 在新图中创建n x n的块
-            for i in range(n):
-                for j in range(n):
-                    expanded_image.putpixel((x * n + i, y * n + j), pixel)
-    
-    # 将扩展后的图像转换回调色板模式
-    expanded_palette_image = expanded_image.convert("P", palette=Image.ADAPTIVE, colors=256)
-    
-    return expanded_palette_image
-
-from PIL import Image
-
-def restore_expanded_image(expanded_image: Image.Image, n) -> Image.Image:
-    """
-    将扩展后的 RGB 图像恢复为原始大小
-    """
-    # 获取扩展图像的尺寸
-    new_width, new_height = expanded_image.size
-    width = new_width // n
-    height = new_height // n
-    
-    # 创建一个新图像，大小是原始尺寸
-    restored_image = Image.new(expanded_image.mode, (width, height))
-    
-    for x in range(width):
-        for y in range(height):
-            # 获取扩展图像中对应的 n x n 块的左上角像素
-            pixel = expanded_image.getpixel((x * n, y * n))
-            
-            # 将该像素写入恢复图像
-            restored_image.putpixel((x, y), pixel)
+    # 使用resize方法还原图像
+    restored_image = expanded_image.resize((width, height), Image.NEAREST)
     
     return restored_image
-
-def restore_expanded_palette_image(expanded_palette_image: Image.Image, n) -> Image.Image:
-    """
-    将扩展后的调色板图像恢复为原始大小
-    """
-    # 将调色板图像转换为 RGB 模式
-    expanded_rgb_image = expanded_palette_image.convert("RGB")
-    
-    # 恢复图像的原始大小
-    restored_rgb_image = restore_expanded_image(expanded_rgb_image, n)
-    
-    # 将恢复后的图像转换回调色板模式
-    restored_palette_image = restored_rgb_image.convert("P", palette=Image.ADAPTIVE, colors=256)
-    
-    return restored_palette_image

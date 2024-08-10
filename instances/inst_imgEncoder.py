@@ -3,7 +3,7 @@ from PIL import Image, PngImagePlugin
 from tqdm import tqdm
 from itertools import product
 from tools.TextTools import encode_crc, safe_open_txt, compress_text_to_bytes, decode_crc, decompress_text_from_bytes
-from tools.ImageProcessing import generate_morandi_colors
+from tools.ImageProcessing import generate_palette
 
 class ImgEncoder:
     def __init__(self) -> None:
@@ -29,9 +29,8 @@ class ImgEncoder:
             compressed_binary = compress_text_to_bytes(crc_text, 1)
             img = self.encode_grey_from_binary(compressed_binary)
         elif mode == 'palette_binary':
-            palette = generate_morandi_colors(256,)
             compressed_binary = compress_text_to_bytes(crc_text, 1)
-            img = self.encode_palette_from_binary(compressed_binary, palette)
+            img = self.encode_palette_from_binary(compressed_binary)
         elif mode == 'rgb_binary':
             compressed_binary = compress_text_to_bytes(crc_text, 3)
             img = self.encode_rgb_from_binary(compressed_binary)
@@ -155,8 +154,8 @@ class ImgEncoder:
         return img
     
     def encode_palette_from_binary(self, binary_str: bytes, palette: list=None) -> Image.Image:
-        if palette is None:
-            return self.encode_grey_from_binary(binary_str)
+        if not palette:
+            palette = generate_palette(256)
         
         total_pixels_needed = len(binary_str)
         

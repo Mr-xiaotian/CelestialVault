@@ -1,8 +1,9 @@
 import jieba, re, string, zlib, base64, charset_normalizer
+from tqdm import tqdm
+from pathlib import Path
 from jieba import analyse
 from pprint import pprint
 from typing import List, Dict, Union, Tuple
-from pathlib import Path
 
 
 def pro_slash(input_str: str) -> str:
@@ -304,3 +305,45 @@ def safe_open_txt(file_path: str | Path) -> str:
         raise ValueError("无法使用检测到的编码解码文件")
     
     return book_text
+
+def combine_txt_files(folder_path: str | Path):
+    """
+    将指定文件夹内的所有txt文件按文件名中的数字排序，合并为一个新的txt文件。
+    合并时每个文件的内容前面加入该文件的名字，合并文件名为文件夹名。
+
+    :param folder_path: 包含txt文件的文件夹路径。
+    :return: None
+    """
+    def extract_number(file_name: Path) -> int:
+        """
+        从文件名中提取数字，用于排序。
+        """
+        match = re.search(r'\d+', file_name.name)
+        return int(match.group()) if match else 0
+
+    # 转换路径为 Path 对象
+    folder_path = Path(folder_path)
+
+    if not folder_path.is_dir():
+        raise ValueError(f"The provided path {folder_path} is not a directory.")
+
+    # 获取文件夹名称作为输出文件名
+    output_file_name = f"{folder_path.name}.txt"
+    output_file_path = folder_path / output_file_name
+
+    # 获取所有txt文件路径，并按文件名中的数字排序
+    txt_files = sorted(folder_path.glob('*.txt'), key=extract_number)
+
+    if not txt_files:
+        raise ValueError(f"No txt files found in {folder_path}.")
+
+    # 合并文件
+    with open(output_file_path, 'w', encoding='utf-8') as outfile:
+        for txt_file in tqdm(txt_files):
+            with open(txt_file, 'r', encoding='utf-8') as infile:
+                content = infile.read()
+                # 写入文件名和内容
+                outfile.write(f"== {txt_file.name} ==\n\n")
+                outfile.write(content + "\n\n")
+
+    print(f"All files have been combined into {output_file_path}")
