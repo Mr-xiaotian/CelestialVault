@@ -241,33 +241,43 @@ def decode_crc(decoded_text: str) -> str:
         return False
     
     return True
-    
-def compress_to_base64(text: str) -> str:
+
+def compress_text_to_bytes(text: str, padding_length: int=1) -> bytes:
     # Step 1: Compress the text
     compressed_data = zlib.compress(text.encode('utf-8'))
     
     # Step 2: Adjust the length of compressed data to avoid "=" in Base64 output
     # We calculate the required padding to make the length a multiple of 3.
-    padding_length = (3 - len(compressed_data) % 3) % 3
+    padding_length = (padding_length - len(compressed_data) % padding_length) % padding_length
     compressed_data += b'\0' * padding_length  # Add null bytes for padding
+
+    return compressed_data
     
-    # Step 3: Encode the compressed data with Base64
+def compress_to_base64(text: str) -> str:
+    compressed_data = compress_text_to_bytes(text, 3)
+    
     base64_text = base64.b64encode(compressed_data).decode('utf-8')
     
     return base64_text
 
+def decompress_text_from_bytes(compressed_data: bytes) -> str:
+    original_text = zlib.decompress(compressed_data.rstrip(b'\0')).decode('utf-8')
+
+    return original_text
+
 def decode_from_base64(base64_text: str) -> str:
     # Decode the Base64 text to get the compressed data
-    compressed_data = base64.b64decode(base64_text.encode('utf-8')).rstrip(b'\0')
+    compressed_data = base64.b64decode(base64_text.encode('utf-8'))
     
     # Decompress the data to get the original text
-    original_text = zlib.decompress(compressed_data).decode('utf-8')
+    original_text = decompress_text_from_bytes(compressed_data)
 
     return original_text
 
 def safe_open_txt(file_path: str | Path) -> str:
-    from tools.TextTools import is_valid_text
-
+    """
+    尝试使用多种编码打开文本文件，并返回解码后的文本。
+    """
     # 读取整个文件以进行编码检测
     file_path = Path(file_path)
     raw = file_path.read_bytes()
@@ -281,7 +291,7 @@ def safe_open_txt(file_path: str | Path) -> str:
     for encoding in encoding_list:
         try:
             # 尝试使用当前编码解码文本, 并验证解码后的文本是否合理
-            decoded_text = raw.decode(encoding, errors='replace')
+            decoded_text = file_path.read_text(encoding, errors='replace')
 
             if is_valid_text(decoded_text):
                 book_text = decoded_text
