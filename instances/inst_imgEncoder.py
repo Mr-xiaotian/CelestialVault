@@ -3,6 +3,7 @@ from PIL import Image, PngImagePlugin
 from tqdm import tqdm
 from itertools import product
 from tools.TextTools import encode_crc, safe_open_txt, compress_text_to_bytes, decode_crc, decompress_text_from_bytes
+from tools.ImageProcessing import generate_morandi_colors
 
 class ImgEncoder:
     def __init__(self) -> None:
@@ -27,6 +28,10 @@ class ImgEncoder:
         elif mode == 'grey_binary':
             compressed_binary = compress_text_to_bytes(crc_text, 1)
             img = self.encode_grey_from_binary(compressed_binary)
+        elif mode == 'palette_binary':
+            palette = generate_morandi_colors(256,)
+            compressed_binary = compress_text_to_bytes(crc_text, 1)
+            img = self.encode_palette_from_binary(compressed_binary, palette)
         elif mode == 'rgb_binary':
             compressed_binary = compress_text_to_bytes(crc_text, 3)
             img = self.encode_rgb_from_binary(compressed_binary)
@@ -149,6 +154,33 @@ class ImgEncoder:
         
         return img
     
+    def encode_palette_from_binary(self, binary_str: bytes, palette: list=None) -> Image.Image:
+        if palette is None:
+            return self.encode_grey_from_binary(binary_str)
+        
+        total_pixels_needed = len(binary_str)
+        
+        width = math.ceil(math.sqrt(total_pixels_needed))
+        height = math.ceil(total_pixels_needed / width)
+        
+        img = Image.new("P", (width, height))
+
+        # 将调色板应用到图像上
+        img.putpalette(palette)
+        
+        x, y = 0, 0
+        for i in tqdm(range(total_pixels_needed), desc='Encoding text(palette-binary):'):
+            grey = binary_str[i]
+            
+            img.putpixel((x, y), grey)
+            if x == width - 1:
+                x = 0
+                y += 1
+            else:
+                x += 1
+        
+        return img
+    
     def encode_rgb_from_binary(self, binary_str: bytes) -> Image.Image:
         str_len = len(binary_str)
         
@@ -232,6 +264,9 @@ class ImgDecoder:
             crc_text = self.decode_rgba(img)
         elif mode == 'grey_binary':
             crc_binary = self.decode_grey_to_binary(img)
+            crc_text = decompress_text_from_bytes(crc_binary)
+        elif mode == 'palette_binary':
+            crc_binary = self.decode_palette_to_binary(img)
             crc_text = decompress_text_from_bytes(crc_binary)
         elif mode == 'rgb_binary':
             crc_binary = self.decode_rgb_to_binary(img)
@@ -322,6 +357,21 @@ class ImgDecoder:
         for y, x in product(range(height), range(width)):
             grey = pixels[x, y]
             bytes_list.append(grey)
+            progress_bar.update(1)
+            
+        progress_bar.close()
+        return bytes(bytes_list)
+    
+    def decode_palette_to_binary(self, img: Image.Image) -> bytes:
+        width, height = img.size
+        pixels = img.load()
+
+        bytes_list = []
+        progress_bar = tqdm(total=height * width, desc='Decoding img(palette-binary):')
+        for y, x in product(range(height), range(width)):
+            index = pixels[x, y]
+
+            bytes_list.append(index)
             progress_bar.update(1)
             
         progress_bar.close()

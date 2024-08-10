@@ -254,6 +254,7 @@ def compress_text_to_bytes(text: str, padding_length: int=1) -> bytes:
     return compressed_data
     
 def compress_to_base64(text: str) -> str:
+    # 每三字节映射到四位6nit进制字符，所以需要填充以避免出现 "="
     compressed_data = compress_text_to_bytes(text, 3)
     
     base64_text = base64.b64encode(compressed_data).decode('utf-8')
