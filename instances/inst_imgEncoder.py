@@ -3,7 +3,7 @@ from PIL import Image, PngImagePlugin
 from tqdm import tqdm
 from itertools import product
 from tools.TextTools import encode_crc, safe_open_txt, compress_text_to_bytes, decode_crc, decompress_text_from_bytes
-from tools.ImageProcessing import generate_palette
+from tools.ImageProcessing import generate_palette_random
 
 class ImgEncoder:
     def __init__(self) -> None:
@@ -155,7 +155,7 @@ class ImgEncoder:
     
     def encode_palette_from_binary(self, binary_str: bytes, palette: list=None) -> Image.Image:
         if not palette:
-            palette = generate_palette(256)
+            palette = generate_palette_random(256)
         
         total_pixels_needed = len(binary_str)
         
@@ -169,9 +169,9 @@ class ImgEncoder:
         
         x, y = 0, 0
         for i in tqdm(range(total_pixels_needed), desc='Encoding text(palette-binary):'):
-            grey = binary_str[i]
+            pixel = binary_str[i]
             
-            img.putpixel((x, y), grey)
+            img.putpixel((x, y), pixel)
             if x == width - 1:
                 x = 0
                 y += 1

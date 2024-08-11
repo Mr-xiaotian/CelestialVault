@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 from pathlib import Path
+from tqdm import tqdm
+from itertools import product
 from pillow_heif import register_heif_opener
 from colorsys import hsv_to_rgb
 
@@ -102,21 +104,30 @@ def img_to_base64(img: Image.Image) -> str:
 
     return encoded_text
 
-def generate_palette(n=256, random_seed=0, saturation_range=(0.1, 0.3), value_range=(0.7, 0.9)):
+def generate_palette_random(n=256, random_seed=0, style=None):
     """
     生成调色板，默认为Morandi 色系，并确保颜色唯一。
 
     :param n: 要生成的颜色数量
     :param random_seed: 随机种子，确保颜色生成的可重复性
-    :param saturation_range: 饱和度的范围，控制颜色的柔和度
-    :param value_range: 亮度的范围，控制颜色的明度
-    :return: 颜色列表，以 0-255 范围的 RGB 值表示
+    :param style: 调色板风格，可选 'morandi' 或 'grey'，默认为 'morandi'
     """
+    if not style or style == 'morandi':
+        hue_range = (0, 1)
+        saturation_range=(0.1, 0.3)
+        value_range=(0.7, 0.9)
+    elif style == 'grey':
+        hue_range = (0, 0)
+        saturation_range=(0, 0)
+        value_range=(0.5, 0.8)
+    else:
+        raise ValueError("Unsupported style")
+
     np.random.seed(random_seed)
     colors = set()
 
     while len(colors) < n:
-        h = np.random.uniform(0, 1)  # 随机色调
+        h = np.random.uniform(*hue_range)  # 随机色调
         s = np.random.uniform(*saturation_range)  # 低饱和度
         v = np.random.uniform(*value_range)  # 较高亮度
         
@@ -190,3 +201,38 @@ def restore_expanded_image(expanded_image: Image.Image, n: int) -> Image.Image:
     restored_image = expanded_image.resize((width, height), Image.NEAREST)
     
     return restored_image
+
+def extract_pixels_as_gif(image: Image.Image, frame_size=200, duration=100, loop=0):
+    """
+    将每个像素点提取出来作为GIF中的一帧。
+
+    :param image: 要处理的图像。如果是调色板图像（P模式），将其转换为RGB模式。
+    :param frame_size: 每帧图像的大小。
+    :param duration: 每帧显示的持续时间（毫秒）。
+    :param loop: GIF循环的次数，0表示无限循环。
+    """
+    # 如果图像是P模式（调色板图像），转换为RGB模式
+    if image.mode == 'P':
+        image = image.convert('RGB')
+
+    width, height = image.size
+
+    # 准备保存GIF的帧列表
+    frames = []
+    progress_bar = tqdm(total=height * width, desc='Extract Pixels:')
+
+    # 提取每个像素点并生成每帧图像
+    for y, x in product(range(height), range(width)):
+        pixel = image.getpixel((x, y))
+        frame = Image.new(image.mode, (frame_size, frame_size), color=pixel)
+        frames.append(frame)
+        progress_bar.update(1)
+    
+    progress_bar.close()
+
+    # 将帧保存到一个BytesIO对象中
+    gif_io = io.BytesIO()
+    frames[0].save(gif_io, format='GIF', save_all=True, append_images=frames[1:], duration=duration, loop=loop)
+
+    gif_io.seek(0)
+    return gif_io
