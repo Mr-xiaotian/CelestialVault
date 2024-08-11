@@ -25,7 +25,7 @@ def compress_video(old_video_path: Path, new_video_path: Path):
         'ffmpeg', 
         '-i', str(old_video_path), 
         '-vcodec', 'libx265', 
-        '-crf', '28', 
+        '-crf', '23', 
         '-preset', 'medium',
         '-acodec', 'aac',
         str(new_video_path)
