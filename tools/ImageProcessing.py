@@ -110,16 +110,47 @@ def generate_palette_random(n=256, random_seed=0, style=None):
 
     :param n: 要生成的颜色数量
     :param random_seed: 随机种子，确保颜色生成的可重复性
-    :param style: 调色板风格，可选 'morandi' 或 'grey'，默认为 'morandi'
+    :param style: 调色板风格，可选 'morandi', 'grey', 'hawaiian', 'deepsea', 'twilight', 'sunrise', 'cyberpunk', 'autumn'，默认为 'morandi'
     """
     if not style or style == 'morandi':
-        hue_range = (0, 1)
-        saturation_range=(0.1, 0.3)
-        value_range=(0.7, 0.9)
+        # 莫兰迪风格，使用柔和、低饱和度的颜色
+        hue_range = (0, 1)  # 随机色调
+        saturation_range=(0.1, 0.3)  # 低饱和度
+        value_range=(0.7, 0.9)  # 较高亮度
     elif style == 'grey':
         hue_range = (0, 0)
         saturation_range=(0, 0)
         value_range=(0.5, 0.8)
+    elif style == 'hawaiian':
+        # 夏威夷风格，通常使用明亮、热情的颜色，比如橙色、黄色和绿色
+        hue_range = (0.1, 0.6)  # 从橙色到绿色的色调
+        saturation_range = (0.7, 1.0)  # 高饱和度
+        value_range = (0.8, 1.0)  # 高亮度
+    elif style == 'deepsea':
+        # 深海蓝调，使用深蓝色和绿色调，营造深海的感觉
+        hue_range = (0.5, 0.7)  # 蓝色到青色
+        saturation_range = (0.4, 0.7)  # 中等饱和度
+        value_range = (0.3, 0.5)  # 低亮度
+    elif style == 'twilight':
+        # 暮光森林，使用深绿色和紫色调，营造神秘感
+        hue_range = (0.3, 0.8)  # 从深绿色到紫色
+        saturation_range = (0.3, 0.6)  # 低到中等饱和度
+        value_range = (0.2, 0.4)  # 较低亮度，模拟暮光的阴暗感
+    elif style == 'sunrise':
+        # 日出暖阳，柔和的粉色、橙色和淡黄色
+        hue_range = (0.0, 0.2)  # 从粉色到橙色
+        saturation_range = (0.5, 0.7)  # 中等饱和度
+        value_range = (0.7, 0.9)  # 较高亮度，表现温暖感
+    elif style == 'cyberpunk':
+        # 工业未来风格，赛博朋克文化的霓虹灯色调
+        hue_range = (0.7, 0.9)  # 从紫色到蓝绿色
+        saturation_range = (0.8, 1.0)  # 非常高的饱和度，强烈对比
+        value_range = (0.7, 1.0)  # 高亮度，表现明亮醒目的霓虹灯光
+    elif style == 'autumn':
+        # 秋天的怀旧，温暖的橙色、棕色和金色
+        hue_range = (0.05, 0.15)  # 从橙色到棕色
+        saturation_range = (0.4, 0.7)  # 低到中等饱和度
+        value_range = (0.4, 0.6)  # 较低到中等亮度，表现秋天的温暖
     else:
         raise ValueError("Unsupported style")
 
@@ -127,9 +158,9 @@ def generate_palette_random(n=256, random_seed=0, style=None):
     colors = set()
 
     while len(colors) < n:
-        h = np.random.uniform(*hue_range)  # 随机色调
-        s = np.random.uniform(*saturation_range)  # 低饱和度
-        v = np.random.uniform(*value_range)  # 较高亮度
+        h = np.random.uniform(*hue_range)
+        s = np.random.uniform(*saturation_range)
+        v = np.random.uniform(*value_range)
         
         r, g, b = hsv_to_rgb(h, s, v)
         color = (int(r*255), int(g*255), int(b*255))
@@ -145,6 +176,9 @@ def display_palette(palette, block_size=1):
     :param palette: 一个包含 RGB 颜色的平铺列表或元组，形如 [r, g, b, r, g, b, ...]
     :param block_size: 每个颜色块的大小，默认为1
     """
+    def rgb_to_hex(r, g, b):
+        return '#%02x%02x%02x' % (r, g, b)
+    
     total_colors = len(palette) // 3  # 计算颜色的数量
     
     n_cols = math.ceil(math.sqrt(total_colors))
@@ -162,7 +196,7 @@ def display_palette(palette, block_size=1):
     
     for i in range(total_colors):
         r, g, b = palette[3 * i], palette[3 * i + 1], palette[3 * i + 2]
-        hex_color = '#%02x%02x%02x' % (r, g, b)
+        hex_color = rgb_to_hex(r, g, b)
         ax.add_patch(plt.Rectangle(
             (i % n_cols, n_rows - 1 - i // n_cols), 
             block_size, block_size, 

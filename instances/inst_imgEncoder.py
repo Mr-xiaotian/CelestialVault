@@ -16,27 +16,28 @@ class ImgEncoder:
 
         return img
         
-    def encode_text(self, target_text, mode: str='grey') -> Image.Image:
+    def encode_text(self, target_text, mode: str='morandi') -> Image.Image:
         crc_text = encode_crc(target_text)
 
-        if mode == 'grey':
-            img = self.encode_gray(crc_text)
-        elif mode == 'rgb':
-            img = self.encode_rgb(crc_text)
-        elif mode == 'rgba':
-            img = self.encode_rgba(crc_text)
-        elif mode == 'grey_binary':
+        if mode in ['morandi', 'hawaiian', 'deepsea', 'twilight', 'sunrise', 'cyberpunk', 'autumn']: 
+            palette = generate_palette_random(256, style=mode)
+            compressed_binary = compress_text_to_bytes(crc_text, 1)
+            img = self.encode_palette_from_binary(compressed_binary, palette)
+        elif mode == 'grey':
             compressed_binary = compress_text_to_bytes(crc_text, 1)
             img = self.encode_grey_from_binary(compressed_binary)
-        elif mode == 'palette_binary':
-            compressed_binary = compress_text_to_bytes(crc_text, 1)
-            img = self.encode_palette_from_binary(compressed_binary)
-        elif mode == 'rgb_binary':
+        elif mode == 'rgb':
             compressed_binary = compress_text_to_bytes(crc_text, 3)
             img = self.encode_rgb_from_binary(compressed_binary)
-        elif mode == 'rgba_binary':
+        elif mode == 'rgba':
             compressed_binary = compress_text_to_bytes(crc_text, 4)
             img = self.encode_rgba_from_binary(compressed_binary)
+        elif mode == 'grey_ori':
+            img = self.encode_gray(crc_text)
+        elif mode == 'rgb_ori':
+            img = self.encode_rgb(crc_text)
+        elif mode == 'rgba_ori':
+            img = self.encode_rgba(crc_text)
         else:
             raise ValueError(f'Unsupported mode: {mode}')
         
@@ -254,25 +255,22 @@ class ImgDecoder:
         with open(img_path.replace(f'.png', '.txt'), 'w', encoding='utf-8') as f:
             f.write(actual_text)
 
-    def decode_image(self, img: Image.Image, mode: str='grey') -> None:
-        if mode == 'grey':
-            crc_text = self.decode_gray(img)
+    def decode_image(self, img: Image.Image, mode: str='morandi') -> None:
+        if mode in ['grey', 'morandi', 'hawaiian', 'deepsea']:
+            crc_binary = self.decode_one_channel_binary(img)
+            crc_text = decompress_text_from_bytes(crc_binary)
         elif mode == 'rgb':
-            crc_text = self.decode_rgb(img)
+            crc_binary = self.decode_two_channel_binary(img)
+            crc_text = decompress_text_from_bytes(crc_binary)
         elif mode == 'rgba':
+            crc_binary = self.decode_three_channel_binary(img)
+            crc_text = decompress_text_from_bytes(crc_binary)
+        elif mode == 'grey_ori':
+            crc_text = self.decode_gray(img)
+        elif mode == 'rgb_ori':
+            crc_text = self.decode_rgb(img)
+        elif mode == 'rgba_ori':
             crc_text = self.decode_rgba(img)
-        elif mode == 'grey_binary':
-            crc_binary = self.decode_grey_to_binary(img)
-            crc_text = decompress_text_from_bytes(crc_binary)
-        elif mode == 'palette_binary':
-            crc_binary = self.decode_palette_to_binary(img)
-            crc_text = decompress_text_from_bytes(crc_binary)
-        elif mode == 'rgb_binary':
-            crc_binary = self.decode_rgb_to_binary(img)
-            crc_text = decompress_text_from_bytes(crc_binary)
-        elif mode == 'rgba_binary':
-            crc_binary = self.decode_rgba_to_binary(img)
-            crc_text = decompress_text_from_bytes(crc_binary)
         else:
             raise ValueError(f'Unsupported mode: {mode}')
         
@@ -347,26 +345,12 @@ class ImgDecoder:
         progress_bar.close()
         return ''.join(chars)
     
-    def decode_grey_to_binary(self, img: Image.Image) -> bytes:
+    def decode_one_channel_binary(self, img: Image.Image) -> bytes:
         width, height = img.size
         pixels = img.load()
 
         bytes_list = []
-        progress_bar = tqdm(total=height * width, desc='Decoding img(grey-binary):')
-        for y, x in product(range(height), range(width)):
-            grey = pixels[x, y]
-            bytes_list.append(grey)
-            progress_bar.update(1)
-            
-        progress_bar.close()
-        return bytes(bytes_list)
-    
-    def decode_palette_to_binary(self, img: Image.Image) -> bytes:
-        width, height = img.size
-        pixels = img.load()
-
-        bytes_list = []
-        progress_bar = tqdm(total=height * width, desc='Decoding img(palette-binary):')
+        progress_bar = tqdm(total=height * width, desc='Decoding img(one-channel-binary):')
         for y, x in product(range(height), range(width)):
             index = pixels[x, y]
 
@@ -376,12 +360,12 @@ class ImgDecoder:
         progress_bar.close()
         return bytes(bytes_list)
     
-    def decode_rgb_to_binary(self, img: Image.Image) -> bytes:
+    def decode_two_channel_binary(self, img: Image.Image) -> bytes:
         width, height = img.size
         pixels = img.load()
 
         bytes_list = []
-        progress_bar = tqdm(total=height * width, desc='Decoding img(rgb-binary):')
+        progress_bar = tqdm(total=height * width, desc='Decoding img(two-channel-binary):')
         for y, x in product(range(height), range(width)):
             rgb = pixels[x, y]
             bytes_list.extend([rgb[0], rgb[1], rgb[2]])
@@ -390,12 +374,12 @@ class ImgDecoder:
         progress_bar.close()
         return bytes(bytes_list)
     
-    def decode_rgba_to_binary(self, img: Image.Image) -> bytes:
+    def decode_three_channel_binary(self, img: Image.Image) -> bytes:
         width, height = img.size
         pixels = img.load()
 
         bytes_list = []
-        progress_bar = tqdm(total=height * width, desc='Decoding img(rgba-binary):')
+        progress_bar = tqdm(total=height * width, desc='Decoding img(three-channel-binary):')
         for y, x in product(range(height), range(width)):
             rgba = pixels[x, y]
             bytes_list.extend([rgba[0], rgba[1], rgba[2], rgba[3]])
