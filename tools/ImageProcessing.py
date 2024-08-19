@@ -112,47 +112,18 @@ def generate_palette_random(n=256, random_seed=0, style=None):
     :param random_seed: 随机种子，确保颜色生成的可重复性
     :param style: 调色板风格，可选 'morandi', 'grey', 'hawaiian', 'deepsea', 'twilight', 'sunrise', 'cyberpunk', 'autumn'，默认为 'morandi'
     """
-    if not style or style == 'morandi':
-        # 莫兰迪风格，使用柔和、低饱和度的颜色
-        hue_range = (0, 1)  # 随机色调
-        saturation_range=(0.1, 0.3)  # 低饱和度
-        value_range=(0.7, 0.9)  # 较高亮度
-    elif style == 'grey':
-        hue_range = (0, 0)
-        saturation_range=(0, 0)
-        value_range=(0.5, 0.8)
-    elif style == 'hawaiian':
-        # 夏威夷风格，通常使用明亮、热情的颜色，比如橙色、黄色和绿色
-        hue_range = (0.1, 0.6)  # 从橙色到绿色的色调
-        saturation_range = (0.7, 1.0)  # 高饱和度
-        value_range = (0.8, 1.0)  # 高亮度
-    elif style == 'deepsea':
-        # 深海蓝调，使用深蓝色和绿色调，营造深海的感觉
-        hue_range = (0.5, 0.7)  # 蓝色到青色
-        saturation_range = (0.4, 0.7)  # 中等饱和度
-        value_range = (0.3, 0.5)  # 低亮度
-    elif style == 'twilight':
-        # 暮光森林，使用深绿色和紫色调，营造神秘感
-        hue_range = (0.3, 0.8)  # 从深绿色到紫色
-        saturation_range = (0.3, 0.6)  # 低到中等饱和度
-        value_range = (0.2, 0.4)  # 较低亮度，模拟暮光的阴暗感
-    elif style == 'sunrise':
-        # 日出暖阳，柔和的粉色、橙色和淡黄色
-        hue_range = (0.0, 0.2)  # 从粉色到橙色
-        saturation_range = (0.5, 0.7)  # 中等饱和度
-        value_range = (0.7, 0.9)  # 较高亮度，表现温暖感
-    elif style == 'cyberpunk':
-        # 工业未来风格，赛博朋克文化的霓虹灯色调
-        hue_range = (0.7, 0.9)  # 从紫色到蓝绿色
-        saturation_range = (0.8, 1.0)  # 非常高的饱和度，强烈对比
-        value_range = (0.7, 1.0)  # 高亮度，表现明亮醒目的霓虹灯光
-    elif style == 'autumn':
-        # 秋天的怀旧，温暖的橙色、棕色和金色
-        hue_range = (0.05, 0.15)  # 从橙色到棕色
-        saturation_range = (0.4, 0.7)  # 低到中等饱和度
-        value_range = (0.4, 0.6)  # 较低到中等亮度，表现秋天的温暖
-    else:
+    from constants import style_params
+
+    # 获取对应风格的参数
+    if not style:
+        style = 'morandi'  # 默认风格
+    elif style not in style_params:
         raise ValueError("Unsupported style")
+    
+    params = style_params[style]
+    hue_range = params['hue_range']
+    saturation_range = params['saturation_range']
+    value_range = params['value_range']
 
     np.random.seed(random_seed)
     colors = set()
@@ -167,6 +138,70 @@ def generate_palette_random(n=256, random_seed=0, style=None):
         colors.add(color) # 尝试将颜色添加到集合中，确保唯一性
 
     # 将颜色集转换为列表形式，并展开为单个数值列表
+    return [value for color in colors for value in color]
+
+def generate_palette_spiral_hue(n=256, style=None):
+    """
+    生成具有规律性的调色板，颜色在HSV空间中沿螺旋路径分布。
+
+    :param n: 要生成的颜色数量
+    :param style: 调色板风格，可选 'morandi', 'grey', 'hawaiian', 'deepsea', 'twilight', 'sunrise', 'cyberpunk', 'autumn'，默认为 'morandi'
+    """
+    from constants import style_params
+
+    if not style:
+        style = 'morandi'  # 默认风格
+    elif style not in style_params:
+        raise ValueError("Unsupported style")
+
+    params = style_params[style]
+    hue_range = params['hue_range']
+    saturation_range = params['saturation_range']
+    value_range = params['value_range']
+
+    colors = []
+
+    for i in range(n):
+        h = hue_range[0] + (hue_range[1] - hue_range[0]) * (i / n)
+        s = saturation_range[0] + (saturation_range[1] - saturation_range[0]) * (np.sin(i / n * 2 * np.pi) / 2 + 0.5)
+        v = value_range[0] + (value_range[1] - value_range[0]) * (np.cos(i / n * 2 * np.pi) / 2 + 0.5)
+
+        r, g, b = hsv_to_rgb(h, s, v)
+        color = (int(r * 255), int(g * 255), int(b * 255))
+        colors.append(color)
+
+    return [value for color in colors for value in color]
+
+def generate_palette_uniform_hue(n=256, style=None):
+    """
+    生成具有规律性的调色板，颜色在色相空间均匀分布。
+
+    :param n: 要生成的颜色数量
+    :param style: 调色板风格，可选 'morandi', 'grey', 'hawaiian', 'deepsea', 'twilight', 'sunrise', 'cyberpunk', 'autumn'，默认为 'morandi'
+    """
+    from constants import style_params
+
+    if not style:
+        style = 'morandi'  # 默认风格
+    elif style not in style_params:
+        raise ValueError("Unsupported style")
+
+    params = style_params[style]
+    hue_range = params['hue_range']
+    saturation_range = params['saturation_range']
+    value_range = params['value_range']
+
+    colors = []
+
+    for i in range(n):
+        h = hue_range[0] + (hue_range[1] - hue_range[0]) * (i / n)
+        s = np.mean(saturation_range)  # 使用饱和度的平均值
+        v = np.mean(value_range)  # 使用亮度的平均值
+
+        r, g, b = hsv_to_rgb(h, s, v)
+        color = (int(r * 255), int(g * 255), int(b * 255))
+        colors.append(color)
+
     return [value for color in colors for value in color]
 
 def display_palette(palette, block_size=1):
