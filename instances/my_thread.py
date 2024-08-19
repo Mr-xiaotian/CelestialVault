@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-#版本 2.10
+#版本 2.20
 #作者：晓天, GPT-4
-#时间：30/7/2023
+#时间：16/8/2024
+#Github: https://github.com/Mr-xiaotian
 
 # We import the necessary modules
 import sys,asyncio
@@ -213,6 +214,7 @@ class ThreadManager:
             self.dictory_queue.put(item)
             self.retry_time_dict[item] = 0
     
+        self.chunk_index = 0
         while not self.dictory_queue.empty():
             chunk = []
             for _ in range(
@@ -228,6 +230,7 @@ class ThreadManager:
                 self.run_in_multiprocessing(chunk)
             else:
                 self.run_in_serial(chunk)
+            self.chunk_index += 1
 
     async def start_async(self, dictory):
         """
@@ -259,7 +262,7 @@ class ThreadManager:
         参数:
         dictory: 任务列表
         """
-        progress_bar = tqdm(total=len(dictory), desc=self.tqdm_desc) if self.show_progress else None
+        progress_bar = tqdm(total=len(dictory), desc=f'{self.tqdm_desc}(serial) {self.chunk_index}') if self.show_progress else None
         for num,d in enumerate(dictory):
             try:
                 start_time = time()
@@ -295,7 +298,7 @@ class ThreadManager:
             threads.append(thread)
             thread.start()
 
-        progress_bar = tqdm(total=len(dictory), desc=self.tqdm_desc) if self.show_progress else None
+        progress_bar = tqdm(total=len(dictory), desc=f'{self.tqdm_desc}(parallel) {self.chunk_index}') if self.show_progress else None
         for thread, d in zip(threads, dictory):
             thread.join()
             if thread.get_exception() is not None:
@@ -327,7 +330,7 @@ class ThreadManager:
             task = asyncio.create_task(self.func(*self.get_args(d)))
             tasks.append(task)
 
-        progress_bar = tqdm_asy(total=len(dictory), desc=self.tqdm_desc) if self.show_progress else None
+        progress_bar = tqdm_asy(total=len(dictory), desc=f'{self.tqdm_desc}(async) {self.chunk_index}') if self.show_progress else None
         for task, d in zip(tasks, dictory):
             try:
                 result = await task
@@ -363,7 +366,7 @@ class ThreadManager:
             processes.append(process)
             process.start()
 
-        progress_bar = tqdm(total=len(dictory), desc=self.tqdm_desc) if self.show_progress else None
+        progress_bar = tqdm(total=len(dictory), desc=f'{self.tqdm_desc}(multiprocessing) {self.chunk_index}') if self.show_progress else None
         for process in processes:
             process.join()
             progress_bar.update(1) if self.show_progress else None
@@ -451,7 +454,6 @@ class ExampleThreadManager(ThreadManager):
         """
         result_dict = self.get_result_dict()
         for task, result in result_dict.items():
-            # print(f"Task {self.get_task_info(task)}: {self.get_result_info(result)}")
             logger.info(f"Task {self.get_task_info(task)}: {self.get_result_info(result)}")
 
     def handle_error(self):
@@ -465,5 +467,4 @@ class ExampleThreadManager(ThreadManager):
         error_dict = self.get_error_dict()
         error_len = len(error_dict)
         for num,(task, error) in enumerate(error_dict.items()):
-            # print(f"Error in Task {self.get_task_info(task)}(index:{num}/{error_len}):\n{error}\n")
             logger.error(f"Task {self.get_task_info(task)}(index:{num+1}/{error_len}): {error}")
