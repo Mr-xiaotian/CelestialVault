@@ -104,57 +104,46 @@ def img_to_base64(img: Image.Image) -> str:
 
     return encoded_text
 
-def generate_palette_random(color_num=256, style=None, random_seed=0):
-    """
-    生成调色板，默认为Morandi 色系，并确保颜色唯一。
-
-    :param color_num: 要生成的颜色数量
-    :param style: 调色板风格，可选 'morandi', 'grey', 'hawaiian', 'deepsea', 'twilight', 'sunrise', 'cyberpunk', 'autumn'，默认为 'morandi'
-    :param random_seed: 随机种子，确保颜色生成的可重复性
-    """
-    from constants import style_params
-
-    # 获取对应风格的参数
-    if not style:
-        style = 'morandi'  # 默认风格
-    elif style not in style_params:
-        raise ValueError("Unsupported style")
-    
-    params = style_params[style]
-    hue_range = params['hue_range']
-    saturation_range = params['saturation_range']
-    value_range = params['value_range']
-
-    np.random.seed(random_seed)
-    colors = set()
-
-    while len(colors) < color_num:
-        h = np.random.uniform(*hue_range)
-        s = np.random.uniform(*saturation_range)
-        v = np.random.uniform(*value_range)
-        
-        r, g, b = hsv_to_rgb(h, s, v)
-        color = (int(r*255), int(g*255), int(b*255))
-        colors.add(color) # 尝试将颜色添加到集合中，确保唯一性
-
-    # 将颜色集转换为列表形式，并展开为单个数值列表
-    return [value for color in colors for value in color]
-
-def generate_palette_order(color_num=256, style=None, mode='spiral'):
+def generate_palette(color_num=256, style=None, mode='random', random_seed=0):
     """
     生成调色板，支持均匀和螺旋两种模式，并确保颜色唯一或规律分布。
 
     :param color_num: 要生成的颜色数量
     :param style: 调色板风格，可选 'morandi', 'grey', 'hawaiian', 'deepsea', 'twilight', 'sunrise', 'cyberpunk', 'autumn'，默认为 'morandi'
-    :param mode: 颜色生成模式，可选 'uniform', 'spiral'
+    :param mode: 颜色生成模式，可选 'random' 'uniform', 'spiral'
     """
-    def uniform_hue(hue_range, saturation_range, value_range, index):
+    def select_random_range(range_tuple):
+        """
+        根据输入的范围元组返回一个随机选择的范围。
+        如果是四元元组，随机选择两个区间之一。
+        如果是二元元组，直接返回。
+
+        :param range_tuple: 二元或四元的元组。
+        :return: 返回选中的二元元组。
+        """
+        if len(range_tuple) == 4:
+            # 随机选择前两个值的范围或后两个值的范围
+            if np.random.rand() > 0.5:
+                return range_tuple[0], range_tuple[1]
+            else:
+                return range_tuple[2], range_tuple[3]
+        else:
+            return range_tuple
+    def random_mode(hue_range, saturation_range, value_range, index):
+        # 实现随机模式
+        h = np.random.uniform(*hue_range)
+        s = np.random.uniform(*saturation_range)
+        v = np.random.uniform(*value_range)
+        if (h, s, v) in old_hsv:
+            return random_mode(hue_range, saturation_range, value_range, index)
+        return h, s, v
+    def uniform_mode(hue_range, saturation_range, value_range, index):
         # 实现均匀模式
         h = hue_range[0] + (hue_range[1] - hue_range[0]) * (index / color_num)
         s = np.mean(saturation_range)  # 使用饱和度的平均值
         v = np.mean(value_range)  # 使用亮度的平均值
         return h, s, v
-    def spiral_hue(hue_range, saturation_range, value_range, index):
+    def spiral_mode(hue_range, saturation_range, value_range, index):
         # 实现螺旋模式
         h = hue_range[0] + (hue_range[1] - hue_range[0]) * (index / color_num)
         s = saturation_range[0] + (saturation_range[1] - saturation_range[0]) * (np.sin(index / color_num * 2 * np.pi) / 2 + 0.5)
@@ -167,17 +156,29 @@ def generate_palette_order(color_num=256, style=None, mode='spiral'):
     elif style not in style_params:
         raise ValueError("Unsupported style")
     
-    if mode not in ['uniform', 'spiral']:
+    if mode not in ['random', 'uniform', 'spiral']:
         raise ValueError("Unsupported mode")
 
     params = style_params[style]
-    hue_range = params['hue_range']
-    saturation_range = params['saturation_range']
-    value_range = params['value_range']
+    np.random.seed(random_seed)
+
+    get_hsv = None
+    if mode == 'random':
+        get_hsv = random_mode
+    elif mode == 'uniform':
+        get_hsv = uniform_mode
+    elif mode == 'spiral':
+        get_hsv = spiral_mode
 
     colors = []
+    old_hsv = []
     for i in range(color_num):
-        h, s, v = uniform_hue(hue_range, saturation_range, value_range, i) if mode == 'uniform' else spiral_hue(hue_range, saturation_range, value_range, i)
+        hue_range = select_random_range(params['hue_range'])
+        saturation_range = select_random_range(params['saturation_range'])
+        value_range = select_random_range(params['value_range'])
+
+        h, s, v = get_hsv(hue_range, saturation_range, value_range, i)
+        old_hsv.append((h, s, v))
 
         r, g, b = hsv_to_rgb(h, s, v)
         color = (int(r * 255), int(g * 255), int(b * 255))
