@@ -3,7 +3,7 @@ from PIL import Image, PngImagePlugin
 from tqdm import tqdm
 from itertools import product
 from tools.TextTools import encode_crc, safe_open_txt, compress_text_to_bytes, decode_crc, decompress_text_from_bytes
-from tools.ImageProcessing import generate_palette_random
+from tools.ImageProcessing import generate_palette
 
 class ImgEncoder:
     def __init__(self) -> None:
@@ -20,7 +20,7 @@ class ImgEncoder:
         crc_text = encode_crc(target_text)
 
         if mode in ['morandi', 'hawaiian', 'deepsea', 'twilight', 'sunrise', 'cyberpunk', 'autumn']: 
-            palette = generate_palette_random(256, style=mode)
+            palette = generate_palette(256, style=mode)
             compressed_binary = compress_text_to_bytes(crc_text, 1)
             img = self.encode_palette_from_binary(compressed_binary, palette)
         elif mode == 'grey':
@@ -133,31 +133,7 @@ class ImgEncoder:
                 x += 1
         return img
     
-    def encode_grey_from_binary(self, binary_str: bytes) -> Image.Image:
-        total_pixels_needed = len(binary_str)
-        
-        width = math.ceil(math.sqrt(total_pixels_needed))
-        height = math.ceil(total_pixels_needed / width)
-        
-        img = Image.new("L", (width, height), 0)
-        
-        x, y = 0, 0
-        for i in tqdm(range(total_pixels_needed), desc='Encoding text(grey-binary):'):
-            grey = binary_str[i]
-            
-            img.putpixel((x, y), grey)
-            if x == width - 1:
-                x = 0
-                y += 1
-            else:
-                x += 1
-        
-        return img
-    
-    def encode_palette_from_binary(self, binary_str: bytes, palette: list=None) -> Image.Image:
-        if not palette:
-            palette = generate_palette_random(256)
-        
+    def encode_palette_from_binary(self, binary_str: bytes, palette: list) -> Image.Image:
         total_pixels_needed = len(binary_str)
         
         width = math.ceil(math.sqrt(total_pixels_needed))
@@ -173,6 +149,27 @@ class ImgEncoder:
             pixel = binary_str[i]
             
             img.putpixel((x, y), pixel)
+            if x == width - 1:
+                x = 0
+                y += 1
+            else:
+                x += 1
+        
+        return img
+    
+    def encode_grey_from_binary(self, binary_str: bytes) -> Image.Image:
+        total_pixels_needed = len(binary_str)
+        
+        width = math.ceil(math.sqrt(total_pixels_needed))
+        height = math.ceil(total_pixels_needed / width)
+        
+        img = Image.new("L", (width, height), 0)
+        
+        x, y = 0, 0
+        for i in tqdm(range(total_pixels_needed), desc='Encoding text(grey-binary):'):
+            grey = binary_str[i]
+            
+            img.putpixel((x, y), grey)
             if x == width - 1:
                 x = 0
                 y += 1
