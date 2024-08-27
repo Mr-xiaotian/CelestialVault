@@ -244,17 +244,29 @@ def decode_crc(decoded_text: str) -> str:
     return True
 
 def compress_text_to_bytes(text: str, padding_length: int=1) -> bytes:
-    # Step 1: Compress the text
+    """
+    压缩文本为字节流。
+    """
+    # 使用zlib压缩文本
     compressed_data = zlib.compress(text.encode('utf-8'))
     
-    # Step 2: Adjust the length of compressed data to avoid "=" in Base64 output
-    # We calculate the required padding to make the length a multiple of 3.
     padding_length = (padding_length - len(compressed_data) % padding_length) % padding_length
     compressed_data += b'\0' * padding_length  # Add null bytes for padding
 
     return compressed_data
+
+def decompress_text_from_bytes(compressed_data: bytes) -> str:
+    """
+    从字节流中解压缩文本。
+    """
+    original_text = zlib.decompress(compressed_data.rstrip(b'\0')).decode('utf-8')
+
+    return original_text
     
 def compress_to_base64(text: str) -> str:
+    """
+    压缩文本并转换为Base64编码。
+    """
     # 每三字节映射到四位6nit进制字符，所以需要填充以避免出现 "="
     compressed_data = compress_text_to_bytes(text, 3)
     
@@ -262,12 +274,10 @@ def compress_to_base64(text: str) -> str:
     
     return base64_text
 
-def decompress_text_from_bytes(compressed_data: bytes) -> str:
-    original_text = zlib.decompress(compressed_data.rstrip(b'\0')).decode('utf-8')
-
-    return original_text
-
 def decode_from_base64(base64_text: str) -> str:
+    """
+    从Base64编码中解码并解压缩文本。
+    """
     # Decode the Base64 text to get the compressed data
     compressed_data = base64.b64decode(base64_text.encode('utf-8'))
     

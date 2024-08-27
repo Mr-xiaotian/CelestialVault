@@ -2,7 +2,7 @@ import math
 from PIL import Image, PngImagePlugin
 from tqdm import tqdm
 from itertools import product
-from tools.TextTools import encode_crc, safe_open_txt, compress_text_to_bytes, decode_crc, decompress_text_from_bytes
+from tools.TextTools import safe_open_txt, encode_crc, decode_crc, compress_text_to_bytes, decompress_text_from_bytes
 from tools.ImageProcessing import generate_palette
 
 class ImgEncoder:

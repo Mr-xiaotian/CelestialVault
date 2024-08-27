@@ -104,7 +104,7 @@ def img_to_base64(img: Image.Image) -> str:
 
     return encoded_text
 
-def generate_palette(color_num=256, style=None, mode='random', random_seed=0):
+def generate_palette(color_num=256, style='morandi', mode='random', random_seed=0):
     """
     生成调色板，支持均匀和螺旋两种模式，并确保颜色唯一或规律分布。
 
@@ -131,12 +131,13 @@ def generate_palette(color_num=256, style=None, mode='random', random_seed=0):
             return range_tuple
     def random_mode(hue_range, saturation_range, value_range, index):
         # 实现随机模式
-        h = np.random.uniform(*hue_range)
-        s = np.random.uniform(*saturation_range)
-        v = np.random.uniform(*value_range)
-        if (h, s, v) in old_hsv:
-            return random_mode(hue_range, saturation_range, value_range, index)
-        return h, s, v
+        while True:
+            h = np.random.uniform(*hue_range)
+            s = np.random.uniform(*saturation_range)
+            v = np.random.uniform(*value_range)
+            if (h, s, v) not in used_hsv:
+                used_hsv.add((h, s, v))
+                return h, s, v
     def uniform_mode(hue_range, saturation_range, value_range, index):
         # 实现均匀模式
         h = hue_range[0] + (hue_range[1] - hue_range[0]) * (index / color_num)
@@ -151,11 +152,9 @@ def generate_palette(color_num=256, style=None, mode='random', random_seed=0):
         return h, s, v
 
     from constants import style_params
-    if not style:
-        style = 'morandi'  # 默认风格
-    elif style not in style_params:
+
+    if style not in style_params:
         raise ValueError("Unsupported style")
-    
     if mode not in ['random', 'uniform', 'spiral']:
         raise ValueError("Unsupported mode")
 
@@ -171,18 +170,17 @@ def generate_palette(color_num=256, style=None, mode='random', random_seed=0):
         get_hsv = spiral_mode
 
     colors = []
-    old_hsv = []
+    used_hsv = set()
     for i in range(color_num):
         hue_range = select_random_range(params['hue_range'])
         saturation_range = select_random_range(params['saturation_range'])
         value_range = select_random_range(params['value_range'])
 
         h, s, v = get_hsv(hue_range, saturation_range, value_range, i)
-        old_hsv.append((h, s, v))
-
         r, g, b = hsv_to_rgb(h, s, v)
         color = (int(r * 255), int(g * 255), int(b * 255))
         colors.append(color)
+        
     return [value for color in colors for value in color]
 
 def display_palette(palette, block_size=1):
