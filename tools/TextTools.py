@@ -239,9 +239,9 @@ def decode_crc(decoded_text: str) -> str:
     # 计算校验和并验证
     crc_calculated = zlib.crc32(actual_text.encode('utf-8'))
     if crc_received != crc_calculated:
-        return False
+        print("校验和验证失败！")
     
-    return True
+    return actual_text
 
 def compress_text_to_bytes(text: str, padding_length: int=1) -> bytes:
     """

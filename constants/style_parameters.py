@@ -1,10 +1,10 @@
 # 定义风格参数字典
 style_params = {
-    'grey': {
-        'hue_range': (0, 0),
-        'saturation_range': (0, 0),
-        'value_range': (0, 1)
-    },
+    # 'grey': {
+    #     'hue_range': (0, 0),
+    #     'saturation_range': (0, 0),
+    #     'value_range': (0, 1)
+    # },
     'morandi': {
         # 莫兰迪风格，使用柔和、低饱和度的颜色
         'hue_range': (0, 1),  # 随机色调

@@ -4,12 +4,10 @@ from tqdm import tqdm
 from itertools import product
 from tools.TextTools import safe_open_txt, encode_crc, decode_crc, compress_text_to_bytes, decompress_text_from_bytes
 from tools.ImageProcessing import generate_palette
+from constants import style_params
 
 class ImgEncoder:
-    def __init__(self) -> None:
-        pass
-    
-    def encode_text_file(self, file_path: str, mode: str='grey') -> Image.Image:
+    def encode_text_file(self, file_path: str, mode: str='morandi') -> Image.Image:
         target_text = safe_open_txt(file_path)
         img = self.encode_text(target_text, mode)
         img.save(file_path.replace('.txt', f'({mode}).png'))
@@ -19,19 +17,19 @@ class ImgEncoder:
     def encode_text(self, target_text, mode: str='morandi') -> Image.Image:
         crc_text = encode_crc(target_text)
 
-        if mode in ['morandi', 'hawaiian', 'deepsea', 'twilight', 'sunrise', 'cyberpunk', 'autumn']: 
+        if mode in style_params: 
             palette = generate_palette(256, style=mode)
             compressed_binary = compress_text_to_bytes(crc_text, 1)
-            img = self.encode_palette_from_binary(compressed_binary, palette)
+            img = self.encode_channels(compressed_binary, 'P', palette)
         elif mode == 'grey':
             compressed_binary = compress_text_to_bytes(crc_text, 1)
-            img = self.encode_grey_from_binary(compressed_binary)
+            img = self.encode_channels(compressed_binary, 'L')
         elif mode == 'rgb':
             compressed_binary = compress_text_to_bytes(crc_text, 3)
-            img = self.encode_rgb_from_binary(compressed_binary)
+            img = self.encode_channels(compressed_binary, 'RGB')
         elif mode == 'rgba':
             compressed_binary = compress_text_to_bytes(crc_text, 4)
-            img = self.encode_rgba_from_binary(compressed_binary)
+            img = self.encode_channels(compressed_binary, 'RGBA')
         elif mode == 'grey_ori':
             img = self.encode_gray(crc_text)
         elif mode == 'rgb_ori':
@@ -77,6 +75,11 @@ class ImgEncoder:
         return img
 
     def encode_rgb(self, text: str) -> Image.Image:
+        """
+        将文本编码为RGB图像(unsafe)
+        :param text: 要编码的文本
+        :return: 编码后的RGB图像
+        """
         str_len = len(text)
         total_pixels_needed = math.ceil(str_len * 2 / 3)
         width = math.ceil(math.sqrt(total_pixels_needed))
@@ -133,22 +136,24 @@ class ImgEncoder:
                 x += 1
         return img
     
-    def encode_palette_from_binary(self, binary_str: bytes, palette: list) -> Image.Image:
-        total_pixels_needed = len(binary_str)
+    def encode_channels(self, binary_str: bytes, mode: str, palette: list=None) -> Image.Image:
+        channels = len(mode)
+        str_len = len(binary_str)
+        total_pixels_needed = math.ceil(str_len / channels)
         
         width = math.ceil(math.sqrt(total_pixels_needed))
         height = math.ceil(total_pixels_needed / width)
         
-        img = Image.new("P", (width, height))
+        img = Image.new(mode, (width, height), (0,) * channels)
 
         # 将调色板应用到图像上
-        img.putpalette(palette)
+        img.putpalette(palette) if mode == 'P' else None
         
         x, y = 0, 0
-        for i in tqdm(range(total_pixels_needed), desc='Encoding text(palette-binary):'):
-            pixel = binary_str[i]
-            
-            img.putpixel((x, y), pixel)
+        for i in tqdm(range(0, str_len, channels), desc=f'Encoding text({mode}-binary):'):
+            chars = binary_str[i:i+channels]
+                
+            img.putpixel((x, y), tuple(chars))
             if x == width - 1:
                 x = 0
                 y += 1
@@ -157,69 +162,25 @@ class ImgEncoder:
         
         return img
     
-    def encode_grey_from_binary(self, binary_str: bytes) -> Image.Image:
-        total_pixels_needed = len(binary_str)
-        
-        width = math.ceil(math.sqrt(total_pixels_needed))
-        height = math.ceil(total_pixels_needed / width)
-        
-        img = Image.new("L", (width, height), 0)
-        
-        x, y = 0, 0
-        for i in tqdm(range(total_pixels_needed), desc='Encoding text(grey-binary):'):
-            grey = binary_str[i]
-            
-            img.putpixel((x, y), grey)
-            if x == width - 1:
-                x = 0
-                y += 1
-            else:
-                x += 1
-        
-        return img
-    
-    def encode_rgb_from_binary(self, binary_str: bytes) -> Image.Image:
-        str_len = len(binary_str)
-        
-        total_pixels_needed = math.ceil(str_len / 3)
-        width = math.ceil(math.sqrt(total_pixels_needed))
-        height = math.ceil(total_pixels_needed / width)
-        
-        img = Image.new("RGB", (width, height), (0, 0, 0))
-        
-        x, y = 0, 0
-        for i in tqdm(range(0, str_len, 3), desc='Encoding text(rgb-binary):'):
-            chars = binary_str[i:i+3]
-            rgb = (chars[0], chars[1], chars[2])
-            
-            img.putpixel((x, y), rgb)
-            if x == width - 1:
-                x = 0
-                y += 1
-            else:
-                x += 1
-        
-        return img
-    
-    def encode_rgba_from_binary(self, binary_str: bytes) -> Image.Image:
-        str_len = len(binary_str)
-        total_pixels_needed = math.ceil(str_len / 4)
-        width = math.ceil(math.sqrt(total_pixels_needed))
-        height = math.ceil(total_pixels_needed / width)
-        
-        img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    def encode_1bit_from_binary(self, binary_str: bytes) -> Image.Image:
+        total_bits_needed = len(binary_str) * 8  # 每个字节有8位
+        width = math.ceil(math.sqrt(total_bits_needed))  # 计算图像的宽度
+        height = math.ceil(total_bits_needed / width)  # 计算图像的高度
 
-        x,y = 0,0
-        for i in tqdm(range(0, len(binary_str), 4), desc='Encoding text(rgba-binary):'):
-            chars = binary_str[i:i+4]
-            rgba = (chars[0], chars[1], chars[2], chars[3])
+        img = Image.new("1", (width, height), 0)  # 创建1位模式的图像，默认黑色
 
-            img.putpixel((x, y), rgba)
-            if x == width - 1:
-                x = 0
-                y += 1
-            else:
-                x += 1
+        x, y = 0, 0
+        for byte in tqdm(binary_str, desc='Encoding text(1-bit-binary):'):
+            for bit in range(8):  # 每个字节的8位逐一处理
+                pixel_value = (byte >> (7 - bit)) & 1  # 提取对应位的值
+                img.putpixel((x, y), pixel_value)
+
+                if x == width - 1:
+                    x = 0
+                    y += 1
+                else:
+                    x += 1
+
         return img
     
     def add_message_after_binary(self, binary_img: bytes, message: str) -> bytes:
@@ -245,7 +206,7 @@ class ImgEncoder:
         img.save(output_path, "PNG", pnginfo=meta)
 
 class ImgDecoder:
-    def decode_image_file(self, img_path: str, mode: str='grey') -> str:
+    def decode_image_file(self, img_path: str, mode: str='morandi') -> str:
         img = Image.open(img_path)
         actual_text = self.decode_image(img, mode)
 
@@ -253,14 +214,8 @@ class ImgDecoder:
             f.write(actual_text)
 
     def decode_image(self, img: Image.Image, mode: str='morandi') -> None:
-        if mode in ['grey', 'morandi', 'hawaiian', 'deepsea']:
-            crc_binary = self.decode_one_channel_binary(img)
-            crc_text = decompress_text_from_bytes(crc_binary)
-        elif mode == 'rgb':
-            crc_binary = self.decode_two_channel_binary(img)
-            crc_text = decompress_text_from_bytes(crc_binary)
-        elif mode == 'rgba':
-            crc_binary = self.decode_three_channel_binary(img)
+        if mode in style_params.keys() or mode in ['grey', 'rgb', 'rgba']:
+            crc_binary = self.decode_channels(img)
             crc_text = decompress_text_from_bytes(crc_binary)
         elif mode == 'grey_ori':
             crc_text = self.decode_gray(img)
@@ -270,11 +225,8 @@ class ImgDecoder:
             crc_text = self.decode_rgba(img)
         else:
             raise ValueError(f'Unsupported mode: {mode}')
-        
-        if not decode_crc(crc_text):
-            print('CRC校验失败')
 
-        actual_text = crc_text[4:]
+        actual_text = decode_crc(crc_text)
 
         return actual_text
 
@@ -302,6 +254,11 @@ class ImgDecoder:
         return ''.join(chars)
 
     def decode_rgb(self, img: Image.Image) -> str:
+        '''
+        将rgb图像解码为字符串
+        :param img: 图像对象
+        :return: 解码后的字符串
+        '''
         width, height = img.size
         pixels = img.load()
         chars = []
@@ -342,44 +299,22 @@ class ImgDecoder:
         progress_bar.close()
         return ''.join(chars)
     
-    def decode_one_channel_binary(self, img: Image.Image) -> bytes:
+    def decode_channels(self, img: Image.Image) -> bytes:
         width, height = img.size
         pixels = img.load()
 
         bytes_list = []
-        progress_bar = tqdm(total=height * width, desc='Decoding img(one-channel-binary):')
+        mode = img.mode  # 获取图像的模式
+        channels = len(mode)  # 根据模式确定通道数
+        desc = f'Decoding img({channels}-channel-binary):'
+        progress_bar = tqdm(total=height * width, desc=desc)
+        
         for y, x in product(range(height), range(width)):
-            index = pixels[x, y]
-
-            bytes_list.append(index)
-            progress_bar.update(1)
-            
-        progress_bar.close()
-        return bytes(bytes_list)
-    
-    def decode_two_channel_binary(self, img: Image.Image) -> bytes:
-        width, height = img.size
-        pixels = img.load()
-
-        bytes_list = []
-        progress_bar = tqdm(total=height * width, desc='Decoding img(two-channel-binary):')
-        for y, x in product(range(height), range(width)):
-            rgb = pixels[x, y]
-            bytes_list.extend([rgb[0], rgb[1], rgb[2]])
-            progress_bar.update(1)
-            
-        progress_bar.close()
-        return bytes(bytes_list)
-    
-    def decode_three_channel_binary(self, img: Image.Image) -> bytes:
-        width, height = img.size
-        pixels = img.load()
-
-        bytes_list = []
-        progress_bar = tqdm(total=height * width, desc='Decoding img(three-channel-binary):')
-        for y, x in product(range(height), range(width)):
-            rgba = pixels[x, y]
-            bytes_list.extend([rgba[0], rgba[1], rgba[2], rgba[3]])
+            pixel_data = pixels[x, y]
+            if channels == 1:
+                bytes_list.append(pixel_data)
+            else:
+                bytes_list.extend(pixel_data)
             progress_bar.update(1)
             
         progress_bar.close()
