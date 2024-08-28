@@ -124,3 +124,61 @@ style_params = {
         'value_range': (0.5, 0.7)  # 中等亮度，表现出雨林的茂密与生机
     }
 }
+
+image_mode_params = {
+    'grey': {  # 灰度模式
+        'channels': 1,
+        'mode_name': "L",
+        'description': "8-bit pixels, black and white"
+    },
+    'rgb': {  # 彩色模式
+        'channels': 3,
+        'mode_name': "RGB",
+        'description': "3x8-bit pixels, true color"
+    },
+    'rgba': {  # 彩色模式带透明通道
+        'channels': 4,
+        'mode_name': "RGBA",
+        'description': "4x8-bit pixels, true color with transparency mask"
+    },
+    'palette': {  # 调色板模式
+        'channels': 1,  # 实际上每个像素存储的是调色板索引
+        'mode_name': "P",
+        'description': "8-bit pixels, mapped to any other mode using a color palette"
+    },
+    'cmyk': {  # 印刷用色彩模型
+        'channels': 4,
+        'mode_name': "CMYK",
+        'description': "4x8-bit pixels, color separation"
+    },
+    # 'ycbcr': {  # 颜色视频格式
+    #     'channels': 3,
+    #     'mode_name': "YCbCr",
+    #     'description': "3x8-bit pixels, color video format"
+    # },
+    'lab': {  # Lab 色彩空间
+        'channels': 3,
+        'mode_name': "LAB",
+        'description': "3x8-bit pixels, L*a*b color space"
+    },
+    'hsv': {  # 色调、饱和度、明度
+        'channels': 3,
+        'mode_name': "HSV",
+        'description': "3x8-bit pixels, Hue, Saturation, Value color space"
+    },
+    # '1bit': {  # 单通道黑白图像
+    #     'channels': 1,
+    #     'mode_name': "1",
+    #     'description': "1-bit pixels, black and white"
+    # },
+    # '32bit_integer': {  # 32位有符号整数像素
+    #     'channels': 1,
+    #     'mode_name': "I",
+    #     'description': "32-bit signed integer pixels"
+    # },
+    # '32bit_float': {  # 32位浮点数像素
+    #     'channels': 1,
+    #     'mode_name': "F",
+    #     'description': "32-bit floating point pixels"
+    # }
+}

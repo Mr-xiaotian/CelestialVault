@@ -115,20 +115,21 @@ def generate_palette(color_num=256, style='morandi', mode='random', random_seed=
     def select_random_range(range_tuple):
         """
         根据输入的范围元组返回一个随机选择的范围。
-        如果是四元元组，随机选择两个区间之一。
-        如果是二元元组，直接返回。
-
-        :param range_tuple: 二元或四元的元组。
+        如果元组的长度为2的倍数，随机选择其中的一个二元区间。
+        
+        :param range_tuple: 任意长度为2的倍数的元组。
         :return: 返回选中的二元元组。
         """
-        if len(range_tuple) == 4:
-            # 随机选择前两个值的范围或后两个值的范围
-            if np.random.rand() > 0.5:
-                return range_tuple[0], range_tuple[1]
-            else:
-                return range_tuple[2], range_tuple[3]
-        else:
-            return range_tuple
+        # 确保元组长度为2的倍数
+        if len(range_tuple) % 2 != 0:
+            raise ValueError("Input tuple length must be a multiple of 2.")
+        
+        # 将元组分解为多个二元组
+        ranges = [(range_tuple[i], range_tuple[i+1]) for i in range(0, len(range_tuple), 2)]
+        
+        # 随机选择一个二元组并返回
+        selected_range = ranges[np.random.randint(0, len(ranges))]
+        return selected_range
     def random_mode(hue_range, saturation_range, value_range, index):
         # 实现随机模式
         while True:
