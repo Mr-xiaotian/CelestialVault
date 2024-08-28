@@ -13,6 +13,8 @@ def test_imgEncoder():
     image_path_grey_ori = text_path.replace('.txt', '(grey_ori).png')
     image_path_rgb_ori = text_path.replace('.txt', '(rgb_ori).png')
     image_path_rgba_ori = text_path.replace('.txt', '(rgba_ori).png')
+    image_path_rgb_redundancy = text_path.replace('.txt', '(rgb_redundancy).png')
+    image_path_rgba_redundancy = text_path.replace('.txt', '(rgba_redundancy).png')
 
     # 编码
     encoder = ImgEncoder()
@@ -23,6 +25,8 @@ def test_imgEncoder():
     encoder.encode_text_file(text_path, mode='grey_ori')
     encoder.encode_text_file(text_path, mode='rgb_ori')
     encoder.encode_text_file(text_path, mode='rgba_ori')
+    encoder.encode_text_file(text_path, mode='rgb_redundancy')
+    encoder.encode_text_file(text_path, mode='rgba_redundancy')
     print("="*50)
     
     # 解码
@@ -34,3 +38,5 @@ def test_imgEncoder():
     decoder.decode_image_file(image_path_grey_ori, mode='grey_ori')
     decoder.decode_image_file(image_path_rgb_ori, mode='rgb_ori')
     decoder.decode_image_file(image_path_rgba_ori, mode='rgba_ori')
+    decoder.decode_image_file(image_path_rgb_redundancy, mode='rgb_redundancy')
+    decoder.decode_image_file(image_path_rgba_redundancy, mode='rgba_redundancy')

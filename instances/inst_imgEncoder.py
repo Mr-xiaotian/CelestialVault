@@ -16,23 +16,23 @@ class ImgEncoder:
         
     def encode_text(self, target_text, mode: str='morandi') -> Image.Image:
         crc_text = encode_crc(target_text)
-
-        if mode in style_params: 
+        
+        if mode == 'grey_ori':
+            img = self.encode_gray(crc_text)
+        elif mode == 'rgb_ori':
+            img = self.encode_rgb(crc_text)
+        elif mode == 'rgba_ori':
+            img = self.encode_rgba(crc_text)
+        elif mode in style_params: 
             palette = generate_palette(256, style=mode)
             compressed_binary = compress_text_to_bytes(crc_text, 1)
             img = self.encode_channels(compressed_binary, 'P', palette)
         elif mode in image_mode_params:
             compressed_binary = compress_text_to_bytes(crc_text, image_mode_params[mode]['channels'])
             img = self.encode_channels(compressed_binary, image_mode_params[mode]['mode_name'])
-        elif mode == 'grey_ori':
-            img = self.encode_gray(crc_text)
-        elif mode == 'rgb_ori':
-            img = self.encode_rgb(crc_text)
-        elif mode == 'rgba_ori':
-            img = self.encode_rgba(crc_text)
-        elif mode == 'rgba_redundancy':
+        elif 'redundancy' in mode and mode[:-11] in image_mode_params:
             compressed_binary = compress_text_to_bytes(crc_text, 1)
-            img = self.encode_four_channels_with_redundancy(compressed_binary)
+            img = self.encode_channels_with_redundancy(compressed_binary, image_mode_params[mode[:-11]]['mode_name'])
         else:
             raise ValueError(f'Unsupported mode: {mode}')
         
@@ -159,17 +159,17 @@ class ImgEncoder:
         
         return img
     
-    def encode_four_channels_with_redundancy(self, binary_str: bytes) -> Image.Image:
+    def encode_channels_with_redundancy(self, binary_str: bytes, mode: str) -> Image.Image:
         str_len = len(binary_str)
         
-        # 计算图像边长和总像素数
+        channels = len(mode)  # 获取图像模式的通道数量
         edge = math.ceil(math.sqrt(str_len))
         total_pixels = edge * edge
         
         # 为不满的部分填充 0
         binary_str = binary_str.ljust(total_pixels, b'\0')
         
-        img = Image.new('RGBA', (edge, edge), (0,) * 4)
+        img = Image.new(mode, (edge, edge), (0,) * channels)
 
         # 提前计算索引，减少循环内的计算量
         r_indices = [edge * y + x for y in range(edge) for x in range(edge)]
@@ -178,13 +178,15 @@ class ImgEncoder:
         a_indices = [edge * (edge - 1 - x) + y for y in range(edge) for x in range(edge)]
 
         # 编码数据到图像
-        for idx in tqdm(range(total_pixels), desc=f'Encoding RGBA (Size: {edge}x{edge}, Data: {str_len} bytes)'):
-            r = binary_str[r_indices[idx]]
-            g = binary_str[g_indices[idx]]
-            b = binary_str[b_indices[idx]]
-            a = binary_str[a_indices[idx]]
+        for idx in tqdm(range(total_pixels), desc=f'Encoding text({mode}-redundancy)'):
+            r = binary_str[r_indices[idx]] if channels > 0 else 0
+            g = binary_str[g_indices[idx]] if channels > 1 else 0
+            b = binary_str[b_indices[idx]] if channels > 2 else 0
+            a = binary_str[a_indices[idx]] if channels > 3 else 0
 
-            img.putpixel((idx % edge, idx // edge), (r, g, b, a))
+            pixel_value = (r, g, b, a)[:channels]  # 根据通道数量选择数据
+
+            img.putpixel((idx % edge, idx // edge), pixel_value)
 
         return img
     
@@ -240,16 +242,16 @@ class ImgDecoder:
             f.write(actual_text)
 
     def decode_image(self, img: Image.Image, mode: str='morandi') -> None:
-        if mode in style_params or mode in image_mode_params:
-            crc_binary = self.decode_channels(img)
-            crc_text = decompress_text_from_bytes(crc_binary)
-        elif mode == 'grey_ori':
+        if mode == 'grey_ori':
             crc_text = self.decode_gray(img)
         elif mode == 'rgb_ori':
             crc_text = self.decode_rgb(img)
         elif mode == 'rgba_ori':
             crc_text = self.decode_rgba(img)
-        elif mode == 'rgba_redundancy':
+        elif mode in style_params or mode in image_mode_params:
+            crc_binary = self.decode_channels(img)
+            crc_text = decompress_text_from_bytes(crc_binary)
+        elif 'redundancy' in mode and mode[:-11] in image_mode_params:
             crc_binary = self.decode_channels_with_redundancy(img)
             crc_text = decompress_text_from_bytes(crc_binary)
         else:
@@ -361,7 +363,7 @@ class ImgDecoder:
         pixels = img.load()
 
         bytes_list = []
-        desc = f'Decoding img(channel {channel_index}-binary):'
+        desc = f'Decoding img(channel {channel_index}-redundancy):'
         progress_bar = tqdm(total=height * width, desc=desc)
         
         for y, x in product(range(height), range(width)):
@@ -376,32 +378,40 @@ class ImgDecoder:
         """
         解码所有方向的信息，将结果合并成完整的字节数据。
         
-        :param img: 输入的图像 (RGBA 模式)
+        :param img: 输入的图像 (RGBA, RGB, L 模式)
         :return: 完整的解码后的字节数据
         """
-        # 解码第一个通道（R通道）
-        r_data = self.decode_one_channel_with_redundancy(img, 0)
+        mode = img.mode
+        channels = len(mode)
 
-        # 解码第二个通道（G通道） - 旋转图像 270 度
-        img_rotated = img.rotate(270, expand=True)
-        g_data = self.decode_one_channel_with_redundancy(img_rotated, 1)
+        if channels == 1:
+            return self.decode_channels(img)
 
-        # 解码第三个通道（B通道） - 旋转图像 180 度
-        img_rotated = img.rotate(180, expand=True)
-        b_data = self.decode_one_channel_with_redundancy(img_rotated, 2)
+        # 解码通道数据
+        decoded_data = []
+        for channel_index in range(channels):
+            if channel_index == 0:
+                data = self.decode_one_channel_with_redundancy(img, 0)
+            elif channel_index == 1:
+                img_rotated = img.rotate(270, expand=True)
+                data = self.decode_one_channel_with_redundancy(img_rotated, 1)
+            elif channel_index == 2:
+                img_rotated = img.rotate(180, expand=True)
+                data = self.decode_one_channel_with_redundancy(img_rotated, 2)
+            elif channel_index == 3:
+                img_rotated = img.rotate(90, expand=True)
+                data = self.decode_one_channel_with_redundancy(img_rotated, 3)
+            decoded_data.append(data)
 
-        # 解码第四个通道（A通道） - 旋转图像 90 度
-        img_rotated = img.rotate(90, expand=True)
-        a_data = self.decode_one_channel_with_redundancy(img_rotated, 3)
+        # 如果所有解码数据相同，则直接返回其中一个
+        if all(decoded_data[0] == d for d in decoded_data):
+            return decoded_data[0]
 
-        if r_data == g_data == b_data == a_data:
-            return r_data
-
-        # 合并四个通道的数据，去除冗余
-        combined_data = bytearray(len(r_data))
+        # 合并通道数据，处理冗余
+        combined_data = bytearray(len(decoded_data[0]))
         for i in range(len(combined_data)):
-            # 由于冗余数据应该是相同的，可以选择第一个非零的值，或者一致性检查
-            combined_data[i] = r_data[i] or g_data[i] or b_data[i] or a_data[i]
+            candidates = [decoded_data[ch][i] for ch in range(channels)]
+            combined_data[i] = max(set(candidates), key=candidates.count)  # 选取出现最多的值
 
         return bytes(combined_data)
     
