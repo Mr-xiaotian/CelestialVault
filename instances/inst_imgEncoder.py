@@ -351,7 +351,7 @@ class ImgDecoder:
         progress_bar.close()
         return bytes(bytes_list)
     
-    def decode_one_channel_with_redundancy(self, img: Image.Image, channel_index: int) -> bytes:
+    def decode_one_channel(self, img: Image.Image, channel_index: int) -> bytes:
         """
         解码给定通道的数据，并从图像中恢复原始字节数据。
         
@@ -391,16 +391,16 @@ class ImgDecoder:
         decoded_data = []
         for channel_index in range(channels):
             if channel_index == 0:
-                data = self.decode_one_channel_with_redundancy(img, 0)
+                data = self.decode_one_channel(img, 0)
             elif channel_index == 1:
                 img_rotated = img.rotate(270, expand=True)
-                data = self.decode_one_channel_with_redundancy(img_rotated, 1)
+                data = self.decode_one_channel(img_rotated, 1)
             elif channel_index == 2:
                 img_rotated = img.rotate(180, expand=True)
-                data = self.decode_one_channel_with_redundancy(img_rotated, 2)
+                data = self.decode_one_channel(img_rotated, 2)
             elif channel_index == 3:
                 img_rotated = img.rotate(90, expand=True)
-                data = self.decode_one_channel_with_redundancy(img_rotated, 3)
+                data = self.decode_one_channel(img_rotated, 3)
             decoded_data.append(data)
 
         # 如果所有解码数据相同，则直接返回其中一个
