@@ -4,7 +4,7 @@ import logging
 import subprocess
 from pathlib import Path
 from os.path import splitext, join, exists
-from instances.my_thread import ExampleThreadManager
+from instances.task_manager import ExampleThreadManager
 from instances.inst_fetch import Fetcher
 
 class FetchThread(ExampleThreadManager):

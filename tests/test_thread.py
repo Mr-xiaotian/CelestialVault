@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import pytest, logging, asyncio
 from time import time
-from instances.my_thread import ThreadManager, ExampleThreadManager
+from instances.task_manager import TaskManager, ExampleTaskManager
 
 
 async def fibonacci_async(n):
@@ -31,7 +31,7 @@ def fibonacci(n):
 
 def test_thread_manager():
     # We instantiate the ThreadManager
-    manager = ExampleThreadManager(fibonacci, thread_num=6, 
+    manager = ExampleTaskManager(fibonacci, thread_num=6, 
                                    show_progress=True)
 
     # Assuming dictory is the list of tasks you want to test
@@ -41,7 +41,7 @@ def test_thread_manager():
 @pytest.mark.asyncio
 async def test_thread_manager_async():
     # We instantiate the ThreadManager
-    manager = ExampleThreadManager(fibonacci_async, thread_num=6,
+    manager = ExampleTaskManager(fibonacci_async, thread_num=6,
                                    show_progress=True)
 
     # Assuming dictory is the list of tasks you want to test
