@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-#版本 2.20
+#版本 2.21
 #作者：晓天, GPT-4
-#时间：16/8/2024
+#时间：4/9/2024
 #Github: https://github.com/Mr-xiaotian
 
 # We import the necessary modules
@@ -10,6 +10,7 @@ import traceback
 from queue import Queue
 from threading import Thread
 from multiprocessing import Process, Queue as MPQueue
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 from time import time, strftime, localtime
 from loguru import logger
@@ -118,36 +119,36 @@ class ProcessWorker(Process):
 
 
 class ThreadManager:
-    def __init__(self, func, pool=None, thread_num=50, max_retries=3, max_info=50,
+    def __init__(self, func, thread_num=50, max_retries=3, max_info=50,
                  tqdm_desc="Processing", show_progress=False):
         """
         初始化 ThreadManager
 
         参数:
         func: 可调用对象
-        pool: 线程池（未在代码中使用）
         thread_num: 线程数量
         max_retries: 任务的最大重试次数
         tqdm_desc: 进度条显示名称
         show_progress: 进度条显示与否
         """
         self.func = func
-        self.pool = pool
         self.thread_num = thread_num
         self.max_retries = max_retries
         self.max_info = max_info
 
-        self.set_start()
+        # 可以复用的线程池或进程池
+        self.thread_pool = ThreadPoolExecutor(max_workers=thread_num)
+        self.process_pool = ProcessPoolExecutor(max_workers=thread_num)
 
+        self.set_start()
         self.tqdm_desc = tqdm_desc
         self.show_progress = show_progress
 
     def set_start(self):
+        self.task_queue = Queue()
         self.result_queue = Queue()
-        self.dictory_queue = Queue()
 
         self.result_dict = {}
-        self.error_list = []
         self.error_dict = {}
         self.retry_time_dict = {}
 
@@ -198,6 +199,22 @@ class ThreadManager:
         else:
             return f"{result[:self.max_info]}..."
         
+    def handle_task_exception(self, task, exception):
+        """
+        统一处理任务异常
+
+        参数:
+        task: 发生异常的任务
+        exception: 捕获的异常
+        """
+        if self.retry_time_dict[task] < self.max_retries:
+            self.task_queue.put(task)
+            self.retry_time_dict[task] += 1
+            logger.warning(f"Task {self.get_task_info(task)} failed {self.retry_time_dict[task]} times and will retry.")
+        else:
+            self.error_dict[task] = exception
+            logger.error(f"Task {self.get_task_info(task)} failed and reached the retry limit: {exception}")
+        
     def start(self, dictory, start_type="serial"):
         """
         根据 start_type 的值，选择串行、并行、异步或多进程执行任务
@@ -211,16 +228,16 @@ class ThreadManager:
 
         # Convert dictory to a Queue
         for item in dictory:
-            self.dictory_queue.put(item)
+            self.task_queue.put(item)
             self.retry_time_dict[item] = 0
     
         self.chunk_index = 0
-        while not self.dictory_queue.empty():
+        while not self.task_queue.empty():
             chunk = []
             for _ in range(
-                min(self.thread_num, self.dictory_queue.qsize())
+                min(self.thread_num, self.task_queue.qsize())
                 ):
-                chunk.append(self.dictory_queue.get())
+                chunk.append(self.task_queue.get())
             if start_type == "parallel":
                 self.run_in_parallel(chunk)
             elif start_type == "async":
@@ -244,149 +261,120 @@ class ThreadManager:
 
         # Convert dictory to a Queue
         for item in dictory:
-            self.dictory_queue.put(item)
+            self.task_queue.put(item)
             self.retry_time_dict[item] = 0
 
-        while not self.dictory_queue.empty():
+        while not self.task_queue.empty():
             chunk = []
             for _ in range(
-                min(self.thread_num, self.dictory_queue.qsize())
+                min(self.thread_num, self.task_queue.qsize())
                 ):
-                chunk.append(self.dictory_queue.get())
+                chunk.append(self.task_queue.get())
             await self.run_in_async(chunk)
  
-    def run_in_serial(self, dictory):
+    def run_in_serial(self, task_list):
         """
         串行地执行任务
 
         参数:
-        dictory: 任务列表
+        task_list: 任务列表
         """
-        progress_bar = tqdm(total=len(dictory), desc=f'{self.tqdm_desc}(serial) {self.chunk_index}') if self.show_progress else None
-        for num,d in enumerate(dictory):
+        progress_bar = tqdm(total=len(task_list), desc=f'{self.tqdm_desc}(serial) {self.chunk_index}') if self.show_progress else None
+        for task in task_list:
             try:
                 start_time = time()
-                result = self.func(*self.get_args(d))
-                self.result_dict[d] = result
-            except Exception as e:
-                if self.retry_time_dict[d] < self.max_retries:
-                    self.dictory_queue.put(d)
-                    self.retry_time_dict[d] += 1
-                    logger.warning(f"Task {self.get_task_info(d)} failed {self.retry_time_dict[d]} times and try again.")
-                else:
-                    self.error_list.append(d)
-                    self.error_dict[d] = e
-                    logger.error(f"Task {self.get_task_info(d)} failed and reached the retry limit.")
+                result = self.func(*self.get_args(task))
+                self.result_dict[task] = result
+            except Exception as error:
+                self.handle_task_exception(task, error)
             else:
-                logger.success(f"Task {self.get_task_info(d)} completed by serial. Result is {self.get_result_info(result)}. Used {time() - start_time: .2f} seconds.")
+                logger.success(f"Task {self.get_task_info(task)} completed by serial. Result is {self.get_result_info(result)}. Used {time() - start_time: .2f} seconds.")
             progress_bar.update(1) if self.show_progress else None
 
         progress_bar.close() if self.show_progress else None
     
-    def run_in_parallel(self, dictory):
+    def run_in_parallel(self, task_list):
         """
         并行地执行任务
 
         参数:
-        dictory: 任务列表
+        task_list: 任务列表
         """
-        threads = []
         start_time = time()
-        for d in dictory:
-            thread = ThreadWorker(self.func, self.get_args(d), 
-                                  self.result_queue, d)
-            threads.append(thread)
-            thread.start()
+    
+        # 使用已经存在的线程池 self.thread_pool
+        futures = {self.thread_pool.submit(self.func, *self.get_args(task)): task for task in task_list}
 
-        progress_bar = tqdm(total=len(dictory), desc=f'{self.tqdm_desc}(parallel) {self.chunk_index}') if self.show_progress else None
-        for thread, d in zip(threads, dictory):
-            thread.join()
-            if thread.get_exception() is not None:
-                if self.retry_time_dict[d] < self.max_retries:
-                    self.dictory_queue.put(d)
-                    self.retry_time_dict[d] += 1
-                    logger.warning(f"Task {self.get_task_info(d)} failed {self.retry_time_dict[d]} times and try again.")
-                else:
-                    self.error_list.append(d)
-                    self.error_dict[d] = thread.get_exception()
-                    logger.error(f"Task {self.get_task_info(d)} failed and reached the retry limit.")
-            else:
-                result = thread.get_result()
-                logger.success(f"Task {self.get_task_info(d)} completed by parallel. Result is {self.get_result_info(result)}. Used {time() - start_time: .2f} seconds.")
+        progress_bar = tqdm(total=len(task_list), desc=f'{self.tqdm_desc}(parallel) {self.chunk_index}') if self.show_progress else None
+
+        for future in as_completed(futures):
+            task = futures[future]
+            try:
+                result = future.result()  # 获取任务结果
+                self.result_dict[task] = result
+                logger.success(f"Task {self.get_task_info(task)} completed by parallel. Result is {self.get_result_info(result)}. Used {time() - start_time: .2f} seconds.")
+            except Exception as error:
+                self.handle_task_exception(task, error)
             progress_bar.update(1) if self.show_progress else None
 
         progress_bar.close() if self.show_progress else None
                 
-    async def run_in_async(self, dictory):
+    async def run_in_async(self, tasks_list):
         """
         异步地执行任务
 
         参数:
-        dictory: 任务列表
+        tasks_list: 任务列表
         """
-        tasks = []
+        async_tasks = []
         start_time = time()
-        for d in dictory:
-            task = asyncio.create_task(self.func(*self.get_args(d)))
-            tasks.append(task)
 
-        progress_bar = tqdm_asy(total=len(dictory), desc=f'{self.tqdm_desc}(async) {self.chunk_index}') if self.show_progress else None
-        for task, d in zip(tasks, dictory):
+        # 创建异步任务
+        for task_data in tasks_list:
+            async_task = asyncio.create_task(self.func(*self.get_args(task_data)))
+            async_tasks.append(async_task)
+
+        # 创建异步进度条
+        progress_bar = tqdm_asy(total=len(tasks_list), desc=f'{self.tqdm_desc}(async) {self.chunk_index}') if self.show_progress else None
+
+        # 遍历任务并等待完成
+        for async_task, task_data in zip(async_tasks, tasks_list):
             try:
-                result = await task
-                self.result_dict[d] = result
-            except Exception as e:
-                if self.retry_time_dict[d] < self.max_retries:
-                    self.dictory_queue.put(d)
-                    self.retry_time_dict[d] += 1
-                    logger.warning(f"Task {task} failed {self.retry_time_dict[d]} times and try again.")
-                else:
-                    self.error_list.append(d)
-                    self.error_dict[d] = e
-                    logger.error(f"Task {task} failed and reached the retry limit.")
+                result = await async_task
+                self.result_dict[task_data] = result
+            except Exception as error:
+                self.handle_task_exception(task_data, error)
             else:
-                logger.success(f"Task {task} completed by async. Result is {self.get_result_info(result)}. Used {time() - start_time: .2f} seconds.")
+                logger.success(f"Task {task_data} completed by async. Result is {self.get_result_info(result)}. Used {time() - start_time: .2f} seconds.")
             progress_bar.update(1) if self.show_progress else None
 
         progress_bar.close() if self.show_progress else None
 
-    def run_in_multiprocessing(self, dictory):
+    def run_in_multiprocessing(self, task_list):
         """
         多进程地执行任务
         
         参数:
-        dictory: 任务列表
+        task_list: 任务列表
         """
-        processes = []
-        result_queue = MPQueue()
         start_time = time()
 
-        for d in dictory:
-            process = ProcessWorker(self.func, self.get_args(d), result_queue, d)
-            processes.append(process)
-            process.start()
+        # 使用已经存在的进程池 self.process_pool
+        futures = {self.process_pool.submit(self.func, *self.get_args(d)): d for d in task_list}
 
-        progress_bar = tqdm(total=len(dictory), desc=f'{self.tqdm_desc}(multiprocessing) {self.chunk_index}') if self.show_progress else None
-        for process in processes:
-            process.join()
+        progress_bar = tqdm(total=len(task_list), desc=f'{self.tqdm_desc}(multiprocessing) {self.chunk_index}') if self.show_progress else None
+
+        for future in as_completed(futures):
+            task = futures[future]
+            try:
+                result = future.result()  # 获取任务结果
+                self.result_dict[task] = result
+                logger.success(f"Task {self.get_task_info(task)} completed by multiprocessing. Result is {self.get_result_info(result)}. Used {time() - start_time: .2f} seconds.")
+            except Exception as error:
+                self.handle_task_exception(task, error)
             progress_bar.update(1) if self.show_progress else None
-        progress_bar.close() if self.show_progress else None
 
-        while not result_queue.empty():
-            result = result_queue.get()
-            for task, output in result.items():
-                if isinstance(output, Exception):
-                    if self.retry_time_dict[task] < self.max_retries:
-                        self.dictory_queue.put(task)
-                        self.retry_time_dict[task] += 1
-                        logger.warning(f"Task {self.get_task_info(task)} failed {self.retry_time_dict[task]} times and try again.")
-                    else:
-                        self.error_list.append(task)
-                        self.error_dict[task] = output
-                        logger.error(f"Task {self.get_task_info(task)} failed and reached the retry limit.")
-                else:
-                    logger.success(f"Task {self.get_task_info(task)} completed by multiprocessing. Result is {self.get_result_info(output)}. Used {time() - start_time: .2f} seconds.")
-                    self.result_dict[task] = output
+        progress_bar.close() if self.show_progress else None
             
     def get_result_dict(self):
         """
@@ -395,12 +383,6 @@ class ThreadManager:
         while not self.result_queue.empty():
             self.result_dict.update(self.result_queue.get())
         return self.result_dict
-
-    def get_error_list(self):
-        """
-        获取错误列表
-        """
-        return self.error_list
     
     def get_error_dict(self):
         """
@@ -427,10 +409,10 @@ class ThreadManager:
         # self.start(dictory, 'async')
         # results['run_in_async   '] = time() - start
 
-        # Test run_in_multiprocessing
-        start = time()
-        self.start(dictory, 'multiprocessing')
-        results['run_in_multiprocessing'] = time() - start
+        # # Test run_in_multiprocessing
+        # start = time()
+        # self.start(dictory, 'multiprocessing')
+        # results['run_in_multiprocessing'] = time() - start
 
         # Return the results
         return results
@@ -462,7 +444,7 @@ class ExampleThreadManager(ThreadManager):
 
         在这个示例中，我们只是简单地打印错误信息
         """
-        if not self.get_error_list():
+        if not self.get_error_dict():
             return
         error_dict = self.get_error_dict()
         error_len = len(error_dict)
