@@ -26,46 +26,46 @@ def fibonacci(n):
     if n <= 0:
         raise ValueError("n must be a positive integer")
     elif n == 1:
-        return 0
+        return 1
     elif n == 2:
         return 1
     else:
         return fibonacci(n-1) + fibonacci(n-2)
 
-# # 测试 TaskManager 的同步任务
-# def test_thread_manager():
-#     manager = ExampleTaskManager(fibonacci, thread_num=6, show_progress=True)
-#     results = manager.test_methods([30]*12)
-#     logging.info(results)
+# 测试 TaskManager 的同步任务
+def test_thread_manager():
+    manager = ExampleTaskManager(fibonacci, thread_num=6, show_progress=True)
+    results = manager.test_methods([30]*12)
+    logging.info(results)
 
-# # 测试 TaskManager 的异步任务
-# @pytest.mark.asyncio
-# async def test_thread_manager_async():
-#     manager = ExampleTaskManager(fibonacci_async, thread_num=6, show_progress=True)
-#     start = time()
-#     await manager.start_async([30]*12)
-#     logging.info(f'run_in_async: {time() - start}')
-
-# 测试 TaskChain 的功能
-def test_task_chain():
-    # 定义多个阶段的 TaskManager 实例，假设我们使用 Fibonacci 作为每个阶段的任务
-    stage1 = ExampleTaskManager(fibonacci, process_mode='parallel', thread_num=4, show_progress=False)
-    stage2 = ExampleTaskManager(square, process_mode='serial', thread_num=4, show_progress=False)
-
-    # 初始化 TaskChain
-    chain = TaskChain([stage1, stage2])
-
-    # 要测试的任务列表（例如：计算 30 的 Fibonacci）
-    tasks = range(5,16)
-
-    # 开始任务链
+# 测试 TaskManager 的异步任务
+@pytest.mark.asyncio
+async def test_thread_manager_async():
+    manager = ExampleTaskManager(fibonacci_async, thread_num=6, show_progress=True)
     start = time()
-    results = chain.start_chain(tasks)
-    logging.info(f'TaskChain completed in {time() - start} seconds')
+    await manager.start_async([30]*12)
+    logging.info(f'run_in_async: {time() - start}')
 
-    # 打印结果
-    for result in results:
-        logging.info(f"Task result: {result}")
+# # 测试 TaskChain 的功能
+# def test_task_chain():
+#     # 定义多个阶段的 TaskManager 实例，假设我们使用 Fibonacci 作为每个阶段的任务
+#     stage1 = ExampleTaskManager(fibonacci, process_mode='parallel', thread_num=4, show_progress=False)
+#     stage2 = ExampleTaskManager(square, process_mode='serial', thread_num=4, show_progress=False)
 
-    # 验证结果
-    # assert len(results) == len(tasks)
+#     # 初始化 TaskChain
+#     chain = TaskChain([stage1, stage2])
+
+#     # 要测试的任务列表
+#     tasks = range(25,31)
+
+#     # 开始任务链
+#     start_time = time()
+#     chain.start_chain(tasks)
+#     logging.info(f'TaskChain completed in {time() - start_time} seconds')
+
+#     # 打印结果
+#     # final_result_dict = chain.get_final_result_dict()
+#     # logging.info(f"Task result: {final_result_dict}")
+
+#     # 验证结果
+#     # assert len(results) == len(tasks)
