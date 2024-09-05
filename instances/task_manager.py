@@ -26,7 +26,8 @@ logger.add(f"logs/thread_manager({now_time}).log",
 class TaskManager:
     def __init__(self, func, process_mode = 'serial',
                  thread_num=50, max_retries=3, max_info=50,
-                 tqdm_desc="Processing", show_progress=False):
+                 tqdm_desc="Processing", show_progress=False, 
+                 result_dict=None, error_dict=None):
         """
         初始化 TaskManager
 
@@ -46,7 +47,14 @@ class TaskManager:
         self.tqdm_desc = tqdm_desc
         self.show_progress = show_progress
 
-    def init_env(self):
+        self.init_dict(result_dict, error_dict)
+        
+    def init_dict(self, result_dict, error_dict):
+        self.result_dict = result_dict if result_dict is not None else {}
+        self.error_dict = error_dict if error_dict is not None else {}
+        self.retry_time_dict = {}
+
+    def init_queue_and_poll(self):
         if self.process_mode == "async":
             self.task_queue = asyncio.Queue()
         elif self.process_mode == "multiprocessing":
@@ -55,9 +63,6 @@ class TaskManager:
             self.task_queue = ThreadQueue()
 
         self.result_queue = ThreadQueue()
-        self.result_dict = {}
-        self.error_dict = {}
-        self.retry_time_dict = {}
 
         self.thread_pool = None
         self.process_pool = None
@@ -154,7 +159,7 @@ class TaskManager:
         参数:
         dictory: 任务列表
         """
-        self.init_env()
+        self.init_queue_and_poll()
         logger.info(f"'{self.func.__name__}' start {len(dictory)} tasks by {self.process_mode}.")
 
         for item in dictory:
@@ -183,7 +188,7 @@ class TaskManager:
         dictory: 任务列表
         """
         self.set_process_mode('async')
-        self.init_env()
+        self.init_queue_and_poll()
         logger.info(f"'{self.func.__name__}' start {len(dictory)} tasks by async(await).")
 
         for item in dictory:
@@ -193,31 +198,29 @@ class TaskManager:
         await self.task_queue.put(None)  # 添加一个哨兵任务，用于结束任务队列
         await self.run_in_async()
 
-    def start_stage(self, queues: List[MPQueue], stage_index: int, error_dict: dict):
+    def start_stage(self, queues: List[MPQueue], stage_index: int):
         """
         根据 start_type 的值，选择串行、并行执行任务
 
         参数:
         dictory: 任务列表
         """
-        self.init_env()
+        self.init_queue_and_poll()
         start_time = time()
         logger.info(f"The {stage_index} stage '{self.func.__name__}' start tasks by {self.process_mode}.")
 
         self.task_queue = queues[stage_index]
         self.result_queue = queues[stage_index+1]
-        self.error_dict = error_dict
 
         # 根据模式运行对应的任务处理函数
-        while True:
-            if self.process_mode == "parallel":
-                self.run_in_parallel()
-            elif self.process_mode == "multiprocessing":
-                self.run_in_multiprocessing()
-            elif self.process_mode == "async":
-                asyncio.run(self.run_in_async())
-            else:
-                self.run_in_serial()
+        if self.process_mode == "parallel":
+            self.run_with_executor(self.thread_pool)
+        elif self.process_mode == "multiprocessing":
+            self.run_with_executor(self.process_pool)
+        elif self.process_mode == "async":
+            asyncio.run(self.run_in_async())
+        else:
+            self.run_in_serial()
 
         self.shutdown_pools()
         logger.info(f"The {stage_index} stage '{self.func.__name__}' end tasks. Use {time() - start_time} second.")
@@ -249,6 +252,7 @@ class TaskManager:
         if will_retry:
             self.task_queue.put(None) if will_retry else None
             self.run_in_serial()
+        self.result_queue.put(None)  # 添加一个哨兵任务，用于结束任务队列
     
     def run_with_executor(self, executor):
         """
@@ -292,6 +296,7 @@ class TaskManager:
         if will_retry:
             self.task_queue.put(None)
             self.run_with_executor(executor)
+        self.result_queue.put(None)  # 添加一个哨兵任务，用于结束任务队列
 
     async def run_in_async(self):
         """
@@ -330,6 +335,7 @@ class TaskManager:
         if will_retry:
             await self.task_queue.put(None)
             await self.run_in_async()
+        self.result_queue.put(None)  # 添加一个哨兵任务，用于结束任务队列
 
     async def _run_single_task(self, task):
         """
@@ -445,16 +451,22 @@ class TaskChain:
         # 创建进程间的队列和一个共享的字典来记录错误
         queues = [MPQueue() for _ in range(len(self.stages) + 1)]
         manager = multiprocessing .Manager()
-        error_dict = manager.dict()
+        
+        # 为每个stage创建独立的共享result_dict
+        stage_result_dicts = [manager.dict() for _ in self.stages]
+        error_dict = manager.dict()  # 创建共享的 error_dict
         
         # 向第一个队列添加初始任务
         for task in tasks:
             queues[0].put(task)
+
+        queues[0].put(None)
         
         # 创建多进程来运行每个环节
         processes = []
         for stage_index, stage in enumerate(self.stages):
-            p = multiprocessing.Process(target=stage.start_stage, args=(queues, stage_index, error_dict))
+            stage.init_dict(stage_result_dicts[stage_index], error_dict)
+            p = multiprocessing.Process(target=stage.start_stage, args=(queues, stage_index))
             p.start()
             processes.append(p)
             sleep(0.1)  # 等待一段时间，确保上一个进程已经启动
@@ -462,11 +474,6 @@ class TaskChain:
         # 等待所有进程结束
         for p in processes:
             p.join()
-        
-        # # 从最后的队列中收集结果
-        # results = []
-        # while not queues[-1].empty():
-        #     results.append(queues[-1].get())
         
         # 检查是否有错误
         if error_dict:
@@ -476,11 +483,9 @@ class TaskChain:
         """
         查找对应的初始任务并更新 final_result_dict
         """
-        for initial_task in self.stages[0].get_result_dict().keys():
-            stage_task = initial_task
+        for initial_task, initial_resylt in self.stages[0].get_result_dict().items():
+            stage_result = initial_resylt
             for stage in self.stages[1:]:
-                stage_result = stage.get_result_dict().get(stage_task, None)
-                stage_task = stage_result
-            
+                stage_result = stage.get_result_dict().get(stage_result, None)
             self.final_result_dict[initial_task] = stage_result
         return self.final_result_dict

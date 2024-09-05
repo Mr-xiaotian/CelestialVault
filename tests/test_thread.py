@@ -46,26 +46,23 @@ async def test_thread_manager_async():
     await manager.start_async([30]*12)
     logging.info(f'run_in_async: {time() - start}')
 
-# # 测试 TaskChain 的功能
-# def test_task_chain():
-#     # 定义多个阶段的 TaskManager 实例，假设我们使用 Fibonacci 作为每个阶段的任务
-#     stage1 = ExampleTaskManager(fibonacci, process_mode='parallel', thread_num=4, show_progress=False)
-#     stage2 = ExampleTaskManager(square, process_mode='serial', thread_num=4, show_progress=False)
+# 测试 TaskChain 的功能
+def test_task_chain():
+    # 定义多个阶段的 TaskManager 实例，假设我们使用 Fibonacci 作为每个阶段的任务
+    stage1 = ExampleTaskManager(fibonacci, process_mode='parallel', thread_num=4, show_progress=False)
+    stage2 = ExampleTaskManager(square, process_mode='serial', thread_num=4, show_progress=False)
 
-#     # 初始化 TaskChain
-#     chain = TaskChain([stage1, stage2])
+    # 初始化 TaskChain
+    chain = TaskChain([stage1, stage2])
 
-#     # 要测试的任务列表
-#     tasks = range(25,31)
+    # 要测试的任务列表
+    tasks = range(25,31)
 
-#     # 开始任务链
-#     start_time = time()
-#     chain.start_chain(tasks)
-#     logging.info(f'TaskChain completed in {time() - start_time} seconds')
+    # 开始任务链
+    start_time = time()
+    chain.start_chain(tasks)
+    logging.info(f'TaskChain completed in {time() - start_time} seconds')
 
-#     # 打印结果
-#     # final_result_dict = chain.get_final_result_dict()
-#     # logging.info(f"Task result: {final_result_dict}")
-
-#     # 验证结果
-#     # assert len(results) == len(tasks)
+    # 打印结果
+    final_result_dict = chain.get_final_result_dict()
+    logging.info(f"Task result: {final_result_dict}")
