@@ -2,7 +2,7 @@ import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest, logging
-from instances import Saver
+from instances.inst_save import Saver
 
 def test_saver():
     saver = Saver(r'../test')

@@ -4,10 +4,10 @@ import logging
 import subprocess
 from pathlib import Path
 from os.path import splitext, join, exists
-from instances.task_manager import ExampleThreadManager
+from instances.task_manager import ExampleTaskManager
 from instances.inst_fetch import Fetcher
 
-class FetchThread(ExampleThreadManager):
+class FetchThread(ExampleTaskManager):
     def get_args(self, obj: object):
         return (obj[1], )
     
@@ -16,7 +16,7 @@ class FetchThread(ExampleThreadManager):
         return [(d[0], result_dict[d], d[2]) for d in result_dict]
     
     
-class SaveThread(ExampleThreadManager):
+class SaveThread(ExampleTaskManager):
     def get_args(self, obj: object):
         return (obj[0], obj[1], obj[2])
     
@@ -33,7 +33,7 @@ class Saver(object):
             tqdm_desc='urlsFetchProcess', 
             show_progress=show_progress)
         self.save_threader = SaveThread(
-            self.download_content, 
+            self.save_content, 
             tqdm_desc='urlsSaveProcess', 
             show_progress=False)
 
@@ -42,14 +42,14 @@ class Saver(object):
 
     def set_base_path(self, base_path):
         self.base_path = Path(base_path)
-        base_path.mkdir(parents=True)
+        self.base_path.mkdir(parents=True, exist_ok=True)
 
     def set_add_path(self, add_path):
         self.add_path = Path(add_path)
 
     def get_path(self, file_name, suffix_name):
         middle_path = self.base_path / self.add_path
-        middle_path.mkdir(parents=True)
+        middle_path.mkdir(parents=True, exist_ok=True)
         path = join(middle_path, str(file_name))
         
         if splitext(path)[1] == '':
@@ -69,7 +69,7 @@ class Saver(object):
         with open(path, 'a', encoding = encoding) as f:
             f.write(text.encode(encoding, 'ignore').decode(encoding, "ignore"))
 
-    def download_content(self, file_name, content, suffix_name='.dat'):
+    def save_content(self, file_name, content, suffix_name='.dat'):
         path = self.get_path(file_name, suffix_name)
         logging.info(f'save {file_name} in {path}')
         with open(path, 'wb') as f:
@@ -77,15 +77,17 @@ class Saver(object):
 
     def download_urls(self, url_list:list[tuple[str,str,str]], start_type="serial"):
         logging.info(f'Start download {len(url_list)} urls by {start_type}.')
-        self.fetch_threader.start(url_list, start_type)
+        self.save_threader.set_process_mode(start_type)
+        self.fetch_threader.start(url_list)
         self.fetch_threader.handle_error()
         content_list = self.fetch_threader.process_result()
 
         logging.info(f'Start save {len(content_list)} urls by {start_type}.')
-        self.save_threader.start(content_list, start_type = start_type)
+        self.save_threader.set_process_mode(start_type)
+        self.save_threader.start(content_list)
         self.save_threader.handle_error()
         self.save_threader.process_result(
-            len(content_list), self.base_path + '\\' + self.add_path
+            len(content_list), self.base_path / self.add_path
             )
         
     async def download_urls_async(self, url_list:list[tuple[str,str,str]]):

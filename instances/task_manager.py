@@ -5,7 +5,7 @@
 #Github: https://github.com/Mr-xiaotian
 
 
-import asyncio
+import asyncio, multiprocessing
 from queue import Queue as ThreadQueue
 from multiprocessing import Queue as MPQueue
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
@@ -66,6 +66,9 @@ class TaskManager:
             self.thread_pool = ThreadPoolExecutor(max_workers=self.thread_num)
         elif self.process_mode == 'multiprocessing':
             self.process_pool = ProcessPoolExecutor(max_workers=self.thread_num)
+
+    def set_process_mode(self, process_mode):
+        self.process_mode = process_mode
 
     def get_args(self, obj):
         """
@@ -137,7 +140,7 @@ class TaskManager:
         参数:
         dictory: 任务列表
         """
-        self.init_env(self.process_mode)
+        self.init_env()
         logger.info(f"'{self.func.__name__}' start {len(dictory)} tasks by {self.process_mode}.")
 
         for item in dictory:
@@ -164,38 +167,59 @@ class TaskManager:
         参数:
         dictory: 任务列表
         """
-        self.init_env('async')
+        self.set_process_mode('async')
+        self.init_env()
         logger.info(f"'{self.func.__name__}' start {len(dictory)} tasks by async(await).")
 
         for item in dictory:
             await self.task_queue.put(item)
             self.retry_time_dict[item] = 0
 
-        self.chunk_index = 0
         while not self.task_queue.empty():
-            chunk = []
-            for _ in range(min(self.thread_num, self.task_queue.qsize())):
-                chunk.append(await self.task_queue.get())  # 使用 await 从队列获取任务
-            await self.run_in_async(chunk)
-            self.chunk_index += 1
- 
-    def run_in_serial(self, task_list):
+            await self.run_in_async()
+
+    def start_stage(self, input_queue, output_queue, error_dict):
         """
-        串行地执行任务
+        根据 start_type 的值，选择串行、并行、异步或多进程执行任务
 
         参数:
-        task_list: 任务列表
+        dictory: 任务列表
         """
-        progress_bar = tqdm(total=len(task_list), desc=f'{self.tqdm_desc}(serial)_{self.chunk_index}') if self.show_progress else None
-        for task in task_list:
+        self.init_env()
+        logger.info(f"'{self.func.__name__}' start {input_queue.qsize()} tasks by {self.process_mode}.")
+
+        self.task_queue = input_queue
+        self.result_queue = output_queue
+        self.error_dict = error_dict
+
+        # 根据模式运行对应的任务处理函数
+        while not self.task_queue.empty():
+            if self.process_mode == "parallel":
+                self.run_in_parallel()
+            elif self.process_mode == "multiprocessing":
+                self.run_in_multiprocessing()
+            elif self.process_mode == "async":
+                asyncio.run(self.run_in_async())
+            else:
+                self.run_in_serial()
+ 
+    def run_in_serial(self):
+        """
+        串行地执行任务
+        """
+        progress_bar = tqdm(total=self.task_queue.qsize(), desc=f'{self.tqdm_desc}(serial)') if self.show_progress else None
+        start_time = time()
+
+        # 从队列中依次获取任务并执行
+        while not self.task_queue.empty():
+            task = self.task_queue.get()
             try:
-                start_time = time()
                 result = self.func(*self.get_args(task))
                 self.result_dict[task] = result
+                self.result_queue.put(result)
+                logger.success(f"Task {self.get_task_info(task)} completed by serial. Result is {self.get_result_info(result)}. Used {time() - start_time: .2f} seconds.")
             except Exception as error:
                 self.handle_task_exception(task, error)
-            else:
-                logger.success(f"Task {self.get_task_info(task)} completed by serial. Result is {self.get_result_info(result)}. Used {time() - start_time: .2f} seconds.")
             progress_bar.update(1) if self.show_progress else None
 
         progress_bar.close() if self.show_progress else None
@@ -208,7 +232,7 @@ class TaskManager:
         
         # 使用已经存在的线程池 self.thread_pool
         futures = {}
-        progress_bar = tqdm(total=self.task_queue.qsize(), desc=f'{self.tqdm_desc}(parallel)_{self.chunk_index+1}') if self.show_progress else None
+        progress_bar = tqdm(total=self.task_queue.qsize(), desc=f'{self.tqdm_desc}(parallel)') if self.show_progress else None
 
         # 从任务队列中提交任务到线程池
         while not self.task_queue.empty():
@@ -221,9 +245,14 @@ class TaskManager:
             try:
                 result = future.result()  # 获取任务结果
                 self.result_dict[task] = result
+                self.result_queue.put(result)
                 logger.success(f"Task {self.get_task_info(task)} completed by parallel. Result is {self.get_result_info(result)}. Used {time() - start_time: .2f} seconds.")
             except Exception as error:
                 self.handle_task_exception(task, error)
+                # 动态更新进度条总数
+                if self.show_progress:
+                    progress_bar.total += 1
+                    progress_bar.refresh()
             progress_bar.update(1) if self.show_progress else None
 
         progress_bar.close() if self.show_progress else None
@@ -236,7 +265,7 @@ class TaskManager:
 
         # 使用已经存在的进程池 self.process_pool
         futures = {}
-        progress_bar = tqdm(total=self.task_queue.qsize(), desc=f'{self.tqdm_desc}(multiprocessing)_{self.chunk_index+1}') if self.show_progress else None
+        progress_bar = tqdm(total=self.task_queue.qsize(), desc=f'{self.tqdm_desc}(multiprocessing)') if self.show_progress else None
 
         # 从任务队列中提交任务到进程池
         while not self.task_queue.empty():
@@ -249,6 +278,7 @@ class TaskManager:
             try:
                 result = future.result()  # 获取任务结果
                 self.result_dict[task] = result
+                self.result_queue.put(result)
                 logger.success(f"Task {self.get_task_info(task)} completed by multiprocessing. Result is {self.get_result_info(result)}. Used {time() - start_time: .2f} seconds.")
             except Exception as error:
                 self.handle_task_exception(task, error)
@@ -256,27 +286,28 @@ class TaskManager:
 
         progress_bar.close() if self.show_progress else None
                 
-    async def run_in_async(self, tasks_list):
+    async def run_in_async(self):
         """
         异步地执行任务
-
-        参数:
-        tasks_list: 任务列表
         """
         start_time = time()
 
-        # 使用 asyncio.gather 并发执行任务
-        async_tasks = [self.func(*self.get_args(task_data)) for task_data in tasks_list]
+        # 创建异步任务列表
+        async_tasks = []
+        progress_bar = tqdm_asy(total=self.task_queue.qsize(), desc=f'{self.tqdm_desc}(async)') if self.show_progress else None
 
-        # 创建异步进度条
-        progress_bar = tqdm_asy(total=len(tasks_list), desc=f'{self.tqdm_desc}(async)_{self.chunk_index}') if self.show_progress else None
+        # 从任务队列中获取任务并加入异步任务列表
+        while not self.task_queue.empty():
+            task = await self.task_queue.get()  # 从异步队列获取任务
+            async_tasks.append(self.func(*self.get_args(task)))
 
-        # 运行所有任务并处理结果
-        for task_data, result in zip(tasks_list, await asyncio.gather(*async_tasks, return_exceptions=True)):
+        # 并发运行所有任务
+        for task_data, result in zip(async_tasks, await asyncio.gather(*async_tasks, return_exceptions=True)):
             if isinstance(result, Exception):
                 self.handle_task_exception(task_data, result)
             else:
                 self.result_dict[task_data] = result
+                self.result_queue.put(result)
                 logger.success(f"Task {task_data} completed by async. Result is {self.get_result_info(result)}. Used {time() - start_time: .2f} seconds.")
             progress_bar.update(1) if self.show_progress else None
 
@@ -286,8 +317,6 @@ class TaskManager:
         """
         获取结果字典
         """
-        while not self.result_queue.empty():
-            self.result_dict.update(self.result_queue.get())
         return self.result_dict
     
     def get_error_dict(self):
@@ -318,17 +347,20 @@ class TaskManager:
 
         # Test run_in_serial
         start = time()
-        self.start(dictory, 'serial')
+        self.set_process_mode('serial')
+        self.start(dictory)
         results['run_in_serial'] = time() - start
 
         # Test run_in_parallel
         start = time()
-        self.start(dictory, 'parallel')
+        self.set_process_mode('parallel')
+        self.start(dictory)
         results['run_in_parallel'] = time() - start
 
         # Test run_in_multiprocessing
         start = time()
-        self.start(dictory, 'multiprocessing')
+        self.set_process_mode('multiprocessing')
+        self.start(dictory)
         results['run_in_multiprocessing'] = time() - start
 
         # # Test run_in_async
@@ -371,3 +403,48 @@ class ExampleTaskManager(TaskManager):
         error_len = len(error_dict)
         for num,(task, error) in enumerate(error_dict.items()):
             logger.error(f"Task {self.get_task_info(task)}(index:{num+1}/{error_len}): {error}")
+
+class TaskChain:
+    def __init__(self, stages):
+        """
+        stages: 一个包含 StageManager 实例的列表，表示执行链
+        """
+        self.stages: TaskManager = stages
+
+    def start_chain(self, tasks):
+        # 创建进程间的队列和一个共享的字典来记录错误
+        queues = [MPQueue() for _ in range(len(self.stages) + 1)]
+        manager = multiprocessing .Manager()
+        error_dict = manager.dict()
+        
+        # 向第一个队列添加初始任务
+        for task in tasks:
+            queues[0].put(task)
+        
+        # 创建多进程来运行每个环节
+        processes = []
+        for i, stage in enumerate(self.stages):
+            p = multiprocessing.Process(target=self.run_stage, args=(stage, queues[i], queues[i + 1], error_dict))
+            p.start()
+            processes.append(p)
+        
+        # 等待所有进程结束
+        for p in processes:
+            p.join()
+        
+        # 从最后的队列中收集结果
+        results = []
+        while not queues[-1].empty():
+            results.append(queues[-1].get())
+        
+        # 检查是否有错误
+        if error_dict:
+            logger.error(f"Errors encountered in TaskChain: {error_dict}")
+        
+        return results
+
+    def run_stage(self, stage, input_queue, output_queue, error_dict):
+        try:
+            stage.start_stage(input_queue, output_queue)
+        except Exception as e:
+            error_dict[stage] = str(e)
