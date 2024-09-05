@@ -4,25 +4,25 @@ import logging
 import subprocess
 from pathlib import Path
 from os.path import splitext, join, exists
-from instances.task_manager import ExampleTaskManager
+from instances.task_manager import TaskManager, TaskChain
 from instances.inst_fetch import Fetcher
 
-class FetchThread(ExampleTaskManager):
+class FetchThread(TaskManager):
     def get_args(self, obj: object):
         return (obj[1], )
     
-    def process_result(self):
-        result_dict = self.get_result_dict()
-        return [(d[0], result_dict[d], d[2]) for d in result_dict]
+    # def process_result(self):
+    #     result_dict = self.get_result_dict()
+    #     return [(d[0], result_dict[d], d[2]) for d in result_dict]
     
     
-class SaveThread(ExampleTaskManager):
+class SaveThread(TaskManager):
     def get_args(self, obj: object):
         return (obj[0], obj[1], obj[2])
     
-    def process_result(self, dictory_len, path):
-        logging.info(f'{dictory_len} files has saved to {path}.')
-        return
+    # def process_result(self, dictory_len, path):
+    #     logging.info(f'{dictory_len} files has saved to {path}.')
+    #     return
     
 
 class Saver(object):
@@ -76,19 +76,22 @@ class Saver(object):
             f.write(content)
 
     def download_urls(self, url_list:list[tuple[str,str,str]], start_type="serial"):
-        logging.info(f'Start download {len(url_list)} urls by {start_type}.')
+        self.fetch_threader.set_process_mode(start_type)
         self.save_threader.set_process_mode(start_type)
-        self.fetch_threader.start(url_list)
-        self.fetch_threader.handle_error()
-        content_list = self.fetch_threader.process_result()
+        chain = TaskChain([self.fetch_threader, self.save_threader])
+        chain.start_chain(url_list)
 
-        logging.info(f'Start save {len(content_list)} urls by {start_type}.')
-        self.save_threader.set_process_mode(start_type)
-        self.save_threader.start(content_list)
-        self.save_threader.handle_error()
-        self.save_threader.process_result(
-            len(content_list), self.base_path / self.add_path
-            )
+        # logging.info(f'Start download {len(url_list)} urls by {start_type}.')
+        # self.fetch_threader.start(url_list)
+        # self.fetch_threader.handle_error()
+        # content_list = self.fetch_threader.process_result()
+
+        # logging.info(f'Start save {len(content_list)} urls by {start_type}.')
+        # self.save_threader.start(content_list)
+        # self.save_threader.handle_error()
+        # self.save_threader.process_result(
+        #     len(content_list), self.base_path / self.add_path
+        #     )
         
     async def download_urls_async(self, url_list:list[tuple[str,str,str]]):
         # await self.fetcher.start_session()
