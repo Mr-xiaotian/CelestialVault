@@ -8,11 +8,12 @@ def test_saver():
     saver = Saver(r'../test')
     saver.set_add_path('test_jpg')
 
-    li = ['https://ttzytp.com/dongman/xvhu6d.jpg',
+    li = [
+        'https://ttzytp.com/dongman/xvhu6d.jpg',
         'dfgdfgdfgdfg',
-        # 'https://ttzytp.com/dongman/xvjq0t.jpg',
-        # 'https://ttzytp.com/dongman/xvlwc7.jpg',
-        # 'https://ttzytp.com/dongman/xvoi5z.jpg',
+        'https://ttzytp.com/dongman/xvjq0t.jpg',
+        'https://ttzytp.com/dongman/xvlwc7.jpg',
+        'https://ttzytp.com/dongman/xvoi5z.jpg',
         # 'https://ttzytp.com/dongman/xvznus.jpg',
         # 'https://ttzytp.com/dongman/xw2j01.jpg',
         # 'https://ttzytp.com/dongman/xw4svq.jpg',
@@ -37,6 +38,9 @@ def test_saver():
         # 'https://ttzytp.com/dongman/xyd87f.jpg'
     ]
 
-    saver.download_urls([(num, i, '.jpg') for num,i in enumerate(li)], 'serial')
+    task_list = [(num, i, '.jpg') for num,i in enumerate(li)]
+    final_result_dict = saver.download_urls(task_list, execution_mode = 'thread')
+
+    logging.info(f"Task result: {final_result_dict}.")
 
 

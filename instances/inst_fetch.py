@@ -25,7 +25,11 @@ class Fetcher(object):
         self._text_encoding = text_encoding
 
         self.headers = headers
-        self.cl = httpx.Client(headers=self.headers, timeout=self._wait_time)
+        self.cl = None  # 延迟初始化
+
+    def init_client(self):
+        if self.cl is None:
+            self.cl = httpx.Client(headers=self.headers, timeout=self._wait_time)
 
     def obtainText(self, func: object, *args, **kwargs) -> Tuple[int, Any, str]:
         response = func(*args, **kwargs)
@@ -45,18 +49,22 @@ class Fetcher(object):
         return 1, (response.status_code, response.content), ''
 
     def getText(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
+        self.init_client()
         return self.obtainText(self.cl.get, url=url,
                                *args, **kwargs)[1][1]
 
     def postText(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
+        self.init_client()
         return self.obtainText(self.cl.post, url=url, 
                                *args, **kwargs)[1][1]
     
     def getContent(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
+        self.init_client()
         return self.obtainContent(self.cl.get, url=url,
                                *args, **kwargs)[1][1]
 
     def postText(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
+        self.init_client()
         return self.obtainContent(self.cl.post, url=url, 
                                *args, **kwargs)[1][1]
     

@@ -4,25 +4,21 @@ import logging
 import subprocess
 from pathlib import Path
 from os.path import splitext, join, exists
-from instances.task_manager import TaskManager, TaskChain
+from instances.task_manager import ExampleTaskManager, TaskChain
 from instances.inst_fetch import Fetcher
 
-class FetchThread(TaskManager):
+
+class FetchThread(ExampleTaskManager):
     def get_args(self, obj: object):
         return (obj[1], )
     
-    # def process_result(self):
-    #     result_dict = self.get_result_dict()
-    #     return [(d[0], result_dict[d], d[2]) for d in result_dict]
+    def process_result(self, task, result):
+        return (task[0], result, task[2])
     
     
-class SaveThread(TaskManager):
+class SaveThread(ExampleTaskManager):
     def get_args(self, obj: object):
         return (obj[0], obj[1], obj[2])
-    
-    # def process_result(self, dictory_len, path):
-    #     logging.info(f'{dictory_len} files has saved to {path}.')
-    #     return
     
 
 class Saver(object):
@@ -38,7 +34,7 @@ class Saver(object):
             show_progress=False)
 
         self.set_base_path(base_path)
-        self.add_path = ''
+        self.set_add_path('')
 
     def set_base_path(self, base_path):
         self.base_path = Path(base_path)
@@ -63,39 +59,33 @@ class Saver(object):
         path = self.get_path(file_name, suffix_name)
         with open(path, 'w', encoding = encoding) as f:
             f.write(text.encode(encoding, 'ignore').decode(encoding, "ignore"))
+        return path
 
     def add_text(self, file_name, text, encoding = 'utf-8', suffix_name = '.md'):
         path = self.get_path(file_name, suffix_name)
         with open(path, 'a', encoding = encoding) as f:
             f.write(text.encode(encoding, 'ignore').decode(encoding, "ignore"))
+        return path
 
     def save_content(self, file_name, content, suffix_name='.dat'):
         path = self.get_path(file_name, suffix_name)
-        logging.info(f'save {file_name} in {path}')
         with open(path, 'wb') as f:
             f.write(content)
+        return path
 
-    def download_urls(self, url_list:list[tuple[str,str,str]], start_type="serial"):
-        self.fetch_threader.set_process_mode(start_type)
-        self.save_threader.set_process_mode(start_type)
+    def download_urls(self, task_list:list[tuple[str,str,str]], execution_mode="serial"):
+        self.fetch_threader.set_execution_mode(execution_mode)
+        self.save_threader.set_execution_mode(execution_mode)
+
         chain = TaskChain([self.fetch_threader, self.save_threader])
-        chain.start_chain(url_list)
+        chain.start_chain(task_list)
 
-        # logging.info(f'Start download {len(url_list)} urls by {start_type}.')
-        # self.fetch_threader.start(url_list)
-        # self.fetch_threader.handle_error()
-        # content_list = self.fetch_threader.process_result()
-
-        # logging.info(f'Start save {len(content_list)} urls by {start_type}.')
-        # self.save_threader.start(content_list)
-        # self.save_threader.handle_error()
-        # self.save_threader.process_result(
-        #     len(content_list), self.base_path / self.add_path
-        #     )
+        final_result_dict = chain.get_final_result_dict()
+        return final_result_dict
         
-    async def download_urls_async(self, url_list:list[tuple[str,str,str]]):
+    async def download_urls_async(self, task_list:list[tuple[str,str,str]]):
         # await self.fetcher.start_session()
-        # await self.fetch_threader.start_async(url_list)
+        # await self.fetch_threader.start_async(task_list)
         # await self.fetcher.close_session()
         pass
 
