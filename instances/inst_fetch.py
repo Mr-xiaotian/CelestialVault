@@ -12,7 +12,7 @@ class Fetcher(object):
     class of Fetcher, must include function working()
     """
 
-    def __init__(self, sleep_time=0, _wait_time=5, max_repeat=3, 
+    def __init__(self, sleep_time=0, wait_time=5, max_repeat=3, 
                  text_encoding = 'utf-8', headers = ''):
         """
         constructor
@@ -20,7 +20,7 @@ class Fetcher(object):
         :param max_repeat: default 3, maximum repeat count of fetching
         """
         self._sleep_time = sleep_time
-        self._wait_time = _wait_time
+        self._wait_time = wait_time
         self._max_repeat = max_repeat
         self._text_encoding = text_encoding
 

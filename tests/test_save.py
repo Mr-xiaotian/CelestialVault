@@ -2,12 +2,10 @@ import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest, logging
+from time import time
 from instances.inst_save import Saver
 
 def test_saver():
-    saver = Saver(r'../test')
-    saver.set_add_path('test_jpg')
-
     li = [
         'https://ttzytp.com/dongman/xvhu6d.jpg',
         'dfgdfgdfgdfg',
@@ -38,9 +36,18 @@ def test_saver():
         # 'https://ttzytp.com/dongman/xyd87f.jpg'
     ]
 
-    task_list = [(num, i, '.jpg') for num,i in enumerate(li)]
-    final_result_dict = saver.download_urls(task_list, execution_mode = 'thread')
+    saver = Saver(r'../test')
+    saver.set_add_path('test_jpg')
 
+    task_list = [(num, i, '.jpg') for num,i in enumerate(li)]
+
+    start_time = time()
+    final_result_dict = saver.download_urls(task_list, chain_mode = 'process')
+    logging.info(f'TaskChain completed in {time() - start_time} seconds.')
     logging.info(f"Task result: {final_result_dict}.")
+
+    # saver.fetch_threader.set_execution_mode('async')
+    # saver.fetch_threader.start(task_list)
+    # logging.info(f"Task result: {saver.fetch_threader.result_dict}.")
 
 

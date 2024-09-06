@@ -22,17 +22,7 @@ class SaveThread(ExampleTaskManager):
     
 
 class Saver(object):
-    def __init__(self, base_path = '.', show_progress=False, **kwargs):   
-        self.fetcher = Fetcher(**kwargs)
-        self.fetch_threader = FetchThread(
-            self.fetcher.getContent, 
-            tqdm_desc='urlsFetchProcess', 
-            show_progress=show_progress)
-        self.save_threader = SaveThread(
-            self.save_content, 
-            tqdm_desc='urlsSaveProcess', 
-            show_progress=False)
-
+    def __init__(self, base_path = '.'):
         self.set_base_path(base_path)
         self.set_add_path('')
 
@@ -73,11 +63,14 @@ class Saver(object):
             f.write(content)
         return path
 
-    def download_urls(self, task_list:list[tuple[str,str,str]], execution_mode="serial"):
-        self.fetch_threader.set_execution_mode(execution_mode)
-        self.save_threader.set_execution_mode(execution_mode)
+    def download_urls(self, task_list:list[tuple[str,str,str]], chain_mode="serial", show_progress=False):
+        fetcher = Fetcher()
+        fetch_threader = FetchThread(fetcher.getContent, execution_mode='thread',
+                                          tqdm_desc='urlsFetchProcess', show_progress=show_progress)
+        save_threader = SaveThread(self.save_content, execution_mode='serial',
+                                        tqdm_desc='urlsSaveProcess', show_progress=False)
 
-        chain = TaskChain([self.fetch_threader, self.save_threader])
+        chain = TaskChain([fetch_threader, save_threader], chain_mode)
         chain.start_chain(task_list)
 
         final_result_dict = chain.get_final_result_dict()

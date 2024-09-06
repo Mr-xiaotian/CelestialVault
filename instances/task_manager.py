@@ -77,19 +77,34 @@ class TaskManager:
     def set_execution_mode(self, execution_mode):
         self.execution_mode = execution_mode
 
-    def get_args(self, obj):
+    def get_args(self, task):
         """
-        从 obj 中获取参数
+        从任务对象中提取执行函数的参数。
 
-        这是一个抽象方法，需要由子类实现
+        参数:
+        task: 任务对象
+
+        返回:
+        包含执行函数所需参数的元组或列表。
+        
+        说明:
+        这个方法必须在子类中实现。task 的具体结构依赖于子类的任务类型。
         """
         raise NotImplementedError("This method should be overridden")
 
     def process_result(self, task, result):
         """
-        处理结果
+        处理任务的结果。
 
-        这是一个抽象方法，需要由子类实现
+        参数:
+        task: 已完成的任务对象
+        result: 任务的执行结果
+
+        返回:
+        处理后的结果。
+
+        说明:
+        这个方法必须在子类中实现。可以对结果进行格式化、存储或其他处理。
         """
         raise NotImplementedError("This method should be overridden")
 
@@ -146,7 +161,8 @@ class TaskManager:
         task: 发生异常的任务
         exception: 捕获的异常
         """
-        if self.retry_time_dict[task] < self.max_retries:
+        retry_time = self.retry_time_dict.setdefault(task, 0)
+        if retry_time < self.max_retries:
             self.task_queue.put(task)
             self.retry_time_dict[task] += 1
             logger.warning(f"Task {self.get_task_info(task)} failed {self.retry_time_dict[task]} times and will retry.")
@@ -167,7 +183,6 @@ class TaskManager:
 
         for item in dictory:
             self.task_queue.put(item)
-            self.retry_time_dict[item] = 0
 
         self.task_queue.put(None)  # 添加一个哨兵任务，用于结束任务队列
 
@@ -198,7 +213,6 @@ class TaskManager:
 
         for item in dictory:
             await self.task_queue.put(item)
-            self.retry_time_dict[item] = 0
 
         await self.task_queue.put(None)  # 添加一个哨兵任务，用于结束任务队列
         await self.run_in_async()
@@ -418,13 +432,13 @@ class TaskManager:
 
 # As an example of use, we redefine the subclass of TaskManager
 class ExampleTaskManager(TaskManager):
-    def get_args(self, obj):
+    def get_args(self, task):
         """
         从 obj 中获取参数
 
         在这个示例中，我们假设 obj 是一个整数，并将其作为参数返回
         """
-        return (obj,)
+        return (task,)
 
     def process_result(self, task, result):
         """
@@ -502,14 +516,16 @@ class TaskChain:
         for p in processes:
             p.join()
         
-        # 检查是否有错误
-        if error_dict:
-            logger.error(f"Errors encountered in TaskChain: {error_dict}")
+        # 释放资源
+        # manager.shutdown()
             
     def get_final_result_dict(self):
         """
         查找对应的初始任务并更新 final_result_dict
         """
+        if len(self.stages) == 1:
+            return self.stages[0].get_result_dict()
+
         for initial_task, initial_resylt in self.stages[0].get_result_dict().items():
             stage_result = initial_resylt
             for stage in self.stages[1:]:
