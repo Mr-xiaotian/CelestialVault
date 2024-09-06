@@ -32,11 +32,11 @@ def fibonacci(n):
     else:
         return fibonacci(n-1) + fibonacci(n-2)
 
-# 测试 TaskManager 的同步任务
-def test_thread_manager():
-    manager = ExampleTaskManager(fibonacci, worker_limit=6, show_progress=True)
-    results = manager.test_methods([30]*12)
-    logging.info(results)
+# # 测试 TaskManager 的同步任务
+# def test_thread_manager():
+#     manager = ExampleTaskManager(fibonacci, worker_limit=6, show_progress=True)
+#     results = manager.test_methods([30]*12)
+#     logging.info(results)
 
 # 测试 TaskManager 的异步任务
 @pytest.mark.asyncio

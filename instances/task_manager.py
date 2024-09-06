@@ -170,18 +170,18 @@ class TaskManager:
             self.error_dict[task] = exception
             logger.error(f"Task {self.get_task_info(task)} failed and reached the retry limit: {exception}")
         
-    def start(self, dictory):
+    def start(self, task_list):
         """
         根据 start_type 的值，选择串行、并行、异步或多进程执行任务
 
         参数:
-        dictory: 任务列表
+        task_list: 任务列表
         """
         start_time = time()
         self.init_queue_and_pool()
-        logger.info(f"'{self.func.__name__}' start {len(dictory)} tasks by {self.execution_mode}.")
+        logger.info(f"'{self.func.__name__}' start {len(task_list)} tasks by {self.execution_mode}.")
 
-        for item in dictory:
+        for item in task_list:
             self.task_queue.put(item)
 
         self.task_queue.put(None)  # 添加一个哨兵任务，用于结束任务队列
@@ -199,19 +199,19 @@ class TaskManager:
 
         logger.info(f"'{self.func.__name__}' end tasks. Use {time() - start_time} second.")
 
-    async def start_async(self, dictory):
+    async def start_async(self, task_list):
         """
         异步地执行任务
 
         参数:
-        dictory: 任务列表
+        task_list: 任务列表
         """
         start_time = time()
         self.set_execution_mode('async')
         self.init_queue_and_pool()
-        logger.info(f"'{self.func.__name__}' start {len(dictory)} tasks by async(await).")
+        logger.info(f"'{self.func.__name__}' start {len(task_list)} tasks by async(await).")
 
-        for item in dictory:
+        for item in task_list:
             await self.task_queue.put(item)
 
         await self.task_queue.put(None)  # 添加一个哨兵任务，用于结束任务队列
@@ -224,7 +224,7 @@ class TaskManager:
         根据 start_type 的值，选择串行、并行执行任务
 
         参数:
-        dictory: 任务列表
+        task_list: 任务列表
         """
         start_time = time()
         self.init_queue_and_pool()
@@ -346,9 +346,9 @@ class TaskManager:
         for task_data, result in await asyncio.gather(*async_tasks, return_exceptions=True):
             if isinstance(result, Exception):
                 self.handle_task_exception(task_data, result)
+                will_retry = True
             else:
                 self.process_task_success(task_data, result, start_time)
-                will_retry = True
             progress_bar.update(1) if self.show_progress else None
 
         progress_bar.close() if self.show_progress else None
@@ -397,31 +397,31 @@ class TaskManager:
         except Exception as e:
             logger.error(f"Error during process pool shutdown: {e}")
     
-    def test_methods(self, dictory):
+    def test_methods(self, task_list):
         # Prepare the results dictionary
         results = {}
 
         # Test run_in_serial
         start = time()
         self.set_execution_mode('serial')
-        self.start(dictory)
+        self.start(task_list)
         results['run_in_serial'] = time() - start
 
         # Test run_in_thread
         start = time()
         self.set_execution_mode('thread')
-        self.start(dictory)
+        self.start(task_list)
         results['run_in_thread'] = time() - start
 
         # Test run_in_process
         start = time()
         self.set_execution_mode('process')
-        self.start(dictory)
+        self.start(task_list)
         results['run_in_process'] = time() - start
 
         # # Test run_in_async
         # start = time()
-        # self.start(dictory, 'async')
+        # self.start(task_list, 'async')
         # results['run_in_async'] = time() - start
 
         return results
