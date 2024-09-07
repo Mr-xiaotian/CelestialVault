@@ -14,6 +14,7 @@ from tqdm import tqdm
 from tqdm.asyncio import tqdm as tqdm_asy
 from time import time, strftime, localtime, sleep
 from loguru import logger
+from instances.inst_progress import ProgressManager
 
 
 logger.remove()  # remove the default handler
@@ -162,13 +163,16 @@ class TaskManager:
         exception: 捕获的异常
         """
         retry_time = self.retry_time_dict.setdefault(task, 0)
+        # 基于异常类型决定重试策略
         if retry_time < self.max_retries:
             self.task_queue.put(task)
             self.retry_time_dict[task] += 1
-            logger.warning(f"Task {self.get_task_info(task)} failed {self.retry_time_dict[task]} times and will retry.")
+            logger.warning(f"Task {self.get_task_info(task)} failed {self.retry_time_dict[task]} times and will retry after a delay.")
+            sleep(2 ** self.retry_time_dict[task])  # 指数退避
         else:
             self.error_dict[task] = exception
             logger.error(f"Task {self.get_task_info(task)} failed and reached the retry limit: {exception}")
+
         
     def start(self, task_list):
         """
@@ -249,7 +253,12 @@ class TaskManager:
         """
         串行地执行任务
         """
-        progress_bar = tqdm(total=self.task_queue.qsize(), desc=f'{self.tqdm_desc}(serial)') if self.show_progress else None
+        progress_manager = ProgressManager(
+            total_tasks=self.task_queue.qsize(),
+            desc=f'{self.tqdm_desc}(serial)',
+            mode="sync",
+            show_progress=self.show_progress
+        )
         start_time = time()
         will_retry = False
 
@@ -257,7 +266,7 @@ class TaskManager:
         while True:
             task = self.task_queue.get()
             if task is None:
-                progress_bar.update(1) if self.show_progress else None
+                progress_manager.update(1)
                 break
             try:
                 result = self.func(*self.get_args(task))
@@ -265,9 +274,9 @@ class TaskManager:
             except Exception as error:
                 self.handle_task_exception(task, error)
                 will_retry = True
-            progress_bar.update(1) if self.show_progress else None
+            progress_manager.update(1)
 
-        progress_bar.close() if self.show_progress else None
+        progress_manager.close()
 
         if will_retry:
             self.task_queue.put(None) if will_retry else None
@@ -286,13 +295,18 @@ class TaskManager:
         futures = {}
         will_retry = False
         
-        progress_bar = tqdm(total=self.task_queue.qsize(), desc=f'{self.tqdm_desc}({self.execution_mode})') if self.show_progress else None
+        progress_manager = ProgressManager(
+            total_tasks=self.task_queue.qsize(),
+            desc=f'{self.tqdm_desc}({self.execution_mode})',
+            mode=self.execution_mode,
+            show_progress=self.show_progress
+        )
 
         # 从任务队列中提交任务到执行池
         while True:
             task = self.task_queue.get()
             if task is None:
-                progress_bar.update(1) if self.show_progress else None
+                progress_manager.update(1)
                 break
             futures[executor.submit(self.func, *self.get_args(task))] = task
 
@@ -307,11 +321,10 @@ class TaskManager:
                 will_retry = True
                 # 动态更新进度条总数
                 if self.show_progress:
-                    progress_bar.total += 1
-                    progress_bar.refresh()
-            progress_bar.update(1) if self.show_progress else None
+                    progress_manager.add_total(1)
+            progress_manager.update(1)
 
-        progress_bar.close() if self.show_progress else None
+        progress_manager.close()
 
         if will_retry:
             self.task_queue.put(None)
@@ -333,12 +346,17 @@ class TaskManager:
 
         # 创建异步任务列表
         async_tasks = []
-        progress_bar = tqdm_asy(total=self.task_queue.qsize(), desc=f'{self.tqdm_desc}(async)') if self.show_progress else None
+        progress_manager = ProgressManager(
+            total_tasks=self.task_queue.qsize(),
+            desc=f'{self.tqdm_desc}(async)',
+            mode="async",
+            show_progress=self.show_progress
+        )
 
         while True:
             task = await self.task_queue.get()
             if task is None:
-                progress_bar.update(1) if self.show_progress else None
+                progress_manager.update(1)
                 break
             async_tasks.append(sem_task(task))  # 使用信号量包裹的任务
 
@@ -349,9 +367,9 @@ class TaskManager:
                 will_retry = True
             else:
                 self.process_task_success(task_data, result, start_time)
-            progress_bar.update(1) if self.show_progress else None
+            progress_manager.update(1)
 
-        progress_bar.close() if self.show_progress else None
+        progress_manager.close()
 
         if will_retry:
             await self.task_queue.put(None)
@@ -462,25 +480,25 @@ class ExampleTaskManager(TaskManager):
             logger.error(f"Task {self.get_task_info(task)}(index:{num+1}/{error_len})")
 
 class TaskChain:
-    def __init__(self, stages, execution_mode='serial'):
+    def __init__(self, stages, chain_mode='serial'):
         """
         stages: 一个包含 StageManager 实例的列表，表示执行链
         """
         self.stages: List[TaskManager] = stages
-        self.execution_mode = execution_mode
+        self.chain_mode = chain_mode
 
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
 
-    def set_execution_mode(self, execution_mode):
-        self.execution_mode = execution_mode
+    def set_chain_mode(self, chain_mode):
+        self.chain_mode = chain_mode
 
     def start_chain(self, tasks):
-        logger.info(f"Starting TaskChain with {len(self.stages)} stages by {self.execution_mode}.")
+        logger.info(f"Starting TaskChain with {len(self.stages)} stages by {self.chain_mode}.")
 
-        if self.execution_mode == 'process':
+        if self.chain_mode == 'process':
             self.run_chain_in_process(tasks)
         else:
-            self.set_execution_mode('serial')
+            self.set_chain_mode('serial')
             self.run_chain_in_serial(tasks)
 
     def run_chain_in_serial(self, tasks):

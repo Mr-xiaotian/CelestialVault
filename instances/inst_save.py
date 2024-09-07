@@ -4,7 +4,7 @@ import logging
 import subprocess
 from pathlib import Path
 from os.path import splitext, join, exists
-from instances.task_manager import ExampleTaskManager, TaskChain
+from instances.inst_task import ExampleTaskManager, TaskChain
 from instances.inst_fetch import Fetcher
 
 

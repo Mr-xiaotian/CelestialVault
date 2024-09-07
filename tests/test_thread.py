@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import pytest, logging, asyncio
 from time import time
-from instances.task_manager import TaskManager, ExampleTaskManager, TaskChain
+from instances.inst_task import TaskManager, ExampleTaskManager, TaskChain
 
 
 def square(n):
@@ -32,11 +32,11 @@ def fibonacci(n):
     else:
         return fibonacci(n-1) + fibonacci(n-2)
 
-# # 测试 TaskManager 的同步任务
-# def test_thread_manager():
-#     manager = ExampleTaskManager(fibonacci, worker_limit=6, show_progress=True)
-#     results = manager.test_methods([30]*12)
-#     logging.info(results)
+# 测试 TaskManager 的同步任务
+def test_thread_manager():
+    manager = ExampleTaskManager(fibonacci, worker_limit=6, show_progress=True)
+    results = manager.test_methods([30]*12)
+    logging.info(results)
 
 # 测试 TaskManager 的异步任务
 @pytest.mark.asyncio
@@ -53,6 +53,7 @@ def test_task_chain():
     stage2 = ExampleTaskManager(square, execution_mode='serial', worker_limit=4, show_progress=False)
 
     # 初始化 TaskChain
+    chain_mode = 'process'
     chain = TaskChain([stage1, stage2], 'process')
 
     # 要测试的任务列表
@@ -61,7 +62,7 @@ def test_task_chain():
     # 开始任务链
     start_time = time()
     chain.start_chain(tasks)
-    logging.info(f'TaskChain completed in {time() - start_time} seconds.')
+    logging.info(f'TaskChain completed by {chain_mode} in {time() - start_time} seconds.')
 
     # 打印结果
     final_result_dict = chain.get_final_result_dict()
