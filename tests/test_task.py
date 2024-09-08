@@ -54,7 +54,7 @@ def test_task_chain():
 
     # 初始化 TaskChain
     chain_mode = 'process'
-    chain = TaskChain([stage1, stage2], 'process')
+    chain = TaskChain([stage1, stage2], chain_mode)
 
     # 要测试的任务列表
     tasks = range(25,31)

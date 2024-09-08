@@ -111,11 +111,15 @@ class TaskManager:
 
     def handle_error(self):
         """
-        处理错误
-
-        这是一个抽象方法，需要由子类实现
+        处理任务执行后的所有错误
         """
-        raise NotImplementedError("This method should be overridden")
+        if not self.get_error_dict():
+            return
+        error_dict = self.get_error_dict()
+        error_len = len(error_dict)
+        # for num,(task, error) in enumerate(error_dict.items()):
+        #     logger.error(f"Task {self.get_task_info(task)}(index:{num+1}/{error_len})")
+        logger.error(f'There are total {error_len} errors.')
     
     def get_task_info(self, task):
         """
@@ -173,7 +177,6 @@ class TaskManager:
             self.error_dict[task] = exception
             logger.error(f"Task {self.get_task_info(task)} failed and reached the retry limit: {exception}")
 
-        
     def start(self, task_list):
         """
         根据 start_type 的值，选择串行、并行、异步或多进程执行任务
@@ -201,7 +204,7 @@ class TaskManager:
             self.set_execution_mode('serial')
             self.run_in_serial()
 
-        logger.info(f"'{self.func.__name__}' end tasks. Use {time() - start_time} second.")
+        logger.info(f"'{self.func.__name__}' end tasks. Use {time() - start_time} second. {len(self.error_dict)} tasks failed, {len(self.result_dict)} tasks successed.")
 
     async def start_async(self, task_list):
         """
@@ -221,7 +224,7 @@ class TaskManager:
         await self.task_queue.put(None)  # 添加一个哨兵任务，用于结束任务队列
         await self.run_in_async()
 
-        logger.info(f"'{self.func.__name__}' end tasks. Use {time() - start_time} second.")
+        logger.info(f"'{self.func.__name__}' end tasks. Use {time() - start_time} second. {len(self.error_dict)} tasks failed, {len(self.result_dict)} tasks successed.")
 
     def start_stage(self, queues: List[MPQueue], stage_index: int):
         """
@@ -232,7 +235,7 @@ class TaskManager:
         """
         start_time = time()
         self.init_queue_and_pool()
-        logger.info(f"The {stage_index} stage '{self.func.__name__}' start tasks by {self.execution_mode}.")
+        logger.info(f"The {stage_index} stage '{self.func.__name__}' start tasks by {self.execution_mode}. ")
 
         self.task_queue = queues[stage_index]
         self.result_queue = queues[stage_index+1]
@@ -247,7 +250,7 @@ class TaskManager:
         else:
             self.run_in_serial()
 
-        logger.info(f"The {stage_index} stage '{self.func.__name__}' end tasks. Use {time() - start_time} second.")
+        logger.info(f"The {stage_index} stage '{self.func.__name__}' end tasks. Use {time() - start_time} second. {len(self.error_dict)} tasks failed, {len(self.result_dict)} tasks successed.")
  
     def run_in_serial(self):
         """
@@ -466,19 +469,6 @@ class ExampleTaskManager(TaskManager):
         """
         return result
 
-    def handle_error(self):
-        """
-        处理错误
-
-        在这个示例中，我们只是简单地打印错误信息
-        """
-        if not self.get_error_dict():
-            return
-        error_dict = self.get_error_dict()
-        error_len = len(error_dict)
-        for num,(task, error) in enumerate(error_dict.items()):
-            logger.error(f"Task {self.get_task_info(task)}(index:{num+1}/{error_len})")
-
 class TaskChain:
     def __init__(self, stages, chain_mode='serial'):
         """
@@ -490,9 +480,15 @@ class TaskChain:
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
 
     def set_chain_mode(self, chain_mode):
+        """
+        设置任务链的执行模式
+        """
         self.chain_mode = chain_mode
 
     def start_chain(self, tasks):
+        """
+        启动任务链
+        """
         logger.info(f"Starting TaskChain with {len(self.stages)} stages by {self.chain_mode}.")
 
         if self.chain_mode == 'process':
@@ -502,11 +498,17 @@ class TaskChain:
             self.run_chain_in_serial(tasks)
 
     def run_chain_in_serial(self, tasks):
+        """
+        串行运行任务链
+        """
         for stage in self.stages:
             stage.start(tasks)
             tasks = stage.get_result_dict().values()
 
     def run_chain_in_process(self, tasks):
+        """
+        并行运行任务链
+        """
         # 创建进程间的队列
         queues = [MPQueue() for _ in range(len(self.stages) + 1)]
         
@@ -528,7 +530,6 @@ class TaskChain:
             p = multiprocessing.Process(target=stage.start_stage, args=(queues, stage_index))
             p.start()
             processes.append(p)
-            sleep(0.1)  # 等待一段时间，确保上一个进程已经启动
         
         # 等待所有进程结束
         for p in processes:
@@ -544,8 +545,8 @@ class TaskChain:
         if len(self.stages) == 1:
             return self.stages[0].get_result_dict()
 
-        for initial_task, initial_resylt in self.stages[0].get_result_dict().items():
-            stage_result = initial_resylt
+        for initial_task, initial_result in self.stages[0].get_result_dict().items():
+            stage_result = initial_result
             for stage in self.stages[1:]:
                 stage_result = stage.get_result_dict().get(stage_result, None)
             self.final_result_dict[initial_task] = stage_result
