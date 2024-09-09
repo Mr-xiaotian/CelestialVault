@@ -45,7 +45,7 @@ def test_saver():
 
     chain_mode = 'serial'
     final_result_dict = saver.download_urls(task_list, chain_mode)
-    logging.info(f'TaskChain completed by {chain_mode} in {time() - start_time} seconds.')
+    logging.info(f'TaskChain completed in {time() - start_time} seconds by {chain_mode}.')
     logging.info(f"Task result: {final_result_dict}.")
 
     # saver.fetch_threader.set_execution_mode('async')

@@ -9,9 +9,7 @@ import asyncio, multiprocessing
 from queue import Queue as ThreadQueue
 from multiprocessing import Queue as MPQueue
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
-from typing import Callable, Tuple, Dict, List
-from tqdm import tqdm
-from tqdm.asyncio import tqdm as tqdm_asy
+from typing import List
 from time import time, strftime, localtime, sleep
 from loguru import logger
 from instances.inst_progress import ProgressManager
@@ -54,9 +52,10 @@ class TaskManager:
 
         self.init_dict(result_dict, error_dict)
         
-    def init_dict(self, result_dict, error_dict):
+    def init_dict(self, result_dict=None, error_dict=None):
         self.result_dict = result_dict if result_dict is not None else {}
         self.error_dict = error_dict if error_dict is not None else {}
+
         self.retry_time_dict = {}
 
     def init_queue_and_pool(self):
@@ -226,7 +225,7 @@ class TaskManager:
 
         logger.info(f"'{self.func.__name__}' end tasks. Use {time() - start_time} second. {len(self.error_dict)} tasks failed, {len(self.result_dict)} tasks successed.")
 
-    def start_stage(self, queues: List[MPQueue], stage_index: int):
+    def start_stage(self, input_queue: MPQueue, output_queue: MPQueue, stage_index):
         """
         根据 start_type 的值，选择串行、并行执行任务
 
@@ -237,8 +236,8 @@ class TaskManager:
         self.init_queue_and_pool()
         logger.info(f"The {stage_index} stage '{self.func.__name__}' start tasks by {self.execution_mode}. ")
 
-        self.task_queue = queues[stage_index]
-        self.result_queue = queues[stage_index+1]
+        self.task_queue = input_queue
+        self.result_queue = output_queue
 
         # 根据模式运行对应的任务处理函数
         if self.execution_mode == "thread":
@@ -271,6 +270,9 @@ class TaskManager:
             if task is None:
                 progress_manager.update(1)
                 break
+            elif task in self.result_dict:
+                progress_manager.update(1)
+                continue
             try:
                 result = self.func(*self.get_args(task))
                 self.process_task_success(task, result, start_time)
@@ -311,6 +313,9 @@ class TaskManager:
             if task is None:
                 progress_manager.update(1)
                 break
+            elif task in self.result_dict:
+                progress_manager.update(1)
+                continue
             futures[executor.submit(self.func, *self.get_args(task))] = task
 
         # 处理已完成的任务
@@ -361,6 +366,9 @@ class TaskManager:
             if task is None:
                 progress_manager.update(1)
                 break
+            elif task in self.result_dict:
+                progress_manager.update(1)
+                continue
             async_tasks.append(sem_task(task))  # 使用信号量包裹的任务
 
         # 并发运行所有任务
@@ -424,18 +432,21 @@ class TaskManager:
 
         # Test run_in_serial
         start = time()
+        self.init_dict()
         self.set_execution_mode('serial')
         self.start(task_list)
         results['run_in_serial'] = time() - start
 
         # Test run_in_thread
         start = time()
+        self.init_dict()
         self.set_execution_mode('thread')
         self.start(task_list)
         results['run_in_thread'] = time() - start
 
         # Test run_in_process
         start = time()
+        self.init_dict()
         self.set_execution_mode('process')
         self.start(task_list)
         results['run_in_process'] = time() - start
@@ -485,6 +496,13 @@ class TaskChain:
         """
         self.chain_mode = chain_mode
 
+    def add_stage(self, stage: TaskManager):
+        self.stages.append(stage)
+
+    def remove_stage(self, index: int):
+        if 0 <= index < len(self.stages):
+            self.stages.pop(index)
+
     def start_chain(self, tasks):
         """
         启动任务链
@@ -527,13 +545,16 @@ class TaskChain:
         processes = []
         for stage_index, stage in enumerate(self.stages):
             stage.init_dict(stage_result_dicts[stage_index], error_dict)
-            p = multiprocessing.Process(target=stage.start_stage, args=(queues, stage_index))
+            p = multiprocessing.Process(target=stage.start_stage, args=(queues[stage_index], queues[stage_index + 1], stage_index))
             p.start()
             processes.append(p)
         
         # 等待所有进程结束
         for p in processes:
             p.join()
+
+        for queue in queues:
+            queue.close()
         
         # 释放资源
         # manager.shutdown()

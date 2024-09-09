@@ -35,7 +35,7 @@ def fibonacci(n):
 # 测试 TaskManager 的同步任务
 def test_thread_manager():
     manager = ExampleTaskManager(fibonacci, worker_limit=6, show_progress=True)
-    results = manager.test_methods([30]*12)
+    results = manager.test_methods(range(25,37)) # [30]*12
     logging.info(results)
 
 # 测试 TaskManager 的异步任务
@@ -43,7 +43,7 @@ def test_thread_manager():
 async def test_thread_manager_async():
     manager = ExampleTaskManager(fibonacci_async, worker_limit=6, show_progress=True)
     start = time()
-    await manager.start_async([30]*12)
+    await manager.start_async(range(25,37))
     logging.info(f'run_in_async: {time() - start}')
 
 # 测试 TaskChain 的功能
@@ -62,7 +62,7 @@ def test_task_chain():
     # 开始任务链
     start_time = time()
     chain.start_chain(tasks)
-    logging.info(f'TaskChain completed by {chain_mode} in {time() - start_time} seconds.')
+    logging.info(f'TaskChain completed in {time() - start_time} seconds by {chain_mode}.')
 
     # 打印结果
     final_result_dict = chain.get_final_result_dict()
