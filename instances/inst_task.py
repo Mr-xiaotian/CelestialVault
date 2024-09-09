@@ -22,11 +22,15 @@ logger.add(f"logs/thread_manager({now_time}).log",
            level="INFO")
 
 
+class TerminationSignal:
+    """用于标记任务队列终止的哨兵对象"""
+    pass
+TERMINATION_SIGNAL = TerminationSignal()
+
 class TaskManager:
     def __init__(self, func, execution_mode = 'serial',
                  worker_limit=50, max_retries=3, max_info=50,
-                 tqdm_desc="Processing", show_progress=False, 
-                 result_dict=None, error_dict=None):
+                 tqdm_desc="Processing", show_progress=False):
         """
         初始化 TaskManager
 
@@ -50,23 +54,23 @@ class TaskManager:
         self.thread_pool = None
         self.process_pool = None
 
-        self.init_dict(result_dict, error_dict)
+        self.init_result_error_dict()
         
-    def init_dict(self, result_dict=None, error_dict=None):
+    def init_result_error_dict(self, result_dict=None, error_dict=None):
         self.result_dict = result_dict if result_dict is not None else {}
-        self.error_dict = error_dict if error_dict is not None else {}
+        self.error_dict = error_dict if error_dict is not None else {} 
 
-        self.retry_time_dict = {}
-
-    def init_queue_and_pool(self):
+    def init_env(self):
         if self.execution_mode == "async":
             self.task_queue = asyncio.Queue()
         elif self.execution_mode == "process":
             self.task_queue = MPQueue()
         else:
             self.task_queue = ThreadQueue()
-
         self.result_queue = ThreadQueue()
+
+        self.retry_time_dict = {}
+        self.duplicates_num = 0
 
         # 可以复用的线程池或进程池
         if self.execution_mode == 'thread' and self.thread_pool is None:
@@ -170,8 +174,9 @@ class TaskManager:
         if retry_time < self.max_retries:
             self.task_queue.put(task)
             self.retry_time_dict[task] += 1
-            logger.warning(f"Task {self.get_task_info(task)} failed {self.retry_time_dict[task]} times and will retry after a delay.")
-            sleep(2 ** self.retry_time_dict[task])  # 指数退避
+            delay_time = 2 ** retry_time
+            logger.warning(f"Task {self.get_task_info(task)} failed {self.retry_time_dict[task]} times and will retry after {delay_time} seconds.")
+            sleep(delay_time)  # 指数退避
         else:
             self.error_dict[task] = exception
             logger.error(f"Task {self.get_task_info(task)} failed and reached the retry limit: {exception}")
@@ -184,13 +189,13 @@ class TaskManager:
         task_list: 任务列表
         """
         start_time = time()
-        self.init_queue_and_pool()
+        self.init_env()
         logger.info(f"'{self.func.__name__}' start {len(task_list)} tasks by {self.execution_mode}.")
 
         for item in task_list:
             self.task_queue.put(item)
 
-        self.task_queue.put(None)  # 添加一个哨兵任务，用于结束任务队列
+        self.task_queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
 
         # 根据模式运行对应的任务处理函数
         if self.execution_mode == "thread":
@@ -203,7 +208,7 @@ class TaskManager:
             self.set_execution_mode('serial')
             self.run_in_serial()
 
-        logger.info(f"'{self.func.__name__}' end tasks. Use {time() - start_time} second. {len(self.error_dict)} tasks failed, {len(self.result_dict)} tasks successed.")
+        logger.info(f"'{self.func.__name__}' end tasks by {self.execution_mode}. Use {time() - start_time} second. {len(self.error_dict)} tasks failed, {len(self.result_dict)} tasks successed, {self.duplicates_num} tasks duplicated.")
 
     async def start_async(self, task_list):
         """
@@ -214,16 +219,16 @@ class TaskManager:
         """
         start_time = time()
         self.set_execution_mode('async')
-        self.init_queue_and_pool()
+        self.init_env()
         logger.info(f"'{self.func.__name__}' start {len(task_list)} tasks by async(await).")
 
         for item in task_list:
             await self.task_queue.put(item)
 
-        await self.task_queue.put(None)  # 添加一个哨兵任务，用于结束任务队列
+        await self.task_queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
         await self.run_in_async()
 
-        logger.info(f"'{self.func.__name__}' end tasks. Use {time() - start_time} second. {len(self.error_dict)} tasks failed, {len(self.result_dict)} tasks successed.")
+        logger.info(f"'{self.func.__name__}' end tasks by {self.execution_mode}. Use {time() - start_time} second. {len(self.error_dict)} tasks failed, {len(self.result_dict)} tasks successed, {self.duplicates_num} tasks duplicated.")
 
     def start_stage(self, input_queue: MPQueue, output_queue: MPQueue, stage_index):
         """
@@ -233,7 +238,7 @@ class TaskManager:
         task_list: 任务列表
         """
         start_time = time()
-        self.init_queue_and_pool()
+        self.init_env()
         logger.info(f"The {stage_index} stage '{self.func.__name__}' start tasks by {self.execution_mode}. ")
 
         self.task_queue = input_queue
@@ -249,7 +254,8 @@ class TaskManager:
         else:
             self.run_in_serial()
 
-        logger.info(f"The {stage_index} stage '{self.func.__name__}' end tasks. Use {time() - start_time} second. {len(self.error_dict)} tasks failed, {len(self.result_dict)} tasks successed.")
+        self.result_queue.put(TERMINATION_SIGNAL)
+        logger.info(f"The {stage_index} stage '{self.func.__name__}' end tasks by {self.execution_mode}. Use {time() - start_time} second. {len(self.error_dict)} tasks failed, {len(self.result_dict)} tasks successed, {self.duplicates_num} tasks duplicated.")
  
     def run_in_serial(self):
         """
@@ -267,10 +273,11 @@ class TaskManager:
         # 从队列中依次获取任务并执行
         while True:
             task = self.task_queue.get()
-            if task is None:
+            if isinstance(task, TerminationSignal):
                 progress_manager.update(1)
                 break
-            elif task in self.result_dict:
+            elif task in self.result_dict or task in self.error_dict:
+                self.duplicates_num += 1
                 progress_manager.update(1)
                 continue
             try:
@@ -284,9 +291,8 @@ class TaskManager:
         progress_manager.close()
 
         if will_retry:
-            self.task_queue.put(None) if will_retry else None
+            self.task_queue.put(TERMINATION_SIGNAL)
             self.run_in_serial()
-        self.result_queue.put(None)  # 添加一个哨兵任务，用于结束任务队列
     
     def run_with_executor(self, executor):
         """
@@ -310,10 +316,11 @@ class TaskManager:
         # 从任务队列中提交任务到执行池
         while True:
             task = self.task_queue.get()
-            if task is None:
+            if isinstance(task, TerminationSignal):
                 progress_manager.update(1)
                 break
-            elif task in self.result_dict:
+            elif task in self.result_dict or task in self.error_dict:
+                self.duplicates_num += 1
                 progress_manager.update(1)
                 continue
             futures[executor.submit(self.func, *self.get_args(task))] = task
@@ -328,16 +335,14 @@ class TaskManager:
                 self.handle_task_exception(task, error)
                 will_retry = True
                 # 动态更新进度条总数
-                if self.show_progress:
-                    progress_manager.add_total(1)
+                # progress_manager.add_total(1)
             progress_manager.update(1)
 
         progress_manager.close()
 
         if will_retry:
-            self.task_queue.put(None)
+            self.task_queue.put(TERMINATION_SIGNAL)
             self.run_with_executor(executor)
-        self.result_queue.put(None)  # 添加一个哨兵任务，用于结束任务队列
 
     async def run_in_async(self):
         """
@@ -363,10 +368,11 @@ class TaskManager:
 
         while True:
             task = await self.task_queue.get()
-            if task is None:
+            if isinstance(task, TerminationSignal):
                 progress_manager.update(1)
                 break
-            elif task in self.result_dict:
+            elif task in self.result_dict or task in self.error_dict:
+                self.duplicates_num += 1
                 progress_manager.update(1)
                 continue
             async_tasks.append(sem_task(task))  # 使用信号量包裹的任务
@@ -383,9 +389,8 @@ class TaskManager:
         progress_manager.close()
 
         if will_retry:
-            await self.task_queue.put(None)
+            await self.task_queue.put(TERMINATION_SIGNAL)
             await self.run_in_async()
-        self.result_queue.put(None)  # 添加一个哨兵任务，用于结束任务队列
 
     async def _run_single_task(self, task):
         """
@@ -432,21 +437,21 @@ class TaskManager:
 
         # Test run_in_serial
         start = time()
-        self.init_dict()
+        self.init_result_error_dict()
         self.set_execution_mode('serial')
         self.start(task_list)
         results['run_in_serial'] = time() - start
 
         # Test run_in_thread
         start = time()
-        self.init_dict()
+        self.init_result_error_dict()
         self.set_execution_mode('thread')
         self.start(task_list)
         results['run_in_thread'] = time() - start
 
         # Test run_in_process
         start = time()
-        self.init_dict()
+        self.init_result_error_dict()
         self.set_execution_mode('process')
         self.start(task_list)
         results['run_in_process'] = time() - start
@@ -539,12 +544,13 @@ class TaskChain:
         for task in tasks:
             queues[0].put(task)
 
-        queues[0].put(None)
+        # 使用哨兵对象作为终止信号
+        queues[0].put(TERMINATION_SIGNAL)
         
         # 创建多进程来运行每个环节
         processes = []
         for stage_index, stage in enumerate(self.stages):
-            stage.init_dict(stage_result_dicts[stage_index], error_dict)
+            stage.init_result_error_dict(stage_result_dicts[stage_index], error_dict)
             p = multiprocessing.Process(target=stage.start_stage, args=(queues[stage_index], queues[stage_index + 1], stage_index))
             p.start()
             processes.append(p)

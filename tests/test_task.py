@@ -34,16 +34,22 @@ def fibonacci(n):
 
 # 测试 TaskManager 的同步任务
 def test_thread_manager():
+    test_task_0 = [30]*12
+    test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
+
     manager = ExampleTaskManager(fibonacci, worker_limit=6, show_progress=True)
-    results = manager.test_methods(range(25,37)) # [30]*12
+    results = manager.test_methods(test_task_1)
     logging.info(results)
 
 # 测试 TaskManager 的异步任务
 @pytest.mark.asyncio
 async def test_thread_manager_async():
+    test_task_0 = [30]*12
+    test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
+
     manager = ExampleTaskManager(fibonacci_async, worker_limit=6, show_progress=True)
     start = time()
-    await manager.start_async(range(25,37))
+    await manager.start_async(test_task_1)
     logging.info(f'run_in_async: {time() - start}')
 
 # 测试 TaskChain 的功能
