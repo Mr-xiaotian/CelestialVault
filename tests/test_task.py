@@ -2,8 +2,9 @@ import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest, logging, asyncio
-from time import time
-from instances.inst_task import TaskManager, ExampleTaskManager, TaskChain
+import cProfile, subprocess
+from time import time, strftime, localtime
+from instances.inst_task import ExampleTaskManager, TaskChain
 
 
 def square(n):
@@ -33,23 +34,23 @@ def fibonacci(n):
         return fibonacci(n-1) + fibonacci(n-2)
 
 # 测试 TaskManager 的同步任务
-def test_thread_manager():
-    test_task_0 = [30]*12
+def test_task_manager():
+    test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
 
     manager = ExampleTaskManager(fibonacci, worker_limit=6, show_progress=True)
-    results = manager.test_methods(test_task_1)
+    results = manager.test_methods(test_task_0)
     logging.info(results)
 
 # 测试 TaskManager 的异步任务
 @pytest.mark.asyncio
-async def test_thread_manager_async():
-    test_task_0 = [30]*12
+async def test_task_manager_async():
+    test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
 
     manager = ExampleTaskManager(fibonacci_async, worker_limit=6, show_progress=True)
     start = time()
-    await manager.start_async(test_task_1)
+    await manager.start_async(test_task_0)
     logging.info(f'run_in_async: {time() - start}')
 
 # 测试 TaskChain 的功能
@@ -73,3 +74,15 @@ def test_task_chain():
     # 打印结果
     final_result_dict = chain.get_final_result_dict()
     logging.info(f"Task result: {final_result_dict}.")
+
+def profile_task_chain():
+    target_func = 'test_task_manager'
+    now_time = strftime("%m-%d-%H-%M", localtime())
+    output_file = f'profile/{target_func}({now_time}).prof'
+    cProfile.run(target_func + '()', output_file)
+
+    subprocess.run(['snakeviz', output_file])
+
+# 在主函数或脚本中调用此函数，而不是在测试中
+if __name__ == "__main__":
+    profile_task_chain()

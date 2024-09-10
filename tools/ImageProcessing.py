@@ -32,8 +32,8 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
         """
         从文件名中提取数字，用于排序。
         """
-        match = re.search(r'\d+', file_name.name)
-        return int(match.group()) if match else 0
+        matches = re.findall(r'\d+', file_name.name)
+        return int(''.join(matches)) if matches else float('inf')
 
     # 转换路径为 Path 对象
     image_path = Path(image_path)
@@ -56,15 +56,31 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
     if not image_paths:
         raise ValueError(f"No images found in {image_path} with suffixes: {valid_suffixes}")
 
-    # 打开所有图片并转换为 RGB 模式
+    # 加载所有图片并调整宽度
+    images = []
+    max_width = 0
+    
     try:
-        images = [Image.open(img_path).convert('RGB') for img_path in image_paths]
+        for img_path in tqdm(image_paths, desc="Loading and resizing images"):
+            img = Image.open(img_path).convert('RGB')
+            width, height = img.size
+            max_width = max(max_width, width)
+            images.append((img, width, height))
+
+        # 调整图片宽度并保持纵横比
+        resized_images = []
+        for img, width, height in tqdm(images, desc="Resizing images"):
+            if width != max_width:
+                new_height = int(max_width * height / width)
+                img = img.resize((max_width, new_height), Image.ANTIALIAS)
+            resized_images.append(img)
+
     except Exception as e:
-        raise ValueError(f"Error loading images: {e}")
+        raise ValueError(f"Error loading or resizing images: {e}")
 
     # 将图片保存为单个PDF
     try:
-        images[0].save(pdf_path, save_all=True, append_images=images[1:])
+        resized_images[0].save(pdf_path, save_all=True, append_images=resized_images[1:])
     except Exception as e:
         raise ValueError(f"Error saving PDF: {e}")
 
@@ -163,12 +179,8 @@ def generate_palette(color_num=256, style='morandi', mode='random', random_seed=
     np.random.seed(random_seed)
 
     get_hsv = None
-    if mode == 'random':
-        get_hsv = random_mode
-    elif mode == 'uniform':
-        get_hsv = uniform_mode
-    elif mode == 'spiral':
-        get_hsv = spiral_mode
+    mode_dict = {'random': random_mode, 'uniform': uniform_mode, 'spiral': spiral_mode}
+    get_hsv = mode_dict[mode]
 
     colors = []
     used_hsv = set()
