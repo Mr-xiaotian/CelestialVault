@@ -56,7 +56,7 @@ task_logger = TaskLogger(logger)
 class TaskManager:
     def __init__(self, func, execution_mode = 'serial',
                  worker_limit=50, max_retries=3, max_info=50,
-                 tqdm_desc="Processing", show_progress=False):
+                 progress_desc="Processing", show_progress=False):
         """
         初始化 TaskManager
 
@@ -65,7 +65,7 @@ class TaskManager:
         execution_mode: 执行模式，可选 'serial', 'thread', 'process', 'async'
         worker_limit: 同时处理数量
         max_retries: 任务的最大重试次数
-        tqdm_desc: 进度条显示名称
+        progress_desc: 进度条显示名称
         show_progress: 进度条显示与否
         """
         self.func = func
@@ -74,11 +74,13 @@ class TaskManager:
         self.max_retries = max_retries
         self.max_info = max_info
 
-        self.tqdm_desc = tqdm_desc
+        self.progress_desc = progress_desc
         self.show_progress = show_progress
 
         self.thread_pool = None
         self.process_pool = None
+
+        self.retry_exceptions = (TimeoutError, ConnectionError) # 需要重试的异常类型
 
         self.init_result_error_dict()
         
@@ -198,18 +200,27 @@ class TaskManager:
         参数:
         task: 发生异常的任务
         exception: 捕获的异常
+
+        返回:
+        是否需要重试
         """
         retry_time = self.retry_time_dict.setdefault(task, 0)
+        will_try = False
+
         # 基于异常类型决定重试策略
-        if retry_time < self.max_retries:
+        if isinstance(exception, self.retry_exceptions) and retry_time < self.max_retries:
             self.task_queue.put(task)
             self.retry_time_dict[task] += 1
             delay_time = 2 ** retry_time
             task_logger.task_retry(self.get_task_info(task), self.retry_time_dict[task], delay_time)
             sleep(delay_time)  # 指数退避
+            will_try = True
         else:
+            # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
             task_logger.task_fail(self.get_task_info(task), exception)
+
+        return will_try
 
     def start(self, task_list):
         """
@@ -296,11 +307,10 @@ class TaskManager:
         """
         progress_manager = ProgressManager(
             total_tasks=self.task_queue.qsize(),
-            desc=f'{self.tqdm_desc}(serial)',
+            desc=f'{self.progress_desc}(serial)',
             mode="sync",
             show_progress=self.show_progress
         )
-        start_time = time()
         will_retry = False
 
         # 从队列中依次获取任务并执行
@@ -314,11 +324,11 @@ class TaskManager:
                 progress_manager.update(1)
                 continue
             try:
+                start_time = time()
                 result = self.func(*self.get_args(task))
                 self.process_task_success(task, result, start_time)
             except Exception as error:
-                self.handle_task_exception(task, error)
-                will_retry = True
+                will_retry = self.handle_task_exception(task, error)
             progress_manager.update(1)
 
         progress_manager.close()
@@ -341,7 +351,7 @@ class TaskManager:
         
         progress_manager = ProgressManager(
             total_tasks=self.task_queue.qsize(),
-            desc=f'{self.tqdm_desc}({self.execution_mode})',
+            desc=f'{self.progress_desc}({self.execution_mode})',
             mode=self.execution_mode,
             show_progress=self.show_progress
         )
@@ -365,8 +375,7 @@ class TaskManager:
                 result = future.result()  # 获取任务结果
                 self.process_task_success(task, result, start_time)
             except Exception as error:
-                self.handle_task_exception(task, error)
-                will_retry = True
+                will_retry = self.handle_task_exception(task, error)
                 # 动态更新进度条总数
                 # progress_manager.add_total(1)
             progress_manager.update(1)
@@ -381,20 +390,20 @@ class TaskManager:
         """
         异步地执行任务，限制并发数量
         """
-        start_time = time()
         semaphore = asyncio.Semaphore(self.worker_limit)  # 限制并发数量
         will_retry = False
 
         async def sem_task(task):
+            start_time = time()  # 记录任务开始时间
             async with semaphore:  # 使用信号量限制并发
                 result = await self._run_single_task(task)
-                return task, result  # 返回 task 和 result
+                return task, result, start_time  # 返回 task, result 和 start_time
 
         # 创建异步任务列表
         async_tasks = []
         progress_manager = ProgressManager(
             total_tasks=self.task_queue.qsize(),
-            desc=f'{self.tqdm_desc}(async)',
+            desc=f'{self.progress_desc}(async)',
             mode="async",
             show_progress=self.show_progress
         )
@@ -411,12 +420,11 @@ class TaskManager:
             async_tasks.append(sem_task(task))  # 使用信号量包裹的任务
 
         # 并发运行所有任务
-        for task_data, result in await asyncio.gather(*async_tasks, return_exceptions=True):
-            if isinstance(result, Exception):
-                self.handle_task_exception(task_data, result)
-                will_retry = True
+        for task, result, start_time in await asyncio.gather(*async_tasks, return_exceptions=True):
+            if not isinstance(result, Exception):
+                self.process_task_success(task, result, start_time)
             else:
-                self.process_task_success(task_data, result, start_time)
+                will_retry = self.handle_task_exception(task, result)
             progress_manager.update(1)
 
         progress_manager.close()
