@@ -61,7 +61,7 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
     max_width = 0
     
     try:
-        for img_path in image_paths:
+        for img_path in tqdm(image_paths, desc="Loading and resizing images"):
             img = Image.open(img_path).convert('RGB')
             width, height = img.size
             max_width = max(max_width, width)
@@ -69,7 +69,7 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
 
         # 调整图片宽度并保持纵横比
         resized_images = []
-        for img, width, height in images:
+        for img, width, height in tqdm(images, desc="Resizing images"):
             if width != max_width:
                 new_height = int(max_width * height / width)
                 img = img.resize((max_width, new_height), Image.ANTIALIAS)
