@@ -6,6 +6,38 @@ from pathlib import Path
 from tqdm import tqdm
 from typing import Callable, Tuple, Dict, List
 from collections import defaultdict
+from instances.inst_task import TaskManager, TaskChain
+
+class HandleFileManager(TaskManager):
+    def __init__(self, func, folder_path: Path, new_folder_path: Path, rules: Dict[str, Tuple[Callable, Callable]], 
+                 execution_mode='serial', worker_limit=50, max_retries=3, max_info=50, progress_desc="Processing", show_progress=False):
+        super().__init__(func, execution_mode, worker_limit, max_retries, max_info, progress_desc, show_progress)
+        self.folder_path = folder_path
+        self.new_folder_path = new_folder_path
+        self.rules = rules
+
+    def get_args(self, file_path: Path):
+        rel_path = file_path.relative_to(self.folder_path)
+        new_file_path = self.new_folder_path / rel_path
+
+        file_suffix = file_path.suffix.lower()[1:]
+        action_func, rename_func = self.rules.get(file_suffix, (shutil.copy, lambda x: x))
+        
+        final_path = rename_func(new_file_path)
+        return (file_path, final_path, action_func)
+    
+    def process_result(self, file_path: Path, result):
+        return
+    
+    def handle_error(self):
+        error_path_dict = defaultdict(list)
+
+        for file_path, error in self.get_error_dict().items():
+            rel_path = file_path.relative_to(self.folder_path)
+            new_file_path = self.new_folder_path / rel_path
+            shutil.copy(file_path, new_file_path)
+            error_path_dict[error].append(new_file_path)
+        return error_path_dict
 
 
 def create_folder(path: str | Path) -> Path:
@@ -29,7 +61,26 @@ def create_folder(path: str | Path) -> Path:
 
     return path
 
-def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path, Path], None], Callable[[Path], Path]]]) -> Dict[Exception, List[Path]]:
+def handle_file(source: Path, destination: Path, action: Callable[[Path, Path], None]):
+    """
+    处理文件，如果目标文件不存在则执行指定的操作。
+    
+    :param source: 源文件路径。
+    :param destination: 目标文件路径。
+    :param action: 处理文件的函数或方法。
+    """
+    if destination.exists():
+        return
+    
+    # 判断 destination 是文件还是文件夹
+    if destination.suffix:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        destination.mkdir(parents=True, exist_ok=True)
+    action(source, destination)
+
+def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path, Path], None], Callable[[Path], Path]]], 
+                  execution_mode: str = 'serial') -> Dict[Exception, List[Path]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行处理，并将处理后的文件存储到新的目录中。
     不属于指定后缀的文件将被直接复制到新目录中。处理后的文件会保持原始的目录结构。
@@ -37,52 +88,22 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
 
     :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
     :param rules: 一个字典，键为文件后缀，值为处理该类型文件的函数和重命名函数的元组。
+    :param execution_mode: 执行模式，可以是 'serial' 或 'process'。默认为 'serial'。
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
-    def handle_file(source: Path, destination: Path, action: Callable[[Path, Path], None]):
-        """
-        处理文件，如果目标文件不存在则执行指定的操作。
-        
-        :param source: 源文件路径。
-        :param destination: 目标文件路径。
-        :param action: 处理文件的函数或方法。
-        """
-        if destination.exists():
-            return
-        
-        # 判断 destination 是文件还是文件夹
-        if destination.suffix:
-            destination.parent.mkdir(parents=True, exist_ok=True)
-        else:
-            destination.mkdir(parents=True, exist_ok=True)
-        action(source, destination)
-
     folder_path = Path(folder_path)
     new_folder_path = folder_path.parent / (folder_path.name + "_re")
-    error_dict = defaultdict(list)
 
-    # 遍历文件夹
-    for file_path in tqdm(list(folder_path.glob('**/*'))):
-        if not file_path.is_file():
-            continue
+    handlefile_manager = HandleFileManager(handle_file, folder_path, new_folder_path, rules,
+                                           execution_mode=execution_mode, worker_limit=6, progress_desc="Processing files", show_progress=True)
 
-        rel_path = file_path.relative_to(folder_path)
-        new_file_path = new_folder_path / rel_path
-        file_suffix = file_path.suffix.lower()[1:]
-        try:
-            action_func, rename_func = rules.get(file_suffix, (shutil.copy, lambda x: x))
-            final_path = rename_func(new_file_path)
-            handle_file(file_path, final_path, action_func)
-        except Exception as e:
-            error_dict[e].append(file_path)
-            try:
-                shutil.copy(file_path, new_file_path)
-            except Exception as e:
-                error_dict[e].append(file_path)
+    file_path_list = [file_path for file_path in folder_path.glob('**/*') if file_path.is_file()]
+    handlefile_manager.start(file_path_list)
 
-    return error_dict
+    error_path_dict = handlefile_manager.handle_error()
+    return error_path_dict
 
-def compress_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]:
+def compress_folder(folder_path: str | Path, execution_mode: str = 'serial') -> List[Tuple[Path, Exception]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行压缩处理，并将处理后的文件存储到新的目录中。
     支持的文件类型包括图片、视频和PDF。不属于这三种类型的文件将被直接复制到新目录中。
@@ -110,7 +131,7 @@ def compress_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]:
     rules.update({suffix: (compress_video,rename_mp4) for suffix in VIDEO_SUFFIXES})
     rules.update({suffix: (compress_pdf,rename_pdf) for suffix in ['pdf', 'PDF']})
 
-    return handle_folder(folder_path, rules)
+    return handle_folder(folder_path, rules, execution_mode)
 
 def unzip_zip_file(zip_file: Path, destination: Path):
     """
