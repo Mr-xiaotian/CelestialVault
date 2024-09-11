@@ -25,7 +25,7 @@ class Suber:
             ('(?<!\n)```', '\n```'), ('```(?!\n)', '```\n'),  # 确保 Markdown 代码块标记前后有换行符
         ]
 
-        self.sub_list = (
+        self.sub_text_list = (
             self.special_character_removal +
             self.newline_handling
         )
@@ -61,7 +61,7 @@ class Suber:
         text = pro_slash(text)
         text = unquote(unescape(text))
         
-        for sub in self.sub_list:
+        for sub in self.sub_text_list:
             text = re.sub(sub[0], sub[1], text, flags = re.S)
 
         #re_png = '<([0-9a-z]+)>'

@@ -70,9 +70,9 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
         new_file_path = new_folder_path / rel_path
         file_suffix = file_path.suffix.lower()[1:]
         try:
-            action, rename_func = rules.get(file_suffix, (shutil.copy, lambda x: x))
+            action_func, rename_func = rules.get(file_suffix, (shutil.copy, lambda x: x))
             final_path = rename_func(new_file_path)
-            handle_file(file_path, final_path, action)
+            handle_file(file_path, final_path, action_func)
         except Exception as e:
             error_dict[e].append(file_path)
             try:

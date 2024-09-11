@@ -146,14 +146,11 @@ class TaskManager:
     def handle_error(self):
         """
         处理任务执行后的所有错误
+
+        说明:
+        这个方法必须在子类中实现。可以记录错误、发送通知或其他错误处理操作。
         """
-        if not self.get_error_dict():
-            return
-        error_dict = self.get_error_dict()
-        error_len = len(error_dict)
-        # for num,(task, error) in enumerate(error_dict.items()):
-        #     logger.error(f"Task {self.get_task_info(task)}(index:{num+1}/{error_len})")
-        logger.error(f'There are total {error_len} errors.')
+        raise NotImplementedError("This method should be overridden")
     
     def get_task_info(self, task):
         """
@@ -522,9 +519,23 @@ class ExampleTaskManager(TaskManager):
         """
         从结果队列中获取结果，并进行处理
 
-        在这个示例中，我们只是简单地打印结果
+        在这个示例中，我们假设结果是一个整数，并将其加 1 后返回
         """
         return result
+    
+    def handle_error(self):
+        """
+        处理任务执行后的所有错误
+
+        在这个示例中，我们只是简单地打印错误信息
+        """
+        if not self.get_error_dict():
+            return
+        error_dict = self.get_error_dict()
+        error_len = len(error_dict)
+        # for num,(task, error) in enumerate(error_dict.items()):
+        #     logger.error(f"Task {self.get_task_info(task)}(index:{num+1}/{error_len})")
+        logger.error(f'There are total {error_len} errors.')
 
 class TaskChain:
     def __init__(self, stages, chain_mode='serial'):

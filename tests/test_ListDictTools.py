@@ -14,11 +14,11 @@ def test_list_removes():
     assert result == [1, 3, 4], "Should remove all 2s from the list"
 
 def test_list_replace():
-    input_list = [1, 2, 'dfg3', [51, 'a'], 4, lambda x: x]
-    replace_list = [(2, 5), ('dfg3', 6), (lambda x: x, 'def'), ([51, 'a'], [15, 'b'])]
+    input_list = [1, 2, '123456', 'dfg3', [51, 'a'], lambda x: x]
+    replace_list = [(2, 5), ('123', '321'), ('dfg3', 6), (lambda x: x, 'def'), ([51, 'a'], [15, 'b'])]
     result = list_replace(input_list, replace_list)
     logging.info(f"{'Test input':<15}: {input_list}")
-    logging.info(f"{'Expected output':<15}: [1, 5, 6, [15, 'b'], 4, 'def']")
+    logging.info(f"{'Expected output':<15}: [1, 5, '321456', 6, [15, 'b'], 'def']")
     logging.info(f"{'Actual output':<15}: {result}")
 
 def test_multi_loop_generator():
