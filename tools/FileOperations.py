@@ -22,7 +22,7 @@ class HandleFileManager(TaskManager):
 
         file_suffix = file_path.suffix.lower()[1:]
         action_func, rename_func = self.rules.get(file_suffix, (shutil.copy, lambda x: x))
-        
+
         final_path = rename_func(new_file_path)
         return (file_path, final_path, action_func)
     
@@ -310,15 +310,15 @@ def duplicate_files_report(identical_files: Dict[Tuple[str, int], List[Path]]):
     :param identical_files: 相同文件的字典，由 detect_identical_files 函数返回。
     """
     report = []
-    if identical_files:
-        report.append("Identical files found:")
-        for (hash_value,file_size), file_list in identical_files.items():
-            report.append(f"Hash: {hash_value}")
-            max_name_len = max(len(str(file)) for file in file_list)
-            for file in file_list:
-                report.append(f" - {str(file):<{max_name_len}} (Size: {file_size} bytes)")
-    else:
+    if not identical_files:
         report.append("No identical files found.")
+
+    report.append("Identical files found:")
+    for (hash_value,file_size), file_list in identical_files.items():
+        report.append(f"Hash: {hash_value}")
+        max_name_len = max(len(str(file)) for file in file_list)
+        for file in file_list:
+            report.append(f" - {str(file):<{max_name_len}} (Size: {file_size} bytes)")
         
     print("\n".join(report))
 

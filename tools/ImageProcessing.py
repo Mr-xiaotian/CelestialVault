@@ -16,7 +16,7 @@ def compress_img(old_img_path: str | Path, new_img_path: str | Path):
 
     # 打开图片并压缩
     img = Image.open(old_img_path)
-    img.save(new_img_path, optimize=True, quality=50)
+    img.save(new_img_path, optimize=True, quality=75)
 
 def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
     """
@@ -26,8 +26,6 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
     :param pdf_path: 输出的PDF文件路径。
     :return: None
     """
-    from constants import IMG_SUFFIXES
-    
     def extract_number(file_name: Path) -> int:
         """
         从文件名中提取数字，用于排序。
@@ -35,6 +33,7 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
         matches = re.findall(r'\d+', file_name.name)
         return int(''.join(matches)) if matches else float('inf')
 
+    from constants import IMG_SUFFIXES
     # 转换路径为 Path 对象
     image_path = Path(image_path)
     pdf_path = Path(pdf_path)

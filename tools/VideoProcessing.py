@@ -91,7 +91,7 @@ def transfer_gif_to_video(gif_path, output_path):
     
     subprocess.run(command, check=True)
 
-def transfer_gifs(folder_path: str | Path) -> List[Tuple[Path, Exception]]:
+def transfer_gif_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]:
     def rename_mp4(file_path: Path) -> Path:
         name = file_path.stem.replace("_compressed", "")
         parent = file_path.parent

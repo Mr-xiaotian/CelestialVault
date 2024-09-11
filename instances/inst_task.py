@@ -26,7 +26,7 @@ class TaskLogger:
 
         self.logger.remove()  # remove the default handler
         now_time = strftime("%Y-%m-%d", localtime())
-        self.logger.add(f"logs/thread_manager({now_time}).log",
+        self.logger.add(f"logs/task_manager({now_time}).log",
                 format="{time:YYYY-MM-DD HH:mm:ss} {level} {message}", 
                 level="INFO")
         
@@ -49,7 +49,7 @@ class TaskLogger:
         self.logger.warning(f"Task {task_info} failed {retry_times} times and will retry after {delay_time} seconds.")
 
     def task_fail(self, task_info, exception):
-        self.logger.error(f"Task {task_info} failed and reached the retry limit: {exception}")
+        self.logger.error(f"Task {task_info} failed and can't retry: {exception}")
         
 task_logger = TaskLogger(logger)
 
