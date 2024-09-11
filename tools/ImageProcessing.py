@@ -56,33 +56,25 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
     if not image_paths:
         raise ValueError(f"No images found in {image_path} with suffixes: {valid_suffixes}")
 
-    # 加载所有图片并调整宽度
-    images = []
+    # 找到最大宽度的图片
     max_width = 0
+    for img_path in image_paths:
+        with Image.open(img_path) as img:
+            max_width = max(max_width, img.size[0])
     
-    try:
-        for img_path in tqdm(image_paths, desc="Loading and resizing images"):
+    # 生成器函数：逐步处理图片，调整宽度
+    def generate_resized_images():
+        for img_path in tqdm(image_paths, desc="Processing images"):
             img = Image.open(img_path).convert('RGB')
             width, height = img.size
-            max_width = max(max_width, width)
-            images.append((img, width, height))
-
-        # 调整图片宽度并保持纵横比
-        resized_images = []
-        for img, width, height in tqdm(images, desc="Resizing images"):
             if width != max_width:
                 new_height = int(max_width * height / width)
-                img = img.resize((max_width, new_height), Image.ANTIALIAS)
-            resized_images.append(img)
+                img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+            yield img
 
-    except Exception as e:
-        raise ValueError(f"Error loading or resizing images: {e}")
-
-    # 将图片保存为单个PDF
-    try:
-        resized_images[0].save(pdf_path, save_all=True, append_images=resized_images[1:])
-    except Exception as e:
-        raise ValueError(f"Error saving PDF: {e}")
+    # 保存第一张图片，并附加后续图片到 PDF
+    first_image = next(generate_resized_images())
+    first_image.save(pdf_path, save_all=True, append_images=list(generate_resized_images()))
 
 def img_to_binary(img: Image.Image) -> bytes:
     """
