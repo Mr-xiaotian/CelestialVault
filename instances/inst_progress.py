@@ -6,11 +6,10 @@ class ProgressManager:
         """
         初始化进度条管理器
 
-        参数:
-        total_tasks: 任务总数，用于设置进度条的总长度
-        desc: 进度条的描述文字
-        mode: 任务模式，可选 "sync" 或 "async"
-        show_progress: 是否显示进度条
+        :param total_tasks: 任务总数，用于设置进度条的总长度
+        :param desc: 进度条的描述文字
+        :param mode: 任务模式，可选 "sync" 或 "async"
+        :param show_progress: 是否显示进度条
         """
         self.show_progress = show_progress
         self.mode = mode

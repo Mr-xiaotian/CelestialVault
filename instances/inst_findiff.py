@@ -93,11 +93,10 @@ class Findiffer:
         """
         Print differences to stderr.
         
-        Args:
-        input_str: The input string to print.
-        diff_ranges: The ranges of differences to print.
-        norm_end: can use '\033[0m' '_' or others.
-        diff_end: can use '\033[1m' '_' or others.
+        :param input_str: The input string to print.
+        :param diff_ranges: The ranges of differences to print.
+        :param norm_end: can use '\033[0m' '_' or others.
+        :param diff_end: can use '\033[1m' '_' or others.
         """
         prev_end_index = 0
         for start_index, end_index in diff_ranges:

@@ -42,7 +42,7 @@ class Suber:
 
         rules = {"txt": (self.clear_book, lambda a: a)}
 
-        return handle_folder(folder_path, rules)
+        return handle_folder(folder_path, rules, progress_desc='Clearing book folder')
         
     def clear_book(self, book_path: Path, new_path: Path):
         from tools.TextTools import safe_open_txt

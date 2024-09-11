@@ -63,7 +63,7 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
     
     # 生成器函数：逐步处理图片，调整宽度
     def generate_resized_images():
-        for img_path in tqdm(image_paths, desc="Combine images"):
+        for img_path in tqdm(image_paths, desc="Combining images"):
             img = Image.open(img_path).convert('RGB')
             width, height = img.size
             if width != max_width:

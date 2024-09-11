@@ -60,13 +60,12 @@ class TaskManager:
         """
         初始化 TaskManager
 
-        参数:
-        func: 可调用对象
-        execution_mode: 执行模式，可选 'serial', 'thread', 'process', 'async'
-        worker_limit: 同时处理数量
-        max_retries: 任务的最大重试次数
-        progress_desc: 进度条显示名称
-        show_progress: 进度条显示与否
+        :param func: 可调用对象
+        :param execution_mode: 执行模式，可选 'serial', 'thread', 'process', 'async'
+        :param worker_limit: 同时处理数量
+        :param max_retries: 任务的最大重试次数
+        :param progress_desc: 进度条显示名称
+        :param show_progress: 进度条显示与否
         """
         self.func = func
         self.execution_mode = execution_mode
@@ -116,11 +115,8 @@ class TaskManager:
         """
         从任务对象中提取执行函数的参数。
 
-        参数:
-        task: 任务对象
-
-        返回:
-        包含执行函数所需参数的元组或列表。
+        :param task: 任务对象
+        :return 包含执行函数所需参数的元组或列表。
         
         说明:
         这个方法必须在子类中实现。task 的具体结构依赖于子类的任务类型。
@@ -131,12 +127,9 @@ class TaskManager:
         """
         处理任务的结果。
 
-        参数:
-        task: 已完成的任务对象
-        result: 任务的执行结果
-
-        返回:
-        处理后的结果。
+        :param task: 已完成的任务对象
+        :param result: 任务的执行结果
+        :return 处理后的结果。
 
         说明:
         这个方法必须在子类中实现。可以对结果进行格式化、存储或其他处理。
@@ -179,10 +172,9 @@ class TaskManager:
         """
         统一处理任务成功
 
-        参数:
-        task: 完成的任务
-        result: 任务的结果
-        start_time: 任务开始时间
+        :param task: 完成的任务
+        :param result: 任务的结果
+        :param start_time: 任务开始时间
         """
         process_result = self.process_result(task, result)
         self.result_dict[task] = process_result
@@ -194,12 +186,10 @@ class TaskManager:
         """
         统一处理任务异常
 
-        参数:
-        task: 发生异常的任务
-        exception: 捕获的异常
+        :param task: 发生异常的任务
+        :param exception: 捕获的异常
 
-        返回:
-        是否需要重试
+        :return 是否需要重试
         """
         retry_time = self.retry_time_dict.setdefault(task, 0)
         will_try = False
@@ -223,8 +213,7 @@ class TaskManager:
         """
         根据 start_type 的值，选择串行、并行、异步或多进程执行任务
 
-        参数:
-        task_list: 任务列表
+        :param task_list: 任务列表
         """
         start_time = time()
         self.init_env()
@@ -253,8 +242,7 @@ class TaskManager:
         """
         异步地执行任务
 
-        参数:
-        task_list: 任务列表
+        :param task_list: 任务列表
         """
         start_time = time()
         self.set_execution_mode('async')
@@ -274,8 +262,7 @@ class TaskManager:
         """
         根据 start_type 的值，选择串行、并行执行任务
 
-        参数:
-        task_list: 任务列表
+        :param task_list: 任务列表
         """
         start_time = time()
         self.init_env()
@@ -338,9 +325,8 @@ class TaskManager:
         """
         使用指定的执行池（线程池或进程池）来并行执行任务。
 
-        参数:
-        executor: 线程池或进程池
-        pool_type: "thread" 表示线程池, "process" 表示进程池, 用于日志记录和进度条显示
+        :param executor: 线程池或进程池
+        :param pool_type: "thread" 表示线程池, "process" 表示进程池, 用于日志记录和进度条显示
         """
         start_time = time()
         futures = {}

@@ -80,7 +80,7 @@ def handle_file(source: Path, destination: Path, action: Callable[[Path, Path], 
     action(source, destination)
 
 def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path, Path], None], Callable[[Path], Path]]], 
-                  execution_mode: str = 'serial') -> Dict[Exception, List[Path]]:
+                  execution_mode: str = 'serial', progress_desc: str = "Processing files") -> Dict[Exception, List[Path]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行处理，并将处理后的文件存储到新的目录中。
     不属于指定后缀的文件将被直接复制到新目录中。处理后的文件会保持原始的目录结构。
@@ -88,14 +88,15 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
 
     :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
     :param rules: 一个字典，键为文件后缀，值为处理该类型文件的函数和重命名函数的元组。
-    :param execution_mode: 执行模式，可以是 'serial' 或 'process'。默认为 'serial'。
+    :param execution_mode: 执行模式，可以是 'serial' 或 'process' 'process'。默认为 'serial'。
+    :param progress_desc: 进度条描述。
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
     folder_path = Path(folder_path)
     new_folder_path = folder_path.parent / (folder_path.name + "_re")
 
     handlefile_manager = HandleFileManager(handle_file, folder_path, new_folder_path, rules,
-                                           execution_mode=execution_mode, worker_limit=6, progress_desc="Processing files", show_progress=True)
+                                           execution_mode=execution_mode, worker_limit=6, progress_desc=progress_desc, show_progress=True)
 
     file_path_list = [file_path for file_path in folder_path.glob('**/*') if file_path.is_file()]
     handlefile_manager.start(file_path_list)
@@ -131,7 +132,7 @@ def compress_folder(folder_path: str | Path, execution_mode: str = 'serial') -> 
     rules.update({suffix: (compress_video,rename_mp4) for suffix in VIDEO_SUFFIXES})
     rules.update({suffix: (compress_pdf,rename_pdf) for suffix in ['pdf', 'PDF']})
 
-    return handle_folder(folder_path, rules, execution_mode)
+    return handle_folder(folder_path, rules, execution_mode, progress_desc='Compressing folder')
 
 def unzip_zip_file(zip_file: Path, destination: Path):
     """
@@ -199,7 +200,7 @@ def unzip_folder(folder_path: str | Path):
     rules.update({'rar': (unzip_rar_file, rename_unzip)})
     rules.update({'7z': (unzip_7z_file, rename_unzip)})
 
-    return handle_folder(folder_path, rules)
+    return handle_folder(folder_path, rules, progress_desc="Unziping folder")
 
 def delete_files(file_path: str | Path):
     """

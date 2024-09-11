@@ -10,13 +10,9 @@ def pro_slash(input_str: str) -> str:
     """
     移除字符串中多余的转义符。
 
-    参数:
-    input_str (str): 要处理的字符串。
+    :param input_str (str): 要处理的字符串。
+    :return str: 移除多余转义符后的字符串。
 
-    返回值:
-    str: 移除多余转义符后的字符串。
-    """
-    '''
     old:
     re_strs = repr(strs)
     while '\\\\' in re_strs:
@@ -31,7 +27,7 @@ def pro_slash(input_str: str) -> str:
     except Exception as e:
         print(e)
         return strs
-    '''
+    """
     if not input_str:
         return input_str
     
@@ -47,12 +43,9 @@ def str_to_dict(string: str, spli_str: str = "\n") -> Dict[str, str]:
     """
     将字符串转化为字典，每行格式为 `key:value`，以指定的分隔符分隔行。
 
-    参数:
-    string (str): 包含键值对的字符串，每行一个键值对。
-    spli_str (str): 用于分隔行的字符串，默认是换行符。
-
-    返回值:
-    Dict[str, str]: 转化后的字典。
+    :param string (str): 包含键值对的字符串，每行一个键值对。
+    :param spli_str (str): 用于分隔行的字符串，默认是换行符。
+    :return Dict[str, str]: 转化后的字典。
     """
     # 使用列表推导式去除空字符串
     string_list = [line for line in string.split(spli_str) if line.strip()]
@@ -74,12 +67,9 @@ def str_removes(strs: str, _remove: str) -> str:
     """
     从字符串中移除指定的子串。
     
-    Args:
-        strs (str): 原始字符串。
-        _remove (str): 需要从原始字符串中移除的子串。
-    
-    Returns:
-        str: 移除指定子串后的新字符串。
+    :param strs (str): 原始字符串。
+    :param _remove (str): 需要从原始字符串中移除的子串。
+    :return str: 移除指定子串后的新字符串。
     """
     return strs.replace(_remove, '')
 
@@ -93,8 +83,7 @@ def iprint(obj: Union[List, Dict], start='', end=''):
     根据对象的大小选择打印方式。
     如果对象的长度小于16，那么就打印整个对象，否则只打印前10个和后5个元素。
 
-    Args:
-        obj (Union[List, Dict]): 需要打印的对象，可以是列表或字典。
+    :param obj (Union[List, Dict]): 需要打印的对象，可以是列表或字典。
     """
     print(start, end='')
     length = len(obj)
