@@ -6,7 +6,7 @@ from pathlib import Path
 from tqdm import tqdm
 from typing import Callable, Tuple, Dict, List
 from collections import defaultdict
-from instances.inst_task import TaskManager, TaskChain
+from instances.inst_task import TaskManager
 
 class HandleFileManager(TaskManager):
     def __init__(self, func, folder_path: Path, new_folder_path: Path, rules: Dict[str, Tuple[Callable, Callable]], 

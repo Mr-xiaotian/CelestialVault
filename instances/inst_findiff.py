@@ -2,21 +2,21 @@
 #版本 2.10
 #作者：晓天
 
-from itertools import zip_longest
+from tools.TextTools import strings_split
+from tools.ListDictTools import dictkey_mix
 
 class Findiffer:
     def __init__(self) -> None:
         pass
 
     def fd_str(self, string_a, string_b, split_str = '\n'):
-        from tools.TextTools import strings_split
         # 打印出a和b的长度
         print(f'len(a):{len(string_a)}, len(b):{len(string_b)}\n')
         # 打印出a和b不同的地方
-        print(f'a与b不同的地方为(以{split_str}为划分):')
+        print(f'a与b不同的地方为(以{split_str}为划分):\n')
 
         # 以split_str为分割符将a和b分割成多行
-        a,b = strings_split(string_a, string_b, split_str=split_str)
+        a,b = strings_split([string_a, string_b], split_str=split_str)
         
         # 比较a和b的每一行
         for i in range(min(len(a),len(b))):
@@ -29,7 +29,7 @@ class Findiffer:
 
     def fd_dict(self, dict_a, dict_b):
         # a_keys_values = [list(i) for i in zip(*dict_a.items())]    
-        key_max,key_min,dif_key_a,dif_key_b = cf.dictkey_mix(
+        key_max,key_min,dif_key_a,dif_key_b = dictkey_mix(
             dict_a,dict_b
             )
     
@@ -105,18 +105,3 @@ class Findiffer:
             print(input_str[start_index:end_index], end = diff_end)
             prev_end_index = end_index
         print(input_str[prev_end_index:])
-
-com_a = 'SINAGLOBAL=726498192962.7856.1581590581551; UOR=,,news.youth.cn; login_sid_t=015292a8ba72d856cae5b22680861963; cross_origin_proto=SSL; _s_tentry=-; Apache=3595127495457.271.1625819725620; ULV=1625819725627:19:1:1:3595127495457.271.1625819725620:1624162772348; WBtopGlobal_register_version=2021070916; SSOLoginState=1625820399; wvr=6; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9W5PeVRUQONGCM8Rrd.b8s8Q5JpX5KMhUgL.Fozpe0.feKn4S052dJLoIEXLxKqL1K.L1KeLxK-LBKBLBK.LxK-LBo5L12qLxKqL1h5LB-2LxK-L1h-LB.Bt; ALF=1657470788; SCF=Am5owQxxc637SAPKvQuZb_j2-EoihJ0mZBomjE-9lR41CwUPDNHpxA8VF1072DCgdIppH2FjWGMjJ7cacwvJ8qk.; SUB=_2A25N7buVDeRhGeRP6FsU8SbFzDyIHXVumqpdrDV8PUNbmtB-LUnZkW9NTj0tqlPrTQaSyU8mnRR2ZDR0LYkD84nn; wb_view_log_2139518970=1536*8641.25; webim_unReadCount=%7B%22time%22%3A1625974572289%2C%22dm_pub_total%22%3A5%2C%22chat_group_client%22%3A0%2C%22chat_group_notice%22%3A0%2C%22allcountNum%22%3A83%2C%22msgbox%22%3A0%7'
-com_b = 'SINAGLOBAL=726498192962.7856.1581590581551; UOR=,,news.youth.cn; login_sid_t=015292a8ba72d856cae5b22680861963; cross_origin_proto=SSL; _s_tentry=-; Apache=3595127495457.271.1625819725620; ULV=1625819725627:19:1:1:3595127495457.271.1625819725620:1624162772348; wb_view_log=1536*8641.25; WBtopGlobal_register_version=2021070916; SUB=_2A25N7Hy_DeRhGeRP6FsU8SbFzDyIHXVumOl3rDV8PUNbmtANLVPwkW9NTj0tqi9Nl4ydVcx1qWHVVDHgO5-bTJm6; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9W5PeVRUQONGCM8Rrd.b8s8Q5JpX5o275NHD95QEeKe4SK2R1KM7Ws4Dqcj_i--ciK.4iK.0i--fi-2Xi-24i--fi-z7iKysi--ciKn7i-8Wi--fiKnfi-i2; ALF=1626425199; SSOLoginState=1625820399; wvr=6; wb_view_log_2139518970=1536*8641.25; webim_unReadCount=%7B%22time%22%3A1625821623881%2C%22dm_pub_total%22%3A5%2C%22chat_group_client%22%3A0%2C%22chat_group_notice%22%3A0%2C%22allcountNum%22%3A83%2C%22msgbox%22%3A0%7D'
-
-com_c = '1234dtyjdtyjdtyj6789'
-com_d = '123456789'
-
-if __name__ == '__main__': 
-    finder = Findiffer(com_a, com_b, '; ')
-    #dict_0 = cf.str_to_dict(com_c)
-    #dict_1 = cf.str_to_dict(com_b)
-    #dict_2, dict_3 = cf.deal_cookie(com_d,com_f)
-    #fd_dict(dict_0,dict_1)
-
-    finder.fd_str()

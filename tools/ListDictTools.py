@@ -1,7 +1,5 @@
 from typing import List, Dict, Any, Tuple, Callable, Type, Iterable
 from functools import reduce
-from dis import Bytecode
-from inspect import getsource
 from itertools import product
 
 

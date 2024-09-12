@@ -1,6 +1,3 @@
-import numpy.random as nr
-
-
 class Node(object):
     def __init__(self, elem, _next=None):
         self.elem = elem  # 表示对应的元素值

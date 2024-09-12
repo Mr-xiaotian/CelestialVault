@@ -52,7 +52,7 @@ def transfer_pdf_to_img(pdf_path: str | Path, img_path: str | Path):
         pix = page.get_pixmap(matrix=fitz.Matrix(150/72, 150/72))  # 将页面渲染为图片
         img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)  # 将 Pixmap 转换为 PIL Image
         img_file = img_path / f"{page_num}.jpg"
-        img.save(str(img_file), quality=50)  # 使用 PIL 保存图像
+        img.save(str(img_file), quality=75)  # 使用 PIL 保存图像
 
     doc.close()
 

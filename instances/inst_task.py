@@ -505,7 +505,7 @@ class ExampleTaskManager(TaskManager):
         """
         从结果队列中获取结果，并进行处理
 
-        在这个示例中，我们假设结果是一个整数，并将其加 1 后返回
+        在这个示例中，我们只是简单地返回结果
         """
         return result
     

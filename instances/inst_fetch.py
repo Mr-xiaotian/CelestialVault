@@ -1,8 +1,7 @@
-import time
 import httpx
 from typing import Tuple, Any
 from html import unescape
-from urllib.parse import quote,unquote
+from urllib.parse import unquote
 from aiohttp import ClientSession
 from aiohttp.client import ClientTimeout
 
@@ -12,8 +11,8 @@ class Fetcher(object):
     class of Fetcher, must include function working()
     """
 
-    def __init__(self, sleep_time=0, wait_time=5, max_repeat=3, 
-                 text_encoding = 'utf-8', headers = ''):
+    def __init__(self, headers=None, sleep_time=0, wait_time=5, 
+                 max_repeat=3, text_encoding = 'utf-8'):
         """
         constructor
         :param sleep_time: default 0, sleeping time before fetching

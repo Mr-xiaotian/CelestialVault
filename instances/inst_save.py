@@ -1,6 +1,5 @@
 # _*_ coding: utf-8 _*_
 
-import logging
 import subprocess
 from pathlib import Path
 from os.path import splitext, join, exists
