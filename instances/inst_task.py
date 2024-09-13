@@ -36,6 +36,9 @@ class TaskLogger:
     def start_stage(self, stage_index, func_name, execution_mode):
         self.logger.info(f"The {stage_index} stage '{func_name}' start tasks by {execution_mode}. ")
 
+    def start_chain(self, stage_num, chain_mode):
+        self.logger.info(f"Starting TaskChain with {stage_num} stages by {chain_mode}.")
+
     def end_task(self, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
         self.logger.info(f"'{func_name}' end tasks by {execution_mode}. Use {use_time: .2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
 
@@ -50,7 +53,6 @@ class TaskLogger:
 
     def task_fail(self, task_info, exception):
         self.logger.error(f"Task {task_info} failed and can't retry: {exception}")
-        
 task_logger = TaskLogger(logger)
 
 class TaskManager:
@@ -550,7 +552,7 @@ class TaskChain:
         """
         启动任务链
         """
-        logger.info(f"Starting TaskChain with {len(self.stages)} stages by {self.chain_mode}.")
+        task_logger.start_chain(len(self.stages), self.chain_mode)
 
         if self.chain_mode == 'process':
             self.run_chain_in_process(tasks)

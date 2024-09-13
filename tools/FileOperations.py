@@ -88,7 +88,7 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
 
     :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
     :param rules: 一个字典，键为文件后缀，值为处理该类型文件的函数和重命名函数的元组。
-    :param execution_mode: 执行模式，可以是 'serial' 或 'process' 'process'。默认为 'serial'。
+    :param execution_mode: 执行模式，可以是 'serial' 或 'thread' 'process'。默认为 'serial'。
     :param progress_desc: 进度条描述。
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
@@ -96,7 +96,8 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
     new_folder_path = folder_path.parent / (folder_path.name + "_re")
 
     handlefile_manager = HandleFileManager(handle_file, folder_path, new_folder_path, rules,
-                                           execution_mode=execution_mode, worker_limit=6, progress_desc=progress_desc, show_progress=True)
+                                           execution_mode=execution_mode, worker_limit=6, 
+                                           progress_desc=progress_desc, show_progress=True)
 
     file_path_list = [file_path for file_path in folder_path.glob('**/*') if file_path.is_file()]
     handlefile_manager.start(file_path_list)
