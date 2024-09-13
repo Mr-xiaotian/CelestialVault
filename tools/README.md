@@ -94,3 +94,27 @@ if error_files:
 
 `compress_folder` 是一个用于批量压缩指定文件夹内图片、视频和 PDF 文件的函数，并保留文件夹的原始结构。对于不属于这些类别的文件，它将直接复制到新的目标文件夹。该函数允许通过串行、线程池或多进程方式执行，并且会记录处理过程中遇到的错误。
 
+整体框架由handle_folder提供:
+
+```python
+def rename_mp4(file_path: Path) -> Path:
+    name = file_path.stem.replace("_compressed", "")
+    parent = file_path.parent
+    return parent / Path(name + '_compressed.mp4')
+
+def rename_pdf(file_path: Path) -> Path:
+    name = file_path.stem.replace("_compressed", "")
+    parent = file_path.parent
+    return parent / Path(name + '_compressed.pdf')
+
+from tools.ImageProcessing import compress_img
+from tools.VideoProcessing import compress_video
+from tools.DocumentConversion import compress_pdf
+from constants import IMG_SUFFIXES, VIDEO_SUFFIXES
+
+rules = {suffix: (compress_img, lambda x: x) for suffix in IMG_SUFFIXES}
+rules.update({suffix: (compress_video,rename_mp4) for suffix in VIDEO_SUFFIXES})
+rules.update({suffix: (compress_pdf,rename_pdf) for suffix in ['pdf', 'PDF']})
+
+return handle_folder(folder_path, rules, execution_mode, progress_desc='Compressing folder')
+```

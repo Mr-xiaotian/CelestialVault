@@ -387,3 +387,20 @@ def move_identical_files(identical_files: Dict[Tuple[str, int], List[Path]], tar
     print("\n".join(report))
 
     return moved_files
+
+def folder_to_file_path(folder_path: Path, file_extension: str) -> Path:
+    """
+    将文件夹路径转换为与文件夹同名的 PDF 文件路径。
+
+    :param folder_path: 文件夹的路径。
+    :return: 与文件夹同名的 PDF 文件路径。
+    """
+    # 获取文件夹的父目录和文件夹名称
+    folder_name = folder_path.stem  # 获取文件夹名称，不带路径
+    parent_dir = folder_path.parent  # 获取文件夹的父目录路径
+    
+    # 生成与文件夹同名的 PDF 文件路径
+    pdf_file_name = f"{folder_name}.{file_extension}"
+    pdf_path = parent_dir / pdf_file_name
+    
+    return pdf_path

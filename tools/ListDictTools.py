@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Tuple, Callable, Type, Iterable
 from functools import reduce
-from itertools import product
+from itertools import product, islice
 
 
 def list_removes(lists: list, _remove) -> list:
@@ -135,3 +135,13 @@ def find_tuple(lst: List[Tuple[Tuple[str, int], str]], target: str) -> Tuple[str
         Tuple[str, int]: 在列表中找到的元组，如果没有找到，则返回None。
     """
     return next((item for item in lst if item[0] == target), None)
+
+def batch_generator(generator, batch_size):
+    """
+    批量生成器：每次从原生成器中获取 batch_size 个元素。
+    """
+    while True:
+        batch = list(islice(generator, batch_size))
+        if not batch:
+            break
+        yield batch

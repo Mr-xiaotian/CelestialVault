@@ -18,7 +18,7 @@ def compress_img(old_img_path: str | Path, new_img_path: str | Path):
     img = Image.open(old_img_path)
     img.save(new_img_path, optimize=True, quality=75)
 
-def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
+def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path = None):
     """
     将指定文件夹中的JPEG图片组合成单个PDF文件。
 
@@ -33,10 +33,11 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
         matches = re.findall(r'\d+', file_name.name)
         return int(''.join(matches)) if matches else float('inf')
 
+    from tools.FileOperations import folder_to_file_path
     from constants import IMG_SUFFIXES
     # 转换路径为 Path 对象
     image_path = Path(image_path)
-    pdf_path = Path(pdf_path)
+    pdf_path = folder_to_file_path(image_path, 'pdf') if pdf_path is None else Path(pdf_path)
     
     if not image_path.is_dir():
         raise ValueError(f"The provided image path {image_path} is not a directory.")
@@ -72,8 +73,10 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path):
             yield img
 
     # 保存第一张图片，并附加后续图片到 PDF
-    first_image = next(generate_resized_images())
-    first_image.save(pdf_path, save_all=True, append_images=list(generate_resized_images()))
+    resized_images = generate_resized_images()  # 生成其余的图片
+    first_image = next(resized_images)  # 获取第一张图片
+    
+    first_image.save(pdf_path, save_all=True, append_images=resized_images)
 
 def img_to_binary(img: Image.Image) -> bytes:
     """
