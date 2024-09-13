@@ -104,13 +104,14 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
     error_path_dict = handlefile_manager.handle_error()
     return error_path_dict
 
-def compress_folder(folder_path: str | Path, execution_mode: str = 'serial') -> List[Tuple[Path, Exception]]:
+def compress_folder(folder_path: str | Path, execution_mode: str = 'thread') -> List[Tuple[Path, Exception]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行压缩处理，并将处理后的文件存储到新的目录中。
     支持的文件类型包括图片、视频和PDF。不属于这三种类型的文件将被直接复制到新目录中。
     压缩后的文件会保持原始的目录结构。如果目标文件已存在，则会跳过处理。处理过程中遇到的任何错误都会被记录并返回。
 
     :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
+    :param execution_mode: 执行模式，可以是 'serial' 或 'thread' 'process'。默认为 'thread'。
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
     def rename_mp4(file_path: Path) -> Path:

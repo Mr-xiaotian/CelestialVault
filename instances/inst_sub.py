@@ -37,12 +37,12 @@ class Suber:
             (r'\t', '_'),('\.+', '_'), ('<', '_'), ('>', '_'),
         ]
 
-    def clear_book_folder(self, folder_path):
+    def clear_book_folder(self, folder_path: Path | str, execution_mode: str = 'thread'):
         from tools.FileOperations import handle_folder
 
         rules = {"txt": (self.clear_book, lambda a: a)}
 
-        return handle_folder(folder_path, rules, progress_desc='Clearing book folder')
+        return handle_folder(folder_path, rules, execution_mode, progress_desc='Clearing book folder')
         
     def clear_book(self, book_path: Path, new_path: Path):
         from tools.TextTools import safe_open_txt
