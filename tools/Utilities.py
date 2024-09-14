@@ -1,6 +1,6 @@
 import types
-from time import strftime, localtime
 from typing import Callable
+from time import strftime, localtime
 
 
 def get_now_time():
@@ -22,3 +22,16 @@ def functions_are_equal(func1: Callable, func2: Callable) -> bool:
             func1.__code__.co_argcount == func2.__code__.co_argcount and
             func1.__defaults__ == func2.__defaults__ and
             func1.__closure__ == func2.__closure__)
+
+def bytes_to_human_readable(size_in_bytes):
+    units = ['B', 'KB', 'MB', 'GB', 'TB']
+    result = []
+    
+    for unit in reversed(units):
+        unit_size = 1024 ** units.index(unit)
+        if size_in_bytes >= unit_size:
+            value = size_in_bytes // unit_size
+            size_in_bytes %= unit_size
+            result.append(f"{value}{unit}")
+    
+    return ' '.join(result)

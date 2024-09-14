@@ -302,38 +302,45 @@ def detect_identical_files(folder_path: str | Path) -> Dict[Tuple[str, int], Lis
             hash_dict[(file_hash_value, size)].append(file_path)
     
     # 找出哈希值相同的文件
-    identical_files = {k: v for k, v in hash_dict.items() if len(v) > 1}
+    identical_dict = {k: v for k, v in hash_dict.items() if len(v) > 1}
     
-    return identical_files
+    return identical_dict
 
-def duplicate_files_report(identical_files: Dict[Tuple[str, int], List[Path]]):
+def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
     """
     生成一个详细报告，列出所有重复的文件及其位置。
 
-    :param identical_files: 相同文件的字典，由 detect_identical_files 函数返回。
+    :param identical_dict: 相同文件的字典，由 detect_identical_files 函数返回。
     """
+    from tools.Utilities import bytes_to_human_readable
     report = []
-    if not identical_files:
-        report.append("No identical files found.")
+    if not identical_dict:
+        report.append("\nNo identical files found.")
 
-    report.append("Identical files found:")
-    for (hash_value,file_size), file_list in identical_files.items():
+    total_size = 0
+    sort_identical_dict = dict(sorted(identical_dict.items(), key=lambda item: item[0][1], reverse=True))
+    report.append("\nIdentical files found:")
+    for (hash_value,file_size), file_list in sort_identical_dict.items():
         report.append(f"Hash: {hash_value}")
+        total_size += file_size * len(file_list)
+
         max_name_len = max(len(str(file)) for file in file_list)
         for file in file_list:
-            report.append(f" - {str(file):<{max_name_len}} (Size: {file_size} bytes)")
+            report.append(f" - {str(file):<{max_name_len}} (Size: {bytes_to_human_readable(file_size)})")
+
+    report.append(f"\n\nTotal size of duplicate files: {bytes_to_human_readable(total_size)}")
         
     print("\n".join(report))
 
-def delete_identical_files(identical_files: Dict[Tuple[str, int], List[Path]]):
+def delete_identical_dict(identical_dict: Dict[Tuple[str, int], List[Path]]):
     """
     删除文件夹中所有相同内容的文件。
 
-    :param identical_files: 相同文件的字典，由 detect_identical_files 函数返回。
+    :param identical_dict: 相同文件的字典，由 detect_identical_files 函数返回。
     :return: 删除的文件列表。
     """
     delete_list = []
-    for (hash_value,file_size), file_list in identical_files.items():
+    for (hash_value,file_size), file_list in identical_dict.items():
         for file in file_list:
             try:
                 file.unlink()
@@ -344,11 +351,11 @@ def delete_identical_files(identical_files: Dict[Tuple[str, int], List[Path]]):
 
     return delete_list
 
-def move_identical_files(identical_files: Dict[Tuple[str, int], List[Path]], target_folder: str | Path, size_threshold: int = None):
+def move_identical_dict(identical_dict: Dict[Tuple[str, int], List[Path]], target_folder: str | Path, size_threshold: int = None):
     """
     将相同内容的文件移动到指定的目标文件夹。
 
-    :param identical_files: 相同文件的字典，由 detect_identical_files 函数返回。
+    :param identical_dict: 相同文件的字典，由 detect_identical_files 函数返回。
     :param target_folder: 目标文件夹路径。
     :param size_threshold: 文件大小阈值，只有大于此阈值的文件会被移动。如果为 None，则不限制文件大小。
     :return: 移动的文件列表。
@@ -357,7 +364,7 @@ def move_identical_files(identical_files: Dict[Tuple[str, int], List[Path]], tar
     moved_files = []
     report = []
 
-    for (hash_value, file_size), file_list in tqdm(identical_files.items()):
+    for (hash_value, file_size), file_list in tqdm(identical_dict.items()):
         for file in file_list:
             if size_threshold is not None and file_size <= size_threshold:
                 continue
