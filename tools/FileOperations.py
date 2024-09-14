@@ -29,7 +29,7 @@ class HandleFileManager(TaskManager):
     def process_result(self, file_path: Path, result):
         return
     
-    def handle_error(self):
+    def handle_error_dict(self):
         error_path_dict = defaultdict(list)
 
         for file_path, error in self.get_error_dict().items():
@@ -38,6 +38,21 @@ class HandleFileManager(TaskManager):
             shutil.copy(file_path, new_file_path)
             error_path_dict[error].append(new_file_path)
         return error_path_dict
+    
+
+class DetectIdenticalManager(TaskManager):
+    def get_args(self, task):
+        return (task[0], )
+    
+    def process_result(self, task: Path, result):
+        return result
+    
+    def process_result_dict(self):
+        result_path_dict = defaultdict(list)
+
+        for (path, size), hash_vault in self.get_result_dict().items():
+            result_path_dict[(hash_vault, size)].append(path)
+        return result_path_dict
 
 
 def create_folder(path: str | Path) -> Path:
@@ -102,7 +117,7 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
     file_path_list = [file_path for file_path in folder_path.glob('**/*') if file_path.is_file()]
     handlefile_manager.start(file_path_list)
 
-    error_path_dict = handlefile_manager.handle_error()
+    error_path_dict = handlefile_manager.handle_error_dict()
     return error_path_dict
 
 def compress_folder(folder_path: str | Path, execution_mode: str = 'thread') -> List[Tuple[Path, Exception]]:
@@ -275,7 +290,7 @@ def file_hash(file_path: Path) -> str:
             hash_algo.update(chunk)
     return hash_algo.hexdigest()
 
-def detect_identical_files(folder_path: str | Path) -> Dict[Tuple[str, int], List[Path]]:
+def detect_identical_files(folder_path: str | Path, execution_mode: str ='threaD') -> Dict[Tuple[str, int], List[Path]]:
     """
     检测文件夹中是否存在相同内容的文件，并在文件名后添加文件大小。
 
@@ -291,17 +306,18 @@ def detect_identical_files(folder_path: str | Path) -> Dict[Tuple[str, int], Lis
             continue
         file_size = file_path.stat().st_size
         size_dict[file_size].append(file_path)
+
+    size_dict = {k: v for k, v in size_dict.items() if len(v) > 1}
     
     # 对于相同大小的文件，进一步计算哈希值
-    hash_dict = defaultdict(list)
-    for size, files in tqdm(size_dict.items(), desc='Calculating file hashes'):
-        if len(files) < 2:
-            continue
-        for file_path in files:
-            file_hash_value = file_hash(file_path)
-            hash_dict[(file_hash_value, size)].append(file_path)
-    
+    detect_identical_manager = DetectIdenticalManager(file_hash, execution_mode, 
+                                                      progress_desc='Calculating file hashes', show_progress=True)
+
+    file_task_list = [(file_path, size) for size, files in size_dict.items() for file_path in files]
+    detect_identical_manager.start(file_task_list)
+
     # 找出哈希值相同的文件
+    hash_dict = detect_identical_manager.process_result_dict()
     identical_dict = {k: v for k, v in hash_dict.items() if len(v) > 1}
     
     return identical_dict
@@ -315,18 +331,20 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
     from tools.Utilities import bytes_to_human_readable
     report = []
     if not identical_dict:
-        report.append("\nNo identical files found.")
+        print("\nNo identical files found.")
+        return 
 
     total_size = 0
     sort_identical_dict = dict(sorted(identical_dict.items(), key=lambda item: item[0][1], reverse=True))
     report.append("\nIdentical files found:")
     for (hash_value,file_size), file_list in sort_identical_dict.items():
+        readable_size = bytes_to_human_readable(file_size)
         report.append(f"Hash: {hash_value}")
         total_size += file_size * len(file_list)
 
         max_name_len = max(len(str(file)) for file in file_list)
         for file in file_list:
-            report.append(f" - {str(file):<{max_name_len}} (Size: {bytes_to_human_readable(file_size)})")
+            report.append(f" - {str(file):<{max_name_len}} (Size: {readable_size})")
 
     report.append(f"\n\nTotal size of duplicate files: {bytes_to_human_readable(total_size)}")
         

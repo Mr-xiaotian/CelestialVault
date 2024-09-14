@@ -134,11 +134,20 @@ class TaskManager:
         :return 处理后的结果。
 
         说明:
-        这个方法必须在子类中实现。可以对结果进行格式化、存储或其他处理。
+        这个方法必须在子类中实现。可以记录错误、发送通知或其他错误处理操作。
         """
         raise NotImplementedError("This method should be overridden")
+    
+    def process_result_dict(self):
+        """
+        处理任务结果字典，将结果字典中的结果提取出来，并返回一个包含结果的列表。
 
-    def handle_error(self):
+        说明:
+        这个方法必须在子类中实现。可以记录错误、发送通知或其他错误处理操作。
+        """
+        return NotImplementedError("This method should be overridden")
+
+    def handle_error_dict(self):
         """
         处理任务执行后的所有错误
 
@@ -511,7 +520,7 @@ class ExampleTaskManager(TaskManager):
         """
         return result
     
-    def handle_error(self):
+    def handle_error_dict(self):
         """
         处理任务执行后的所有错误
 
