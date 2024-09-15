@@ -35,3 +35,21 @@ def bytes_to_human_readable(size_in_bytes):
             result.append(f"{value}{unit}")
     
     return ' '.join(result)
+
+def human_readable_to_bytes(human_readable):
+    units = {'B': 1, 'KB': 1024, 'MB': 1024**2, 'GB': 1024**3, 'TB': 1024**4}
+    size_in_bytes = 0
+
+    # Split the input by spaces
+    parts = human_readable.split()
+    
+    for part in parts:
+        # Extract the numeric value and unit
+        value = int(''.join(filter(str.isdigit, part)))
+        unit = ''.join(filter(str.isalpha, part)).upper()
+        
+        # Convert the value to bytes
+        if unit in units:
+            size_in_bytes += value * units[unit]
+
+    return size_in_bytes
