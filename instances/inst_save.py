@@ -44,13 +44,19 @@ class Saver(object):
     def is_exist(self, file_name, suffix_name):
         return exists(self.get_path(file_name, suffix_name))
 
-    def download_text(self, file_name, text, encoding = 'utf-8', suffix_name = '.md'):
+    def save_text(self, file_name, text, encoding = 'utf-8', suffix_name = '.txt'):
+        if not file_name:
+            return None
+        
         path = self.get_path(file_name, suffix_name)
         with open(path, 'w', encoding = encoding) as f:
             f.write(text.encode(encoding, 'ignore').decode(encoding, "ignore"))
         return path
 
-    def add_text(self, file_name, text, encoding = 'utf-8', suffix_name = '.md'):
+    def add_text(self, file_name, text, encoding = 'utf-8', suffix_name = '.txt'):
+        if not file_name:
+            return None
+    
         path = self.get_path(file_name, suffix_name)
         with open(path, 'a', encoding = encoding) as f:
             f.write(text.encode(encoding, 'ignore').decode(encoding, "ignore"))

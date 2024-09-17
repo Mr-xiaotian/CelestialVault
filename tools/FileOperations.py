@@ -6,7 +6,7 @@ from pathlib import Path
 from tqdm import tqdm
 from typing import Callable, Tuple, Dict, List
 from collections import defaultdict
-from instances.inst_task import TaskManager
+from instances.inst_task import TaskManager, ExampleTaskManager
 
 class HandleFileManager(TaskManager):
     def __init__(self, func, folder_path: Path, new_folder_path: Path, rules: Dict[str, Tuple[Callable, Callable]], 
@@ -53,6 +53,15 @@ class DetectIdenticalManager(TaskManager):
         for (path, size), hash_vault in self.get_result_dict().items():
             result_path_dict[(hash_vault, size)].append(path)
         return result_path_dict
+    
+
+class ScanFileManager(ExampleTaskManager):
+    def process_result_dict(self):
+        size_dict = defaultdict(list)
+
+        for path, size in self.get_result_dict().items():
+            size_dict[size].append(path)
+        return size_dict
 
 
 def create_folder(path: str | Path) -> Path:
@@ -277,7 +286,7 @@ def print_directory_structure(folder_path: str='.', indent: str='', exclude_dirs
             icon = FILE_ICONS.get(item.suffix, FILE_ICONS['default'])
             print(f"{indent}{icon} {item.name:<{max_name_len}} \t({item.stat().st_size} bytes)")
 
-def file_hash(file_path: Path) -> str:
+def get_file_hash(file_path: Path) -> str:
     """
     计算文件的哈希值。
 
@@ -300,17 +309,17 @@ def detect_identical_files(folder_path: str | Path, execution_mode: str ='thread
     folder_path = Path(folder_path)
     
     # 根据文件大小进行初步筛选
-    size_dict = defaultdict(list)
-    for file_path in tqdm(list(folder_path.glob('**/*')), desc='Scanning files'):
-        if not file_path.is_file():
-            continue
-        file_size = file_path.stat().st_size
-        size_dict[file_size].append(file_path)
+    scan_file_manager = ScanFileManager(lambda x: x.stat().st_size, execution_mode, 
+                                        progress_desc='Scanning files', show_progress=True)
 
+    file_path_list = [path for path in folder_path.rglob('*') if path.is_file()]
+    scan_file_manager.start(file_path_list)
+
+    size_dict = scan_file_manager.process_result_dict()
     size_dict = {k: v for k, v in size_dict.items() if len(v) > 1}
     
     # 对于相同大小的文件，进一步计算哈希值
-    detect_identical_manager = DetectIdenticalManager(file_hash, execution_mode, 
+    detect_identical_manager = DetectIdenticalManager(get_file_hash, execution_mode, 
                                                       progress_desc='Calculating file hashes', show_progress=True)
 
     file_task_list = [(file_path, size) for size, files in size_dict.items() for file_path in files]

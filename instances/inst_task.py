@@ -162,18 +162,18 @@ class TaskManager:
         """
         info_list = []
         for arg in self.get_args(task):
-            arg = f'{arg}'
-            if len(arg) < self.max_info:
-                info_list.append(f"{arg}")
+            arg_str = f'{arg}'.replace("\\", "\\\\").replace("\n", "\\n")
+            if len(arg_str) < self.max_info:
+                info_list.append(arg_str)
             else:
-                info_list.append(f"{arg[:self.max_info]}...")
+                info_list.append(f"{arg_str[:self.max_info]}...")
         return "(" + ", ".join(info_list) + ")"
     
     def get_result_info(self, result):
         """
         获取结果信息
         """
-        result = f"{result}"
+        result = f"{result}".replace("\\", "\\\\").replace("\n", "\\n")
         if len(result) < self.max_info:
             return result
         else:
