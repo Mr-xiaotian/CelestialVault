@@ -71,9 +71,9 @@ class Saver(object):
     def download_urls(self, task_list:list[tuple[str,str,str]], chain_mode="serial", show_progress=False):
         fetcher = Fetcher()
         fetch_manager = FetchManager(fetcher.getContent, execution_mode='thread',
-                                     tqdm_desc='urlsFetchProcess', show_progress=show_progress)
+                                     progress_desc='urlsFetchProcess', show_progress=show_progress)
         save_manager = SaveManager(self.save_content, execution_mode='serial',
-                                   tqdm_desc='urlsSaveProcess', show_progress=False)
+                                   progress_desc='urlsSaveProcess', show_progress=False)
 
         chain = TaskChain([fetch_manager, save_manager], chain_mode)
         chain.start_chain(task_list)

@@ -269,7 +269,7 @@ class TaskManager:
         task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time, 
                         len(self.result_dict), len(self.error_dict), self.duplicates_num)
         
-    def start_stage(self, input_queue: MPQueue, output_queue: MPQueue, stage_index):
+    def start_stage(self, input_queue: MPQueue, output_queue: MPQueue, stage_index: int):
         """
         根据 start_type 的值，选择串行、并行执行任务
 
@@ -585,7 +585,7 @@ class TaskChain:
         queues = [MPQueue() for _ in range(len(self.stages) + 1)]
         
         # 为每个stage创建独立的共享result_dict
-        manager = multiprocessing .Manager()
+        manager = multiprocessing.Manager()
         stage_result_dicts = [manager.dict() for _ in self.stages]
         error_dict = manager.dict()  # 创建共享的 error_dict
         
