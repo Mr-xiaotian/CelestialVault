@@ -39,7 +39,7 @@ def test_task_manager():
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
 
     manager = ExampleTaskManager(fibonacci, worker_limit=6, show_progress=True)
-    results = manager.test_methods(test_task_0)
+    results = manager.test_methods(test_task_1)
     logging.info(results)
 
 # 测试 TaskManager 的异步任务
@@ -50,7 +50,7 @@ async def test_task_manager_async():
 
     manager = ExampleTaskManager(fibonacci_async, worker_limit=6, show_progress=True)
     start = time()
-    await manager.start_async(test_task_0)
+    await manager.start_async(test_task_1)
     logging.info(f'run_in_async: {time() - start}')
 
 # 测试 TaskChain 的功能
@@ -64,16 +64,20 @@ def test_task_chain():
     chain = TaskChain([stage1, stage2], chain_mode)
 
     # 要测试的任务列表
-    tasks = range(25,31)
+    tasks_0 = range(25,31)
+    tasks_1 = list(range(25,32)) + [0, 27, None, 0, '']
 
     # 开始任务链
     start_time = time()
-    chain.start_chain(tasks)
+    chain.start_chain(tasks_1)
     logging.info(f'TaskChain completed in {time() - start_time} seconds by {chain_mode}.')
 
     # 打印结果
     final_result_dict = chain.get_final_result_dict()
     logging.info(f"Task result: {final_result_dict}.")
+
+    final_error_dict = chain.get_final_error_dict()
+    logging.info(f"Task error: {final_error_dict}.")
 
 def profile_task_chain():
     target_func = 'test_task_manager'

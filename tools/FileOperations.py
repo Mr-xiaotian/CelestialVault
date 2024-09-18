@@ -36,7 +36,7 @@ class HandleFileManager(TaskManager):
             rel_path = file_path.relative_to(self.folder_path)
             new_file_path = self.new_folder_path / rel_path
             shutil.copy(file_path, new_file_path)
-            error_path_dict[error].append(new_file_path)
+            error_path_dict[(type(error).__name__, str(error))].append(new_file_path)
         return error_path_dict
     
 
