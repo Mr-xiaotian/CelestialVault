@@ -93,10 +93,10 @@ class TaskManager:
         self.error_dict = error_dict if error_dict is not None else {} 
 
     def init_env(self):
-        if self.execution_mode == "async":
-            self.task_queue = asyncio.Queue()
-        elif self.execution_mode == "process":
+        if self.execution_mode == "process":
             self.task_queue = MPQueue()
+        elif self.execution_mode == "async":
+            self.task_queue = asyncio.Queue()
         else:
             self.task_queue = ThreadQueue()
         self.result_queue = ThreadQueue()
@@ -276,7 +276,9 @@ class TaskManager:
         """
         根据 start_type 的值，选择串行、并行执行任务
 
-        :param task_list: 任务列表
+        :param input_queue: 输入队列
+        :param output_queue: 输出队列
+        :param stage_index: 阶段索引
         """
         start_time = time()
         self.init_env()
@@ -461,13 +463,13 @@ class TaskManager:
             if self.thread_pool:
                 self.thread_pool.shutdown(wait=True)
         except Exception as e:
-            logger.error(f"Error during thread pool shutdown: {e}")
+            task_logger.logger.error(f"Error during thread pool shutdown: {e}")
 
         try:
             if self.process_pool:
                 self.process_pool.shutdown(wait=True)
         except Exception as e:
-            logger.error(f"Error during process pool shutdown: {e}")
+            task_logger.logger.error(f"Error during process pool shutdown: {e}")
     
     def test_methods(self, task_list):
         # Prepare the results dictionary
@@ -535,7 +537,7 @@ class ExampleTaskManager(TaskManager):
         error_len = len(error_dict)
         # for num,(task, error) in enumerate(error_dict.items()):
         #     logger.error(f"Task {self.get_task_info(task)}(index:{num+1}/{error_len})")
-        logger.error(f'There are total {error_len} errors.')
+        task_logger.logger.error(f'There are total {error_len} errors.')
 
 class TaskChain:
     def __init__(self, stages, chain_mode='serial'):
@@ -651,4 +653,7 @@ class TaskChain:
             self.final_result_dict[initial_task] = stage_result
     
     def get_final_result_dict(self):
+        """
+        返回最终结果字典
+        """
         return self.final_result_dict
