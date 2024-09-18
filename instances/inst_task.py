@@ -162,18 +162,18 @@ class TaskManager:
         """
         info_list = []
         for arg in self.get_args(task):
-            arg = f'{arg}'
-            if len(arg) < self.max_info:
-                info_list.append(f"{arg}")
+            arg_str = f'{arg}'.replace("\\", "\\\\").replace("\n", "\\n")
+            if len(arg_str) < self.max_info:
+                info_list.append(arg_str)
             else:
-                info_list.append(f"{arg[:self.max_info]}...")
+                info_list.append(f"{arg_str[:self.max_info]}...")
         return "(" + ", ".join(info_list) + ")"
     
     def get_result_info(self, result):
         """
         获取结果信息
         """
-        result = f"{result}"
+        result = f"{result}".replace("\\", "\\\\").replace("\n", "\\n")
         if len(result) < self.max_info:
             return result
         else:
@@ -269,7 +269,7 @@ class TaskManager:
         task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time, 
                         len(self.result_dict), len(self.error_dict), self.duplicates_num)
         
-    def start_stage(self, input_queue: MPQueue, output_queue: MPQueue, stage_index):
+    def start_stage(self, input_queue: MPQueue, output_queue: MPQueue, stage_index: int):
         """
         根据 start_type 的值，选择串行、并行执行任务
 
@@ -585,7 +585,7 @@ class TaskChain:
         queues = [MPQueue() for _ in range(len(self.stages) + 1)]
         
         # 为每个stage创建独立的共享result_dict
-        manager = multiprocessing .Manager()
+        manager = multiprocessing.Manager()
         stage_result_dicts = [manager.dict() for _ in self.stages]
         error_dict = manager.dict()  # 创建共享的 error_dict
         

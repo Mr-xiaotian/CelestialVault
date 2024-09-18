@@ -44,13 +44,19 @@ class Saver(object):
     def is_exist(self, file_name, suffix_name):
         return exists(self.get_path(file_name, suffix_name))
 
-    def download_text(self, file_name, text, encoding = 'utf-8', suffix_name = '.md'):
+    def save_text(self, file_name, text, encoding = 'utf-8', suffix_name = '.txt'):
+        if not file_name:
+            return None
+        
         path = self.get_path(file_name, suffix_name)
         with open(path, 'w', encoding = encoding) as f:
             f.write(text.encode(encoding, 'ignore').decode(encoding, "ignore"))
         return path
 
-    def add_text(self, file_name, text, encoding = 'utf-8', suffix_name = '.md'):
+    def add_text(self, file_name, text, encoding = 'utf-8', suffix_name = '.txt'):
+        if not file_name:
+            return None
+    
         path = self.get_path(file_name, suffix_name)
         with open(path, 'a', encoding = encoding) as f:
             f.write(text.encode(encoding, 'ignore').decode(encoding, "ignore"))
@@ -65,9 +71,9 @@ class Saver(object):
     def download_urls(self, task_list:list[tuple[str,str,str]], chain_mode="serial", show_progress=False):
         fetcher = Fetcher()
         fetch_manager = FetchManager(fetcher.getContent, execution_mode='thread',
-                                     tqdm_desc='urlsFetchProcess', show_progress=show_progress)
+                                     progress_desc='urlsFetchProcess', show_progress=show_progress)
         save_manager = SaveManager(self.save_content, execution_mode='serial',
-                                   tqdm_desc='urlsSaveProcess', show_progress=False)
+                                   progress_desc='urlsSaveProcess', show_progress=False)
 
         chain = TaskChain([fetch_manager, save_manager], chain_mode)
         chain.start_chain(task_list)
