@@ -7,11 +7,11 @@
 
 import asyncio, multiprocessing
 from queue import Queue as ThreadQueue
-from multiprocessing import Queue as MPQueue
+from multiprocessing import Process, Queue as MPQueue
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from typing import List
+from loguru import logger as loguru_logger
 from time import time, strftime, localtime, sleep
-from loguru import logger
 from instances.inst_progress import ProgressManager
 
 
@@ -45,6 +45,9 @@ class TaskLogger:
     def end_stage(self, stage_index, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
         self.logger.info(f"The {stage_index} stage '{func_name}' end tasks by {execution_mode}. Use {use_time: .2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
     
+    def end_chain(self, use_time):
+        self.logger.info(f"TaskChain end. Use {use_time: .2f} second.")
+
     def task_success(self, func_name, task_info, execution_mode, result_info, use_time):
         self.logger.success(f"In '{func_name}', Task {task_info} completed by {execution_mode}. Result is {result_info}. Used {use_time: .2f} seconds.")
 
@@ -53,7 +56,7 @@ class TaskLogger:
 
     def task_fail(self, task_info, exception):
         self.logger.error(f"Task {task_info} failed and can't retry: {exception}")
-task_logger = TaskLogger(logger)
+task_logger = TaskLogger(loguru_logger)
 
 class TaskManager:
     def __init__(self, func, execution_mode = 'serial',
@@ -561,6 +564,7 @@ class TaskChain:
         """
         启动任务链
         """
+        start_time = time()
         task_logger.start_chain(len(self.stages), self.chain_mode)
 
         if self.chain_mode == 'process':
@@ -569,6 +573,8 @@ class TaskChain:
             self.set_chain_mode('serial')
             self.run_chain_in_serial(tasks)
 
+        task_logger.end_chain(time()-start_time)
+
     def run_chain_in_serial(self, tasks):
         """
         串行运行任务链
@@ -576,6 +582,7 @@ class TaskChain:
         for stage in self.stages:
             stage.start(tasks)
             tasks = stage.get_result_dict().values()
+        self.process_final_result_dict()
 
     def run_chain_in_process(self, tasks):
         """
@@ -610,11 +617,27 @@ class TaskChain:
 
         for queue in queues:
             queue.close()
-        
-        # 释放资源
-        # manager.shutdown()
+
+        self.process_final_result_dict()
+        self.release_resources(queues, manager, processes)
+
+    def release_resources(self, queues: List[MPQueue], manager, processes: List[Process]):
+        # 关闭所有队列并确保它们的后台线程被终止
+        for queue in queues:
+            queue.close()
+            queue.join_thread()  # 确保队列的后台线程正确终止
+
+        # 关闭 multiprocessing.Manager
+        if manager is not None:
+            manager.shutdown()
+
+        # 确保所有进程已被正确终止
+        for p in processes:
+            if p.is_alive():
+                p.terminate()  # 如果进程仍在运行，强制终止
+            p.join()  # 确保进程终止
             
-    def get_final_result_dict(self):
+    def process_final_result_dict(self):
         """
         查找对应的初始任务并更新 final_result_dict
         """
@@ -626,4 +649,6 @@ class TaskChain:
             for stage in self.stages[1:]:
                 stage_result = stage.get_result_dict().get(stage_result, None)
             self.final_result_dict[initial_task] = stage_result
+    
+    def get_final_result_dict(self):
         return self.final_result_dict
