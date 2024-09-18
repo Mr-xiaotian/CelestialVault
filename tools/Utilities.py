@@ -24,6 +24,11 @@ def functions_are_equal(func1: Callable, func2: Callable) -> bool:
             func1.__closure__ == func2.__closure__)
 
 def bytes_to_human_readable(size_in_bytes):
+    """
+    将字节大小转换为人类可读的格式
+    :param size_in_bytes:
+    :return:
+    """
     units = ['B', 'KB', 'MB', 'GB', 'TB']
     result = []
     

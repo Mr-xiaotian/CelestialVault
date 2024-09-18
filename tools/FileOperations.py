@@ -350,16 +350,16 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
         
     print("\n".join(report))
 
-def delete_identical_dict(identical_dict: Dict[Tuple[str, int], List[Path]]):
+def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
     """
-    删除文件夹中所有相同内容的文件。
+    删除文件夹中相同内容的文件。
 
     :param identical_dict: 相同文件的字典，由 detect_identical_files 函数返回。
     :return: 删除的文件列表。
     """
     delete_list = []
     for (hash_value,file_size), file_list in identical_dict.items():
-        for file in file_list:
+        for file in file_list[1:]:
             try:
                 file.unlink()
                 delete_list.append(file)
@@ -369,7 +369,7 @@ def delete_identical_dict(identical_dict: Dict[Tuple[str, int], List[Path]]):
 
     return delete_list
 
-def move_identical_dict(identical_dict: Dict[Tuple[str, int], List[Path]], target_folder: str | Path, size_threshold: int = None):
+def move_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]], target_folder: str | Path, size_threshold: int = None):
     """
     将相同内容的文件移动到指定的目标文件夹。
 
@@ -415,17 +415,18 @@ def move_identical_dict(identical_dict: Dict[Tuple[str, int], List[Path]], targe
 
 def folder_to_file_path(folder_path: Path, file_extension: str) -> Path:
     """
-    将文件夹路径转换为与文件夹同名的 PDF 文件路径。
+    将文件夹路径转换为与文件夹同名的文件路径。
 
     :param folder_path: 文件夹的路径。
-    :return: 与文件夹同名的 PDF 文件路径。
+    :param file_extension: 文件扩展名。
+    :return: 与文件夹同名的文件路径。
     """
     # 获取文件夹的父目录和文件夹名称
     folder_name = folder_path.stem  # 获取文件夹名称，不带路径
     parent_dir = folder_path.parent  # 获取文件夹的父目录路径
     
-    # 生成与文件夹同名的 PDF 文件路径
-    pdf_file_name = f"{folder_name}.{file_extension}"
-    pdf_path = parent_dir / pdf_file_name
+    # 生成与文件夹同名的文件路径
+    file_name = f"{folder_name}.{file_extension}"
+    file_path = parent_dir / file_name
     
-    return pdf_path
+    return file_path
