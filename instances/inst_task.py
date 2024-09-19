@@ -57,7 +57,7 @@ class TaskLogger:
         self.logger.warning(f"Task {task_info} failed {retry_times} times and will retry after {delay_time} seconds.")
 
     def task_fail(self, task_info, exception):
-        self.logger.error(f"Task {task_info} failed and can't retry: {exception}")
+        self.logger.error(f"Task {task_info} failed and can't retry: ({type(exception).__name__}){exception}")
 task_logger = TaskLogger(loguru_logger)
 
 class TaskManager:
@@ -86,7 +86,7 @@ class TaskManager:
         self.thread_pool = None
         self.process_pool = None
 
-        self.retry_exceptions = (TimeoutError, ConnectionError, ConnectTimeout, ProtocolError, OSError, ReadError, ConnectError) # 需要重试的异常类型
+        self.retry_exceptions = (ConnectTimeout, ProtocolError, ReadError, ConnectError) # 需要重试的异常类型
 
         self.init_result_error_dict()
         
