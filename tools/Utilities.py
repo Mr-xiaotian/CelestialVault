@@ -1,4 +1,4 @@
-import types
+import types, sys
 from typing import Callable
 from time import strftime, localtime
 
@@ -58,3 +58,25 @@ def human_readable_to_bytes(human_readable):
             size_in_bytes += value * units[unit]
 
     return size_in_bytes
+
+def get_total_size(obj, seen=None):
+    """
+    递归计算对象及其内部元素的总内存大小
+    :param obj:
+    :param seen:
+    """
+    if seen is None:
+        seen = set()
+    obj_id = id(obj)
+    if obj_id in seen:
+        return 0
+    # 标记当前对象为已处理
+    seen.add(obj_id)
+    size = sys.getsizeof(obj)
+    # 递归计算内部元素的大小
+    if isinstance(obj, dict):
+        size += sum(get_total_size(v, seen) for v in obj.values())
+        size += sum(get_total_size(k, seen) for k in obj.keys())
+    elif isinstance(obj, (list, tuple, set, frozenset)):
+        size += sum(get_total_size(i, seen) for i in obj)
+    return size
