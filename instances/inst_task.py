@@ -9,7 +9,7 @@ import asyncio, multiprocessing
 from queue import Queue as ThreadQueue
 from multiprocessing import Process, Queue as MPQueue
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
-from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError, RequestError
+from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError, RequestError, PoolTimeout
 from typing import List
 from loguru import logger as loguru_logger
 from time import time, strftime, localtime, sleep
@@ -86,7 +86,7 @@ class TaskManager:
         self.thread_pool = None
         self.process_pool = None
 
-        self.retry_exceptions = (ConnectTimeout, ProtocolError, ReadError, ConnectError) # 需要重试的异常类型
+        self.retry_exceptions = (ConnectTimeout, ProtocolError, ReadError, ConnectError, PoolTimeout) # 需要重试的异常类型
 
         self.init_result_error_dict()
         
@@ -584,9 +584,10 @@ class TaskChain:
         """
         串行运行任务链
         """
+        stage_tasks = tasks
         for stage in self.stages:
-            stage.start(tasks)
-            tasks = stage.get_result_dict().values()
+            stage.start(stage_tasks)
+            stage_tasks = stage.get_result_dict().values()
         self.process_final_result_dict(tasks)
         self.handle_final_error_dict()
 
@@ -600,7 +601,7 @@ class TaskChain:
         # 为每个stage创建独立的共享result_dict
         manager = multiprocessing.Manager()
         stage_result_dicts = [manager.dict() for _ in self.stages]
-        error_dict = manager.dict()  # 创建共享的 error_dict
+        stage_error_dicts = [manager.dict() for _ in self.stages]  # 创建共享的 error_dict
         
         # 向第一个队列添加初始任务
         for task in tasks:
@@ -612,7 +613,7 @@ class TaskChain:
         # 创建多进程来运行每个环节
         processes = []
         for stage_index, stage in enumerate(self.stages):
-            stage.init_result_error_dict(stage_result_dicts[stage_index], error_dict)
+            stage.init_result_error_dict(stage_result_dicts[stage_index], stage_error_dicts[stage_index])
             p = multiprocessing.Process(target=stage.start_stage, args=(queues[stage_index], queues[stage_index + 1], stage_index))
             p.start()
             processes.append(p)
@@ -660,7 +661,8 @@ class TaskChain:
                     stage_task = (stage.get_error_dict()[stage_task], stage.func.__name__, stage_index)
                     break
                 else:
-                    raise Exception(f"Task {stage_task} not found in stage {stage_index} dict.")
+                    stage_task = Exception(f"Task {stage_task} not found in stage {stage_index} dict, is {stage.func.__name__}.")
+                    break
             self.final_result_dict[initial_task] = stage_task
 
     def handle_final_error_dict(self):
