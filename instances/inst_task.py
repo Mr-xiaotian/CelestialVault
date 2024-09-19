@@ -9,9 +9,11 @@ import asyncio, multiprocessing
 from queue import Queue as ThreadQueue
 from multiprocessing import Process, Queue as MPQueue
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError
 from typing import List
 from loguru import logger as loguru_logger
 from time import time, strftime, localtime, sleep
+from collections import defaultdict
 from instances.inst_progress import ProgressManager
 
 
@@ -40,22 +42,22 @@ class TaskLogger:
         self.logger.info(f"Starting TaskChain with {stage_num} stages by {chain_mode}.")
 
     def end_task(self, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
-        self.logger.info(f"'{func_name}' end tasks by {execution_mode}. Use {use_time: .2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
+        self.logger.info(f"'{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
 
     def end_stage(self, stage_index, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
-        self.logger.info(f"The {stage_index} stage '{func_name}' end tasks by {execution_mode}. Use {use_time: .2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
+        self.logger.info(f"The {stage_index} stage '{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
     
     def end_chain(self, use_time):
-        self.logger.info(f"TaskChain end. Use {use_time: .2f} second.")
+        self.logger.info(f"TaskChain end. Use {use_time:.2f} second.")
 
     def task_success(self, func_name, task_info, execution_mode, result_info, use_time):
-        self.logger.success(f"In '{func_name}', Task {task_info} completed by {execution_mode}. Result is {result_info}. Used {use_time: .2f} seconds.")
+        self.logger.success(f"In '{func_name}', Task {task_info} completed by {execution_mode}. Result is {result_info}. Used {use_time:.2f} seconds.")
 
     def task_retry(self, task_info, retry_times, delay_time):
         self.logger.warning(f"Task {task_info} failed {retry_times} times and will retry after {delay_time} seconds.")
 
     def task_fail(self, task_info, exception):
-        self.logger.error(f"Task {task_info} failed and can't retry: {exception}")
+        self.logger.error(f"Task {task_info} failed and can't retry: ({type(exception).__name__}){exception}")
 task_logger = TaskLogger(loguru_logger)
 
 class TaskManager:
@@ -84,7 +86,7 @@ class TaskManager:
         self.thread_pool = None
         self.process_pool = None
 
-        self.retry_exceptions = (TimeoutError, ConnectionError) # 需要重试的异常类型
+        self.retry_exceptions = (ConnectTimeout, ProtocolError, ReadError, ConnectError) # 需要重试的异常类型
 
         self.init_result_error_dict()
         
@@ -209,7 +211,7 @@ class TaskManager:
         will_try = False
 
         # 基于异常类型决定重试策略
-        if isinstance(exception, self.retry_exceptions) and retry_time < self.max_retries:
+        if isinstance(exception, self.retry_exceptions) and retry_time < self.max_retries: # isinstance(exception, self.retry_exceptions) and 
             self.task_queue.put(task)
             self.retry_time_dict[task] += 1
             delay_time = 2 ** retry_time
@@ -548,6 +550,7 @@ class TaskChain:
         self.chain_mode = chain_mode
 
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
+        self.final_error_dict = defaultdict(list)  # 用于保存初始任务到最终错误的映射
 
     def set_chain_mode(self, chain_mode):
         """
@@ -585,6 +588,7 @@ class TaskChain:
             stage.start(tasks)
             tasks = stage.get_result_dict().values()
         self.process_final_result_dict()
+        self.handle_final_error_dict()
 
     def run_chain_in_process(self, tasks):
         """
@@ -621,6 +625,7 @@ class TaskChain:
             queue.close()
 
         self.process_final_result_dict()
+        self.handle_final_error_dict()
         self.release_resources(queues, manager, processes)
 
     def release_resources(self, queues: List[MPQueue], manager, processes: List[Process]):
@@ -651,9 +656,26 @@ class TaskChain:
             for stage in self.stages[1:]:
                 stage_result = stage.get_result_dict().get(stage_result, None)
             self.final_result_dict[initial_task] = stage_result
+
+    def handle_final_error_dict(self):
+        """
+        处理最终错误字典
+        """
+        if len(self.stages) == 1:
+            return self.stages[0].get_error_dict()
+
+        for stage in self.stages:
+            for task, error in stage.get_error_dict().items():
+                self.final_error_dict[(type(error).__name__, str(error))].append(task)
     
     def get_final_result_dict(self):
         """
         返回最终结果字典
         """
         return self.final_result_dict
+    
+    def get_final_error_dict(self):
+        """
+        返回最终错误字典
+        """
+        return self.final_error_dict
