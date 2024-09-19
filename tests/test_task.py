@@ -60,7 +60,7 @@ def test_task_chain():
     stage2 = ExampleTaskManager(square, execution_mode='serial', worker_limit=4, show_progress=False)
 
     # 初始化 TaskChain
-    chain_mode = 'process'
+    chain_mode = 'serial'
     chain = TaskChain([stage1, stage2], chain_mode)
 
     # 要测试的任务列表

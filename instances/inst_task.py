@@ -667,9 +667,9 @@ class TaskChain:
         """
         处理最终错误字典
         """
-        for stage in self.stages:
+        for stage_index, stage in enumerate(self.stages):
             for task, error in stage.get_error_dict().items():
-                self.final_error_dict[(type(error).__name__, str(error))].append(task)
+                self.final_error_dict[(type(error).__name__, str(error), stage_index)].append(task)
     
     def get_final_result_dict(self):
         """
