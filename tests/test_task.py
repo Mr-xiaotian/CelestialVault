@@ -74,10 +74,10 @@ def test_task_chain():
 
     # 打印结果
     final_result_dict = chain.get_final_result_dict()
-    logging.info(f"Task result: {final_result_dict}.")
+    logging.info(f"Final result dict: {final_result_dict}.")
 
     final_error_dict = chain.get_final_error_dict()
-    logging.info(f"Task error: {final_error_dict}.")
+    logging.info(f"Final error dict: {final_error_dict}.")
 
 def profile_task_chain():
     target_func = 'test_task_manager'

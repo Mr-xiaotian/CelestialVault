@@ -9,7 +9,7 @@ import asyncio, multiprocessing
 from queue import Queue as ThreadQueue
 from multiprocessing import Process, Queue as MPQueue
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
-from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError
+from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError, RequestError
 from typing import List
 from loguru import logger as loguru_logger
 from time import time, strftime, localtime, sleep
@@ -53,8 +53,8 @@ class TaskLogger:
     def task_success(self, func_name, task_info, execution_mode, result_info, use_time):
         self.logger.success(f"In '{func_name}', Task {task_info} completed by {execution_mode}. Result is {result_info}. Used {use_time:.2f} seconds.")
 
-    def task_retry(self, task_info, retry_times, delay_time):
-        self.logger.warning(f"Task {task_info} failed {retry_times} times and will retry after {delay_time} seconds.")
+    def task_retry(self, task_info, retry_times):
+        self.logger.warning(f"Task {task_info} failed {retry_times} times and will retry.")
 
     def task_fail(self, task_info, exception):
         self.logger.error(f"Task {task_info} failed and can't retry: ({type(exception).__name__}){exception}")
@@ -214,9 +214,9 @@ class TaskManager:
         if isinstance(exception, self.retry_exceptions) and retry_time < self.max_retries: # isinstance(exception, self.retry_exceptions) and 
             self.task_queue.put(task)
             self.retry_time_dict[task] += 1
-            delay_time = 2 ** retry_time
-            task_logger.task_retry(self.get_task_info(task), self.retry_time_dict[task], delay_time)
-            sleep(delay_time)  # 指数退避
+            # delay_time = 2 ** retry_time
+            task_logger.task_retry(self.get_task_info(task), self.retry_time_dict[task])
+            # sleep(delay_time)  # 指数退避
             will_try = True
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
@@ -587,7 +587,7 @@ class TaskChain:
         for stage in self.stages:
             stage.start(tasks)
             tasks = stage.get_result_dict().values()
-        self.process_final_result_dict()
+        self.process_final_result_dict(tasks)
         self.handle_final_error_dict()
 
     def run_chain_in_process(self, tasks):
@@ -621,10 +621,7 @@ class TaskChain:
         for p in processes:
             p.join()
 
-        for queue in queues:
-            queue.close()
-
-        self.process_final_result_dict()
+        self.process_final_result_dict(tasks)
         self.handle_final_error_dict()
         self.release_resources(queues, manager, processes)
 
@@ -643,27 +640,33 @@ class TaskChain:
             if p.is_alive():
                 p.terminate()  # 如果进程仍在运行，强制终止
             p.join()  # 确保进程终止
+
+        # 关闭所有stage的线程池
+        for stage in self.stages:
+            stage.shutdown_pools()
             
-    def process_final_result_dict(self):
+    def process_final_result_dict(self, initial_tasks):
         """
         查找对应的初始任务并更新 final_result_dict
-        """
-        if len(self.stages) == 1:
-            return self.stages[0].get_result_dict()
 
-        for initial_task, initial_result in self.stages[0].get_result_dict().items():
-            stage_result = initial_result
-            for stage in self.stages[1:]:
-                stage_result = stage.get_result_dict().get(stage_result, None)
-            self.final_result_dict[initial_task] = stage_result
+        :param initial_tasks: 一个包含初始任务的列表
+        """
+        for initial_task in initial_tasks:
+            stage_task = initial_task
+            for stage_index, stage in enumerate(self.stages):
+                if stage_task in stage.get_result_dict():
+                    stage_task = stage.get_result_dict()[stage_task]
+                elif stage_task in stage.get_error_dict():
+                    stage_task = (stage.get_error_dict()[stage_task], stage.func.__name__, stage_index)
+                    break
+                else:
+                    raise Exception(f"Task {stage_task} not found in stage {stage_index} dict.")
+            self.final_result_dict[initial_task] = stage_task
 
     def handle_final_error_dict(self):
         """
         处理最终错误字典
         """
-        if len(self.stages) == 1:
-            return self.stages[0].get_error_dict()
-
         for stage in self.stages:
             for task, error in stage.get_error_dict().items():
                 self.final_error_dict[(type(error).__name__, str(error))].append(task)
