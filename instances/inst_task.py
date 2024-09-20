@@ -661,7 +661,7 @@ class TaskChain:
                     stage_task = (stage.get_error_dict()[stage_task], stage.func.__name__, stage_index)
                     break
                 else:
-                    stage_task = Exception(f"Task {stage_task} not found in stage {stage_index} dict, is {stage.func.__name__}.")
+                    stage_task = Exception(f"Task {stage_task} not found in stage {stage_index} dict, stage func is {stage.func.__name__}.")
                     break
             self.final_result_dict[initial_task] = stage_task
 
