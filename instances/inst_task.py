@@ -9,7 +9,7 @@ import asyncio, multiprocessing
 from queue import Queue as ThreadQueue
 from multiprocessing import Process, Queue as MPQueue
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
-from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError, RequestError, PoolTimeout
+from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError, RequestError, PoolTimeout, ReadTimeout
 from typing import List
 from loguru import logger as loguru_logger
 from time import time, strftime, localtime, sleep
@@ -86,7 +86,7 @@ class TaskManager:
         self.thread_pool = None
         self.process_pool = None
 
-        self.retry_exceptions = (ConnectTimeout, ProtocolError, ReadError, ConnectError, PoolTimeout) # 需要重试的异常类型
+        self.retry_exceptions = (ConnectTimeout, ProtocolError, ReadError, ConnectError, PoolTimeout, ReadTimeout) # 需要重试的异常类型
 
         self.init_result_error_dict()
         
