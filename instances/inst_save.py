@@ -69,18 +69,34 @@ class Saver(object):
         return path
 
     def download_urls(self, task_list:list[tuple[str,str,str]], chain_mode="serial", show_progress=False):
-        fetcher = Fetcher()
+        """
+        下载给定的 URL 列表，并将其内容保存到指定的文件中。
+
+        :param task_list: list[tuple[str, str, str]] 
+                        每个元组包含三个元素:
+                        - 文件名 (str): 要保存内容的文件名
+                        - URL (str): 要下载内容的 URL
+                        - 文件后缀 (str): 要保存文件的后缀名（例如 '.txt', '.jpg' 等）
+        :param chain_mode: "serial" 或 "parallel" 
+                        - "serial": 任务链将串行执行
+                        - "parallel": 任务链将并行执行
+        :param show_progress: 是否显示下载和保存进度 (默认值为 False)
+        :return: 一个字典，包含每个任务的最终结果
+        """
+        fetcher = Fetcher()  # 创建用于获取 URL 内容的 Fetcher 实例
         fetch_manager = FetchManager(fetcher.getContent, execution_mode='thread',
-                                     progress_desc='urlsFetchProcess', show_progress=show_progress)
-        save_manager = SaveManager(self.save_content, execution_mode='serial',
-                                   progress_desc='urlsSaveProcess', show_progress=False)
-
-        chain = TaskChain([fetch_manager, save_manager], chain_mode)
-        chain.start_chain(task_list)
-
-        final_result_dict = chain.get_final_result_dict()
-        return final_result_dict
+                                    progress_desc='urlsFetchProcess', show_progress=show_progress)
         
+        save_manager = SaveManager(self.save_content, execution_mode='serial',
+                                progress_desc='urlsSaveProcess', show_progress=False)
+
+        # 创建 TaskChain 来管理 Fetch 和 Save 两个阶段的任务处理
+        chain = TaskChain([fetch_manager, save_manager], chain_mode)
+        chain.start_chain(task_list)  # 开始任务链
+
+        final_result_dict = chain.get_final_result_dict()  # 获取任务链的最终结果字典
+        return final_result_dict  # 返回结果
+
     async def download_urls_async(self, task_list:list[tuple[str,str,str]]):
         # await self.fetcher.start_session()
         # await self.fetch_threader.start_async(task_list)

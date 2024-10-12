@@ -1,4 +1,5 @@
 import types, sys
+from mpmath import mp
 from typing import Callable
 from time import strftime, localtime
 
@@ -80,3 +81,24 @@ def get_total_size(obj, seen=None):
     elif isinstance(obj, (list, tuple, set, frozenset)):
         size += sum(get_total_size(i, seen) for i in obj)
     return size
+
+def pi_digits(start, end):
+    """
+    获取π的指定小数位
+    
+    :param start: 起始位置（1-indexed）
+    :param end: 结束位置（1-indexed）
+    :return: π的指定小数位
+    """
+    # 设置mpmath的精度，至少需要end位小数
+    mp.dps = end + 2  # 加2以确保足够的精度
+    pi_str = str(mp.pi)[2:]  # 获取π的字符串形式，去掉"3."
+    
+    # 判断起始和结束位置是否合理
+    if start < 1 or end < start:
+        return "Invalid input. Ensure start >= 1 and end >= start."
+    
+    # 转换成0索引并获取对应的数字序列
+    digits = [d for d in pi_str[start-1:end]]
+    
+    return ''.join(digits)

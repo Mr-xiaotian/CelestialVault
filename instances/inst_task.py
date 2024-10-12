@@ -526,20 +526,6 @@ class ExampleTaskManager(TaskManager):
         在这个示例中，我们只是简单地返回结果
         """
         return result
-    
-    def handle_error_dict(self):
-        """
-        处理任务执行后的所有错误
-
-        在这个示例中，我们只是简单地打印错误信息
-        """
-        if not self.get_error_dict():
-            return
-        error_dict = self.get_error_dict()
-        error_len = len(error_dict)
-        # for num,(task, error) in enumerate(error_dict.items()):
-        #     logger.error(f"Task {self.get_task_info(task)}(index:{num+1}/{error_len})")
-        task_logger.logger.error(f'There are total {error_len} errors.')
 
 class TaskChain:
     def __init__(self, stages, chain_mode='serial'):
