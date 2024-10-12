@@ -60,24 +60,15 @@ def test_task_chain():
     stage2 = ExampleTaskManager(square, execution_mode='serial', worker_limit=4, show_progress=False)
 
     # 初始化 TaskChain
-    chain_mode = 'serial'
-    chain = TaskChain([stage1, stage2], chain_mode)
+    chain = TaskChain([stage1, stage2])
 
     # 要测试的任务列表
     tasks_0 = range(25,31)
     tasks_1 = list(range(25,32)) + [0, 27, None, 0, '']
 
     # 开始任务链
-    start_time = time()
-    chain.start_chain(tasks_1)
-    logging.info(f'TaskChain completed in {time() - start_time} seconds by {chain_mode}.')
-
-    # 打印结果
-    final_result_dict = chain.get_final_result_dict()
-    logging.info(f"Final result dict: {final_result_dict}.")
-
-    final_error_dict = chain.get_final_error_dict()
-    logging.info(f"Final error dict: {final_error_dict}.")
+    result = chain.test_methods(tasks_1)
+    logging.info(result)
 
 def profile_task_chain():
     target_func = 'test_task_manager'

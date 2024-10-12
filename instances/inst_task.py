@@ -457,7 +457,7 @@ class TaskManager:
         """
         return self.error_dict
     
-    def shutdown_pools(self):
+    def release_resources(self):
         """
         关闭线程池和进程池，释放资源
         """
@@ -472,6 +472,15 @@ class TaskManager:
                 self.process_pool.shutdown(wait=True)
         except Exception as e:
             task_logger.logger.error(f"Error during process pool shutdown: {e}")
+
+    def clean_env(self):
+        self.release_resources()
+        
+        self.task_queue = None
+        self.result_queue = None
+        
+        self.thread_pool = None
+        self.process_pool = None
     
     def test_methods(self, task_list):
         # Prepare the results dictionary
@@ -506,7 +515,7 @@ class TaskManager:
         return results
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.shutdown_pools()
+        self.clean_env()
 
 
 # As an example of use, we redefine the subclass of TaskManager
@@ -535,6 +544,9 @@ class TaskChain:
         self.stages: List[TaskManager] = stages
         self.chain_mode = chain_mode
 
+        self.init_dict()
+
+    def init_dict(self):
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
         self.final_error_dict = defaultdict(list)  # 用于保存初始任务到最终错误的映射
 
@@ -574,8 +586,10 @@ class TaskChain:
         for stage in self.stages:
             stage.start(stage_tasks)
             stage_tasks = stage.get_result_dict().values()
+
         self.process_final_result_dict(tasks)
         self.handle_final_error_dict()
+        self.release_resources([], None, [])
 
     def run_chain_in_process(self, tasks):
         """
@@ -587,7 +601,7 @@ class TaskChain:
         # 为每个stage创建独立的共享result_dict
         manager = multiprocessing.Manager()
         stage_result_dicts = [manager.dict() for _ in self.stages]
-        stage_error_dicts = [manager.dict() for _ in self.stages]  # 创建共享的 error_dict
+        stage_error_dicts = [manager.dict() for _ in self.stages]
         
         # 向第一个队列添加初始任务
         for task in tasks:
@@ -630,7 +644,7 @@ class TaskChain:
 
         # 关闭所有stage的线程池
         for stage in self.stages:
-            stage.shutdown_pools()
+            stage.clean_env()
             
     def process_final_result_dict(self, initial_tasks):
         """
@@ -670,3 +684,31 @@ class TaskChain:
         返回最终错误字典
         """
         return self.final_error_dict
+    
+    def test_methods(self, task_list):
+        """
+        测试 TaskChain 在 'serial' 和 'process' 模式下的执行时间。
+        
+        :param task_list: 任务列表，格式为 list[tuple[str, str, str]]，每个任务包含文件名、URL和保存的文件后缀
+        :return: 包含两种执行模式下的执行时间的字典
+        """
+        results = {}
+
+        # 测试 serial 模式
+        start_time = time()
+        self.init_dict()
+        self.set_chain_mode('serial')
+        self.start_chain(task_list)
+        results['serial chain'] = time() - start_time
+        
+        # 测试 process 模式
+        start_time = time()
+        self.init_dict()
+        self.set_chain_mode('process')
+        self.start_chain(task_list)
+        results['process chain'] = time() - start_time
+
+        results['Final result dict'] = self.get_final_result_dict()
+        results['Final error dict'] = self.get_final_error_dict()
+
+        return results
