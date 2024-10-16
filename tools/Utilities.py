@@ -1,4 +1,5 @@
 import types, sys
+import random
 from mpmath import mp
 from typing import Callable
 from time import strftime, localtime
@@ -102,3 +103,19 @@ def pi_digits(start, end):
     digits = [d for d in pi_str[start-1:end]]
     
     return ''.join(digits)
+
+def generate_random_number(n):
+    """
+    生成一个n位随机数
+
+    :param n: 随机数的位数
+    :return: 随机数
+    """
+    if n <= 0:
+        raise ValueError("Number of digits must be greater than zero.")
+    
+    digits = [random.randint(0, 9) for _ in range(n)]
+    
+    # Combine the digits into a single number
+    random_number_str = ''.join(map(str, digits))
+    return random_number_str

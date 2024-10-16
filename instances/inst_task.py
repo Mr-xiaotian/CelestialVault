@@ -661,7 +661,7 @@ class TaskChain:
                     stage_task = (stage.get_error_dict()[stage_task], stage.func.__name__, stage_index)
                     break
                 else:
-                    stage_task = Exception(f"Task {stage_task} not found in stage {stage_index} dict, stage func is {stage.func.__name__}.")
+                    stage_task = Exception(f"Task not found in stage {stage_index} dict, stage func is {stage.func.__name__}.")
                     break
             self.final_result_dict[initial_task] = stage_task
 
@@ -689,7 +689,7 @@ class TaskChain:
         """
         测试 TaskChain 在 'serial' 和 'process' 模式下的执行时间。
         
-        :param task_list: 任务列表，格式为 list[tuple[str, str, str]]，每个任务包含文件名、URL和保存的文件后缀
+        :param task_list: 任务列表
         :return: 包含两种执行模式下的执行时间的字典
         """
         results = {}
