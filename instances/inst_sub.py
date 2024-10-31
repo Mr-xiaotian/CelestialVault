@@ -2,17 +2,29 @@ import re
 from pathlib import Path
 from html import unescape
 from urllib.parse import unquote
+from tools.TextTools import safe_open_txt, pro_slash
+from tools.FileOperations import handle_folder
 
 
 class Suber:
     def __init__(self):
+        # Characters that need both lookbehind and lookahead checks
+        self.both_check_chars = '#|◆|\*|＊|=|＝|…|_|～|—|－'
+        
+        # Characters that need only lookahead checks
+        self.lookahead_only_chars = ']|』|」|】|》|\)|）|\}|\!|！|\?|？|\||”|"|\.|。|章|：|:'
+        
+        # Characters that need only lookbehind checks
+        self.lookbehind_only_chars = '第|（|\(|\{'
+
         self.special_character_removal = [
             ('(\t|\r|\f|\v|\0|　|| )+', ''),  # 移除制表符、回车符、换页符、垂直制表符、空字符、全角空格和特殊符号
             ('\~', '-'),  # 将波浪号替换为连字符
         ]
 
         self.newline_handling = [
-            ('(?<!－|#|＊|◆|\*|=|＝|…|～|。|]|』|」|】|》|\)|）|!|！|\?|？|—|”|"|_|\.)\n', ''),  # 移除不在某些标点符号后的换行符
+            # 移除不在某些标点符号后的换行符
+            (f"(?<!{self.both_check_chars}|{self.lookahead_only_chars})(\n+)(?!{self.both_check_chars}|{self.lookbehind_only_chars})", ''), 
             ('(?<!\n)\n(?!\n)', '\n\n'),  # 确保单独的换行符前后有两个换行符
             ('(\n){3,}', '\n\n'),  # 限制连续换行符的数量为最多2个
         ]
@@ -38,15 +50,11 @@ class Suber:
         ]
 
     def clear_book_folder(self, folder_path: Path | str, execution_mode: str = 'thread'):
-        from tools.FileOperations import handle_folder
-
         rules = {"txt": (self.clear_book, lambda a: a)}
 
         return handle_folder(folder_path, rules, execution_mode, progress_desc='Clearing book folder')
         
     def clear_book(self, book_path: Path, new_path: Path):
-        from tools.TextTools import safe_open_txt
-        
         book_text = safe_open_txt(book_path)
 
         if book_text is None:
@@ -57,15 +65,11 @@ class Suber:
         new_path.write_text(book_text, encoding='utf-8')
 
     def clear_text(self, text):
-        from tools.TextTools import pro_slash
         text = pro_slash(text)
         text = unquote(unescape(text))
         
         for sub in self.sub_text_list:
             text = re.sub(sub[0], sub[1], text, flags = re.S)
-
-        #re_png = '<([0-9a-z]+)>'
-        #png_list = re.findall(re_png, text)
         
         return text
 
