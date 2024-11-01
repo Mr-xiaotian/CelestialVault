@@ -104,18 +104,23 @@ def pi_digits(start, end):
     
     return ''.join(digits)
 
-def generate_random_number(n):
+def generate_random_number(n, numbers=1):
     """
     生成一个n位随机数
 
     :param n: 随机数的位数
+    :param numbers: 随机数的个数
     :return: 随机数
     """
     if n <= 0:
         raise ValueError("Number of digits must be greater than zero.")
     
-    digits = [random.randint(0, 9) for _ in range(n)]
+    random_number_str_list = []
+    for _ in range(numbers):
+        digits = [random.randint(0, 9) for _ in range(n)]
     
-    # Combine the digits into a single number
-    random_number_str = ''.join(map(str, digits))
-    return random_number_str
+        # Combine the digits into a single number
+        random_number_str = ''.join(map(str, digits))
+        random_number_str_list.append(random_number_str)
+
+    return random_number_str_list
