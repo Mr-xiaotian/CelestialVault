@@ -36,7 +36,7 @@ def get_pi_digits_from_ranges(position_list):
     """
     return ''.join([get_pi_digits(pos[0], pos[1]) for pos in position_list])
 
-def find_sequence_in_pi(target, segment_len=5):
+def segment_search_in_pi(target, segment_len=5):
     """
     在π的字符串表示中查找目标数字的位置
 
@@ -71,15 +71,7 @@ def find_sequence_in_pi(target, segment_len=5):
     pi_str = PI_STR_1E6[2:]  # 移除 '3.' 部分
     target_str = str(target).replace('-', '')
 
-    # 尝试查找完整数字
-    start_pos = pi_str.find(target_str)
-
-    if start_pos != -1:
-        # 计算最后一个位置
-        end_pos = start_pos + len(target_str)
-        return {target_str: [(start_pos + 1, end_pos)]}
-
-    # 如果找不到完整数字，进行分段查找
+    # 进行分段查找
     position_results = {}
     position_results[target_str] = []  # 用于按顺序存储每个分段的位置信息
 
@@ -95,6 +87,42 @@ def find_sequence_in_pi(target, segment_len=5):
 
     # 开始分段查找
     segment_search(target_str, segment_len)
+    
+    return position_results
+
+def greedy_search_in_pi(target):
+    """
+    在 π 的字符串表示中使用贪婪搜索查找目标数字的位置。
+    
+    :param target: 要查找的目标数字
+    :return: 包含每个部分位置信息的字典
+    """
+    pi_str = PI_STR_1E6[2:]  # 移除 '3.'
+    target_str = str(target).replace('-', '')
+    position_results = {}
+    position_results[target_str] = []
+
+    def greedy_find(remaining_str):
+        # 从完整字符串逐步减少末尾字符，直到找到匹配
+        for i in range(len(remaining_str), 0, -1):
+            substring = remaining_str[:i]
+            start_pos = pi_str.find(substring)
+            
+            if start_pos != -1:
+                end_pos = start_pos + len(substring)
+                position = (start_pos + 1, end_pos)
+                position_results[substring] = position
+                position_results[target_str].append(position)
+                
+                # 对剩余部分递归调用
+                remaining_part = remaining_str[i:]
+                if remaining_part:
+                    greedy_find(remaining_part)
+                
+                break
+
+    # 开始贪婪搜索
+    greedy_find(target_str)
     
     return position_results
 
