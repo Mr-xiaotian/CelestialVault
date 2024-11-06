@@ -317,8 +317,8 @@ def combine_txt_files(folder_path: str | Path):
         """
         从文件名中提取数字，用于排序。
         """
-        match = re.search(r'\d+', file_name.name)
-        return int(match.group()) if match else 0
+        matches = re.findall(r'\d+', file_name.name)
+        return int(''.join(matches)) if matches else float('inf')
 
     # 转换路径为 Path 对象
     folder_path = Path(folder_path)
@@ -346,3 +346,21 @@ def combine_txt_files(folder_path: str | Path):
                 outfile.write(content + "\n\n")
 
     print(f"All files have been combined into {output_file_path}")
+
+def character_ratio(target_str):
+    """
+    统计字符串中各个字符的出现比率
+
+    :param target_str: 目标字符串
+    :return: 各个字符及其出现比率的字典
+    """
+    total_length = len(target_str)
+    frequency = {}
+
+    for char in target_str:
+        frequency[char] = frequency.get(char, 0) + 1
+
+    # 将频率转换为比率
+    ratio = {char: count / total_length for char, count in frequency.items()}
+    
+    return ratio

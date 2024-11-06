@@ -41,7 +41,7 @@ def segment_search_in_pi(target, segment_len=5):
     在π的字符串表示中查找目标数字的位置
 
     :param target: 要查找的目标数字
-    :param segment_len: 查找的初始分段长度, 默认为5, 当为-1时为数字长度的一半
+    :param segment_len: 查找的初始分段长度, 默认为5, 当为-1时为数字长度的一半, 当为-2时为数字长度减一
     :return: 目标数字在π中的位置信息
     """
     def get_segment_len_by_half(target_len):
@@ -71,7 +71,15 @@ def segment_search_in_pi(target, segment_len=5):
     pi_str = PI_STR_1E6[2:]  # 移除 '3.' 部分
     target_str = str(target).replace('-', '')
 
-    # 进行分段查找
+    # 尝试查找完整数字
+    start_pos = pi_str.find(target_str)
+
+    if start_pos != -1:
+        # 计算最后一个位置
+        end_pos = start_pos + len(target_str)
+        return {target_str: [(start_pos + 1, end_pos)]}
+
+    # 如果找不到完整数字，进行分段查找
     position_results = {}
     position_results[target_str] = []  # 用于按顺序存储每个分段的位置信息
 
@@ -81,6 +89,9 @@ def segment_search_in_pi(target, segment_len=5):
         segment_len = get_segment_len(len(target_str))
     elif segment_len == -2:
         get_segment_len = get_segment_len_by_decrement
+        segment_len = get_segment_len(len(target_str))
+    elif segment_len > len(target_str):
+        get_segment_len = get_segment_len_by_half
         segment_len = get_segment_len(len(target_str))
     else:
         get_segment_len = get_segment_len_by_decrement
@@ -97,12 +108,7 @@ def greedy_search_in_pi(target):
     :param target: 要查找的目标数字
     :return: 包含每个部分位置信息的字典
     """
-    pi_str = PI_STR_1E6[2:]  # 移除 '3.'
-    target_str = str(target).replace('-', '')
-    position_results = {}
-    position_results[target_str] = []
-
-    def greedy_find(remaining_str):
+    def greedy_search(remaining_str):
         # 从完整字符串逐步减少末尾字符，直到找到匹配
         for i in range(len(remaining_str), 0, -1):
             substring = remaining_str[:i]
@@ -117,12 +123,27 @@ def greedy_search_in_pi(target):
                 # 对剩余部分递归调用
                 remaining_part = remaining_str[i:]
                 if remaining_part:
-                    greedy_find(remaining_part)
+                    greedy_search(remaining_part)
                 
                 break
+            
+    pi_str = PI_STR_1E6[2:]  # 移除 '3.'
+    target_str = str(target).replace('-', '')
+
+    # 尝试查找完整数字
+    start_pos = pi_str.find(target_str)
+
+    if start_pos != -1:
+        # 计算最后一个位置
+        end_pos = start_pos + len(target_str)
+        return {target_str: [(start_pos + 1, end_pos)]}
+    
+    # 如果找不到完整数字，进行贪婪搜索
+    position_results = {}
+    position_results[target_str] = []
 
     # 开始贪婪搜索
-    greedy_find(target_str)
+    greedy_search(target_str)
     
     return position_results
 
@@ -167,3 +188,23 @@ def find_all_combinations_ratio(target_sequence, digit_length):
             found_count += 1
     
     return found_count / (end-start)
+
+def digit_frequency(target_str):
+    """
+    统计字符串中各个数字的出现比率
+
+    :param target_str: 目标数字字符串
+    :return: 各个数字及其出现比率的字典
+    """
+    frequency = {}
+    total_length = 0
+
+    for digit in target_str:
+        if digit.isdigit():  # 只统计数字字符
+            frequency[digit] = frequency.get(digit, 0) + 1
+            total_length += 1
+
+    # 将频率转换为比率
+    ratio = {char: count / total_length for char, count in frequency.items()}
+
+    return ratio
