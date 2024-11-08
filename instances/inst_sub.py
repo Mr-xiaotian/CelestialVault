@@ -17,14 +17,17 @@ class Suber:
         # Characters that need only lookbehind checks
         self.lookbehind_only_chars = '第|（|\(|\{'
 
+        self.regex_remove_unwanted_newlines = [
+            # 移除不在某些标点符号后的换行符
+            (f"(?<!{self.both_check_chars}|{self.lookahead_only_chars})(\n+)(?!{self.both_check_chars}|{self.lookbehind_only_chars})", ''), 
+        ]
+
         self.special_character_removal = [
-            ('(\t|\r|\f|\v|\0|　|| )+', ''),  # 移除制表符、回车符、换页符、垂直制表符、空字符、全角空格和特殊符号
+            ('(?<=\n)(\t|\r|\f|\v|\0|　|| )+', ''),  # 移除制表符、回车符、换页符、垂直制表符、空字符、全角空格和特殊符号
             ('\~', '-'),  # 将波浪号替换为连字符
         ]
 
         self.newline_handling = [
-            # 移除不在某些标点符号后的换行符
-            (f"(?<!{self.both_check_chars}|{self.lookahead_only_chars})(\n+)(?!{self.both_check_chars}|{self.lookbehind_only_chars})", ''), 
             ('(?<!\n)\n(?!\n)', '\n\n'),  # 确保单独的换行符前后有两个换行符
             ('(\n){3,}', '\n\n'),  # 限制连续换行符的数量为最多2个
         ]
