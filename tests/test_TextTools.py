@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import pytest
 import logging
-from tools.TextTools import pro_slash, str_to_dict, language_fingerprint, caculate_valid_text
+from tools.TextTools import pro_slash, str_to_dict, language_fingerprint, calculate_valid_text
 
 def test_pro_slash():
     string_a = '(W//R\S/H\\U)'
@@ -26,11 +26,18 @@ def test_pro_slash():
     logging.info(f"{'Actual output2':<16}: {slash_c}")
 
 def test_str_to_dict():
-    test_string = "key1:value1\nkey2:value2\n\n:key3:value3"
-    result_dict = str_to_dict(test_string)
-    logging.info(f"{'Test input':<15}:\n{test_string}")
+    test_str_0 = "key1:value1\nkey2:value2\n\n:key3:value3"
+    test_str_1 = "key1=value1; key2=value2; key3= ; key4=value4"
+
+    result_dict_0 = str_to_dict(test_str_0)
+    logging.info(f"{'Test 0 input':<15}:\n{test_str_0}")
     logging.info(f"{'Expected output':<15}: {{'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}}")
-    logging.info(f"{'Actual output':<15}: {result_dict}")
+    logging.info(f"{'Actual output':<15}: {result_dict_0}\n")
+    
+    result_dict_1 = str_to_dict(test_str_1, split_str=';', partition_str='=')
+    logging.info(f"{'Test 1 input':<15}:\n{test_str_1}")
+    logging.info(f"{'Expected output':<15}: {{'key1': 'value1', 'key2': 'value2', 'key3': '', 'key4': 'value4'}}")
+    logging.info(f"{'Actual output':<15}: {result_dict_1}")
 
 def test_language_fingerprint():
     return
@@ -39,7 +46,7 @@ def test_language_fingerprint():
     fingerprint = language_fingerprint(text)
     logging.info(f"{'fingerprint':<15}:\n{fingerprint}")
 
-def test_caculate_valid_text():
+def test_calculate_valid_text():
     text = """
     ★ 《亚洲周刊》2020年度十大小说
     ★ 豆瓣读书2020年度中国文学（小说类）Top1
@@ -84,4 +91,8 @@ def test_caculate_valid_text():
 
     ——第四届宝珀理想国文学奖 授奖词"""
 
-    print(caculate_valid_text(text))
+    result = calculate_valid_text(text)
+
+    # logging.info(f"{'Test input':<15}:\n{text}")
+    logging.info(f"{'Actual output':<15}: {result}")
+

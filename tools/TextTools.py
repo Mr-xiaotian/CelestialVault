@@ -39,26 +39,27 @@ def pro_slash(input_str: str) -> str:
     
     return result_str
 
-def str_to_dict(string: str, spli_str: str = "\n") -> Dict[str, str]:
+def str_to_dict(string: str, split_str: str = "\n", partition_str: str = ":") -> Dict[str, str]:
     """
     将字符串转化为字典，每行格式为 `key:value`，以指定的分隔符分隔行。
 
-    :param string (str): 包含键值对的字符串，每行一个键值对。
-    :param spli_str (str): 用于分隔行的字符串，默认是换行符。
-    :return Dict[str, str]: 转化后的字典。
+    :param string: 包含键值对的字符串，每行一个键值对。
+    :param split_str: 用于分隔行的字符串，默认是换行符。
+    :param partition_str: 用于分隔键和值的字符，默认是冒号。
+    :return: 转化后的字典。
     """
     # 使用列表推导式去除空字符串
-    string_list = [line for line in string.split(spli_str) if line.strip()]
+    string_list = [line for line in string.split(split_str) if line.strip()]
 
     headers = {}
 
     for line in string_list:
         # 去掉行首的冒号
-        if line.startswith(':'):
+        if line.startswith(partition_str):
             line = line[1:]
         
         # 分割键和值
-        key, _, value = line.partition(':')
+        key, _, value = line.partition(partition_str)
         headers[key.strip()] = value.strip()
 
     return headers
@@ -74,6 +75,13 @@ def str_removes(strs: str, _remove: str) -> str:
     return strs.replace(_remove, '')
 
 def str_replaces(strs: str, replace_list: list[Tuple[str, str]]) -> str:
+    """
+    从字符串中移除指定的子串。
+
+    :param strs (str): 原始字符串。
+    :param replace_list (list[Tuple[str, str]]): 需要替换的子串列表。
+    :return str: 替换指定子串后的新字符串。
+    """
     for r in replace_list:
         strs = strs.replace(r[0], r[1])
     return strs
@@ -94,24 +102,6 @@ def iprint(obj: Union[List, Dict], start='', end=''):
         print(f'(此处省略{length-15}项)')
         pprint(obj[-5:])
     print(end, end='')
-
-def deal_cookie(*cookies):
-    """
-    处理cookie，将cookie字符串转化为字典。
-    """
-    cookie_dicts = []
-    for cookie in cookies:
-        #cookie += '; '
-
-        cookie_list = cookie.split('; ')
-        cookie_dict = {}
-        for c_l in cookie_list:
-            #print(c_l)
-            key,_,value = c_l.partition('=')
-            cookie_dict[key] = value
-        cookie_dicts.append(cookie_dict)
-
-    return cookie_dicts
 
 def string_split(string: str, split_str: str='\n') -> list[str]:
     """
