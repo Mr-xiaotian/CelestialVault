@@ -39,7 +39,7 @@ def test_task_manager():
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
 
     manager = ExampleTaskManager(fibonacci, worker_limit=6, show_progress=True)
-    results = manager.test_methods(test_task_1)
+    results = manager.test_methods(test_task_0)
     logging.info(results)
 
 # 测试 TaskManager 的异步任务
@@ -50,7 +50,7 @@ async def test_task_manager_async():
 
     manager = ExampleTaskManager(fibonacci_async, worker_limit=6, show_progress=True)
     start = time()
-    await manager.start_async(test_task_1)
+    await manager.start_async(test_task_0)
     logging.info(f'run_in_async: {time() - start}')
 
 # 测试 TaskChain 的功能
