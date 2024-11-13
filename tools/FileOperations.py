@@ -439,6 +439,7 @@ def move_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]], targ
 def folder_to_file_path(folder_path: Path, file_extension: str) -> Path:
     """
     将文件夹路径转换为与文件夹同名的文件路径。
+    例如，给定文件夹路径 '/home/user/folder1' 和文件扩展名 'txt'，函数会返回文件路径 '/home/user/folder1.txt'。
 
     :param folder_path: 文件夹的路径。
     :param file_extension: 文件扩展名。
@@ -453,3 +454,20 @@ def folder_to_file_path(folder_path: Path, file_extension: str) -> Path:
     file_path = parent_dir / file_name
     
     return file_path
+
+def replace_filenames(path: Path | str, old_char: str, new_char: str):
+    """
+    替换文件夹中所有文件名中的指定字符。
+
+    遍历指定文件夹，将其中每个文件的文件名中的 `old_char` 替换为 `new_char`。
+
+    :param path: 文件夹的路径。
+    :param old_char: 需要被替换的字符。
+    :param new_char: 替换后的新字符。
+    """
+    path = Path(path)  # 将传入的路径转换为Path对象
+    for file in path.iterdir():  # 使用iterdir()遍历目录中的文件和子目录
+        if file.is_file():  # 检查是否为文件
+            new_filename = file.name.replace(old_char, new_char)
+            new_file_path = file.with_name(new_filename)  # 使用with_name方法生成新文件路径
+            file.rename(new_file_path)  # 重命名文件

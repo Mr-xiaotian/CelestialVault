@@ -1,6 +1,7 @@
-import fitz, shutil
+import fitz, shutil, re
 import markdown
 import pdfkit
+import PyPDF2
 from PIL import Image
 from pathlib import Path
 
@@ -74,3 +75,39 @@ def compress_pdf(old_pdf_path: str | Path, new_pdf_path: str | Path):
     combine_imgs_to_pdf(temp_img_path, new_pdf_path)
     shutil.rmtree(temp_img_path)
 
+def merge_pdfs_in_order(folder_path: str | Path, pdf_path: str | Path = None):
+    """
+    将指定文件夹下的所有PDF文件按照指定顺序拼接，并输出到指定文件名的PDF文件中。
+    :param folder_path: 存放PDF文件的文件夹路径。
+    :return: None。
+    """
+    def extract_number(file_name: Path) -> int:
+        """
+        从文件名中提取数字，用于排序。
+        """
+        matches = re.findall(r'\d+', file_name.name)
+        return int(''.join(matches)) if matches else float('inf')
+    
+    from tools.FileOperations import folder_to_file_path
+    # 创建一个PdfWriter对象，用于输出拼接后的PDF文件
+    output_pdf = PyPDF2.PdfWriter()
+    
+    # 使用pathlib.Path来处理路径
+    folder_path = Path(folder_path)
+    
+    # 获取该文件夹下的所有PDF文件，并根据文件名中的数字进行排序
+    pdf_files = sorted(folder_path.glob('*.pdf'), key=extract_number)
+
+    output_filename = folder_to_file_path(folder_path, 'pdf')  # 拼接输出文件路径
+
+    # 按照指定顺序依次合并PDF文件
+    for pdf_file in pdf_files:
+        with open(pdf_file, 'rb') as f:
+            pdf_reader = PyPDF2.PdfReader(f)
+            for page in pdf_reader.pages:
+                output_pdf.add_page(page)
+    
+    # 将输出对象中的内容写入到输出文件中
+    with open(output_filename, 'wb') as f:
+        output_pdf.write(f)
+    print(f'PDF files from {folder_path.name} have been merged into {output_filename}')

@@ -354,3 +354,39 @@ def character_ratio(target_str):
     ratio = {char: count / total_length for char, count in frequency.items()}
     
     return ratio
+
+def get_similar_part(str1: str, str2: str):
+    """
+    寻找两个字符串的相似部分, 输出给定两字符串间的相似部分的拼接, 拼接处用"-"填充, 例如: 
+    输入"fountain"和"mountain", 输出"-ountain"; 输入"broom"和"bloom", 输出"b-oom"; 输入"wagon"和"weagon", 输出"w-agon"
+    """
+
+    # 寻找两个字符串的相似部分
+    min_len = min(len(str1), len(str2))
+    max_len = max(len(str1), len(str2))
+    common_prefix = ''
+    common_suffix = ''
+    
+    # 先找到相同的前缀
+    for i in range(min_len):
+        if str1[i] == str2[i]:
+            common_prefix += str1[i]
+        else:
+            break
+    
+    # 然后找到相同的后缀
+    for i in range(min_len):
+        if str1[-(i + 1)] == str2[-(i + 1)]:
+            common_suffix = str1[-(i + 1)] + common_suffix
+        else:
+            break
+
+    # 根据前缀和后缀确定中间部分
+    if common_prefix == '' and common_suffix == '':
+        return '-'  # 如果没有相似部分，返回 '-'
+    
+    mid = max_len - len(common_prefix) - len(common_suffix)
+    if mid > 0:
+        return common_prefix + '-' + common_suffix
+    else:
+        return common_prefix + common_suffix
