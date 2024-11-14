@@ -2,29 +2,30 @@
 #版本 2.10
 #作者：晓天
 
-from tools.TextTools import strings_split
+from tools.TextTools import strings_split, myers_diff
 from tools.ListDictTools import dictkey_mix
 
 class Findiffer:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, norm_end: str = '[', diff_end: str = ']') -> None:
+        '''
+        :param norm_end: can use '\033[0m' '_' '[' or others.
+        :param diff_end: can use '\033[1m' '_' ']' or others.
+        '''
+        self.norm_end = norm_end
+        self.diff_end = diff_end
 
-    def fd_str(self, string_a, string_b, split_str = '\n'):
-        # 打印出a和b的长度
-        print(f'len(a):{len(string_a)}, len(b):{len(string_b)}\n')
-        # 打印出a和b不同的地方
-        print(f'a与b不同的地方为(以{split_str}为划分):\n')
-
-        # 以split_str为分割符将a和b分割成多行
-        a,b = strings_split([string_a, string_b], split_str=split_str)
+    def fd_str(self, string_a, string_b, split_str = None):
+        # 以split_str为分割符将a和b分割
+        a,b = strings_split([string_a, string_b], split_str=split_str) if split_str else [[string_a], [string_b]]
         
-        # 比较a和b的每一行
-        for i in range(min(len(a),len(b))):
+        part_len = min(len(a),len(b))
+        # 比较a和b的每一部分
+        for i in range(part_len):
             if a[i] != b[i]:
                 # 如果a和b的每一行不同，则调用compare_strings()方法比较
                 self.compare_strings(a[i],b[i])
                 # 打印出每一行的行号
-                print('(第%d行)\n'%(i+1))
+                print('(第%d行)\n'%(i+1)) if part_len > 1 else print()
 
 
     def fd_dict(self, dict_a, dict_b):
@@ -51,57 +52,49 @@ class Findiffer:
             print('b中的特有标签值为')
             for key in dif_key_b:
                 print(f'{key} :\n{dict_b[key]}')
-                
+
     def compare_strings(self, str1: str, str2: str) -> None:
-        """
-        Compare two strings and print differences to stderr.
-        
-        Args:
-        str1: The first string to compare.
-        str2: The second string to compare.
-        """
-        diff_start_index = -1
+        similar_part = myers_diff(str1, str2)
+
+        diff_ranges_1 = self.get_diff_ranges(str1, similar_part)
+        diff_ranges_2 = self.get_diff_ranges(str2, similar_part)
+
+        self.print_diffs(str1, diff_ranges_1)
+        self.print_diffs(str2, diff_ranges_2)
+
+    def get_diff_ranges(self, str, similar_part):
         diff_ranges = []
-        longer_str = str1[:] if len(str1) >= len(str2) else str2[:]
-        shorter_str = str2[:] if len(str1) >= len(str2) else str1[:]
+        start_index = -1
+        end_index = -1
 
-        if str1 == str2:
-            print('完全一致')
-            return
-        
-        for idx in range(len(shorter_str)):
-            if str1[idx] == str2[idx]: 
-                if diff_start_index == -1:
-                    continue
-                diff_ranges.append((diff_start_index, idx))
-                # 重置diff_start_index 表示我们目前没有在记录差异区间
-                diff_start_index = -1
-            elif str1[idx] != str2[idx]:
-                if diff_start_index == -1:
-                    diff_start_index = idx
+        for index, similar_str in enumerate(similar_part):
+            if not similar_str:
+                if index == 0:
+                    start_index = 0
+                elif index == len(similar_part) - 1:
+                    end_index = len(str)
+                    diff_ranges.append([start_index, end_index])
+                continue
+            
+            end_index = str.find(similar_str)
+            diff_ranges.append([start_index, end_index]) if start_index != -1 else None
 
-        if diff_start_index != -1:
-            diff_ranges.append((diff_start_index, len(longer_str)))
-        elif not diff_ranges:
-            diff_ranges.append((len(shorter_str), len(longer_str)))
-                    
-        self.print_diffs(str1, diff_ranges)
-        self.print_diffs(str2, diff_ranges)
+            start_index = str.find(similar_str) + len(similar_str)
 
-    def print_diffs(self, input_str: str, diff_ranges: list, 
-                norm_end = '\033[0m', diff_end = '\033[1m') -> None:
+        return diff_ranges
+
+
+    def print_diffs(self, input_str: str, diff_ranges: list) -> None:
         """
         Print differences to stderr.
         
         :param input_str: The input string to print.
         :param diff_ranges: The ranges of differences to print.
-        :param norm_end: can use '\033[0m' '_' or others.
-        :param diff_end: can use '\033[1m' '_' or others.
         """
         prev_end_index = 0
         for start_index, end_index in diff_ranges:
             end_index = min(end_index, len(input_str))
-            print(input_str[prev_end_index:start_index], end = norm_end)
-            print(input_str[start_index:end_index], end = diff_end)
+            print(input_str[prev_end_index:start_index], end = self.norm_end)
+            print(input_str[start_index:end_index], end = self.diff_end)
             prev_end_index = end_index
         print(input_str[prev_end_index:])

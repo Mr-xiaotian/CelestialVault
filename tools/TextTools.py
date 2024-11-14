@@ -355,46 +355,17 @@ def character_ratio(target_str):
     
     return ratio
 
-def get_similar_part(str1: str, str2: str):
-    """
-    寻找两个字符串的相似部分，输出给定两字符串间的相似部分的拼接，拼接处用 "-" 填充。
-    例如：输入 "fountain" 和 "mountain"，输出 "-ountain";
-         输入 "broom" 和 "bloom"，输出 "b-oom";
-         输入 "wagon" 和 "weagon"，输出 "w-agon"
-    """
-    if str1 == str2:
-        return str1
-    
-    min_len = min(len(str1), len(str2))
-    common_prefix = ''
-    common_suffix = ''
-    
-    # 找到相同的前缀
-    for i in range(min_len):
-        if str1[i] == str2[i]:
-            common_prefix += str1[i]
-        else:
-            break
-    
-    # 找到相同的后缀，但跳过已匹配的前缀部分
-    prefix_length = len(common_prefix)
-    for i in range(min_len - prefix_length):
-        if str1[-(i + 1)] == str2[-(i + 1)]:
-            common_suffix = str1[-(i + 1)] + common_suffix
-        else:
-            break
-
-    # 返回拼接结果
-    if common_prefix or common_suffix:
-        return common_prefix + '-' + common_suffix
-    else:
-        return ''  # 如果没有相似部分，返回空字符串
-
-def myers_diff(str1: str, str2: str):
+def myers_diff(str1: str, str2: str) -> List[str]:
     """
     使用 Myers 差异算法思想，找出两个字符串的最大相似部分，并用 '-' 分隔每个相似部分。
     返回一个包含最大相似部分的字符串，如 "1-234-6"。
     """
+    def update_common(common_parts, current_part):
+        if current_part:
+            common_parts.append(''.join(reversed(current_part)))
+            current_part = []  # 重置当前部分
+        return common_parts, current_part
+
     # 获取两个字符串的长度
     len1, len2 = len(str1), len(str2)
     
@@ -416,33 +387,30 @@ def myers_diff(str1: str, str2: str):
 
     # 回溯寻找最长公共子序列，并分段记录
     while i > 0 and j > 0:
-        
         if str1[i - 1] == str2[j - 1]:  # 如果当前字符相同
             current_part.append(str1[i - 1])  # 将字符加入当前部分
+
+            if (i ==1 or j == 1):
+                common_parts, current_part = update_common(common_parts, current_part)
+                common_parts.append('') if i != j else None
+            
             i -= 1  # 移动到左上格子
             j -= 1
         elif dp[i - 1][j] >= dp[i][j - 1]:  # 如果上方格子值较大
-            if current_part:  # 检查当前是否有积累的连续部分
-                common_parts.append(''.join(reversed(current_part)))  # 将当前部分加入结果列表并反转顺序
-                current_part = []  # 重置当前部分
-            if (i == len1 and j == len2) or (i == j == 1): 
-                common_parts.append('')
+            common_parts, current_part = update_common(common_parts, current_part)
+            if (i == len1 or j == len2 or i == 1 or j == 1):
+                if not common_parts or common_parts[-1] != '': 
+                    common_parts.append('')
             i -= 1  # 移动到上方格子
             
         else:  # 左方格子值较大
-            if current_part:
-                common_parts.append(''.join(reversed(current_part)))  # 将当前部分加入结果列表并反转顺序
-                current_part = []  # 重置当前部分
-            if (i == len1 and j == len2) or (i == j == 1): 
+            common_parts, current_part = update_common(common_parts, current_part)
+            if (i == len1 or j == len2 or i == 1 or j == 1) and common_parts and common_parts[-1] != '':
                 common_parts.append('')
             j -= 1  # 移动到左方格子
-
-    # 处理最后一段连续的相似部分，如果存在
-    if current_part:
-        common_parts.append(''.join(reversed(current_part)))  # 将最后一段加入结果列表
 
     # 反转整个 common_parts 列表，因为回溯是从字符串的末尾开始
     common_parts.reverse()
 
     # 用 '-' 拼接多个相似部分并返回
-    return '-'.join(common_parts)
+    return common_parts
