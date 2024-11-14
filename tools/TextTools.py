@@ -363,8 +363,7 @@ def myers_diff(str1: str, str2: str) -> List[str]:
     def update_common(common_parts, current_part):
         if current_part:
             common_parts.append(''.join(reversed(current_part)))
-            current_part = []  # 重置当前部分
-        return common_parts, current_part
+        return common_parts, []  # 重置 current_part 为一个空列表
 
     # 获取两个字符串的长度
     len1, len2 = len(str1), len(str2)
@@ -405,8 +404,9 @@ def myers_diff(str1: str, str2: str) -> List[str]:
             
         else:  # 左方格子值较大
             common_parts, current_part = update_common(common_parts, current_part)
-            if (i == len1 or j == len2 or i == 1 or j == 1) and common_parts and common_parts[-1] != '':
-                common_parts.append('')
+            if (i == len1 or j == len2 or i == 1 or j == 1):
+                if not common_parts or common_parts[-1] != '': 
+                    common_parts.append('')
             j -= 1  # 移动到左方格子
 
     # 反转整个 common_parts 列表，因为回溯是从字符串的末尾开始
@@ -414,3 +414,25 @@ def myers_diff(str1: str, str2: str) -> List[str]:
 
     # 用 '-' 拼接多个相似部分并返回
     return common_parts
+
+def find_nth_occurrence(target_str: str, similar_str: str, occurrence: int) -> tuple:
+    """
+    查找目标字符串中指定第n次出现的子字符串位置，并返回其起始和结束索引。
+    
+    :param target_str: 目标字符串
+    :param similar_str: 待查找的子字符串
+    :param occurrence: 查找的第几次出现（从 1 开始计数）
+    :return: 子字符串在目标字符串中的起始和结束索引位置，若不存在则返回 (-1, -1)
+    """
+    start_index = -1  # 初始值，表示尚未找到
+    count = 0  # 用于计数找到的相同子字符串的次数
+
+    # 迭代查找目标字符串中的子字符串
+    while True:
+        start_index = target_str.find(similar_str, start_index + 1)
+        if start_index == -1:  # 如果没有找到
+            return (-1, -1)
+        
+        count += 1  # 增加找到的次数
+        if count == occurrence:  # 如果找到了指定次数的匹配
+            return (start_index, start_index + len(similar_str))  # 返回坐标

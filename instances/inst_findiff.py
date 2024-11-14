@@ -2,6 +2,7 @@
 #版本 2.10
 #作者：晓天
 
+from typing import List
 from tools.TextTools import strings_split, myers_diff
 from tools.ListDictTools import dictkey_mix
 
@@ -62,24 +63,30 @@ class Findiffer:
         self.print_diffs(str1, diff_ranges_1)
         self.print_diffs(str2, diff_ranges_2)
 
-    def get_diff_ranges(self, str, similar_part):
+    def get_diff_ranges(self, str: str, similar_part: List[str]) -> List[List[int]]:
+        """
+        根据myers_diff返回的相似部分，计算字符串中不同区域的位置
+        """
         diff_ranges = []
         start_index = -1
-        end_index = -1
+        end_index = 0
 
-        for index, similar_str in enumerate(similar_part):
+        for num, similar_str in enumerate(similar_part):
             if not similar_str:
-                if index == 0:
+                if num == 0:
                     start_index = 0
-                elif index == len(similar_part) - 1:
+                elif num == len(similar_part) - 1:
                     end_index = len(str)
                     diff_ranges.append([start_index, end_index])
                 continue
             
-            end_index = str.find(similar_str)
-            diff_ranges.append([start_index, end_index]) if start_index != -1 else None
+            if start_index != -1:
+                end_index = str[start_index:].find(similar_str) + start_index
+                diff_ranges.append([start_index, end_index])
+            else:
+                end_index = str.find(similar_str)
 
-            start_index = str.find(similar_str) + len(similar_str)
+            start_index = end_index + len(similar_str)
 
         return diff_ranges
 

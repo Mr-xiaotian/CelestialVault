@@ -17,6 +17,9 @@ def test_findiff():
     str_6 = "WBtopGlobal_register_version=2021070916"
     str_7 = 'wb_view_log=1536*8641.25'
 
+    str_8 = 'webim_unReadCount=%7B%22time%22%3A1625974572289%2C%22dm_pub_total%22%3A5%2C%22chat_group_client%22%3A0%2C%22chat_group_notice%22%3A0%2C%22allcountNum%22%3A83%2C%22msgbox%22%3A0%7'
+    str_9 = 'webim_unReadCount=%7B%22time%22%3A1625821623881%2C%22dm_pub_total%22%3A5%2C%22chat_group_client%22%3A0%2C%22chat_group_notice%22%3A0%2C%22allcountNum%22%3A83%2C%22msgbox%22%3A0%7D'
+
     # Create an instance of the Findiffer class
     findiffer = Findiffer('[', ']')
     print('\n')
@@ -26,3 +29,4 @@ def test_findiff():
     findiffer.fd_str(str_2, str_3)
     findiffer.fd_str(str_4, str_5)
     findiffer.fd_str(str_6, str_7)
+    findiffer.fd_str(str_8, str_9)
