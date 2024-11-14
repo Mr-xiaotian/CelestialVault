@@ -1,4 +1,4 @@
-import shutil
+import shutil, re
 import logging
 import hashlib
 import zipfile, rarfile, py7zr
@@ -455,19 +455,24 @@ def folder_to_file_path(folder_path: Path, file_extension: str) -> Path:
     
     return file_path
 
-def replace_filenames(path: Path | str, old_char: str, new_char: str):
+def replace_filenames(folder_path: Path | str, pattern: str, replacement: str):
     """
-    替换文件夹中所有文件名中的指定字符。
+    使用正则表达式替换文件夹中所有文件名中的匹配部分。
+    
+    遍历指定文件夹，将其中每个文件的文件名中的匹配内容替换为 `replacement`。
 
-    遍历指定文件夹，将其中每个文件的文件名中的 `old_char` 替换为 `new_char`。
-
-    :param path: 文件夹的路径。
-    :param old_char: 需要被替换的字符。
-    :param new_char: 替换后的新字符。
+    :param folder_path: 文件夹的路径。
+    :param pattern: 用于匹配文件名的正则表达式。
+    :param replacement: 替换后的新内容。
     """
-    path = Path(path)  # 将传入的路径转换为Path对象
-    for file in path.iterdir():  # 使用iterdir()遍历目录中的文件和子目录
-        if file.is_file():  # 检查是否为文件
-            new_filename = file.name.replace(old_char, new_char)
-            new_file_path = file.with_name(new_filename)  # 使用with_name方法生成新文件路径
-            file.rename(new_file_path)  # 重命名文件
+    folder_path = Path(folder_path)  # 将传入的路径转换为Path对象
+    for file in folder_path.glob('**/*'):  # 使用glob('**/*')遍历目录中的文件和子目录
+        if not file.is_file():  # 检查是否为文件
+            continue
+        
+        new_filename = re.sub(pattern, replacement, file.name)
+        if new_filename == file.name:
+            continue
+        
+        new_file_path = file.with_name(new_filename)  # 使用with_name方法生成新文件路径
+        file.rename(new_file_path)  # 重命名文件
