@@ -355,9 +355,9 @@ def character_ratio(target_str):
     
     return ratio
 
-def myers_diff(str1: str, str2: str) -> List[str]:
+def get_lcs(str1: str, str2: str) -> List[str]:
     """
-    使用 Myers 差异算法思想，找出两个字符串的最大相似部分，并用 '-' 分隔每个相似部分。
+    找出两个字符串的最大相似部分。
     返回一个包含最大相似部分的字符串，如 "1-234-6"。
     """
     def update_common(common_parts, current_part):
@@ -398,22 +398,37 @@ def myers_diff(str1: str, str2: str) -> List[str]:
         elif dp[i - 1][j] >= dp[i][j - 1]:  # 如果上方格子值较大
             common_parts, current_part = update_common(common_parts, current_part)
             if (i == len1 or j == len2 or i == 1 or j == 1):
-                if not common_parts or common_parts[-1] != '': 
+                if not (common_parts and common_parts[-1] == ''): 
                     common_parts.append('')
             i -= 1  # 移动到上方格子
             
         else:  # 左方格子值较大
             common_parts, current_part = update_common(common_parts, current_part)
             if (i == len1 or j == len2 or i == 1 or j == 1):
-                if not common_parts or common_parts[-1] != '': 
+                if not (common_parts and common_parts[-1] == ''): 
                     common_parts.append('')
             j -= 1  # 移动到左方格子
 
     # 反转整个 common_parts 列表，因为回溯是从字符串的末尾开始
     common_parts.reverse()
 
-    # 用 '-' 拼接多个相似部分并返回
     return common_parts
+
+def calculate_similarity(str1: str, str2: str) -> float:
+    """
+    计算两个字符串的相似度。
+    
+    :param str1: 第一个字符串
+    :param str2: 第二个字符串
+    :return: 相似度，范围在 0 到 1 之间
+    """
+    lcs_parts = get_lcs(str1, str2)
+    lcs_length = len(''.join(lcs_parts))
+    
+    max_length = max(len(str1), len(str2))
+    similarity = lcs_length / max_length if max_length > 0 else 0
+    
+    return similarity
 
 def find_nth_occurrence(target_str: str, similar_str: str, occurrence: int) -> tuple:
     """

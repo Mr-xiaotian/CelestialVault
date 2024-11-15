@@ -3,7 +3,7 @@
 #作者：晓天
 
 from typing import List
-from tools.TextTools import strings_split, myers_diff
+from tools.TextTools import strings_split, get_lcs, calculate_similarity
 from tools.ListDictTools import dictkey_mix
 
 class Findiffer:
@@ -22,60 +22,65 @@ class Findiffer:
         part_len = min(len(a),len(b))
         # 比较a和b的每一部分
         for i in range(part_len):
-            if a[i] != b[i]:
-                # 如果a和b的每一行不同，则调用compare_strings()方法比较
-                self.compare_strings(a[i],b[i])
-                # 打印出每一行的行号
-                print('(第%d行)\n'%(i+1)) if part_len > 1 else print()
+            if a[i] == b[i]:
+                continue
 
+            # 如果a和b的每一行不同，则调用compare_strings()方法比较
+            self.compare_strings(a[i],b[i])
 
-    def fd_dict(self, dict_a, dict_b):
-        # a_keys_values = [list(i) for i in zip(*dict_a.items())]    
+            similarity = calculate_similarity(a[i],b[i])
+            if part_len > 1:
+                print(f'(第{i+1}行, 相似度：{similarity})\n')
+            else:
+                print(f'(相似度：{similarity})\n')
+
+    def fd_dict(self, dict_a, dict_b):    
         key_max,key_min,dif_key_a,dif_key_b = dictkey_mix(
             dict_a,dict_b
             )
     
         for key in key_min:
             if dict_a[key] == dict_b[key]:
-                pass
-            else:
-                print(key, ':')
-                self.compare_strings(dict_a[key],dict_b[key])
-                print()
+                continue
+
+            print(f'{key}:')
+            self.compare_strings(dict_a[key], dict_b[key])
+            similarity = calculate_similarity(dict_a[key], dict_b[key])
+            print(f'(相似度：{similarity})\n')
                 
-        if dif_key_a != []:
+        if dif_key_a:
             print('a中的特有标签值为：')
             for key in dif_key_a:
                 print(f'{key} :\n{dict_a[key]}')
-        print()
+            print()
                 
-        if dif_key_b != []:
+        if dif_key_b:
             print('b中的特有标签值为')
             for key in dif_key_b:
                 print(f'{key} :\n{dict_b[key]}')
 
     def compare_strings(self, str1: str, str2: str) -> None:
-        similar_part = myers_diff(str1, str2)
+        lcs_part = get_lcs(str1, str2)
 
-        diff_ranges_1 = self.get_diff_ranges(str1, similar_part)
-        diff_ranges_2 = self.get_diff_ranges(str2, similar_part)
+        diff_ranges_1 = self.get_diff_ranges(str1, lcs_part)
+        diff_ranges_2 = self.get_diff_ranges(str2, lcs_part)
 
         self.print_diffs(str1, diff_ranges_1)
         self.print_diffs(str2, diff_ranges_2)
 
-    def get_diff_ranges(self, str: str, similar_part: List[str]) -> List[List[int]]:
+    def get_diff_ranges(self, str: str, lcs_part: List[str]) -> List[List[int]]:
         """
-        根据myers_diff返回的相似部分，计算字符串中不同区域的位置
+        根据get_lcs返回的相似部分，计算字符串中不同区域的位置
         """
         diff_ranges = []
         start_index = -1
         end_index = 0
 
-        for num, similar_str in enumerate(similar_part):
+        for num, similar_str in enumerate(lcs_part):
             if not similar_str:
                 if num == 0:
                     start_index = 0
-                elif num == len(similar_part) - 1:
+                elif num == len(lcs_part) - 1:
                     end_index = len(str)
                     diff_ranges.append([start_index, end_index])
                 continue
