@@ -62,39 +62,45 @@ class Findiffer:
     def compare_strings(self, str1: str, str2: str) -> None:
         lcs_part = get_lcs(str1, str2)
 
-        diff_ranges_1 = self.get_diff_ranges(str1, lcs_part)
-        diff_ranges_2 = self.get_diff_ranges(str2, lcs_part)
+        diff_ranges_1 = self.get_diff_ranges(str1, lcs_part[:])
+        diff_ranges_2 = self.get_diff_ranges(str2, lcs_part[:])
 
         self.print_diffs(str1, diff_ranges_1)
         self.print_diffs(str2, diff_ranges_2)
 
-    def get_diff_ranges(self, str: str, lcs_part: List[str]) -> List[List[int]]:
+    def get_diff_ranges(self, origin_str: str, lcs_part: List[str]) -> List[List[int]]:
         """
         根据get_lcs返回的相似部分，计算字符串中不同区域的位置
         """
-        diff_ranges = []
+        diff_ranges_reverse = []
         start_index = -1
         end_index = 0
+        str_len = len(origin_str)
+
+        str_reverse = origin_str[::-1]
+        lcs_part.reverse()
 
         for num, similar_str in enumerate(lcs_part):
-            if not similar_str:
+            similar_str_reverse = similar_str[::-1]
+            if not similar_str_reverse:
                 if num == 0:
                     start_index = 0
                 elif num == len(lcs_part) - 1:
-                    end_index = len(str)
-                    diff_ranges.append([start_index, end_index])
+                    end_index = str_len
+                    diff_ranges_reverse.append([start_index, end_index])
                 continue
             
             if start_index != -1:
-                end_index = str[start_index:].find(similar_str) + start_index
-                diff_ranges.append([start_index, end_index])
+                end_index = str_reverse[start_index:].find(similar_str_reverse) + start_index
+                diff_ranges_reverse.append([start_index, end_index])
             else:
-                end_index = str.find(similar_str)
+                end_index = str_reverse.find(similar_str_reverse)
 
-            start_index = end_index + len(similar_str)
+            start_index = end_index + len(similar_str_reverse)
+
+        diff_ranges = [[str_len - dr[1], str_len - dr[0]] for dr in diff_ranges_reverse[::-1]]
 
         return diff_ranges
-
 
     def print_diffs(self, input_str: str, diff_ranges: list) -> None:
         """
