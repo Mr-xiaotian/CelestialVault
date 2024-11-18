@@ -39,30 +39,30 @@ def pro_slash(input_str: str) -> str:
     
     return result_str
 
-def str_to_dict(string: str, split_str: str = "\n", partition_str: str = ":") -> Dict[str, str]:
+def str_to_dict(string: str, line_delimiter: str = "\n", key_value_delimiter: str = ":") -> Dict[str, str]:
     """
     将字符串转化为字典，每行格式为 `key:value`，以指定的分隔符分隔行。
 
     :param string: 包含键值对的字符串，每行一个键值对。
-    :param split_str: 用于分隔行的字符串，默认是换行符。
-    :param partition_str: 用于分隔键和值的字符，默认是冒号。
+    :param line_delimiter: 用于分隔行的字符串，默认是换行符。
+    :param key_value_delimiter: 用于分隔键和值的字符，默认是冒号。
     :return: 转化后的字典。
     """
-    # 使用列表推导式去除空字符串
-    string_list = [line for line in string.split(split_str) if line.strip()]
+    # 去除空行并分割成列表
+    lines = [line for line in string.split(line_delimiter) if line.strip()]
 
-    headers = {}
+    parsed_dict = {}
 
-    for line in string_list:
+    for line in lines:
         # 去掉行首的冒号
-        if line.startswith(partition_str):
+        if line.startswith(key_value_delimiter):
             line = line[1:]
-        
-        # 分割键和值
-        key, _, value = line.partition(partition_str)
-        headers[key.strip()] = value.strip()
 
-    return headers
+        # 分割键和值
+        key, _, value = line.partition(key_value_delimiter)
+        parsed_dict[key.strip()] = value.strip()
+
+    return parsed_dict
 
 def str_removes(strs: str, _remove: str) -> str:
     """
@@ -76,7 +76,7 @@ def str_removes(strs: str, _remove: str) -> str:
 
 def str_replaces(strs: str, replace_list: list[Tuple[str, str]]) -> str:
     """
-    从字符串中移除指定的子串。
+    从字符串中替换指定的子串。
 
     :param strs (str): 原始字符串。
     :param replace_list (list[Tuple[str, str]]): 需要替换的子串列表。

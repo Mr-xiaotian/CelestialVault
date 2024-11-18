@@ -38,7 +38,8 @@ class Findiffer:
         key_max,key_min,dif_key_a,dif_key_b = dictkey_mix(
             dict_a,dict_b
             )
-    
+
+        print('a b的共有标签值为:')
         for key in key_min:
             if dict_a[key] == dict_b[key]:
                 continue
@@ -49,15 +50,15 @@ class Findiffer:
             print(f'(相似度：{similarity})\n')
                 
         if dif_key_a:
-            print('a中的特有标签值为：')
+            print('a中的特有标签值为:')
             for key in dif_key_a:
-                print(f'{key} :\n{dict_a[key]}')
+                print(f'{key}:{dict_a[key]}')
             print()
                 
         if dif_key_b:
-            print('b中的特有标签值为')
+            print('b中的特有标签值为:')
             for key in dif_key_b:
-                print(f'{key} :\n{dict_b[key]}')
+                print(f'{key}:{dict_b[key]}')
 
     def compare_strings(self, str1: str, str2: str) -> None:
         lcs_part = get_lcs(str1, str2)
@@ -77,11 +78,11 @@ class Findiffer:
         end_index = 0
         str_len = len(origin_str)
 
+        # 反转字符串和相似部分列表
         str_reverse = origin_str[::-1]
-        lcs_part.reverse()
+        lcs_part_reverse = [similar_str[::-1] for similar_str in lcs_part[::-1]]
 
-        for num, similar_str in enumerate(lcs_part):
-            similar_str_reverse = similar_str[::-1]
+        for num, similar_str_reverse in enumerate(lcs_part_reverse):
             if not similar_str_reverse:
                 if num == 0:
                     start_index = 0
@@ -93,11 +94,10 @@ class Findiffer:
             if start_index != -1:
                 end_index = str_reverse[start_index:].find(similar_str_reverse) + start_index
                 diff_ranges_reverse.append([start_index, end_index])
-            else:
-                end_index = str_reverse.find(similar_str_reverse)
 
             start_index = end_index + len(similar_str_reverse)
 
+        # 将位置转换回正序
         diff_ranges = [[str_len - dr[1], str_len - dr[0]] for dr in diff_ranges_reverse[::-1]]
 
         return diff_ranges
