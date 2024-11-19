@@ -32,11 +32,13 @@ class TaskLogger:
                 format="{time:YYYY-MM-DD HH:mm:ss} {level} {message}", 
                 level="INFO")
         
-    def start_task(self, func_name, task_num, execution_mode):
-        self.logger.info(f"'{func_name}' start {task_num} tasks by {execution_mode}.")
+    def start_task(self, func_name, task_num, execution_mode, worker_limit):
+        start_text = f"'{func_name}' start {task_num} tasks by {execution_mode}"
+        start_text += f"({worker_limit} workers)." if execution_mode != 'serial' else "."
+        self.logger.info(start_text)
 
     def start_stage(self, stage_index, func_name, execution_mode):
-        self.logger.info(f"The {stage_index} stage '{func_name}' start tasks by {execution_mode}. ")
+        self.logger.info(f"The {stage_index} stage '{func_name}' start tasks by {execution_mode}.")
 
     def start_chain(self, stage_num, chain_mode):
         self.logger.info(f"Starting TaskChain with {stage_num} stages by {chain_mode}.")
@@ -53,11 +55,14 @@ class TaskLogger:
     def task_success(self, func_name, task_info, execution_mode, result_info, use_time):
         self.logger.success(f"In '{func_name}', Task {task_info} completed by {execution_mode}. Result is {result_info}. Used {use_time:.2f} seconds.")
 
-    def task_retry(self, task_info, retry_times):
-        self.logger.warning(f"Task {task_info} failed {retry_times} times and will retry.")
+    def task_retry(self, func_name, task_info, retry_times):
+        self.logger.warning(f"In '{func_name}' Task {task_info} failed {retry_times} times and will retry.")
 
-    def task_fail(self, task_info, exception):
-        self.logger.error(f"Task {task_info} failed and can't retry: ({type(exception).__name__}){exception}")
+    def task_fail(self, func_name, task_info, exception):
+        self.logger.error(f"In '{func_name}', Task {task_info} failed and can't retry: ({type(exception).__name__}){exception}")
+
+    def task_duplicate(self, func_name, task_info):
+        self.logger.success(f"In '{func_name}', Task {task_info} has been duplicated.")
 task_logger = TaskLogger(loguru_logger)
 
 class TaskManager:
@@ -86,7 +91,7 @@ class TaskManager:
         self.thread_pool = None
         self.process_pool = None
 
-        self.retry_exceptions = (ConnectTimeout, ProtocolError, ReadError, ConnectError, PoolTimeout, ReadTimeout) # 需要重试的异常类型
+        self.retry_exceptions = (ConnectTimeout, ProtocolError, ReadError, ConnectError, PoolTimeout, ReadTimeout, TypeError) # 需要重试的异常类型
 
         self.init_result_error_dict()
         
@@ -115,8 +120,8 @@ class TaskManager:
     def set_execution_mode(self, execution_mode):
         self.execution_mode = execution_mode
 
-    def is_duplicate(self, task):
-        return task in self.result_dict or task in self.error_dict
+    def is_duplicate(self, task, task_set):
+        return task in task_set
 
     def get_args(self, task):
         """
@@ -211,17 +216,44 @@ class TaskManager:
         will_try = False
 
         # 基于异常类型决定重试策略
-        if isinstance(exception, self.retry_exceptions) and retry_time < self.max_retries: # isinstance(exception, self.retry_exceptions) and 
+        if isinstance(exception, self.retry_exceptions) and retry_time < self.max_retries: # isinstance(exception, self.retry_exceptions) and
             self.task_queue.put(task)
             self.retry_time_dict[task] += 1
             # delay_time = 2 ** retry_time
-            task_logger.task_retry(self.get_task_info(task), self.retry_time_dict[task])
+            task_logger.task_retry(self.func.__name__, self.get_task_info(task), self.retry_time_dict[task])
             # sleep(delay_time)  # 指数退避
             will_try = True
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
-            task_logger.task_fail(self.get_task_info(task), exception)
+            task_logger.task_fail(self.func.__name__, self.get_task_info(task), exception)
+
+        return will_try
+    
+    async def handle_task_exception_async(self, task, exception: Exception):
+        """
+        统一处理任务异常, 异步版本
+
+        :param task: 发生异常的任务
+        :param exception: 捕获的异常
+
+        :return 是否需要重试
+        """
+        retry_time = self.retry_time_dict.setdefault(task, 0)
+        will_try = False
+
+        # 基于异常类型决定重试策略
+        if isinstance(exception, self.retry_exceptions) and retry_time < self.max_retries: # isinstance(exception, self.retry_exceptions) and
+            await self.task_queue.put(task)
+            self.retry_time_dict[task] += 1
+            # delay_time = 2 ** retry_time
+            task_logger.task_retry(self.func.__name__, self.get_task_info(task), self.retry_time_dict[task])
+            # sleep(delay_time)  # 指数退避
+            will_try = True
+        else:
+            # 如果不是可重试的异常，直接将任务标记为失败
+            self.error_dict[task] = exception
+            task_logger.task_fail(self.func.__name__, self.get_task_info(task), exception)
 
         return will_try
 
@@ -233,7 +265,7 @@ class TaskManager:
         """
         start_time = time()
         self.init_env()
-        task_logger.start_task(self.func.__name__, len(task_list), self.execution_mode)
+        task_logger.start_task(self.func.__name__, len(task_list), self.execution_mode, self.worker_limit)
 
         for item in task_list:
             self.task_queue.put(item)
@@ -251,8 +283,8 @@ class TaskManager:
             self.set_execution_mode('serial')
             self.run_in_serial()
 
-        task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time, 
-                        len(self.result_dict), len(self.error_dict), self.duplicates_num)
+        task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time,
+                             len(self.result_dict), len(self.error_dict), self.duplicates_num)
 
     async def start_async(self, task_list):
         """
@@ -263,7 +295,7 @@ class TaskManager:
         start_time = time()
         self.set_execution_mode('async')
         self.init_env()
-        task_logger.start_task(self.func.__name__, len(task_list), 'async(await)')
+        task_logger.start_task(self.func.__name__, len(task_list), 'async(await)', self.worker_limit)
 
         for item in task_list:
             await self.task_queue.put(item)
@@ -272,7 +304,7 @@ class TaskManager:
         await self.run_in_async()
 
         task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time, 
-                        len(self.result_dict), len(self.error_dict), self.duplicates_num)
+                             len(self.result_dict), len(self.error_dict), self.duplicates_num)
         
     def start_stage(self, input_queue: MPQueue, output_queue: MPQueue, stage_index: int):
         """
@@ -314,6 +346,7 @@ class TaskManager:
             show_progress=self.show_progress
         )
         will_retry = False
+        temp_task_set = set()  # 用于存储临时任务，避免重复执行
 
         # 从队列中依次获取任务并执行
         while True:
@@ -321,9 +354,10 @@ class TaskManager:
             if isinstance(task, TerminationSignal):
                 progress_manager.update(1)
                 break
-            elif self.is_duplicate(task):
+            elif self.is_duplicate(task, temp_task_set):
                 self.duplicates_num += 1
                 progress_manager.update(1)
+                task_logger.task_duplicate(self.func.__name__, task)
                 continue
             try:
                 start_time = time()
@@ -332,6 +366,7 @@ class TaskManager:
             except Exception as error:
                 will_retry = self.handle_task_exception(task, error)
             progress_manager.update(1)
+            temp_task_set.add(task)
 
         progress_manager.close()
 
@@ -356,6 +391,7 @@ class TaskManager:
             mode=self.execution_mode,
             show_progress=self.show_progress
         )
+        temp_task_set = set()  # 用于存储临时任务，避免重复执行
 
         # 从任务队列中提交任务到执行池
         while True:
@@ -363,11 +399,13 @@ class TaskManager:
             if isinstance(task, TerminationSignal):
                 progress_manager.update(1)
                 break
-            elif self.is_duplicate(task):
+            elif self.is_duplicate(task, temp_task_set):
                 self.duplicates_num += 1
                 progress_manager.update(1)
+                task_logger.task_duplicate(self.func.__name__, task)
                 continue
             futures[executor.submit(self.func, *self.get_args(task))] = task
+            temp_task_set.add(task)
 
         # 处理已完成的任务
         for future in as_completed(futures):
@@ -393,6 +431,7 @@ class TaskManager:
         """
         semaphore = asyncio.Semaphore(self.worker_limit)  # 限制并发数量
         will_retry = False
+        temp_task_set = set()  # 用于存储临时任务，避免重复执行
 
         async def sem_task(task):
             start_time = time()  # 记录任务开始时间
@@ -414,18 +453,20 @@ class TaskManager:
             if isinstance(task, TerminationSignal):
                 progress_manager.update(1)
                 break
-            elif self.is_duplicate(task):
+            elif self.is_duplicate(task, temp_task_set):
                 self.duplicates_num += 1
                 progress_manager.update(1)
+                task_logger.task_duplicate(self.func.__name__, task)
                 continue
             async_tasks.append(sem_task(task))  # 使用信号量包裹的任务
+            temp_task_set.add(task)
 
         # 并发运行所有任务
         for task, result, start_time in await asyncio.gather(*async_tasks, return_exceptions=True):
             if not isinstance(result, Exception):
                 self.process_task_success(task, result, start_time)
             else:
-                will_retry = self.handle_task_exception(task, result)
+                will_retry = await self.handle_task_exception_async(task, result)
             progress_manager.update(1)
 
         progress_manager.close()
@@ -442,7 +483,6 @@ class TaskManager:
             result = await self.func(*self.get_args(task))
             return result
         except Exception as error:
-            self.handle_task_exception(task, error)
             return error
             
     def get_result_dict(self):
