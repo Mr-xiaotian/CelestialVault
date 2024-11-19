@@ -73,6 +73,9 @@ class Findiffer:
         """
         根据get_lcs返回的相似部分，计算字符串中不同区域的位置
         """
+        if len(lcs_part) == 1 and lcs_part[0] == '':
+            return [[0, len(origin_str)]]
+        
         diff_ranges_reverse = []
         start_index = -1
         end_index = 0
