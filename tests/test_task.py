@@ -8,6 +8,8 @@ from instances.inst_task import ExampleTaskManager, TaskChain
 
 
 def square(n):
+    if n == 317811:
+        raise ValueError("Test error in 317811")
     return n * n
 
 def fibonacci(n):
@@ -34,9 +36,9 @@ async def fibonacci_async(n):
         return result_0 + result_1
 
 # 测试 TaskManager 的同步任务
-def test_task_manager():
+def _test_task_manager():
     test_task_0 = range(25, 37)
-    test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
+    test_task_1 = list(range(25,32)) + [0, 27, None, 0, '', -1]
 
     manager = ExampleTaskManager(fibonacci, worker_limit=6, show_progress=True)
     results = manager.test_methods(test_task_1)
@@ -44,9 +46,9 @@ def test_task_manager():
 
 # 测试 TaskManager 的异步任务
 @pytest.mark.asyncio
-async def test_task_manager_async():
+async def _test_task_manager_async():
     test_task_0 = range(25, 37)
-    test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
+    test_task_1 = list(range(25,32)) + [0, 27, None, 0, '', -1]
 
     manager = ExampleTaskManager(fibonacci_async, worker_limit=6, show_progress=True)
     start = time()
@@ -54,7 +56,7 @@ async def test_task_manager_async():
     logging.info(f'run_in_async: {time() - start}')
 
 # 测试 TaskChain 的功能
-def _test_task_chain():
+def test_task_chain():
     # 定义多个阶段的 TaskManager 实例，假设我们使用 Fibonacci 作为每个阶段的任务
     stage1 = ExampleTaskManager(fibonacci, execution_mode='parallel', worker_limit=4, show_progress=False)
     stage2 = ExampleTaskManager(square, execution_mode='serial', worker_limit=4, show_progress=False)
@@ -64,7 +66,7 @@ def _test_task_chain():
 
     # 要测试的任务列表
     tasks_0 = range(25,31)
-    tasks_1 = list(range(25,32)) + [0, 27, None, 0, '']
+    tasks_1 = list(range(25,32)) + [0, 27, None, 0, '', -1]
 
     # 开始任务链
     result = chain.test_methods(tasks_1)

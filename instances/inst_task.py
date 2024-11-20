@@ -91,7 +91,7 @@ class TaskManager:
         self.thread_pool = None
         self.process_pool = None
 
-        self.retry_exceptions = (ConnectTimeout, ProtocolError, ReadError, ConnectError, PoolTimeout, ReadTimeout, TypeError) # 需要重试的异常类型
+        self.retry_exceptions = (ConnectTimeout, ProtocolError, ReadError, ConnectError, PoolTimeout, ReadTimeout) # 需要重试的异常类型
 
         self.init_result_error_dict()
         
@@ -306,7 +306,7 @@ class TaskManager:
         task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time, 
                              len(self.result_dict), len(self.error_dict), self.duplicates_num)
         
-    def start_stage(self, input_queue: MPQueue, output_queue: MPQueue, stage_index: int):
+    def start_stage(self, input_queue: ThreadQueue, output_queue: ThreadQueue, stage_index: int):
         """
         根据 start_type 的值，选择串行、并行执行任务
 
@@ -622,10 +622,21 @@ class TaskChain:
         """
         串行运行任务链
         """
-        stage_tasks = tasks
-        for stage in self.stages:
-            stage.start(stage_tasks)
-            stage_tasks = stage.get_result_dict().values()
+        queues = [ThreadQueue() for _ in range(len(self.stages) + 1)]
+
+        stage_result_dicts = [dict() for _ in self.stages]
+        stage_error_dicts = [dict() for _ in self.stages]
+
+        # 向第一个队列添加初始任务
+        for task in tasks:
+            queues[0].put(task)
+
+        # 使用哨兵对象作为终止信号
+        queues[0].put(TERMINATION_SIGNAL)
+
+        for stage_index, stage in enumerate(self.stages):
+            stage.init_result_error_dict(stage_result_dicts[stage_index], stage_error_dicts[stage_index])
+            stage.start_stage(queues[stage_index], queues[stage_index + 1], stage_index)
 
         self.process_final_result_dict(tasks)
         self.handle_final_error_dict()
@@ -701,7 +712,8 @@ class TaskChain:
                     stage_task = (stage.get_error_dict()[stage_task], stage.func.__name__, stage_index)
                     break
                 else:
-                    stage_task = Exception(f"Task not found in stage {stage_index} dict, stage func is {stage.func.__name__}.")
+                    dispear_exception = Exception("Task not found.")
+                    stage_task = (dispear_exception, stage.func.__name__, stage_index)
                     break
             self.final_result_dict[initial_task] = stage_task
 
