@@ -389,22 +389,21 @@ def get_lcs(str1: str, str2: str) -> List[str]:
         if str1[i - 1] == str2[j - 1]:  # 如果当前字符相同
             current_part.append(str1[i - 1])  # 将字符加入当前部分
 
-            if (i ==1 or j == 1):
+            if (i == 1 or j == 1):
                 common_parts, current_part = update_common(common_parts, current_part)
                 common_parts.append('') if i != j else None
             
             i -= 1  # 移动到左上格子
             j -= 1
-        elif dp[i - 1][j] >= dp[i][j - 1]:  # 如果上方格子值较大
+        elif dp[i - 1][j] > dp[i][j - 1] or (dp[i - 1][j] == dp[i][j - 1] and str1[i - 1] != str1[0]):  # 如果上方格子值较大
             common_parts, current_part = update_common(common_parts, current_part)
-            if (i == len1 or j == len2 or i == 1 or j == 1):
+            if (i == len1 or j == len2 or i == 1):
                 if not (common_parts and common_parts[-1] == ''): 
                     common_parts.append('')
             i -= 1  # 移动到上方格子
-            
         else:  # 左方格子值较大
             common_parts, current_part = update_common(common_parts, current_part)
-            if (i == len1 or j == len2 or i == 1 or j == 1):
+            if (i == len1 or j == len2 or j == 1):
                 if not (common_parts and common_parts[-1] == ''): 
                     common_parts.append('')
             j -= 1  # 移动到左方格子
