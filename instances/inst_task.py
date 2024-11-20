@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-#版本 2.40
-#作者：晓天, GPT-4
-#时间：6/9/2024
+#版本 2.50
+#作者：晓天, GPT-4o
+#时间：20/11/2024
 #Github: https://github.com/Mr-xiaotian
 
 
@@ -647,7 +647,7 @@ class TaskChain:
         并行运行任务链
         """
         # 创建进程间的队列
-        queues = [MPQueue() for _ in range(len(self.stages) + 1)]
+        MPqueues = [MPQueue() for _ in range(len(self.stages) + 1)]
         
         # 为每个stage创建独立的共享result_dict
         manager = multiprocessing.Manager()
@@ -656,16 +656,16 @@ class TaskChain:
         
         # 向第一个队列添加初始任务
         for task in tasks:
-            queues[0].put(task)
+            MPqueues[0].put(task)
 
         # 使用哨兵对象作为终止信号
-        queues[0].put(TERMINATION_SIGNAL)
+        MPqueues[0].put(TERMINATION_SIGNAL)
         
         # 创建多进程来运行每个环节
         processes = []
         for stage_index, stage in enumerate(self.stages):
             stage.init_result_error_dict(stage_result_dicts[stage_index], stage_error_dicts[stage_index])
-            p = multiprocessing.Process(target=stage.start_stage, args=(queues[stage_index], queues[stage_index + 1], stage_index))
+            p = multiprocessing.Process(target=stage.start_stage, args=(MPqueues[stage_index], MPqueues[stage_index + 1], stage_index))
             p.start()
             processes.append(p)
         
@@ -675,11 +675,11 @@ class TaskChain:
 
         self.process_final_result_dict(tasks)
         self.handle_final_error_dict()
-        self.release_resources(queues, manager, processes)
+        self.release_resources(MPqueues, manager, processes)
 
-    def release_resources(self, queues: List[MPQueue], manager, processes: List[Process]):
+    def release_resources(self, MPqueues: List[MPQueue], manager, processes: List[Process]):
         # 关闭所有队列并确保它们的后台线程被终止
-        for queue in queues:
+        for queue in MPqueues:
             queue.close()
             queue.join_thread()  # 确保队列的后台线程正确终止
 
@@ -705,16 +705,20 @@ class TaskChain:
         """
         for initial_task in initial_tasks:
             stage_task = initial_task
+
             for stage_index, stage in enumerate(self.stages):
-                if stage_task in stage.get_result_dict():
-                    stage_task = stage.get_result_dict()[stage_task]
-                elif stage_task in stage.get_error_dict():
-                    stage_task = (stage.get_error_dict()[stage_task], stage.func.__name__, stage_index)
+                stage_result_dict = stage.get_result_dict()
+                stage_error_dict = stage.get_error_dict()
+                if stage_task in stage_result_dict:
+                    stage_task = stage_result_dict[stage_task]
+                elif stage_task in stage_error_dict:
+                    stage_task = (stage_error_dict[stage_task], stage.func.__name__, stage_index)
                     break
                 else:
                     dispear_exception = Exception("Task not found.")
                     stage_task = (dispear_exception, stage.func.__name__, stage_index)
                     break
+
             self.final_result_dict[initial_task] = stage_task
 
     def handle_final_error_dict(self):
@@ -722,7 +726,8 @@ class TaskChain:
         处理最终错误字典
         """
         for stage_index, stage in enumerate(self.stages):
-            for task, error in stage.get_error_dict().items():
+            stage_error_dict = stage.get_error_dict()
+            for task, error in stage_error_dict.items():
                 self.final_error_dict[(type(error).__name__, str(error), stage_index)].append(task)
     
     def get_final_result_dict(self):

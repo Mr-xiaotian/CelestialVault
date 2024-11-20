@@ -36,7 +36,7 @@ async def fibonacci_async(n):
         return result_0 + result_1
 
 # 测试 TaskManager 的同步任务
-def _test_task_manager():
+def test_task_manager():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '', -1]
 
@@ -46,7 +46,7 @@ def _test_task_manager():
 
 # 测试 TaskManager 的异步任务
 @pytest.mark.asyncio
-async def _test_task_manager_async():
+async def test_task_manager_async():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '', -1]
 
@@ -70,7 +70,10 @@ def test_task_chain():
 
     # 开始任务链
     result = chain.test_methods(tasks_1)
-    logging.info(result)
+    logging.info(f"{'serial chain':<18}: {result['serial chain']}")
+    logging.info(f"{'process chain':<18}: {result['process chain']}")
+    logging.info(f"{'Final result dict':<18}: {result['Final result dict']}")
+    logging.info(f"{'Final error dict':<18}: {result['Final error dict']}")
 
 def profile_task_chain():
     target_func = 'test_task_manager'
