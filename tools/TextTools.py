@@ -413,15 +413,16 @@ def get_lcs(str1: str, str2: str) -> List[str]:
 
     return common_parts
 
-def calculate_similarity(str1: str, str2: str) -> float:
+def calculate_similarity(str1: str, str2: str, lcs_parts: list = None) -> float:
     """
     计算两个字符串的相似度。
     
     :param str1: 第一个字符串
     :param str2: 第二个字符串
+    :param lcs_parts: 最长公共子序列的字符部分列表
     :return: 相似度，范围在 0 到 1 之间
     """
-    lcs_parts = get_lcs(str1, str2)
+    lcs_parts = get_lcs(str1, str2) if not lcs_parts else lcs_parts
     lcs_length = len(''.join(lcs_parts))
     
     max_length = max(len(str1), len(str2))

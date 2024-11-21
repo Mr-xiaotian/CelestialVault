@@ -7,13 +7,15 @@ from tools.TextTools import strings_split, get_lcs, calculate_similarity
 from tools.ListDictTools import dictkey_mix
 
 class Findiffer:
-    def __init__(self, norm_end: str = '[', diff_end: str = ']') -> None:
+    def __init__(self, norm_end: str = '[', diff_end: str = ']', split_part_str: str = '-') -> None:
         '''
         :param norm_end: can use '\033[0m' '_' '[' or others.
         :param diff_end: can use '\033[1m' '_' ']' or others.
+        :param split_part_str: can use '-' '_' or others.
         '''
         self.norm_end = norm_end
         self.diff_end = diff_end
+        self.split_part_str = split_part_str
 
     def fd_str(self, string_a, string_b, split_str = None):
         # 以split_str为分割符将a和b分割
@@ -26,9 +28,11 @@ class Findiffer:
                 continue
 
             # 如果a和b的每一行不同，则调用compare_strings()方法比较
-            self.compare_strings(a[i],b[i])
+            lcs_part = get_lcs(a[i], b[i])
+            self.compare_strings(a[i], b[i], lcs_part)
 
-            similarity = calculate_similarity(a[i],b[i])
+            # print(f"(LCS: {self.split_part_str.join(lcs_part)})")
+            similarity = calculate_similarity(a[i], b[i], lcs_part)
             if part_len > 1:
                 print(f'(第{i+1}行, 相似度：{similarity})\n')
             else:
@@ -45,8 +49,10 @@ class Findiffer:
                 continue
 
             print(f'{key}:')
-            self.compare_strings(dict_a[key], dict_b[key])
-            similarity = calculate_similarity(dict_a[key], dict_b[key])
+            lcs_part = get_lcs(dict_a[key], dict_b[key])
+            self.compare_strings(dict_a[key], dict_b[key], lcs_part)
+            similarity = calculate_similarity(dict_a[key], dict_b[key], lcs_part)
+            # print(f"(LCS: {self.split_part_str.join(lcs_part)})")
             print(f'(相似度：{similarity})\n')
                 
         if dif_key_a:
@@ -60,8 +66,8 @@ class Findiffer:
             for key in dif_key_b:
                 print(f'{key}:{dict_b[key]}')
 
-    def compare_strings(self, str1: str, str2: str) -> None:
-        lcs_part = get_lcs(str1, str2)
+    def compare_strings(self, str1: str, str2: str, lcs_part: List[str] = None) -> None:
+        lcs_part = get_lcs(str1, str2, lcs_part) if lcs_part is None else lcs_part
 
         diff_ranges_1 = self.get_diff_ranges(str1, lcs_part[:])
         diff_ranges_2 = self.get_diff_ranges(str2, lcs_part[:])
