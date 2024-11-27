@@ -3,15 +3,15 @@
 #作者：晓天
 
 from typing import List
-from tools.TextTools import strings_split, get_lcs, calculate_similarity
+from tools.TextTools import string_split, get_lcs, calculate_similarity
 from tools.ListDictTools import dictkey_mix
 
 class Findiffer:
-    def __init__(self, norm_end: str = '[', diff_end: str = ']', split_part_str: str = '-') -> None:
+    def __init__(self, norm_end: str = '[', diff_end: str = ']', split_part_str: str = '[]') -> None:
         '''
         :param norm_end: can use '\033[0m' '_' '[' or others.
         :param diff_end: can use '\033[1m' '_' ']' or others.
-        :param split_part_str: can use '-' '_' or others.
+        :param split_part_str: can use '-' '_' '[]'or others.
         '''
         self.norm_end = norm_end
         self.diff_end = diff_end
@@ -19,20 +19,21 @@ class Findiffer:
 
     def fd_str(self, string_a, string_b, split_str = None):
         # 以split_str为分割符将a和b分割
-        a,b = strings_split([string_a, string_b], split_str=split_str) if split_str else [[string_a], [string_b]]
+        list_a = string_split(string_a, split_str=split_str)
+        list_b = string_split(string_b, split_str=split_str)
         
-        part_len = min(len(a),len(b))
+        part_len = min(len(list_a),len(list_b))
         # 比较a和b的每一部分
         for i in range(part_len):
-            if a[i] == b[i]:
+            if list_a[i] == list_b[i]:
                 continue
 
             # 如果a和b的每一行不同，则调用compare_strings()方法比较
-            lcs_part = get_lcs(a[i], b[i])
-            self.compare_strings(a[i], b[i], lcs_part)
+            lcs_part = get_lcs(list_a[i], list_b[i])
+            self.compare_strings(list_a[i], list_b[i], lcs_part)
 
             # print(f"(LCS: {self.split_part_str.join(lcs_part)})")
-            similarity = calculate_similarity(a[i], b[i], lcs_part)
+            similarity = calculate_similarity(list_a[i], list_b[i], lcs_part)
             if part_len > 1:
                 print(f'(第{i+1}行, 相似度：{similarity})\n')
             else:

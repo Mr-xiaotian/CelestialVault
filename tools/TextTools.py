@@ -109,12 +109,6 @@ def string_split(string: str, split_str: str='\n') -> list[str]:
     """
     return [s for s in string.split(split_str) if s]
 
-def strings_split(string_list: list[str], split_str: str='\n') -> list[list[str]]:
-    """
-    将多个字符串按指定分隔符分割，返回一个列表，每个元素是分割后非空的子字符串列表。
-    """
-    return [string_split(st, split_str) for st in string_list]
-
 def language_fingerprint(text: str) -> dict:
     """
     根据文本生成语言指纹字典。
@@ -244,9 +238,9 @@ def decompress_text_from_bytes(compressed_data: bytes) -> str:
     
 def compress_to_base64(text: str) -> str:
     """
-    压缩文本并转换为Base64编码。
+    压缩文本并转换为Base64编码, 长度为4的倍数。
     """
-    # 每三字节映射到四位6nit进制字符，所以需要填充以避免出现 "="
+    # 每三字节(3×8-bit)映射到四位Base64字符(4×6-bit)进制字符，所以需要填充以避免出现 "="
     compressed_data = compress_text_to_bytes(text, 3)
     
     base64_text = base64.b64encode(compressed_data).decode('utf-8')
