@@ -1,6 +1,7 @@
 import random
 import mpmath
 from typing import List, Dict, Union, Tuple
+from itertools import permutations
 from constants.pi_digit import PI_STR_1E6
 
 
@@ -230,3 +231,110 @@ def digit_frequency(target_str: str) -> Dict[str, float]:
     ratio = {char: count / total_length for char, count in frequency.items()}
 
     return ratio
+
+def check_target_sum(matrix):
+    """
+    检查方阵的每一行、每一列、两个对角线的和是否等于目标和。
+    
+    :param matrix: 方阵（二维列表）
+    :return: 如果所有行、列、对角线的和都等于目标和，返回 True，否则返回 False
+    """
+    # 获取方阵的阶数
+    n = len(matrix)
+    
+    # 计算目标和
+    target_sum = n * (n**2 + 1) // 2
+
+    # 检查每一行的和
+    for row in matrix:
+        if sum(row) != target_sum:
+            return False
+
+    # 检查每一列的和
+    for col in range(n):
+        col_sum = sum(matrix[row][col] for row in range(n))
+        if col_sum != target_sum:
+            return False
+
+    # 检查主对角线的和（从左上到右下）
+    diagonal_sum_1 = sum(matrix[i][i] for i in range(n))
+    if diagonal_sum_1 != target_sum:
+        return False
+
+    # 检查副对角线的和（从右上到左下）
+    diagonal_sum_2 = sum(matrix[i][n - 1 - i] for i in range(n))
+    if diagonal_sum_2 != target_sum:
+        return False
+
+    return True
+
+def check_numbers_validity(matrix):
+    """
+    检查方阵中的数字是否是从 1 到 n^2 的所有整数，且没有重复。
+    
+    :param matrix: 方阵（二维列表）
+    :return: 如果数字是从 1 到 n^2 的连续整数且没有重复，返回 True，否则返回 False
+    """
+    # 获取方阵的阶数
+    n = len(matrix)
+    numbers = set()
+
+    for row in matrix:
+        for num in row:
+            if num < 1 or num > n**2 or num in numbers:
+                return False
+            numbers.add(num)
+    
+    return True
+
+def is_magic_square(matrix):
+    """
+    判断一个方阵是否是幻方。
+    
+    :param matrix: 方阵（二维列表）
+    :return: 如果是幻方，返回 True，否则返回 False
+    """
+    
+    # 检查目标和是否符合
+    if not check_target_sum(matrix):
+        return False
+    
+    # 检查数字是否符合要求
+    if not check_numbers_validity(matrix):
+        return False
+    
+    return True
+
+def list_to_square_matrix(lst):
+    """
+    将长度为 n^2 的列表转换为 n x n 的方阵。
+    
+    :param lst: 长度为 n^2 的列表
+    :return: n x n 的方阵（二维列表）
+    """
+    n = int(len(lst) ** 0.5)  # 计算方阵的阶数n
+    if n * n != len(lst):
+        print(lst)
+        raise ValueError("列表的长度必须是 n^2")
+    
+    # 将列表分割成 n 个子列表，每个子列表表示方阵的一行
+    matrix = [lst[i * n: (i + 1) * n] for i in range(n)]
+    
+    return matrix
+
+def generate_magic_squares_by_random(num):
+    """
+    生成所有可能的 n x n 幻方。
+
+    :param num: 幻方的阶数
+    :return: 所有可能的 n x n 幻方的列表
+    """
+    # 所有数字集合，用于生成排列
+    nums = list(range(1, num**2 + 1))
+    # 存放所有有效幻方的列表
+    magic_squares = []
+    # 生成所有可能的3x3排列
+    for perm in permutations(nums):
+        matrix = list_to_square_matrix(perm)
+        magic_squares.append(matrix) if check_target_sum(matrix) else None
+    return magic_squares
