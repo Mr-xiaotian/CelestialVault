@@ -216,15 +216,20 @@ def decode_crc(decoded_text: str) -> str:
     
     return actual_text
 
-def compress_text_to_bytes(text: str, padding_length: int=1) -> bytes:
+def compress_text_to_bytes(text: str, padding_length: int = 1) -> bytes:
     """
-    压缩文本为字节流。
+    压缩文本并返回字节流，确保字节流长度是指定的 padding_length 的倍数。
+    
+    :param text: 要压缩的文本
+    :param padding_length: 填充长度，使压缩结果的字节长度为此参数的倍数
+    :return: 压缩后的字节流
     """
-    # 使用zlib压缩文本
+    # 使用 zlib 压缩文本，先将文本编码为 UTF-8
     compressed_data = zlib.compress(text.encode('utf-8'))
     
+    # 计算需要填充的字节数，以使字节流长度为 padding_length 的倍数
     padding_length = (padding_length - len(compressed_data) % padding_length) % padding_length
-    compressed_data += b'\0' * padding_length  # Add null bytes for padding
+    compressed_data += b'\0' * padding_length  # 添加零字节作为填充
 
     return compressed_data
 
@@ -239,10 +244,14 @@ def decompress_text_from_bytes(compressed_data: bytes) -> str:
 def compress_to_base64(text: str) -> str:
     """
     压缩文本并转换为Base64编码, 长度为4的倍数。
+
+    :param text: 要压缩并转换为 Base64 的文本
+    :return: 压缩后并转换为 Base64 的字符串
     """
     # 每三字节(3×8-bit)映射到四位Base64字符(4×6-bit)进制字符，所以需要填充以避免出现 "="
     compressed_data = compress_text_to_bytes(text, 3)
     
+    # 转为Base64码时由于以字节码存储, 体积会变为bytes的4/3
     base64_text = base64.b64encode(compressed_data).decode('utf-8')
     
     return base64_text
@@ -262,14 +271,20 @@ def decode_from_base64(base64_text: str) -> str:
 def safe_open_txt(file_path: str | Path) -> str:
     """
     尝试使用多种编码打开文本文件，并返回解码后的文本。
+
+    :param file_path: 文件路径，可以是字符串或 Path 对象
+    :return: 解码后的文本内容
+    :raises ValueError: 如果无法用任何编码解码文件，抛出异常
     """
     # 读取整个文件以进行编码检测
     file_path = Path(file_path)
     raw = file_path.read_bytes()
     
-    # 使用 charset-normalizer 进行编码检测
+    # 使用 charset-normalizer 检测文件的最佳编码
     results = charset_normalizer.from_bytes(raw)
     encoding_list = [results.best().encoding] if results else []
+    
+    # 添加其他常见编码供尝试：GB18030, Big5, UTF-8, UTF-16 和 Latin-1
     encoding_list += ['gb18030', 'big5', 'utf-8', 'utf-16', 'latin-1']
 
     book_text = None
@@ -331,7 +346,7 @@ def combine_txt_files(folder_path: str | Path):
 
     print(f"All files have been combined into {output_file_path}")
 
-def character_ratio(target_str):
+def character_ratio(target_str: str) -> Dict[str, float]:
     """
     统计字符串中各个字符的出现比率
 

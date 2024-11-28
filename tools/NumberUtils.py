@@ -1,9 +1,10 @@
 import random
 import mpmath
+from typing import List, Dict, Union, Tuple
 from constants.pi_digit import PI_STR_1E6
 
 
-def get_pi_digits(start, end):
+def get_pi_digits(start: int, end: int) -> str:
     """
     获取π的指定小数位
     
@@ -27,7 +28,7 @@ def get_pi_digits(start, end):
     
     return ''.join(digits)
 
-def get_pi_digits_from_ranges(position_list):
+def get_pi_digits_from_ranges(position_list: List[Tuple[int, int]]) -> str:
     """
     获取π的指定位置的小数位
 
@@ -36,9 +37,24 @@ def get_pi_digits_from_ranges(position_list):
     """
     return ''.join([get_pi_digits(pos[0], pos[1]) for pos in position_list])
 
-def segment_search_in_pi(target, segment_len=5):
+def segment_search_in_pi(target: str, segment_len: int=5) -> dict:
     """
     在π的字符串表示中查找目标数字的位置
+
+    :Example:
+    segment_search_in_pi('546546516514564651654845', 5) = {
+    '546546516514564651654845': [
+        (92573, 92577),
+        (56196, 56200),
+        (250, 254),
+        (56196, 56200),
+        (10933, 10936)
+        ],
+    '54654': (92573, 92577),
+    '65165': (56196, 56200),
+    '14564': (250, 254),
+    '4845': (10933, 10936)
+    }
 
     :param target: 要查找的目标数字
     :param segment_len: 查找的初始分段长度, 默认为5, 当为-1时为数字长度的一半, 当为-2时为数字长度减一
@@ -101,9 +117,22 @@ def segment_search_in_pi(target, segment_len=5):
     
     return position_results
 
-def greedy_search_in_pi(target):
+def greedy_search_in_pi(target: str) -> dict:
     """
     在 π 的字符串表示中使用贪婪搜索查找目标数字的位置。
+
+    :Example:
+    greedy_search_in_pi('546546516514564651654845') = {
+    '546546516514564651654845': [(993795, 993801),
+        (56198, 56202),
+        (201390, 201394),
+        (143633, 143637),
+        (60, 61)],
+    '5465465': (993795, 993801),
+    '16514': (56198, 56202),
+    '56465': (201390, 201394),
+    '16548': (143633, 143637),
+    '45': (60, 61)}
     
     :param target: 要查找的目标数字
     :return: 包含每个部分位置信息的字典
@@ -147,7 +176,7 @@ def greedy_search_in_pi(target):
     
     return position_results
 
-def generate_random_numbers(num_digits, count=1):
+def generate_random_numbers(num_digits: int, count: int=1) -> List[str]:
     """
     生成指定位数的随机数
 
@@ -158,17 +187,10 @@ def generate_random_numbers(num_digits, count=1):
     if num_digits <= 0:
         raise ValueError("Number of digits must be greater than zero.")
     
-    random_number_str_list = []
-    for _ in range(count):
-        digits = [random.randint(0, 9) for _ in range(num_digits)]
-    
-        # 将数字组合成单个数字字符串
-        random_number_str = ''.join(map(str, digits))
-        random_number_str_list.append(random_number_str)
+    # 使用 random.choices 直接生成 num_digits 个随机数，每个数在 0 到 9 之间
+    return [''.join(random.choices('0123456789', k=num_digits)) for _ in range(count)]
 
-    return random_number_str_list
-
-def find_all_combinations_ratio(target_sequence, digit_length):
+def find_all_combinations_ratio(target_sequence: str, digit_length: int) -> float:
     """
     在被检索字符串中查找所有指定位数的数字组合，并计算找到和未找到的比率。
     
@@ -189,7 +211,7 @@ def find_all_combinations_ratio(target_sequence, digit_length):
     
     return found_count / (end-start)
 
-def digit_frequency(target_str):
+def digit_frequency(target_str: str) -> Dict[str, float]:
     """
     统计字符串中各个数字的出现比率
 
