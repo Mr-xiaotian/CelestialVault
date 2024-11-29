@@ -1,8 +1,11 @@
 import random
 import mpmath
-from typing import List, Dict, Union, Tuple
+import math
+from tqdm import tqdm
 from itertools import permutations
+from typing import List, Dict, Union, Tuple
 from constants.pi_digit import PI_STR_1E6
+from tools.ListDictTools import list_to_square_matrix
 
 
 def get_pi_digits(start: int, end: int) -> str:
@@ -305,23 +308,6 @@ def is_magic_square(matrix):
     
     return True
 
-def list_to_square_matrix(lst):
-    """
-    将长度为 n^2 的列表转换为 n x n 的方阵。
-    
-    :param lst: 长度为 n^2 的列表
-    :return: n x n 的方阵（二维列表）
-    """
-    n = int(len(lst) ** 0.5)  # 计算方阵的阶数n
-    if n * n != len(lst):
-        print(lst)
-        raise ValueError("列表的长度必须是 n^2")
-    
-    # 将列表分割成 n 个子列表，每个子列表表示方阵的一行
-    matrix = [lst[i * n: (i + 1) * n] for i in range(n)]
-    
-    return matrix
-
 def generate_magic_squares_by_random(num):
     """
     生成所有可能的 n x n 幻方。
@@ -331,10 +317,19 @@ def generate_magic_squares_by_random(num):
     """
     # 所有数字集合，用于生成排列
     nums = list(range(1, num**2 + 1))
+
     # 存放所有有效幻方的列表
     magic_squares = []
+
+    total = math.factorial(num ** 2)
+    progress_bar = tqdm(total=total, desc='Generating Magic Squares')
+
     # 生成所有可能的3x3排列
     for perm in permutations(nums):
         matrix = list_to_square_matrix(perm)
         magic_squares.append(matrix) if check_target_sum(matrix) else None
+        progress_bar.update(1)
+
+    progress_bar.close()
+
     return magic_squares

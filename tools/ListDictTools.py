@@ -145,3 +145,20 @@ def batch_generator(generator, batch_size):
         if not batch:
             break
         yield batch
+
+def list_to_square_matrix(lst):
+    """
+    将长度为 n^2 的列表转换为 n x n 的方阵。
+    
+    :param lst: 长度为 n^2 的列表
+    :return: n x n 的方阵（二维列表）
+    """
+    n = int(len(lst) ** 0.5)  # 计算方阵的阶数n
+    if n * n != len(lst):
+        print(lst)
+        raise ValueError("列表的长度必须是 n^2")
+    
+    # 将列表分割成 n 个子列表，每个子列表表示方阵的一行
+    matrix = [lst[i * n: (i + 1) * n] for i in range(n)]
+    
+    return matrix

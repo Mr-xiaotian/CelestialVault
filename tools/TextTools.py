@@ -460,3 +460,20 @@ def find_nth_occurrence(target_str: str, similar_str: str, occurrence: int) -> t
         count += 1  # 增加找到的次数
         if count == occurrence:  # 如果找到了指定次数的匹配
             return (start_index, start_index + len(similar_str))  # 返回坐标
+        
+def format_simple_matrix(matrix):
+    '''
+    格式化简单矩阵
+    :param matrix: 矩阵
+    :return: 格式化后的字符串
+    '''
+    # 确定每个元素的最大宽度
+    max_width = max(len(str(item)) for row in matrix for item in row)
+    
+    formatted_rows = []
+    for row in matrix:
+        formatted_row = "  [" + ", ".join(f"{item:>{max_width}}" for item in row) + "]"
+        formatted_rows.append(formatted_row)
+    
+    formatted_string = "[\n" + ",\n".join(formatted_rows) + "\n]"
+    return formatted_string
