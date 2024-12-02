@@ -13,23 +13,25 @@ def compress_video(old_video_path: Path, new_video_path: Path):
     old_video_path: 原始视频文件路径
     new_video_path: 压缩后视频文件路径
     """
-    # command = [
-    #     'ffmpeg', 
-    #     '-i', str(old_video_path), 
-    #     '-vcodec', 'libx264', 
-    #     '-crf', '24', 
-    #     str(new_video_path)
-    # ]
-
     command = [
         'ffmpeg', 
         '-i', str(old_video_path), 
-        '-vcodec', 'libx265', 
-        '-crf', '23', 
-        '-preset', 'medium',
-        '-acodec', 'aac',
+        '-vcodec', 'libx264', 
+        '-crf', '22',  # 降低 CRF 值来提高视频质量
+        '-preset', 'medium',  # 使用 medium 预设来平衡速度和质量
+        '-acodec', 'aac',  # 添加 AAC 音频编码
         str(new_video_path)
     ]
+
+    # command = [
+    #     'ffmpeg', 
+    #     '-i', str(old_video_path), 
+    #     '-vcodec', 'libx265', 
+    #     '-crf', '23', 
+    #     '-preset', 'medium',
+    #     '-acodec', 'aac',
+    #     str(new_video_path)
+    # ]
 
     subprocess.run(command, check=True)
 
