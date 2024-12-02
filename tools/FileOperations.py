@@ -1,7 +1,7 @@
 import shutil, re
 import logging
 import hashlib
-import zipfile, rarfile, py7zr
+import zipfile, rarfile, tarfile, py7zr
 from pathlib import Path
 from tqdm import tqdm
 from typing import Callable, Tuple, Dict, List
@@ -20,7 +20,7 @@ class HandleFileManager(TaskManager):
         rel_path = file_path.relative_to(self.folder_path)
         new_file_path = self.new_folder_path / rel_path
 
-        file_suffix = file_path.suffix.lower()[1:]
+        file_suffix = file_path.suffix.lower().lstrip('.')
         action_func, rename_func = self.rules.get(file_suffix, (shutil.copy, lambda x: x))
 
         final_path = rename_func(new_file_path)
@@ -141,14 +141,14 @@ def compress_folder(folder_path: str | Path, execution_mode: str = 'thread') -> 
     """
     def rename_mp4(file_path: Path) -> Path:
         name = file_path.stem.replace("_compressed", "")
-        suffix = file_path.suffix
-        parent = file_path.parent
-        return parent / Path(name + f'({suffix})_compressed.mp4')
+        suffix = file_path.suffix.lstrip('.')
+        new_name = f"{name}({suffix})_compressed.mp4"
+        return file_path.with_name(new_name)
     
     def rename_pdf(file_path: Path) -> Path:
         name = file_path.stem.replace("_compressed", "")
-        parent = file_path.parent
-        return parent / Path(name + '_compressed.pdf')
+        new_name = f"{name}_compressed.pdf"
+        return file_path.with_name(new_name)
 
     from tools.ImageProcessing import compress_img
     from tools.VideoProcessing import compress_video
@@ -166,11 +166,11 @@ def unzip_zip_file(zip_file: Path, destination: Path):
     解压缩指定的 zip 文件。
     
     :param zip_file: 要解压缩的 zip 文件路径。
+    :raises ValueError: 如果文件不是有效的 zip 文件或发生其他错误。
     """
     try:
         with zipfile.ZipFile(zip_file) as zip_file:
             zip_file.extractall(destination)
-        # logging.info(f"{zip_file} 解压缩成功")
     except zipfile.BadZipFile:
         raise ValueError(f"{zip_file} 不是一个有效的 zip 文件")
     except zipfile.LargeZipFile:
@@ -187,7 +187,6 @@ def unzip_rar_file(rar_file: Path, destination: Path):
     try:
         with rarfile.RarFile(rar_file) as rar_file:
             rar_file.extractall(destination)
-        # logging.info(f"{rar_file} 解压缩成功")
     except rarfile.BadRarFile:
         raise ValueError(f"{rar_file} 不是一个有效的 rar 文件")
     except rarfile.LargeRarFile:
@@ -195,23 +194,44 @@ def unzip_rar_file(rar_file: Path, destination: Path):
     except rarfile.PasswordRequired:
         raise ValueError(f"{rar_file} 受密码保护，无法解压缩")
 
+def unzip_tar_file(tar_file: Path, destination: Path):
+    """
+    解压缩指定的 tar 文件。
+    
+    :param tar_file: 要解压缩的 tar 文件路径。
+    :param destination: 解压缩的目标路径。
+    :raises ValueError: 如果文件不是有效的 tar 文件或发生其他错误。
+    """
+    # 检查是否为有效的 tar 文件
+    if not tarfile.is_tarfile(tar_file):
+        raise ValueError(f"{tar_file} 不是一个有效的 tar 文件")
+    try:
+        # 打开 tar 文件
+        with tarfile.open(tar_file) as tar:
+            # 提取所有内容到目标路径
+            tar.extractall(path=destination)
+    except tarfile.ReadError:
+        raise ValueError(f"{tar_file} 读取错误，可能不是一个有效的 tar 文件")
+    except Exception as e:
+        raise ValueError(f"解压 {tar_file} 时发生错误: {e}")
+
 def unzip_7z_file(seven_zip_file: Path, destination: Path):
     """
     解压缩指定的 7z 文件。
     
     :param seven_zip_file: 要解压缩的 7z 文件路径。
+    :raises ValueError: 如果文件不是有效的 7z 文件或发生其他错误。
     """
     try:
         with py7zr.SevenZipFile(seven_zip_file, mode='r') as seven_zip_file:
             seven_zip_file.extractall(destination)
-        # logging.info(f"{seven_zip_file} 解压缩成功")
     except py7zr.Bad7zFile:
         raise ValueError(f"{seven_zip_file} 不是一个有效的 7z 文件")
     except py7zr.Large7zFile:
         raise ValueError(f"{seven_zip_file} 太大了，无法解压缩")
     except py7zr.PasswordRequired:
         raise ValueError(f"{seven_zip_file} 受密码保护，无法解压缩")
-    
+
 def unzip_folder(folder_path: str | Path):
     """
     遍历指定文件夹，解压缩所有支持的压缩文件。支持的文件类型包括 zip 和 rar。
@@ -220,11 +240,13 @@ def unzip_folder(folder_path: str | Path):
     """
     def rename_unzip(file_path: Path) -> Path:
         name = file_path.stem
-        parent = file_path.parent
-        return parent / Path(name + '_unzip')
+        suffix = file_path.suffix.lstrip('.')
+        new_name = f"{name}({suffix})_unzip"
+        return file_path.with_name(new_name)
     
     rules = {'zip': (unzip_zip_file, rename_unzip)}
     rules.update({'rar': (unzip_rar_file, rename_unzip)})
+    rules.update({'tar': (unzip_tar_file, rename_unzip)})
     rules.update({'7z': (unzip_7z_file, rename_unzip)})
 
     return handle_folder(folder_path, rules, progress_desc="Unziping folder")
