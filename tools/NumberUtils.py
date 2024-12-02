@@ -324,7 +324,7 @@ def generate_magic_squares_by_random(num):
     total = math.factorial(num ** 2)
     progress_bar = tqdm(total=total, desc='Generating Magic Squares')
 
-    # 生成所有可能的3x3排列
+    # 生成所有可能的n x n排列
     for perm in permutations(nums):
         matrix = list_to_square_matrix(perm)
         magic_squares.append(matrix) if check_target_sum(matrix) else None

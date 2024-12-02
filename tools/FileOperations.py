@@ -141,8 +141,9 @@ def compress_folder(folder_path: str | Path, execution_mode: str = 'thread') -> 
     """
     def rename_mp4(file_path: Path) -> Path:
         name = file_path.stem.replace("_compressed", "")
+        suffix = file_path.suffix
         parent = file_path.parent
-        return parent / Path(name + '_compressed.mp4')
+        return parent / Path(name + f'({suffix})_compressed.mp4')
     
     def rename_pdf(file_path: Path) -> Path:
         name = file_path.stem.replace("_compressed", "")

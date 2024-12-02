@@ -155,7 +155,6 @@ def list_to_square_matrix(lst):
     """
     n = int(len(lst) ** 0.5)  # 计算方阵的阶数n
     if n * n != len(lst):
-        print(lst)
         raise ValueError("列表的长度必须是 n^2")
     
     # 将列表分割成 n 个子列表，每个子列表表示方阵的一行
