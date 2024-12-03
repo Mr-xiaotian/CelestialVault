@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import pytest
 import logging
-from tools.TextTools import pro_slash, str_to_dict, language_fingerprint, calculate_valid_text
+from tools.TextTools import pro_slash, str_to_dict, language_fingerprint, calculate_valid_chinese_text, calculate_valid_text
 
 def test_pro_slash():
     string_a = '(W//R\S/H\\U)'
@@ -34,7 +34,7 @@ def test_str_to_dict():
     logging.info(f"{'Expected output':<15}: {{'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}}")
     logging.info(f"{'Actual output':<15}: {result_dict_0}\n")
     
-    result_dict_1 = str_to_dict(test_str_1, split_str=';', partition_str='=')
+    result_dict_1 = str_to_dict(test_str_1, line_delimiter=';', key_value_delimiter='=')
     logging.info(f"{'Test 1 input':<15}:\n{test_str_1}")
     logging.info(f"{'Expected output':<15}: {{'key1': 'value1', 'key2': 'value2', 'key3': '', 'key4': 'value4'}}")
     logging.info(f"{'Actual output':<15}: {result_dict_1}")
@@ -91,8 +91,10 @@ def test_calculate_valid_text():
 
     ——第四届宝珀理想国文学奖 授奖词"""
 
-    result = calculate_valid_text(text)
+    valid_chinese_rate = calculate_valid_chinese_text(text)
+    valid_rate = calculate_valid_text(text)
 
     # logging.info(f"{'Test input':<15}:\n{text}")
-    logging.info(f"{'Actual output':<15}: {result}")
+    logging.info(f"{'Valid chinese rate':<18}: {valid_chinese_rate}")
+    logging.info(f"{'Valid rate':<18}: {valid_rate}")
 
