@@ -1,4 +1,5 @@
-import types, sys, re
+import sys, re
+from types import FunctionType
 from typing import Callable
 from collections.abc import Mapping, Container
 from time import strftime, localtime
@@ -19,7 +20,7 @@ def functions_are_equal(func1: Callable, func2: Callable) -> bool:
     :param func2:
     :return:
     """
-    if not isinstance(func1, types.FunctionType) or not isinstance(func2, types.FunctionType):
+    if not (isinstance(func1, FunctionType) and isinstance(func2, FunctionType)):
         return False
     return (func1.__code__.co_code == func2.__code__.co_code and
             func1.__code__.co_consts == func2.__code__.co_consts and
@@ -32,7 +33,7 @@ def bytes_to_human_readable(size_in_bytes: int) -> str:
     """
     将字节大小转换为人类可读的格式
     :param size_in_bytes:
-    :return:
+    :return: 人类可读格式的大小 (str)，如 "1GB 512MB"
     """
     units = ['B', 'KB', 'MB', 'GB', 'TB']
     result = []

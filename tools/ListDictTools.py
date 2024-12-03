@@ -35,34 +35,37 @@ def all_elements_same_type(elements: List[Any]) -> bool:
 
     return len(set(type(element) for element in elements)) == 1
 
-def list_replace(lists: List[Any], replace_list: List[Tuple[Any, Any]]) -> List[Any]:
+def list_replace(lists: List[Any], replace_rules: List[Tuple[Any, Any]]) -> List[Any]:
     """
     替换列表中的元素。
     
     :param lists: 需要进行替换操作的列表
-    :param replace_list: 替换规则的列表，每个规则是一个包含两个元素的元组，第一个是要被替换的元素，第二个是替换后的元素
+    :param replace_rules: 替换规则的列表，每个规则是一个包含两个元素的元组，第一个是要被替换的元素，第二个是替换后的元素
     :return: 替换后的列表
     """
     from tools.Utilities import functions_are_equal
     def replace_element(element: Any, replacement: Tuple[Any, Any]) -> Any:
-        # 如果元素是字符串且替换列表中的第一个元素在该字符串中，则进行替换
-        if all_elements_are_type([element, *replacement], str) and replacement[0] in element:
-            return element.replace(replacement[0], replacement[1])
-        # 如果元素与替换列表中的第一个元素类型相同且内容相同，则进行替换
-        elif all_elements_same_type([element, replacement[0]]) and str(element) == str(replacement[0]):
-            return replacement[1]
-        # 如果元素是函数且与替换列表中的第一个元素相同，则进行替换
-        elif all_elements_are_type([element, replacement[0]], Callable) and functions_are_equal(element, replacement[0]):
-            return replacement[1]
-        # 如果元素不是字符串但等于替换列表中的第一个元素，则进行替换
-        elif element == replacement[0]:
-            return replacement[1]
-        else:
+        target, replacement_value = replacement
+        if not all_elements_same_type([element, target]):
             return element
+        
+        # 如果元素与替换列表中的第一个元素内容相同，则进行替换
+        if element == target:
+            return replacement_value
+        
+        # 如果元素是字符串且替换列表中的第一个元素在该字符串中，则进行替换
+        elif isinstance(element, str) and target in element:
+            return element.replace(target, replacement_value)
+        
+        # 如果元素是函数且与替换列表中的第一个元素相同，则进行替换
+        elif isinstance(element,  Callable) and functions_are_equal(element, target):
+            return replacement_value
+        
+        return element
 
     # 遍历原始列表中的每个元素，并应用所有的替换规则
     return [
-        reduce(replace_element, replace_list, l)
+        reduce(replace_element, replace_rules, l)
         for l in lists
     ]
 
@@ -98,12 +101,10 @@ def count_occurrences(lst: List[Tuple[Tuple[str, int], str]], value: str) -> int
     """
     在列表中查找指定元素的出现次数。
     
-    Args:
-        lst (List[Tuple[Tuple[str, int], str]]): 原始列表，列表的元素是元组，元组的第一个元素是字符串。
-        value (str): 需要查找的元素。
+    :param lst (List[Tuple[Tuple[str, int], str]]): 原始列表，列表的元素是元组，元组的第一个元素是字符串。
+    :param value (str): 需要查找的元素。
 
-    Returns:
-        int: 指定元素在列表中的出现次数。
+    :return int: 指定元素在列表中的出现次数。
     """
     return sum(1 for item in lst if item[0][0] == value)
 
@@ -111,11 +112,8 @@ def get_key_dict(lst: List[Tuple[str, int]]) -> Dict[str, Tuple[int]]:
     """
     从列表中获取键值对，创建并返回一个字典。
     
-    Args:
-        lst (List[Tuple[str, int]]): 原始列表，列表的元素是元组。
-
-    Returns:
-        Dict[str, Tuple[int]]: 从列表中获取的键值对组成的字典。
+    :param lst (List[Tuple[str, int]]): 原始列表，列表的元素是元组。
+    :return Dict[str, Tuple[int]]: 从列表中获取的键值对组成的字典。
     """
     dict_result = {}
     for item in lst:
@@ -127,18 +125,19 @@ def find_tuple(lst: List[Tuple[Tuple[str, int], str]], target: str) -> Tuple[str
     """
     在列表中查找指定的元组。
     
-    Args:
-        lst (List[Tuple[Tuple[str, int], str]]): 原始列表，列表的元素是元组。
-        target (str): 需要查找的元素。
-
-    Returns:
-        Tuple[str, int]: 在列表中找到的元组，如果没有找到，则返回None。
+    :param lst (List[Tuple[Tuple[str, int], str]]): 原始列表，列表的元素是元组。
+    :param target (str): 需要查找的元素。
+    :return Tuple[str, int]: 在列表中找到的元组，如果没有找到，则返回None。
     """
     return next((item for item in lst if item[0] == target), None)
 
-def batch_generator(generator, batch_size):
+def batch_generator(generator: Iterable, batch_size: int):
     """
     批量生成器：每次从原生成器中获取 batch_size 个元素。
+
+    :param generator: 原始生成器
+    :param batch_size: 每批次的元素数量
+    :return: 批量生成器，每次生成一个包含 batch_size 个元素的列表
     """
     while True:
         batch = list(islice(generator, batch_size))
