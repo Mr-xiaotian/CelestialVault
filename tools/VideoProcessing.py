@@ -1,17 +1,17 @@
 import subprocess, os
+import cv2
 from pathlib import Path
+from typing import Tuple, List
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip, clips_array
 from moviepy.config import change_settings
-from typing import Tuple, List
 
 
 def compress_video(old_video_path: Path, new_video_path: Path):
     """
     使用ffmpeg压缩视频
     
-    参数:
-    old_video_path: 原始视频文件路径
-    new_video_path: 压缩后视频文件路径
+    :param old_video_path: 原始视频文件路径
+    :param new_video_path: 压缩后视频文件路径
     """
     command = [
         'ffmpeg', 
@@ -39,10 +39,9 @@ def join_and_label_videos(video_path1: str, video_path2: str, output_path: str):
     """
     将两个视频拼接，并在左上角添加文本标签
 
-    参数:
-    video_path1: 第一个视频文件路径
-    video_path2: 第二个视频文件路径
-    output_path: 输出视频文件路径
+    :param video_path1: 第一个视频文件路径
+    :param video_path2: 第二个视频文件路径
+    :param output_path: 输出视频文件路径
     """
     change_settings({"IMAGEMAGICK_BINARY": r"G:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"})
 
@@ -75,9 +74,8 @@ def transfer_gif_to_video(gif_path, output_path):
     """
     将GIF文件转换为MP4视频文件
 
-    参数:
-    gif_path: GIF文件路径
-    output_path: 输出MP4文件路径
+    :param gif_path: GIF文件路径
+    :param  output_path: 输出MP4文件路径
     """
     # 将路径转换为字符串
     gif_path = str(gif_path)
@@ -94,6 +92,12 @@ def transfer_gif_to_video(gif_path, output_path):
     subprocess.run(command, check=True)
 
 def transfer_gif_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]:
+    """
+    将文件夹中的所有GIF文件转换为MP4视频文件
+
+    :param folder_path: 文件夹路径
+    :return: 转换结果列表，每个元素是一个元组，包含输出文件路径和可能的异常
+    """
     def rename_mp4(file_path: Path) -> Path:
         name = file_path.stem.replace("_compressed", "")
         parent = file_path.parent
@@ -103,3 +107,54 @@ def transfer_gif_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]
 
     rules = {'gif': (transfer_gif_to_video, rename_mp4)}
     return handle_folder(folder_path, rules)
+
+def rotate_video(video_path: str | Path, angle: int):
+    """
+    旋转视频文件。
+    
+    :param video_path: 视频路径（str 或 Path 对象）
+    :param angle: 旋转角度，顺时针方向（int 或 float）
+    :return: 输出文件路径（Path 对象）
+    """
+    # 确保 video_path 是 Path 对象
+    video_path = Path(video_path)
+
+    # 打开视频文件
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        raise ValueError(f"无法打开视频文件: {video_path}")
+
+    # 获取视频属性
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps <= 0:
+        fps = 25  # 默认值
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    # 根据角度调整输出尺寸
+    if angle in [90, 270]:
+        output_size = (height, width)
+    else:
+        output_size = (width, height)
+
+    # 设置输出路径和编码器
+    out_path = video_path.with_name(video_path.stem + '_rotated.mp4')
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(str(out_path), fourcc, fps, output_size)
+
+    # 旋转视频
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        # 获取旋转矩阵并应用旋转
+        M = cv2.getRotationMatrix2D((width / 2, height / 2), angle, 1)
+        rotated_frame = cv2.warpAffine(frame, M, output_size)
+        out.write(rotated_frame)
+
+    # 释放资源
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
+
+    return out_path
