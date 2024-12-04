@@ -8,6 +8,7 @@ from typing import Callable, Tuple, Dict, List
 from collections import defaultdict
 from constants import FILE_ICONS
 from instances.inst_task import TaskManager, ExampleTaskManager
+from tools.Utilities import bytes_to_human_readable
 
 class HandleFileManager(TaskManager):
     def __init__(self, func, folder_path: Path, new_folder_path: Path, rules: Dict[str, Tuple[Callable, Callable]], 
@@ -41,6 +42,17 @@ class HandleFileManager(TaskManager):
         return error_path_dict
     
 
+class ScanFileManager(ExampleTaskManager):
+    def process_result_dict(self):
+        size_dict = defaultdict(list)
+
+        for path, size in self.get_result_dict().items():
+            size_dict[size].append(path)
+
+        size_dict = {k: v for k, v in size_dict.items() if len(v) > 1}
+        return size_dict
+    
+
 class DetectIdenticalManager(TaskManager):
     def get_args(self, task):
         return (task[0], )
@@ -49,20 +61,13 @@ class DetectIdenticalManager(TaskManager):
         return result
     
     def process_result_dict(self):
-        result_path_dict = defaultdict(list)
+        identical_dict = defaultdict(list)
 
-        for (path, size), hash_vault in self.get_result_dict().items():
-            result_path_dict[(hash_vault, size)].append(path)
-        return result_path_dict
-    
+        for (path, size), hash_value in self.get_result_dict().items():
+            identical_dict[(hash_value, size)].append(path)
 
-class ScanFileManager(ExampleTaskManager):
-    def process_result_dict(self):
-        size_dict = defaultdict(list)
-
-        for path, size in self.get_result_dict().items():
-            size_dict[size].append(path)
-        return size_dict
+        identical_dict = {k: v for k, v in identical_dict.items() if len(v) > 1}
+        return identical_dict
 
 
 def create_folder(path: str | Path) -> Path:
@@ -269,7 +274,7 @@ def delete_files(file_path: str | Path):
             
     logging.info(f'删除完成:{file_path}')
 
-def print_directory_structure(folder_path: str='.', indent: str='', exclude_dirs: list=None, exclude_exts: list=None, max_depth: int=3):
+def print_directory_structure(folder_path: str='.', indent: str='    ', exclude_dirs: list=None, exclude_exts: list=None, max_depth: int=3):
     """
     打印指定文件夹的目录结构。
     
@@ -285,32 +290,53 @@ def print_directory_structure(folder_path: str='.', indent: str='', exclude_dirs
         exclude_dirs = []
     if exclude_exts is None:
         exclude_exts = []
-    if max_depth < 1:
-        return
-    if not any(folder_path.iterdir()):
-        return
 
-    # 计算文件名的最大长度，如果没有文件，设置默认长度
-    files = [item for item in folder_path.iterdir() if item.is_file()]
-    max_name_len = max((len(str(item.name)) for item in files), default=0)
-    
-    for item in folder_path.iterdir():
-        # 排除指定的目录
-        if item.is_dir() and item.name in exclude_dirs:
-            continue
-        
-        # 排除指定的文件类型
-        if item.is_file() and any(item.suffix == ext for ext in exclude_exts):
-            continue
-        
-        if item.is_dir():
-            print(f"{indent}📁 {item.name}/")
-            print_directory_structure(item, indent + '    ', exclude_dirs, exclude_exts, max_depth-1)
-        else:
-            icon = FILE_ICONS.get(item.suffix, FILE_ICONS['default'])
-            print(f"{indent}{icon} {item.name:<{max_name_len}} \t({item.stat().st_size} bytes)")
+    def get_structure_list(folder_path, indent, exclude_dirs, exclude_exts, max_depth):
+        if max_depth < 1:
+            return [], 0
+        if not any(folder_path.iterdir()):
+            return [], 0
 
-def compare_structure(dir1, dir2, dir1_name=None, dir2_name=None, indent='', max_depth=3):
+        # 计算文件名的最大长度，如果没有文件，设置默认长度
+        files = [item for item in folder_path.iterdir() if item.is_file()]
+        max_name_len = max((len(str(item.name)) for item in files), default=0)
+
+        structure_list = []
+        folder_size = 0
+        
+        for item in folder_path.iterdir():
+            # 排除指定的目录
+            if item.is_dir() and item.name in exclude_dirs:
+                continue
+            
+            # 排除指定的文件类型
+            if item.is_file() and any(item.suffix == ext for ext in exclude_exts):
+                continue
+            
+            if item.is_dir():
+                subfolder_structure_list, subfolder_size = get_structure_list(item, indent + '    ', exclude_dirs, exclude_exts, max_depth-1)
+                folder_size += subfolder_size
+                reable_subfolder_size = bytes_to_human_readable(subfolder_size)
+
+                structure_list.append(f"{indent}📁 {item.name}/    ({reable_subfolder_size})")
+                structure_list.extend(subfolder_structure_list)
+            else:
+                icon = FILE_ICONS.get(item.suffix, FILE_ICONS['default'])
+                file_size = item.stat().st_size
+                folder_size += file_size
+                reable_file_size = bytes_to_human_readable(file_size)
+
+                structure_list.append(f"{indent}{icon}  {item.name:<{max_name_len}}\t({reable_file_size})")
+
+        return structure_list, folder_size
+
+    structure_list, folder_size = get_structure_list(folder_path, indent, exclude_dirs, exclude_exts, max_depth)
+    reable_folder_size = bytes_to_human_readable(folder_size)
+
+    structure_list = [f"📁 {folder_path.name}/    ({reable_folder_size})"] + structure_list
+    print('\n'.join(structure_list))
+
+def compare_structure(dir1, dir2, dir1_name=None, dir2_name=None, indent=''):
     """
     比较两个文件夹的结构，并打印出仅在一个文件夹中存在的文件或文件夹。
     
@@ -321,55 +347,56 @@ def compare_structure(dir1, dir2, dir1_name=None, dir2_name=None, indent='', max
     :param indent: 缩进字符串，用于格式化输出
     :param max_depth: 最大递归深度，默认为3
     """
-    if max_depth < 1:
-        return []
-
     dir1 = Path(dir1)
     dir2 = Path(dir2)
-    dir1_name = dir1_name or str(dir1)
-    dir2_name = dir2_name or str(dir2)
+    dir1_name = str(dir1)
+    dir2_name = str(dir2)
 
     # 检查目录是否有效
     if not dir1.is_dir() or not dir2.is_dir():
         raise ValueError(f"输入路径必须是有效的文件夹: {dir1} 或 {dir2}")
 
-    # 获取文件和文件夹
-    dir1_files = set(os.listdir(dir1))
-    dir2_files = set(os.listdir(dir2))
-    only_in_dir1 = sorted(dir1_files - dir2_files)
-    only_in_dir2 = sorted(dir2_files - dir1_files)
-    common_files = sorted(dir1_files & dir2_files)
+    def get_structure_list(dir1, dir2, dir1_name, dir2_name, indent):
+        # 获取文件和文件夹
+        dir1_files = set(os.listdir(dir1))
+        dir2_files = set(os.listdir(dir2))
+        only_in_dir1 = sorted(dir1_files - dir2_files)
+        only_in_dir2 = sorted(dir2_files - dir1_files)
+        common_files = sorted(dir1_files & dir2_files)
 
-    print_folder_list = []
-    print_file_list = []
+        print_folder_list = []
+        print_file_list = []
 
-    # 打印仅在 dir1 和 dir2 中存在的项目
-    for item in only_in_dir1 + only_in_dir2:
-        item_path = dir1 / item if item in only_in_dir1 else dir2 / item
-        location = dir1_name if item in only_in_dir1 else dir2_name
+        # 打印仅在 dir1 和 dir2 中存在的项目
+        for item in only_in_dir1 + only_in_dir2:
+            item_path = dir1 / item if item in only_in_dir1 else dir2 / item
+            location = dir1_name if item in only_in_dir1 else dir2_name
 
-        if item_path.is_dir():
-            print_folder_list.append(f"{indent}📁 [{location}] {item}")
-        elif item_path.is_file():
-            icon = FILE_ICONS.get(item_path.suffix, FILE_ICONS['default'])
-            print_file_list.append(f"{indent}{icon} [{location}] {item}")
+            if item_path.is_dir():
+                print_folder_list.append(f"{indent}📁 [{location}] {item}")
+            elif item_path.is_file():
+                icon = FILE_ICONS.get(item_path.suffix, FILE_ICONS['default'])
+                print_file_list.append(f"{indent}{icon} [{location}] {item}")
 
-    # 打印项目
-    for item in common_files:
-        item_path1, item_path2 = dir1 / item, dir2 / item
+        # 打印共同项目
+        for item in common_files:
+            item_path1, item_path2 = dir1 / item, dir2 / item
 
-        # 打印文件夹与文件夹的比较结果
-        if item_path1.is_dir() and item_path2.is_dir():
-            subfolder_print_list = compare_structure(item_path1, item_path2, dir1_name, dir2_name, indent + '    ', max_depth - 1)
-            if subfolder_print_list:
-                print_folder_list.append(f"{indent}📁 {item}/")
-                print_folder_list.extend(subfolder_print_list)
+            # 打印文件夹与文件夹的比较结果
+            if item_path1.is_dir() and item_path2.is_dir():
+                subfolder_print_list = get_structure_list(item_path1, item_path2, dir1_name, dir2_name, indent + '    ')
+                if subfolder_print_list:
+                    print_folder_list.append(f"{indent}📁 {item}/")
+                    print_folder_list.extend(subfolder_print_list)
 
-        # 打印文件夹与文件的混合情况
-        elif (item_path1.is_file() and item_path2.is_dir()) or (item_path1.is_dir() and item_path2.is_file()):
-            print_file_list.append(f"{indent}{item} (one is a file, the other is a folder)")
+            # 打印文件夹与文件的混合情况
+            elif (item_path1.is_file() and item_path2.is_dir()) or (item_path1.is_dir() and item_path2.is_file()):
+                print_file_list.append(f"{indent}{item} (one is a file, the other is a folder)")
 
-    return print_folder_list + print_file_list
+        return print_folder_list + print_file_list
+    
+    structure_list = get_structure_list(dir1, dir2, dir1_name, dir2_name, indent)
+    print('\n'.join(structure_list))
 
 def get_file_hash(file_path: Path) -> str:
     """
@@ -393,26 +420,20 @@ def detect_identical_files(folder_path: str | Path, execution_mode: str ='thread
     """
     folder_path = Path(folder_path)
     
-    # 根据文件大小进行初步筛选
     scan_file_manager = ScanFileManager(lambda x: x.stat().st_size, execution_mode, 
                                         progress_desc='Scanning files', show_progress=True)
-
-    file_path_list = [path for path in folder_path.rglob('*') if path.is_file()]
-    scan_file_manager.start(file_path_list)
-
-    size_dict = scan_file_manager.process_result_dict()
-    size_dict = {k: v for k, v in size_dict.items() if len(v) > 1}
-    
-    # 对于相同大小的文件，进一步计算哈希值
     detect_identical_manager = DetectIdenticalManager(get_file_hash, execution_mode, 
                                                       progress_desc='Calculating file hashes', show_progress=True)
 
+    # 根据文件大小进行初步筛选
+    file_path_list = [path for path in folder_path.rglob('*') if path.is_file()]
+    scan_file_manager.start(file_path_list)
+    size_dict = scan_file_manager.process_result_dict()
+    
+    # 对于相同大小的文件，进一步计算哈希值, 找出哈希值相同的文件
     file_task_list = [(file_path, size) for size, files in size_dict.items() for file_path in files]
     detect_identical_manager.start(file_task_list)
-
-    # 找出哈希值相同的文件
-    hash_dict = detect_identical_manager.process_result_dict()
-    identical_dict = {k: v for k, v in hash_dict.items() if len(v) > 1}
+    identical_dict = detect_identical_manager.process_result_dict()
     
     return identical_dict
 
@@ -422,7 +443,6 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
 
     :param identical_dict: 相同文件的字典，由 detect_identical_files 函数返回。
     """
-    from tools.Utilities import bytes_to_human_readable
     if not identical_dict:
         print("\nNo identical files found.")
         return 
@@ -462,7 +482,6 @@ def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
     :param identical_dict: 相同文件的字典，由 detect_identical_files 函数返回。
     :return: 删除的文件列表。
     """
-    from tools.Utilities import bytes_to_human_readable
     report = []
     delete_size = 0
     for (hash_value,file_size), file_list in identical_dict.items():
@@ -543,7 +562,6 @@ def folder_to_file_path(folder_path: Path, file_extension: str) -> Path:
 def replace_filenames(folder_path: Path | str, pattern: str, replacement: str):
     """
     使用正则表达式替换文件夹中所有文件名中的匹配部分。
-    
     遍历指定文件夹，将其中每个文件的文件名中的匹配内容替换为 `replacement`。
 
     :param folder_path: 文件夹的路径。
@@ -561,3 +579,18 @@ def replace_filenames(folder_path: Path | str, pattern: str, replacement: str):
         
         new_file_path = file.with_name(new_filename)  # 使用with_name方法生成新文件路径
         file.rename(new_file_path)  # 重命名文件
+
+def get_folder_size(folder_path: Path | str) -> int:
+    """
+    计算文件夹的大小（以字节为单位）。
+    遍历指定文件夹中的所有文件和子目录，并计算它们的大小总和。
+
+    :param folder_path: 文件夹的路径。
+    :return: 文件夹的总大小（以字节为单位）。
+    """
+    total_size = 0
+    folder = Path(folder_path)
+    for file in folder.rglob('*'):  # rglob('*') 遍历所有文件和子目录
+        if file.is_file():
+            total_size += file.stat().st_size  # 获取文件大小
+    return total_size

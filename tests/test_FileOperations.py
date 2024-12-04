@@ -9,8 +9,9 @@ def test_print_directory_structure():
     exclude_dirs = ['.git', '.pytest_cache', '__pycache__']
     exclude_exts = ['.pyc', '.pyo']
     print()
-    print_directory_structure(r'C:\Users\27342\OneDrive\Videos\compress_temp', exclude_dirs = exclude_dirs, exclude_exts = exclude_exts)
+    print_directory_structure(r'Q:\Project\test', exclude_dirs = exclude_dirs, exclude_exts = exclude_exts)
 
 def test_compress_folder():
     # Test with a valid directory
-    compress_folder(r'C:\Users\27342\OneDrive\Videos\compress_temp')
+    # compress_folder(r'C:\Users\27342\OneDrive\Videos\compress_temp')
+    pass
