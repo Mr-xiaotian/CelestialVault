@@ -1,4 +1,4 @@
-import shutil, re
+import shutil, re, os
 import logging
 import hashlib
 import zipfile, rarfile, tarfile, py7zr
@@ -6,6 +6,7 @@ from pathlib import Path
 from tqdm import tqdm
 from typing import Callable, Tuple, Dict, List
 from collections import defaultdict
+from constants import FILE_ICONS
 from instances.inst_task import TaskManager, ExampleTaskManager
 
 class HandleFileManager(TaskManager):
@@ -278,8 +279,8 @@ def print_directory_structure(folder_path: str='.', indent: str='', exclude_dirs
     :param exclude_exts: 要排除的文件扩展名列表，默认为空列表。
     :param max_depth: 最大递归深度，默认为3。
     """
-    from constants import FILE_ICONS
     folder_path: Path = Path(folder_path)
+
     if exclude_dirs is None:
         exclude_dirs = []
     if exclude_exts is None:
@@ -308,6 +309,67 @@ def print_directory_structure(folder_path: str='.', indent: str='', exclude_dirs
         else:
             icon = FILE_ICONS.get(item.suffix, FILE_ICONS['default'])
             print(f"{indent}{icon} {item.name:<{max_name_len}} \t({item.stat().st_size} bytes)")
+
+def compare_structure(dir1, dir2, dir1_name=None, dir2_name=None, indent='', max_depth=3):
+    """
+    比较两个文件夹的结构，并打印出仅在一个文件夹中存在的文件或文件夹。
+    
+    :param dir1: 第一个文件夹路径
+    :param dir2: 第二个文件夹路径
+    :param dir1_name: 第一个文件夹的名称，用于输出时显示
+    :param dir2_name: 第二个文件夹的名称，用于输出时显示
+    :param indent: 缩进字符串，用于格式化输出
+    :param max_depth: 最大递归深度，默认为3
+    """
+    if max_depth < 1:
+        return []
+
+    dir1 = Path(dir1)
+    dir2 = Path(dir2)
+    dir1_name = dir1_name or str(dir1)
+    dir2_name = dir2_name or str(dir2)
+
+    # 检查目录是否有效
+    if not dir1.is_dir() or not dir2.is_dir():
+        raise ValueError(f"输入路径必须是有效的文件夹: {dir1} 或 {dir2}")
+
+    # 获取文件和文件夹
+    dir1_files = set(os.listdir(dir1))
+    dir2_files = set(os.listdir(dir2))
+    only_in_dir1 = sorted(dir1_files - dir2_files)
+    only_in_dir2 = sorted(dir2_files - dir1_files)
+    common_files = sorted(dir1_files & dir2_files)
+
+    print_folder_list = []
+    print_file_list = []
+
+    # 打印仅在 dir1 和 dir2 中存在的项目
+    for item in only_in_dir1 + only_in_dir2:
+        item_path = dir1 / item if item in only_in_dir1 else dir2 / item
+        location = dir1_name if item in only_in_dir1 else dir2_name
+
+        if item_path.is_dir():
+            print_folder_list.append(f"{indent}📁 [{location}] {item}")
+        elif item_path.is_file():
+            icon = FILE_ICONS.get(item_path.suffix, FILE_ICONS['default'])
+            print_file_list.append(f"{indent}{icon} [{location}] {item}")
+
+    # 打印项目
+    for item in common_files:
+        item_path1, item_path2 = dir1 / item, dir2 / item
+
+        # 打印文件夹与文件夹的比较结果
+        if item_path1.is_dir() and item_path2.is_dir():
+            subfolder_print_list = compare_structure(item_path1, item_path2, dir1_name, dir2_name, indent + '    ', max_depth - 1)
+            if subfolder_print_list:
+                print_folder_list.append(f"{indent}📁 {item}/")
+                print_folder_list.extend(subfolder_print_list)
+
+        # 打印文件夹与文件的混合情况
+        elif (item_path1.is_file() and item_path2.is_dir()) or (item_path1.is_dir() and item_path2.is_file()):
+            print_file_list.append(f"{indent}{item} (one is a file, the other is a folder)")
+
+    return print_folder_list + print_file_list
 
 def get_file_hash(file_path: Path) -> str:
     """
