@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Tuple, Callable, Type, Iterable
+from itertools import islice
 from functools import reduce
-from itertools import product, islice
 
 
 def list_removes(lists: list, _remove) -> list:
@@ -69,16 +69,6 @@ def list_replace(lists: List[Any], replace_rules: List[Tuple[Any, Any]]) -> List
         for l in lists
     ]
 
-def multi_loop_generator(*lists: List[Any]) -> Iterable[List[Any]]:
-    """
-    生成任意次数嵌套循环的组合。
-    
-    :param lists: 多个列表，每个列表将用于一次嵌套循环
-    :return: 生成器，依次产生每种组合的结果
-    """
-    for combination in product(*lists):
-        yield combination
-
 def dictkey_mix(dict_a: dict, dict_b: dict) -> Tuple[List[Any], List[Any], List[Any], List[Any]]:
     """
     将两个字典的键进行混合，并返回混合后的键列表。
@@ -97,40 +87,6 @@ def dictkey_mix(dict_a: dict, dict_b: dict) -> Tuple[List[Any], List[Any], List[
     
     return key_max, key_min, dif_key_a, dif_key_b
 
-def count_occurrences(lst: List[Tuple[Tuple[str, int], str]], value: str) -> int:
-    """
-    在列表中查找指定元素的出现次数。
-    
-    :param lst (List[Tuple[Tuple[str, int], str]]): 原始列表，列表的元素是元组，元组的第一个元素是字符串。
-    :param value (str): 需要查找的元素。
-
-    :return int: 指定元素在列表中的出现次数。
-    """
-    return sum(1 for item in lst if item[0][0] == value)
-
-def get_key_dict(lst: List[Tuple[str, int]]) -> Dict[str, Tuple[int]]:
-    """
-    从列表中获取键值对，创建并返回一个字典。
-    
-    :param lst (List[Tuple[str, int]]): 原始列表，列表的元素是元组。
-    :return Dict[str, Tuple[int]]: 从列表中获取的键值对组成的字典。
-    """
-    dict_result = {}
-    for item in lst:
-        key, value = item[0][0], item[0][1]
-        dict_result.setdefault(key, []).append(value)
-    return {key: tuple(values) for key, values in dict_result.items()}
-
-def find_tuple(lst: List[Tuple[Tuple[str, int], str]], target: str) -> Tuple[str, int]:
-    """
-    在列表中查找指定的元组。
-    
-    :param lst (List[Tuple[Tuple[str, int], str]]): 原始列表，列表的元素是元组。
-    :param target (str): 需要查找的元素。
-    :return Tuple[str, int]: 在列表中找到的元组，如果没有找到，则返回None。
-    """
-    return next((item for item in lst if item[0] == target), None)
-
 def batch_generator(generator: Iterable, batch_size: int):
     """
     批量生成器：每次从原生成器中获取 batch_size 个元素。
@@ -139,6 +95,7 @@ def batch_generator(generator: Iterable, batch_size: int):
     :param batch_size: 每批次的元素数量
     :return: 批量生成器，每次生成一个包含 batch_size 个元素的列表
     """
+    generator = iter(generator)  # 确保是迭代器
     while True:
         batch = list(islice(generator, batch_size))
         if not batch:
