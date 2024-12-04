@@ -46,13 +46,12 @@ def test_batch_generator():
     # 测试输入数据
     input_generator = simple_generator()
     batch_size = 3
-    expected_batches = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10]]
 
     # 实际输出
     actual_batches = list(batch_generator(input_generator, batch_size))
 
     # 日志输出
-    logging.info(f"{'Input generator':<20}: simple_generator()")
+    logging.info(f"{'Input generator':<20}: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]")
     logging.info(f"{'Batch size':<20}: {batch_size}")
-    logging.info(f"{'Expected batches':<20}: {expected_batches}")
+    logging.info(f"{'Expected batches':<20}: [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10]]")
     logging.info(f"{'Actual batches':<20}: {actual_batches}")
