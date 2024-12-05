@@ -105,7 +105,7 @@ def transfer_gif_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]
     
     from tools.FileOperations import handle_folder
 
-    rules = {'gif': (transfer_gif_to_video, rename_mp4)}
+    rules = {'.gif': (transfer_gif_to_video, rename_mp4)}
     return handle_folder(folder_path, rules)
 
 def rotate_video(video_path: str | Path, angle: int):

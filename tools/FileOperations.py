@@ -22,7 +22,7 @@ class HandleFileManager(TaskManager):
         rel_path = file_path.relative_to(self.folder_path)
         new_file_path = self.new_folder_path / rel_path
 
-        file_suffix = file_path.suffix.lower().lstrip('.')
+        file_suffix = file_path.suffix.lower()
         action_func, rename_func = self.rules.get(file_suffix, (shutil.copy, lambda x: x))
 
         final_path = rename_func(new_file_path)
@@ -163,7 +163,7 @@ def compress_folder(folder_path: str | Path, execution_mode: str = 'thread') -> 
 
     rules = {suffix: (compress_img, lambda x: x) for suffix in IMG_SUFFIXES}
     rules.update({suffix: (compress_video,rename_mp4) for suffix in VIDEO_SUFFIXES})
-    rules.update({suffix: (compress_pdf,rename_pdf) for suffix in ['pdf', 'PDF']})
+    # rules.update({'.pdf': (compress_pdf,rename_pdf)})
 
     return handle_folder(folder_path, rules, execution_mode, progress_desc='Compressing folder')
 
@@ -250,10 +250,10 @@ def unzip_folder(folder_path: str | Path):
         new_name = f"{name}({suffix})_unzip"
         return file_path.with_name(new_name)
     
-    rules = {'zip': (unzip_zip_file, rename_unzip)}
-    rules.update({'rar': (unzip_rar_file, rename_unzip)})
-    rules.update({'tar': (unzip_tar_file, rename_unzip)})
-    rules.update({'7z': (unzip_7z_file, rename_unzip)})
+    rules = {'.zip': (unzip_zip_file, rename_unzip)}
+    rules.update({'.rar': (unzip_rar_file, rename_unzip)})
+    rules.update({'.tar': (unzip_tar_file, rename_unzip)})
+    rules.update({'.7z': (unzip_7z_file, rename_unzip)})
 
     return handle_folder(folder_path, rules, progress_desc="Unziping folder")
 
@@ -301,7 +301,8 @@ def print_directory_structure(folder_path: str='.', indent: str='    ', exclude_
         files = [item for item in folder_path.iterdir() if item.is_file()]
         max_name_len = max((len(str(item.name)) for item in files), default=0)
 
-        structure_list = []
+        folder_structure_list = []
+        file_structure_list = []
         folder_size = 0
         
         for item in folder_path.iterdir():
@@ -318,16 +319,17 @@ def print_directory_structure(folder_path: str='.', indent: str='    ', exclude_
                 folder_size += subfolder_size
                 reable_subfolder_size = bytes_to_human_readable(subfolder_size)
 
-                structure_list.append(f"{indent}📁 {item.name}/    ({reable_subfolder_size})")
-                structure_list.extend(subfolder_structure_list)
+                folder_structure_list.append(f"{indent}📁 {item.name}/    ({reable_subfolder_size})")
+                folder_structure_list.extend(subfolder_structure_list)
             else:
                 icon = FILE_ICONS.get(item.suffix, FILE_ICONS['default'])
                 file_size = item.stat().st_size
                 folder_size += file_size
                 reable_file_size = bytes_to_human_readable(file_size)
 
-                structure_list.append(f"{indent}{icon}  {item.name:<{max_name_len}}\t({reable_file_size})")
+                file_structure_list.append(f"{indent}{icon} {item.name:<{max_name_len}}\t({reable_file_size})")
 
+        structure_list = folder_structure_list + file_structure_list
         return structure_list, folder_size
 
     structure_list, folder_size = get_structure_list(folder_path, indent, exclude_dirs, exclude_exts, max_depth)
