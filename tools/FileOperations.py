@@ -291,7 +291,7 @@ def print_directory_structure(folder_path: str='.', indent: str='    ', exclude_
     if exclude_exts is None:
         exclude_exts = []
 
-    def get_structure_list(folder_path, indent, exclude_dirs, exclude_exts, max_depth):
+    def get_structure_list(folder_path, indent, max_depth):
         if max_depth < 1:
             return [], 0
         if not any(folder_path.iterdir()):
@@ -315,7 +315,7 @@ def print_directory_structure(folder_path: str='.', indent: str='    ', exclude_
                 continue
             
             if item.is_dir():
-                subfolder_structure_list, subfolder_size = get_structure_list(item, indent + '    ', exclude_dirs, exclude_exts, max_depth-1)
+                subfolder_structure_list, subfolder_size = get_structure_list(item, indent + '    ', max_depth-1)
                 folder_size += subfolder_size
                 reable_subfolder_size = bytes_to_human_readable(subfolder_size)
 
@@ -332,22 +332,19 @@ def print_directory_structure(folder_path: str='.', indent: str='    ', exclude_
         structure_list = folder_structure_list + file_structure_list
         return structure_list, folder_size
 
-    structure_list, folder_size = get_structure_list(folder_path, indent, exclude_dirs, exclude_exts, max_depth)
+    structure_list, folder_size = get_structure_list(folder_path, indent, max_depth)
     reable_folder_size = bytes_to_human_readable(folder_size)
 
     structure_list = [f"📁 {folder_path.name}/    ({reable_folder_size})"] + structure_list
     print('\n'.join(structure_list))
 
-def compare_structure(dir1, dir2, dir1_name=None, dir2_name=None, indent=''):
+def compare_structure(dir1, dir2, indent=''):
     """
     比较两个文件夹的结构，并打印出仅在一个文件夹中存在的文件或文件夹。
     
     :param dir1: 第一个文件夹路径
     :param dir2: 第二个文件夹路径
-    :param dir1_name: 第一个文件夹的名称，用于输出时显示
-    :param dir2_name: 第二个文件夹的名称，用于输出时显示
     :param indent: 缩进字符串，用于格式化输出
-    :param max_depth: 最大递归深度，默认为3
     """
     dir1 = Path(dir1)
     dir2 = Path(dir2)
