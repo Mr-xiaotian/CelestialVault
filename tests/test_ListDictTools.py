@@ -40,7 +40,7 @@ def test_batch_generator():
     actual_batches = list(batch_generator(input_generator, batch_size))
 
     # 日志输出
-    logging.info(f"{'Input generator':<20}: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]")
-    logging.info(f"{'Batch size':<20}: {batch_size}")
-    logging.info(f"{'Expected batches':<20}: [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10]]")
-    logging.info(f"{'Actual batches':<20}: {actual_batches}")
+    logging.info(f"{'Input generator':<16}: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]")
+    logging.info(f"{'Batch size':<16}: {batch_size}")
+    logging.info(f"{'Expected batches':<16}: [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10]]")
+    logging.info(f"{'Actual batches':<16}: {actual_batches}")

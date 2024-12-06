@@ -1,5 +1,5 @@
-IMG_SUFFIXES = [".jpg", ".png", ".jpeg", ".heic", ".bmp", ".tiff", ".webp",
-                ".JPG", ".PNG", ".JPEG", ".HEIC", ".BMP", ".TIFF", ".WEBP"]
+IMG_SUFFIXES = [".jpg", ".png", ".jpeg", ".heic", ".bmp", ".tiff", ".webp", ".svg",
+                ".JPG", ".PNG", ".JPEG", ".HEIC", ".BMP", ".TIFF", ".WEBP", ".SVG"]
 
 VIDEO_SUFFIXES = [".mp4", ".avi", ".mov", ".mkv", ".divx", ".mpg", ".flv", ".rm", ".rmvb", ".mpeg", ".wmv", ".3gp", ".vob", ".ogm", ".ogv", ".asf", ".ts", ".webm",
                   ".MP4", ".AVI", ".MOV", ".MKV", ".DIVX", ".MPG", ".FLV", ".RM", ".RMVB", ".MPEG", ".WMV", ".3GP", ".VOB", ".OGM", ".OGV", ".ASF", ".TS", ".WEBM"]
@@ -7,8 +7,8 @@ VIDEO_SUFFIXES = [".mp4", ".avi", ".mov", ".mkv", ".divx", ".mpg", ".flv", ".rm"
 AUDIO_SUFFIXES = [".mp3", ".wav", ".aac", ".flac", ".ogg", ".wma", ".m4a", ".alac", ".aiff", ".opus",
                   ".MP3", ".WAV", ".AAC", ".FLAC", ".OGG", ".WMA", ".M4A", ".ALAC", ".AIFF", ".OPUS"]
 
-ZIP_SUFFIXES = [".zip", ".rar", ".tar", ".7z",
-                ".ZIP", ".RAR", ".TAR", ".7Z"]
+ZIP_SUFFIXES = [".zip", ".rar", ".tar", ".7z", ".gz", ".bz2", ".xz", ".zipx", ".tar.gz",
+                ".ZIP", ".RAR", ".TAR", ".7Z", ".GZ", ".BZ2", ".XZ", ".ZIPX", ".TAR.GZ"]
 
 TEXT_SUFFIXES = [".txt", ".md", ".json", ".xml", ".csv", ".tsv", ".yaml", ".yml", ".ini", ".conf", ".config", ".properties", ".prop", ".props",
                  ".TXT", ".MD", ".JSON", ".XML", ".CSV", ".TSV", ".YAML", ".YML", ".INI", ".CONF", ".CONFIG", ".PROPERTIES", ".PROP", ".PROPS"]
