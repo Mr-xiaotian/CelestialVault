@@ -173,10 +173,12 @@ class TaskManager:
         info_list = []
         for arg in self.get_args(task):
             arg_str = f'{arg}'.replace("\\", "\\\\").replace("\n", "\\n")
-            if len(arg_str) < self.max_info:
+            if len(arg_str) < self.max_info or not self.max_info:
                 info_list.append(arg_str)
             else:
-                info_list.append(f"{arg_str[:self.max_info]}...")
+                first_info = arg_str[:int(self.max_info*2//3)]
+                second_info = arg_str[-int(self.max_info*1//3):]
+                info_list.append(f"{first_info}...{second_info}")
         return "(" + ", ".join(info_list) + ")"
     
     def get_result_info(self, result):

@@ -1,8 +1,8 @@
 IMG_SUFFIXES = [".jpg", ".png", ".jpeg", ".heic", ".bmp", ".tiff", ".webp", ".svg",
                 ".JPG", ".PNG", ".JPEG", ".HEIC", ".BMP", ".TIFF", ".WEBP", ".SVG"]
 
-VIDEO_SUFFIXES = [".mp4", ".avi", ".mov", ".mkv", ".divx", ".mpg", ".flv", ".rm", ".rmvb", ".mpeg", ".wmv", ".3gp", ".vob", ".ogm", ".ogv", ".asf", ".ts", ".webm",
-                  ".MP4", ".AVI", ".MOV", ".MKV", ".DIVX", ".MPG", ".FLV", ".RM", ".RMVB", ".MPEG", ".WMV", ".3GP", ".VOB", ".OGM", ".OGV", ".ASF", ".TS", ".WEBM"]
+VIDEO_SUFFIXES = [".mp4", ".avi", ".mov", ".mkv", ".divx", ".mpg", ".flv", ".rm", ".rmvb", ".mpeg", ".wmv", ".3gp", ".vob", ".ogm", ".ogv", ".asf", ".ts", ".webm", ".mts", ".m2t",
+                  ".MP4", ".AVI", ".MOV", ".MKV", ".DIVX", ".MPG", ".FLV", ".RM", ".RMVB", ".MPEG", ".WMV", ".3GP", ".VOB", ".OGM", ".OGV", ".ASF", ".TS", ".WEBM", ".MTS", ".M2T"]
 
 AUDIO_SUFFIXES = [".mp3", ".wav", ".aac", ".flac", ".ogg", ".wma", ".m4a", ".alac", ".aiff", ".opus",
                   ".MP3", ".WAV", ".AAC", ".FLAC", ".OGG", ".WMA", ".M4A", ".ALAC", ".AIFF", ".OPUS"]
