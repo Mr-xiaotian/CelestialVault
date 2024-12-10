@@ -35,6 +35,9 @@ def bytes_to_human_readable(size_in_bytes: int) -> str:
     :param size_in_bytes:
     :return: 人类可读格式的大小 (str)，如 "1GB 512MB"
     """
+    if size_in_bytes <= 0:
+        return "0B"
+    
     units = ['B', 'KB', 'MB', 'GB', 'TB']
     result = []
     

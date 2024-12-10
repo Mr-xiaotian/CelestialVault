@@ -21,8 +21,8 @@ class Findiffer:
         # 以split_str为分割符将a和b分割
         list_a = string_split(string_a, split_str=split_str)
         list_b = string_split(string_b, split_str=split_str)
-        
-        part_len = min(len(list_a),len(list_b))
+        part_len = min(len(list_a), len(list_b))
+
         # 比较a和b的每一部分
         for i in range(part_len):
             if list_a[i] == list_b[i]:
@@ -39,9 +39,9 @@ class Findiffer:
             else:
                 print(f'(相似度：{similarity})\n')
 
-    def fd_dict(self, dict_a, dict_b):    
-        key_max,key_min,dif_key_a,dif_key_b = dictkey_mix(
-            dict_a,dict_b
+    def fd_dict(self, dict_a, dict_b):
+        _, key_min, dif_key_a, dif_key_b = dictkey_mix(
+            dict_a, dict_b
             )
 
         print('a b的共有标签值为:')
@@ -79,6 +79,10 @@ class Findiffer:
     def get_diff_ranges(self, origin_str: str, lcs_part: List[str]) -> List[List[int]]:
         """
         根据get_lcs返回的相似部分，计算字符串中不同区域的位置
+
+        :param origin_str: 原始字符串
+        :param lcs_part: 相似部分列表
+        :return: 不同区域的位置列表
         """
         if len(lcs_part) == 1 and lcs_part[0] == '':
             return [[0, len(origin_str)]]

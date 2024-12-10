@@ -102,7 +102,7 @@ def batch_generator(generator: Iterable, batch_size: int):
             break
         yield batch
 
-def list_to_square_matrix(lst):
+def list_to_square_matrix(lst: list):
     """
     将长度为 n^2 的列表转换为 n x n 的方阵。
     
@@ -117,3 +117,20 @@ def list_to_square_matrix(lst):
     matrix = [lst[i * n: (i + 1) * n] for i in range(n)]
     
     return matrix
+
+def format_simple_matrix(matrix: list):
+    '''
+    格式化简单矩阵
+    :param matrix: 矩阵
+    :return: 格式化后的字符串
+    '''
+    # 确定每个元素的最大宽度
+    max_width = max(len(str(item)) for row in matrix for item in row)
+    
+    formatted_rows = []
+    for row in matrix:
+        formatted_row = "  [" + ", ".join(f"{item:>{max_width}}" for item in row) + "]"
+        formatted_rows.append(formatted_row)
+    
+    formatted_string = "[\n" + ",\n".join(formatted_rows) + "\n]"
+    return formatted_string
