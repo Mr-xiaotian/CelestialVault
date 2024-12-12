@@ -1,5 +1,6 @@
 from loguru import logger as loguru_logger
 from time import strftime, localtime
+from threading import Thread
 
 
 class TerminationSignal:
@@ -51,6 +52,46 @@ class TaskLogger:
 
     def task_duplicate(self, func_name, task_info):
         self.logger.success(f"In '{func_name}', Task {task_info} has been duplicated.")
+
+
+class BroadcastQueueManager:
+    def __init__(self, input_queue, target_queues):
+        """
+        广播队列管理器
+        :param input_queue: 源输入队列
+        :param target_queues: 目标队列列表
+        """
+        self.input_queue = input_queue
+        self.target_queues = target_queues
+        self.running = True
+
+    def start(self):
+        """
+        开始广播线程
+        """
+        self.thread = Thread(target=self.broadcast)
+        self.thread.start()
+
+    def stop(self):
+        """
+        停止广播线程
+        """
+        self.running = False
+        self.thread.join()
+
+    def broadcast(self):
+        """
+        将输入队列的数据广播到目标队列
+        """
+        while self.running:
+            item = self.input_queue.get()  # 从输入队列获取数据
+            if item is TerminationSignal:  # 检测到终止信号时广播并退出
+                for queue in self.target_queues:
+                    queue.put(TerminationSignal)
+                break
+            for queue in self.target_queues:  # 广播到所有目标队列
+                queue.put(item)
+
 
         
 TERMINATION_SIGNAL = TerminationSignal()

@@ -33,19 +33,25 @@ class TaskChain:
             queues[0].put(task)
         queues[0].put(TERMINATION_SIGNAL)
         return queues
+    
+    def _initialize_queues(self):
+        """
+        初始化任务队列
+        :param is_mp: 是否使用多进程模式
+        :return: 节点与队列的映射关系
+        """
+
+        # 为每个节点创建队列
+        queues = {}
+        # for node in all_nodes:
+        #     queues[node] = MPQueue() if is_mp else ThreadQueue()
+        return queues
 
     def set_chain_mode(self, chain_mode):
         """
         设置任务链的执行模式
         """
         self.chain_mode = chain_mode
-
-    def add_stage(self, stage: TaskManager):
-        self.stages.append(stage)
-
-    def remove_stage(self, index: int):
-        if 0 <= index < len(self.stages):
-            self.stages.pop(index)
 
     def start_chain(self, tasks):
         """
