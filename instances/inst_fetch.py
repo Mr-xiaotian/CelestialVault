@@ -10,9 +10,8 @@ class Fetcher(object):
     """
     class of Fetcher, must include function working()
     """
-
-    def __init__(self, headers=None, sleep_time=0, wait_time=5, 
-                 max_repeat=3, text_encoding = 'utf-8'):
+    def __init__(self, headers: dict=None, sleep_time: int=0, wait_time: int=5, 
+                 max_repeat: int=3, text_encoding: str = 'utf-8'):
         """
         constructor
         :param sleep_time: default 0, sleeping time before fetching
@@ -33,41 +32,36 @@ class Fetcher(object):
     def obtainText(self, func: object, *args, **kwargs) -> Tuple[int, Any, str]:
         response = func(*args, **kwargs)
         response_text = response.content.decode(self._text_encoding, 'ignore')
-        # print(response_text)
         response_text = unquote(unescape(response_text))
-
-        '''
-        re_charset = re.compile('charset=(.+)', re.S)
-        charset = re_charset.search(response.headers['content-type']).group(1)
-        '''
-
-        return 1, (response.status_code, response_text), ''
+        # re_charset = re.compile('charset=(.+)', re.S)
+        # charset = re_charset.search(response.headers['content-type']).group(1)
+        return response.status_code, response_text
     
     def obtainContent(self, func: object, *args, **kwargs) -> Tuple[int, Any, str]:
         response = func(*args, **kwargs)
-        return 1, (response.status_code, response.content), ''
+        return response.status_code, response.content
 
     def getText(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
         self.init_client()
         return self.obtainText(self.cl.get, url=url,
-                               *args, **kwargs)[1][1]
+                               *args, **kwargs)[1]
 
     def postText(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
         self.init_client()
         return self.obtainText(self.cl.post, url=url, 
-                               *args, **kwargs)[1][1]
+                               *args, **kwargs)[1]
     
     def getContent(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
         self.init_client()
         return self.obtainContent(self.cl.get, url=url,
-                               *args, **kwargs)[1][1]
+                                  *args, **kwargs)[1]
 
-    def postText(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
+    def postContent(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
         self.init_client()
-        return self.obtainContent(self.cl.post, url=url, 
-                               *args, **kwargs)[1][1]
+        return self.obtainContent(self.cl.post, url=url,
+                                  *args, **kwargs)[1]
     
-    # 以下为异步代码, 需要结合my_thread中的start_async与run_in_async使用
+    # 以下为异步代码, 需要结合inst_task中的start_async与run_in_async使用
     async def getText_async(self, url, encoding='utf-8'):
         async with self.se_async.get(url) as response:
             content = await response.text(encoding=encoding)
