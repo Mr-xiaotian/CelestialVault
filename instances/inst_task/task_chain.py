@@ -3,9 +3,11 @@ import multiprocessing
 from collections import defaultdict
 from queue import Queue as ThreadQueue
 from multiprocessing import Process, Queue as MPQueue
-from typing import List, Any, Dict
+from typing import List, Any, Dict, Union
 from time import time
-from instances.inst_taskmanage import TERMINATION_SIGNAL, TaskManager, task_logger
+from .task_manage import TaskManager
+from .task_support import TERMINATION_SIGNAL, task_logger
+
 
 class TaskChain:
     def __init__(self, stages, chain_mode='serial'):

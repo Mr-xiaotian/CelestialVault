@@ -1,70 +1,14 @@
-# -*- coding: utf-8 -*-
-#版本 2.50
-#作者：晓天, GPT-4o
-#时间：20/11/2024
-#Github: https://github.com/Mr-xiaotian
-
-
+from __future__ import annotations
 import asyncio
 from queue import Queue as ThreadQueue
 from multiprocessing import Queue as MPQueue
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError, RequestError, PoolTimeout, ReadTimeout
-from loguru import logger as loguru_logger
-from time import time, strftime, localtime
+from typing import List
+from time import time
 from instances.inst_progress import ProgressManager
+from .task_support import TERMINATION_SIGNAL, TerminationSignal, task_logger
 
-
-class TerminationSignal:
-    """用于标记任务队列终止的哨兵对象"""
-    pass
-TERMINATION_SIGNAL = TerminationSignal()
-
-class TaskLogger:
-    """
-    用于记录任务执行日志的类
-    """
-    def __init__(self, logger):
-        self.logger = logger
-
-        self.logger.remove()  # remove the default handler
-        now_time = strftime("%Y-%m-%d", localtime())
-        self.logger.add(f"logs/task_manager({now_time}).log",
-                        format="{time:YYYY-MM-DD HH:mm:ss} {level} {message}", 
-                        level="INFO")
-        
-    def start_task(self, func_name, task_num, execution_mode, worker_limit):
-        start_text = f"'{func_name}' start {task_num} tasks by {execution_mode}"
-        start_text += f"({worker_limit} workers)." if execution_mode != 'serial' else "."
-        self.logger.info(start_text)
-
-    def start_stage(self, stage_index, func_name, execution_mode):
-        self.logger.info(f"The {stage_index} stage '{func_name}' start tasks by {execution_mode}.")
-
-    def start_chain(self, stage_num, chain_mode):
-        self.logger.info(f"Starting TaskChain with {stage_num} stages by {chain_mode}.")
-
-    def end_task(self, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
-        self.logger.info(f"'{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
-
-    def end_stage(self, stage_index, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
-        self.logger.info(f"The {stage_index} stage '{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
-    
-    def end_chain(self, use_time):
-        self.logger.info(f"TaskChain end. Use {use_time:.2f} second.")
-
-    def task_success(self, func_name, task_info, execution_mode, result_info, use_time):
-        self.logger.success(f"In '{func_name}', Task {task_info} completed by {execution_mode}. Result is {result_info}. Used {use_time:.2f} seconds.")
-
-    def task_retry(self, func_name, task_info, retry_times):
-        self.logger.warning(f"In '{func_name}' Task {task_info} failed {retry_times} times and will retry.")
-
-    def task_fail(self, func_name, task_info, exception):
-        self.logger.error(f"In '{func_name}', Task {task_info} failed and can't retry: ({type(exception).__name__}){exception}")
-
-    def task_duplicate(self, func_name, task_info):
-        self.logger.success(f"In '{func_name}', Task {task_info} has been duplicated.")
-task_logger = TaskLogger(loguru_logger)
 
 class TaskManager:
     def __init__(self, func, execution_mode = 'serial',
@@ -118,6 +62,13 @@ class TaskManager:
             self.thread_pool = ThreadPoolExecutor(max_workers=self.worker_limit)
         elif self.execution_mode == 'process' and self.process_pool is None:
             self.process_pool = ProcessPoolExecutor(max_workers=self.worker_limit)
+
+    def set_next_stages(self, next_stages: List[TaskManager] = None):
+        """
+        定义任务链中的节点
+        :param next_stages: 后续节点列表
+        """
+        self.next_stages = next_stages or []  # 默认为空列表
 
     def set_execution_mode(self, execution_mode):
         self.execution_mode = execution_mode

@@ -1,2 +1,0 @@
-from instances.inst_taskmanage import TaskManager, ExampleTaskManager
-from instances.inst_taskchain import TaskChain
