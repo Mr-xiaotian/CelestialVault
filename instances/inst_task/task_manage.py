@@ -71,7 +71,7 @@ class TaskManager:
         """
         next_stages = next_stages or []  # 默认为空列表
         chain_mode = chain_mode or 'serial'
-        self.name = name or self.func.__name__
+        self.name = name or id(self.func)
 
         self.set_next_stages(next_stages)
         self.set_chain_mode(chain_mode)
@@ -84,11 +84,15 @@ class TaskManager:
 
     def set_chain_mode(self, chain_mode: str):
         """
-        设置当前节点执行模式, 可以是 'serial'（串行）或 'process'（并行）
+        设置当前节点在chain中的执行模式, 可以是 'serial'（串行）或 'process'（并行）
         """
         self.chain_mode = chain_mode
 
     def set_execution_mode(self, execution_mode):
+        """
+        设置执行模式
+        :param execution_mode: 执行模式，可以是 'thread'（线程）, 'process'（进程）, 'async'（异步）, 'serial'（串行）
+        """
         self.execution_mode = execution_mode
 
     def is_duplicate(self, task, task_set):

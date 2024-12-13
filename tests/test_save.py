@@ -39,11 +39,10 @@ def test_saver():
     saver = Saver(r'../test')
     saver.set_add_path('test_jpg')
 
-    task_list = [(num, i, '.jpg') for num,i in enumerate(li)]
-
     start_time = time()
-
     chain_mode = 'serial'
+
+    task_list = [(num, i, '.jpg') for num,i in enumerate(li)]
     final_result_dict = saver.download_urls(task_list, chain_mode)
     logging.info(f'TaskChain completed in {time() - start_time} seconds by {chain_mode}.')
     logging.info(f"Task result: {final_result_dict}.")

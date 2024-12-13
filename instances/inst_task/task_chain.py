@@ -45,7 +45,6 @@ class TaskChain:
 
         # 初始化每个节点的队列
         queues = collect_queue(self.root_stage)
-        queues[self.root_stage] = MPQueue()
 
         for task in tasks:
             queues[self.root_stage].put(task)
@@ -158,7 +157,8 @@ class TaskChain:
         while stage:
             stage_error_dict = stage.get_error_dict()
             for task, error in stage_error_dict.items():
-                self.final_error_dict[(type(error).__name__, str(error))].append(task)
+                error_key = (f'{type(error).__name__}({error})', stage.func.__name__, stage.name)
+                self.final_error_dict[error_key].append(task)
             stage = stage.next_stages[0] if stage.next_stages else None
     
     def get_final_result_dict(self):
@@ -197,7 +197,7 @@ class TaskChain:
         # 遍历后续节点
         for next_stage in task_manager.next_stages:
             sub_scructure_list = self.get_structure_list(next_stage, indent + 2, visited)
-            scructure_list.append("  " * indent + f"-->")
+            scructure_list.append("  " * indent + f"╘-->")
             scructure_list[-1] += sub_scructure_list[0]
             scructure_list.extend(sub_scructure_list[1:])
 
@@ -243,3 +243,14 @@ class TaskChain:
         results['Final result dict'] = self.get_final_result_dict()
         results['Final error dict'] = self.get_final_error_dict()
         return results
+    
+
+class SimpleTaskChain(TaskChain):
+    def __init__(self, stages: List[TaskManager], chain_mode: str = 'serial'):
+        for num, stage in enumerate(stages):
+            stage_name = f"Stage {num + 1}"
+            next_stage = [stages[num + 1]] if num < len(stages) - 1 else []
+            stage.set_chain_context(next_stage, chain_mode, stage_name)
+
+        root_stage = stages[0]
+        super().__init__(root_stage)

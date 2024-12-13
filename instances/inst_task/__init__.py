@@ -5,6 +5,6 @@
 #Github: https://github.com/Mr-xiaotian
 
 from .task_manage import TaskManager, ExampleTaskManager
-from .task_chain import TaskChain
+from .task_chain import TaskChain, SimpleTaskChain
 
-__all__ = ['TaskManager', 'ExampleTaskManager', 'TaskChain']
+__all__ = ['TaskManager', 'ExampleTaskManager', 'TaskChain', 'SimpleTaskChain']
