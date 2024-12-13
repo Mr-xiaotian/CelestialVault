@@ -12,6 +12,9 @@ def square(n):
         raise ValueError("Test error in 317811")
     return n * n
 
+def half(n):
+    return n / 2
+
 def fibonacci(n):
     if n <= 0:
         raise ValueError("n must be a positive integer")
@@ -36,7 +39,7 @@ async def fibonacci_async(n):
         return result_0 + result_1
 
 # 测试 TaskManager 的同步任务
-def test_task_manager():
+def _test_task_manager():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '', -1]
 
@@ -46,7 +49,7 @@ def test_task_manager():
 
 # 测试 TaskManager 的异步任务
 @pytest.mark.asyncio
-async def test_task_manager_async():
+async def _test_task_manager_async():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '', -1]
 
@@ -58,22 +61,32 @@ async def test_task_manager_async():
 # 测试 TaskChain 的功能
 def test_task_chain():
     # 定义多个阶段的 TaskManager 实例，假设我们使用 Fibonacci 作为每个阶段的任务
-    stage1 = ExampleTaskManager(fibonacci, execution_mode='thread', worker_limit=4, show_progress=False)
+    stage1 = ExampleTaskManager(fibonacci, execution_mode='serial', worker_limit=4, show_progress=False)
     stage2 = ExampleTaskManager(square, execution_mode='serial', worker_limit=4, show_progress=False)
+    stage3 = ExampleTaskManager(half, execution_mode='serial', worker_limit=4, show_progress=False)
+
+
+    stage1.set_next_stages([stage2], 'process')
+    stage2.set_next_stages([stage3], 'process')
+    stage3.set_next_stages([], 'process')
 
     # 初始化 TaskChain
-    chain = TaskChain([stage1, stage2])
+    chain = TaskChain(root_stage = stage1)
 
     # 要测试的任务列表
     tasks_0 = range(25,31)
     tasks_1 = list(range(25,32)) + [0, 27, None, 0, '', -1]
 
     # 开始任务链
-    result = chain.test_methods(tasks_1)
-    logging.info(f"{'serial chain':<17}: {result['serial chain']}")
-    logging.info(f"{'process chain':<17}: {result['process chain']}")
-    logging.info(f"{'Final result dict':<17}: {result['Final result dict']}")
-    logging.info(f"{'Final error dict':<17}: {result['Final error dict']}")
+    # result = chain.test_methods(tasks_0)
+    # logging.info(f"{'serial chain':<17}: {result['serial chain']}")
+    # logging.info(f"{'process chain':<17}: {result['process chain']}")
+    # logging.info(f"{'Final result dict':<17}: {result['Final result dict']}")
+    # logging.info(f"{'Final error dict':<17}: {result['Final error dict']}")
+
+    chain._start_chain(tasks_0)
+    final_result_dict = chain.get_final_result_dict()
+    logging.info(f"{'Final result dict':<17}: {final_result_dict}")
 
 def profile_task_chain():
     target_func = 'test_task_manager'

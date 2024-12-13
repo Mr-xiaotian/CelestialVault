@@ -52,17 +52,17 @@ class TaskChain:
             next_stages = stage.next_stages
             next_execute_mode = stage.next_execute_mode
 
-            queues[stage] = MPQueue() if next_execute_mode == 'process' else ThreadQueue()
+            queues[stage] = MPQueue()
 
             for next_stage in next_stages:
-                queues[next_stage] = MPQueue() if next_execute_mode == 'process' else ThreadQueue()
+                queues[next_stage] = MPQueue()
                 queues.update(collect_queue(next_stage))
 
             return queues
 
         # 初始化每个节点的队列
         queues = collect_queue(self.root_stage)
-        queues[self.root_stage] = ThreadQueue()
+        queues[self.root_stage] = MPQueue()
 
         for task in tasks:
             queues[self.root_stage].put(task)
@@ -70,12 +70,37 @@ class TaskChain:
         return queues
     
     def _start_chain(self, tasks):
+        task_logger.start_chain(0, None)
         queues = self._initialize_queues(tasks)
         stage = self.root_stage
 
+        manager = multiprocessing.Manager()
+
+        processes = []
         while stage:
             next_execute_mode = stage.next_execute_mode
-            stage.start_stage(queues[stage], queues[stage.next_stages[0]])
+            if len(stage.next_stages) > 1:
+                pass
+            
+            next_stage_queue = queues[stage.next_stages[0]] if stage.next_stages else MPQueue()
+            if next_execute_mode == 'process':
+                stage.init_result_error_dict(manager.dict(), manager.dict())
+                p = multiprocessing.Process(target=stage.start_stage, args=(queues[stage], next_stage_queue))
+                p.start()
+                processes.append(p)
+            else:
+                stage.init_result_error_dict(dict(), dict())
+                stage.start_stage(queues[stage], next_stage_queue)
+
+            stage = stage.next_stages[0] if stage.next_stages else None
+
+        # 等待所有进程结束
+        for p in processes:
+            p.join()
+
+        self._process_final_result_dict(tasks)
+        # self._handle_final_error_dict()
+        self._release_resources(queues, manager, processes)
 
     def set_chain_mode(self, chain_mode):
         """
@@ -162,6 +187,30 @@ class TaskChain:
         # 关闭所有stage的线程池
         for stage in self.stages:
             stage.clean_env()
+
+    def _release_resources(self, queues: dict, manager, processes: List[Process]):
+        # 关闭所有队列并确保它们的后台线程被终止
+        for queue in queues.values():
+            if isinstance(queue, ThreadQueue):
+                continue
+            queue.close()
+            queue.join_thread() # 确保队列的后台线程正确终止
+
+        # 关闭 multiprocessing.Manager
+        if manager is not None:
+            manager.shutdown()
+
+        # 确保所有进程已被正确终止
+        for p in processes:
+            if p.is_alive():
+                p.terminate()  # 如果进程仍在运行，强制终止
+            p.join()  # 确保进程终止
+
+        # 关闭所有stage的线程池
+        stage = self.root_stage
+        while stage:
+            stage.clean_env()
+            stage = stage.next_stages[0] if stage.next_stages else None
             
     def process_final_result_dict(self, initial_tasks):
         """
@@ -184,6 +233,32 @@ class TaskChain:
                     dispear_exception = Exception("Task not found.")
                     stage_task = (dispear_exception, stage.func.__name__, stage_index)
                     break
+
+            self.final_result_dict[initial_task] = stage_task
+
+    def _process_final_result_dict(self, initial_tasks):
+        """
+        查找对应的初始任务并更新 final_result_dict
+
+        :param initial_tasks: 一个包含初始任务的列表
+        """
+        for initial_task in initial_tasks:
+            stage_task = initial_task
+            stage = self.root_stage
+
+            while stage:
+                stage_result_dict = stage.get_result_dict()
+                stage_error_dict = stage.get_error_dict()
+                if stage_task in stage_result_dict:
+                    stage_task = stage_result_dict[stage_task]
+                elif stage_task in stage_error_dict:
+                    stage_task = (stage_error_dict[stage_task], stage.func.__name__, 0)
+                    break
+                else:
+                    dispear_exception = Exception("Task not found.")
+                    stage_task = (dispear_exception, stage.func.__name__, 0)
+                    break
+                stage = stage.next_stages[0] if stage.next_stages else None
 
             self.final_result_dict[initial_task] = stage_task
 

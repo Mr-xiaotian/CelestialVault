@@ -262,7 +262,7 @@ class TaskManager:
         task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time, 
                              len(self.result_dict), len(self.error_dict), self.duplicates_num)
         
-    def start_stage(self, input_queue: ThreadQueue, output_queue: ThreadQueue, stage_index: int):
+    def start_stage(self, input_queue: ThreadQueue, output_queue: ThreadQueue, stage_index: int = 0):
         """
         根据 start_type 的值，选择串行、并行执行任务
 
