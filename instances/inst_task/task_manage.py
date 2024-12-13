@@ -63,14 +63,30 @@ class TaskManager:
         elif self.execution_mode == 'process' and self.process_pool is None:
             self.process_pool = ProcessPoolExecutor(max_workers=self.worker_limit)
 
-    def set_next_stages(self, next_stages: List[TaskManager] = None, next_execute_mode: str = None):
+    def set_chain_context(self, next_stages: List[TaskManager] = None, chain_mode: str = None, name: str = None):
         """
-        设置后续节点
+        设置链式上下文
         :param next_stages: 后续节点列表
-        :param next_execute_mode: 后续节点执行模式, 可以是 'serial'（串行）或 'process'（并行）
+        :param chain_mode: 当前节点执行模式, 可以是 'serial'（串行）或 'process'（并行）
         """
-        self.next_stages = next_stages or []  # 默认为空列表
-        self.next_execute_mode = next_execute_mode or 'serial'
+        next_stages = next_stages or []  # 默认为空列表
+        chain_mode = chain_mode or 'serial'
+        self.name = name or self.func.__name__
+
+        self.set_next_stages(next_stages)
+        self.set_chain_mode(chain_mode)
+
+    def set_next_stages(self, next_stages: List[TaskManager]):
+        """
+        设置后续节点列表
+        """
+        self.next_stages = next_stages
+
+    def set_chain_mode(self, chain_mode: str):
+        """
+        设置当前节点执行模式, 可以是 'serial'（串行）或 'process'（并行）
+        """
+        self.chain_mode = chain_mode
 
     def set_execution_mode(self, execution_mode):
         self.execution_mode = execution_mode
@@ -262,17 +278,16 @@ class TaskManager:
         task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time, 
                              len(self.result_dict), len(self.error_dict), self.duplicates_num)
         
-    def start_stage(self, input_queue: ThreadQueue, output_queue: ThreadQueue, stage_index: int = 0):
+    def start_stage(self, input_queue: ThreadQueue, output_queue: ThreadQueue):
         """
         根据 start_type 的值，选择串行、并行执行任务
 
         :param input_queue: 输入队列
         :param output_queue: 输出队列
-        :param stage_index: 阶段索引
         """
         start_time = time()
         self.init_env()
-        task_logger.start_stage(stage_index+1, self.func.__name__, self.execution_mode)
+        task_logger.start_stage(self.name, self.func.__name__, self.execution_mode)
 
         self.task_queue = input_queue
         self.result_queue = output_queue
@@ -288,7 +303,7 @@ class TaskManager:
             self.run_in_serial()
 
         self.result_queue.put(TERMINATION_SIGNAL)
-        task_logger.end_stage(stage_index+1, self.func.__name__, self.execution_mode, time() - start_time,
+        task_logger.end_stage(self.name, self.func.__name__, self.execution_mode, time() - start_time,
                               len(self.result_dict), len(self.error_dict), self.duplicates_num)
  
     def run_in_serial(self):
