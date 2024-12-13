@@ -10,7 +10,7 @@ from .task_support import TERMINATION_SIGNAL, task_logger
 
 
 class TaskChain:
-    def __init__(self, stages, chain_mode='serial'):
+    def _init__(self, stages, chain_mode='serial'):
         """
         :param stages: 一个包含 StageManager 实例的列表，表示执行链
         :param chain_mode: 执行链的模式，可以是 'serial'（串行）或 'process'（并行）
@@ -18,6 +18,13 @@ class TaskChain:
         self.stages: List[TaskManager] = stages
         self.chain_mode = chain_mode
 
+        self.init_dict()
+
+    def __init__(self, root_stage: TaskManager):
+        """
+        :param root_stage: 任务链的根 TaskManager 节点
+        """
+        self.root_stage = root_stage
         self.init_dict()
 
     def init_dict(self):
@@ -34,18 +41,41 @@ class TaskChain:
         queues[0].put(TERMINATION_SIGNAL)
         return queues
     
-    def _initialize_queues(self):
+    def _initialize_queues(self, tasks: list):
         """
         初始化任务队列
-        :param is_mp: 是否使用多进程模式
         :return: 节点与队列的映射关系
         """
+        def collect_queue(stage: TaskManager):
+            # 为每个节点创建队列
+            queues = {}
+            next_stages = stage.next_stages
+            next_execute_mode = stage.next_execute_mode
 
-        # 为每个节点创建队列
-        queues = {}
-        # for node in all_nodes:
-        #     queues[node] = MPQueue() if is_mp else ThreadQueue()
+            queues[stage] = MPQueue() if next_execute_mode == 'process' else ThreadQueue()
+
+            for next_stage in next_stages:
+                queues[next_stage] = MPQueue() if next_execute_mode == 'process' else ThreadQueue()
+                queues.update(collect_queue(next_stage))
+
+            return queues
+
+        # 初始化每个节点的队列
+        queues = collect_queue(self.root_stage)
+        queues[self.root_stage] = ThreadQueue()
+
+        for task in tasks:
+            queues[self.root_stage].put(task)
+        queues[self.root_stage].put(TERMINATION_SIGNAL)
         return queues
+    
+    def _start_chain(self, tasks):
+        queues = self._initialize_queues(tasks)
+        stage = self.root_stage
+
+        while stage:
+            next_execute_mode = stage.next_execute_mode
+            stage.start_stage(queues[stage], queues[stage.next_stages[0]])
 
     def set_chain_mode(self, chain_mode):
         """
