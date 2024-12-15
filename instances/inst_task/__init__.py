@@ -6,5 +6,6 @@
 
 from .task_manage import TaskManager, ExampleTaskManager
 from .task_chain import TaskChain, SimpleTaskChain
+from .task_support import BroadcastQueueManager, TerminationSignal
 
-__all__ = ['TaskManager', 'ExampleTaskManager', 'TaskChain', 'SimpleTaskChain']
+__all__ = ['TaskManager', 'ExampleTaskManager', 'TaskChain', 'SimpleTaskChain', "BroadcastQueueManager", "TerminationSignal"]

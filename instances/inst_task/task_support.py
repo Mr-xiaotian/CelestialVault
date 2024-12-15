@@ -1,7 +1,10 @@
-from loguru import logger as loguru_logger
-from time import strftime, localtime
 from threading import Thread
-
+from multiprocessing import Queue as MPQueue
+from queue import Queue as ThreadQueue
+from threading import Thread
+from time import strftime, localtime
+from typing import List, Union
+from loguru import logger as loguru_logger
 
 class TerminationSignal:
     """用于标记任务队列终止的哨兵对象"""
@@ -57,7 +60,7 @@ class TaskLogger:
 
 
 class BroadcastQueueManager:
-    def __init__(self, input_queue, target_queues):
+    def __init__(self, input_queue: Union[MPQueue, ThreadQueue], target_queues: List[Union[MPQueue, ThreadQueue]]):
         """
         广播队列管理器
         :param input_queue: 源输入队列
@@ -68,31 +71,31 @@ class BroadcastQueueManager:
         self.running = True
 
     def start(self):
-        """
-        开始广播线程
-        """
-        self.thread = Thread(target=self.broadcast)
+        """开始广播线程"""
+        self.thread = Thread(target=self.broadcast, daemon=True)
         self.thread.start()
 
     def stop(self):
-        """
-        停止广播线程
-        """
+        """停止广播线程"""
         self.running = False
         self.thread.join()
 
     def broadcast(self):
-        """
-        将输入队列的数据广播到目标队列
-        """
+        """将输入队列的数据广播到目标队列"""
         while self.running:
-            item = self.input_queue.get()  # 从输入队列获取数据
-            if item is TerminationSignal:  # 检测到终止信号时广播并退出
-                for queue in self.target_queues:
-                    queue.put(TerminationSignal)
-                break
-            for queue in self.target_queues:  # 广播到所有目标队列
-                queue.put(item)
+            try:
+                item = self.input_queue.get()  # 从输入队列获取数据
+                if isinstance(item, TerminationSignal):  # 检测到终止信号时广播并退出
+                    self._broadcast_to_all(TERMINATION_SIGNAL)
+                    break
+                self._broadcast_to_all(item)
+            except Exception as e:
+                print(f"Broadcast thread error: {e}")
+
+    def _broadcast_to_all(self, item):
+        """广播数据到所有目标队列"""
+        for queue in self.target_queues:
+            queue.put(item)
 
         
 TERMINATION_SIGNAL = TerminationSignal()

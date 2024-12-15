@@ -15,7 +15,6 @@ class TaskChain:
         :param root_stage: 任务链的根 TaskManager 节点
         """
         self.root_stage = root_stage
-        self.init_dict()
 
     def init_dict(self):
         """
@@ -23,6 +22,13 @@ class TaskChain:
         """
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
         self.final_error_dict = defaultdict(list)  # 用于保存初始任务到最终错误的映射
+
+    def init_env(self, tasks: list):
+        self.processes: List[multiprocessing.Process] = []
+        self.manager = multiprocessing.Manager()
+
+        self.init_dict()
+        self.initialize_queues(tasks)
     
     def initialize_queues(self, tasks: list):
         """
@@ -31,97 +37,99 @@ class TaskChain:
         """
         def collect_queue(stage: TaskManager):
             # 为每个节点创建队列
-            queues = {}
             next_stages = stage.next_stages
-            chain_mode = stage.chain_mode
+            stage_mode = stage.stage_mode
 
-            queues[stage] = MPQueue()
-
+            self.stage_queues_dict[stage] = MPQueue()
             for next_stage in next_stages:
-                queues[next_stage] = MPQueue()
-                queues.update(collect_queue(next_stage))
-
-            return queues
+                collect_queue(next_stage)
 
         # 初始化每个节点的队列
-        queues = collect_queue(self.root_stage)
+        self.stage_queues_dict = {}
+        collect_queue(self.root_stage)
 
         for task in tasks:
-            queues[self.root_stage].put(task)
-        queues[self.root_stage].put(TERMINATION_SIGNAL)
-        return queues
+            self.stage_queues_dict[self.root_stage].put(task)
+        self.stage_queues_dict[self.root_stage].put(TERMINATION_SIGNAL)
     
-    def set_all_chain_mode(self, mode: str):
+    def set_chain_mode(self, mode: str):
         """
-        设置所有节点的执行模式
+        统一设置整个chain中所有节点的执行模式
         :param mode: 执行模式
         """
-        stage = self.root_stage
-        while stage:
-            stage.set_chain_mode(mode)
-            stage = stage.next_stages[0] if stage.next_stages else None
+        def set_subsequent_satge_mode(stage: TaskManager):
+            stage.set_stage_mode(mode)
+            for next_stage in stage.next_stages:
+                set_subsequent_satge_mode(next_stage)
+
+        set_subsequent_satge_mode(self.root_stage)
     
     def start_chain(self, tasks):
         start_time = time()
         structure_list = self.format_structure_list()
         task_logger.start_chain(structure_list)
 
-        queues = self.initialize_queues(tasks)
-        stage = self.root_stage
-
-        manager = multiprocessing.Manager()
-
-        processes = []
-        while stage:
-            chain_mode = stage.chain_mode
-            if len(stage.next_stages) > 1:
-                pass
-            
-            next_stage_queue = queues[stage.next_stages[0]] if stage.next_stages else MPQueue()
-            if chain_mode == 'process':
-                stage.init_result_error_dict(manager.dict(), manager.dict())
-                p = multiprocessing.Process(target=stage.start_stage, args=(queues[stage], next_stage_queue))
-                p.start()
-                processes.append(p)
-            else:
-                stage.init_result_error_dict(dict(), dict())
-                stage.start_stage(queues[stage], next_stage_queue)
-
-            stage = stage.next_stages[0] if stage.next_stages else None
+        self.init_env(tasks)
+        self._execute_stage(self.root_stage)
 
         # 等待所有进程结束
-        for p in processes:
+        for p in self.processes:
             p.join()
 
         self.process_final_result_dict(tasks)
         self.handle_final_error_dict()
-        self.release_resources(queues, manager, processes)
+        self.release_resources()
 
         task_logger.end_chain(time() - start_time)
 
-    def release_resources(self, queues: dict, manager, processes: List[Process]):
+    def _execute_stage(self, stage: TaskManager):
+        """
+        递归地执行节点任务
+        """
+        next_stage_queue = self.stage_queues_dict[stage.next_stages[0]] if stage.next_stages else MPQueue()
+        if len(stage.next_stages) > 1:
+            pass
+
+        if stage.stage_mode == 'process':
+            stage.init_result_error_dict(self.manager.dict(), self.manager.dict())
+            p = multiprocessing.Process(target=stage.start_stage, args=(self.stage_queues_dict[stage], next_stage_queue))
+            p.start()
+            self.processes.append(p)
+        else:
+            stage.init_result_error_dict(dict(), dict())
+            stage.start_stage(self.stage_queues_dict[stage], next_stage_queue)
+
+        for next_stage in stage.next_stages:
+            self._execute_stage(next_stage)
+
+    def release_resources(self):
+        """
+        释放资源
+        """
+        def clean_stage(stage: TaskManager):
+            stage.clean_env()
+            for next_stage in stage.next_stages:
+                clean_stage(next_stage)
+
         # 关闭所有队列并确保它们的后台线程被终止
-        for queue in queues.values():
+        for queue in self.stage_queues_dict.values():
             if isinstance(queue, ThreadQueue):
                 continue
             queue.close()
             queue.join_thread() # 确保队列的后台线程正确终止
 
         # 关闭 multiprocessing.Manager
-        if manager is not None:
-            manager.shutdown()
+        if self.manager is not None:
+            self.manager.shutdown()
 
         # 确保所有进程已被正确终止
-        for p in processes:
+        for p in self.processes:
             if p.is_alive():
                 p.terminate()  # 如果进程仍在运行，强制终止
             p.join()  # 确保进程终止
 
         # 关闭所有stage的线程池
-        stage = self.root_stage
-        while stage:
-            stage.clean_env()
-            stage = stage.next_stages[0] if stage.next_stages else None
+        clean_stage(self.root_stage)
 
     def process_final_result_dict(self, initial_tasks):
         """
@@ -129,37 +137,46 @@ class TaskChain:
 
         :param initial_tasks: 一个包含初始任务的列表
         """
+        def update_final_result_dict(stage_task, stage: TaskManager):
+            stage_result_dict = stage.get_result_dict()
+            stage_error_dict = stage.get_error_dict()
+
+            final_list = []
+            if stage_task in stage_result_dict:
+                stage_task = stage_result_dict[stage_task]
+            elif stage_task in stage_error_dict:
+                stage_task = (stage_error_dict[stage_task], stage.func.__name__)
+                return [(stage_task, stage.name)]
+            else:
+                dispear_exception = Exception("Task not found.")
+                stage_task = (dispear_exception, stage.func.__name__)
+                return [(stage_task, stage.name)]
+            
+            if not stage.next_stages:
+                return [(stage_task, stage.name)]
+            
+            for next_stage in stage.next_stages:
+                next_stage_final_list = update_final_result_dict(stage_task, next_stage)
+                final_list.extend(next_stage_final_list)
+
+            return final_list
+
         for initial_task in initial_tasks:
-            stage_task = initial_task
-            stage = self.root_stage
-
-            while stage:
-                stage_result_dict = stage.get_result_dict()
-                stage_error_dict = stage.get_error_dict()
-                if stage_task in stage_result_dict:
-                    stage_task = stage_result_dict[stage_task]
-                elif stage_task in stage_error_dict:
-                    stage_task = (stage_error_dict[stage_task], stage.func.__name__, stage.name)
-                    break
-                else:
-                    dispear_exception = Exception("Task not found.")
-                    stage_task = (dispear_exception, stage.func.__name__, stage.name)
-                    break
-                stage = stage.next_stages[0] if stage.next_stages else None
-
-            self.final_result_dict[initial_task] = stage_task
+            self.final_result_dict[initial_task] = update_final_result_dict(initial_task, self.root_stage)
 
     def handle_final_error_dict(self):
         """
         处理最终错误字典
         """
-        stage = self.root_stage
-        while stage:
+        def update_error_dict(stage: TaskManager):
             stage_error_dict = stage.get_error_dict()
             for task, error in stage_error_dict.items():
                 error_key = (f'{type(error).__name__}({error})', stage.func.__name__, stage.name)
                 self.final_error_dict[error_key].append(task)
-            stage = stage.next_stages[0] if stage.next_stages else None
+            for next_stage in stage.next_stages:
+                update_error_dict(next_stage)
+
+        update_error_dict(self.root_stage)
     
     def get_final_result_dict(self):
         """
@@ -192,12 +209,12 @@ class TaskChain:
         visited.add(task_manager)
 
         # 打印当前 TaskManager
-        scructure_list.append(f"{task_manager.name} (chain mode: {task_manager.chain_mode}, id: {id(task_manager)})")
+        scructure_list.append(f"{task_manager.name} (stage mode: {task_manager.stage_mode}, func: {task_manager.func.__name__})")
 
         # 遍历后续节点
         for next_stage in task_manager.next_stages:
             sub_scructure_list = self.get_structure_list(next_stage, indent + 2, visited)
-            scructure_list.append("  " * indent + f"╘-->")
+            scructure_list.append("  " * indent + "╘-->")
             scructure_list[-1] += sub_scructure_list[0]
             scructure_list.extend(sub_scructure_list[1:])
 
@@ -205,7 +222,7 @@ class TaskChain:
     
     def format_structure_list(self, task_manager=None):
         """
-        打印任务链结构
+        格式化任务链的打印列表
         :param task_manager: 起始 TaskManager
         """
         task_manager = task_manager or self.root_stage
@@ -236,8 +253,7 @@ class TaskChain:
         results = {}
         for mode in ['serial', 'process']:
             start_time = time()
-            self.init_dict()
-            self.set_all_chain_mode(mode)
+            self.set_chain_mode(mode)
             self.start_chain(task_list)
             results[f'{mode} chain'] = time() - start_time
         results['Final result dict'] = self.get_final_result_dict()

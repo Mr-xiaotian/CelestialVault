@@ -63,18 +63,18 @@ class TaskManager:
         elif self.execution_mode == 'process' and self.process_pool is None:
             self.process_pool = ProcessPoolExecutor(max_workers=self.worker_limit)
 
-    def set_chain_context(self, next_stages: List[TaskManager] = None, chain_mode: str = None, name: str = None):
+    def set_chain_context(self, next_stages: List[TaskManager] = None, stage_mode: str = None, name: str = None):
         """
         设置链式上下文
         :param next_stages: 后续节点列表
-        :param chain_mode: 当前节点执行模式, 可以是 'serial'（串行）或 'process'（并行）
+        :param stage_mode: 当前节点执行模式, 可以是 'serial'（串行）或 'process'（并行）
         """
         next_stages = next_stages or []  # 默认为空列表
-        chain_mode = chain_mode or 'serial'
-        self.name = name or id(self.func)
+        stage_mode = stage_mode or 'serial'
+        self.name = name or id(self)
 
         self.set_next_stages(next_stages)
-        self.set_chain_mode(chain_mode)
+        self.set_stage_mode(stage_mode)
 
     def set_next_stages(self, next_stages: List[TaskManager]):
         """
@@ -82,11 +82,11 @@ class TaskManager:
         """
         self.next_stages = next_stages
 
-    def set_chain_mode(self, chain_mode: str):
+    def set_stage_mode(self, stage_mode: str):
         """
         设置当前节点在chain中的执行模式, 可以是 'serial'（串行）或 'process'（并行）
         """
-        self.chain_mode = chain_mode
+        self.stage_mode = stage_mode
 
     def set_execution_mode(self, execution_mode):
         """
