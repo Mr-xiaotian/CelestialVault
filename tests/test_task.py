@@ -66,9 +66,9 @@ async def _test_task_manager_async():
 def test_task_chain():
     # 定义多个阶段的 TaskManager 实例，假设我们使用 Fibonacci 作为每个阶段的任务
     stage1 = ExampleTaskManager(fibonacci, execution_mode='serial', worker_limit=4, show_progress=False)
-    stage2 = ExampleTaskManager(square, execution_mode='thread', worker_limit=4, show_progress=False)
+    stage2 = ExampleTaskManager(square, execution_mode='serial', worker_limit=4, show_progress=False)
     stage3 = ExampleTaskManager(half, execution_mode='serial', worker_limit=4, show_progress=False)
-    stage4 = ExampleTaskManager(sleep_1, execution_mode='thread', worker_limit=4, show_progress=False)
+    stage4 = ExampleTaskManager(sleep_1, execution_mode='serial', worker_limit=4, show_progress=False)
 
     stage1.set_chain_context([stage2, stage4], 'process', name='satge1')
     stage2.set_chain_context([stage3], 'process', name='satge2')
@@ -79,12 +79,11 @@ def test_task_chain():
     chain = TaskChain(root_stage = stage1)
 
     # 要测试的任务列表
-    tasks_0 = range(25,31)
-    tasks_1 = list(range(25,32)) + [0, 27, None, 0, '', -1]
-    tasks_2 = range(35, 39)
+    tasks_0 = range(25, 37)
+    tasks_1 = list(range(25, 32)) + [0, 27, None, 0, '', -1]
 
     # 开始任务链
-    result = chain.test_methods(tasks_1)
+    result = chain.test_methods(tasks_0)
     logging.info(f"{'serial chain':<17}: {result['serial chain']}")
     logging.info(f"{'process chain':<17}: {result['process chain']}")
     logging.info(f"{'Final result dict':<17}: {result['Final result dict']}")

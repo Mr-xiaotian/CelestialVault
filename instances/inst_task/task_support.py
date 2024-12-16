@@ -72,7 +72,7 @@ class BroadcastQueueManager:
 
     def start(self):
         """开始广播线程"""
-        self.thread = Thread(target=self.broadcast, daemon=True)
+        self.thread = Thread(target=self.broadcast)
         self.thread.start()
 
     def stop(self):
@@ -86,14 +86,15 @@ class BroadcastQueueManager:
             try:
                 item = self.input_queue.get()  # 从输入队列获取数据
                 if isinstance(item, TerminationSignal):  # 检测到终止信号时广播并退出
-                    self._broadcast_to_all(TERMINATION_SIGNAL)
                     break
                 self._broadcast_to_all(item)
             except Exception as e:
                 print(f"Broadcast thread error: {e}")
+        self._broadcast_to_all(TERMINATION_SIGNAL)
 
     def _broadcast_to_all(self, item):
         """广播数据到所有目标队列"""
+        # task_logger.logger.info(f"Broadcasting {item} to all target queues.")
         for queue in self.target_queues:
             queue.put(item)
 
