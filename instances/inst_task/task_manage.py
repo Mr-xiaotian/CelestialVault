@@ -2,7 +2,7 @@ from __future__ import annotations
 import asyncio
 from queue import Queue as ThreadQueue
 from multiprocessing import Queue as MPQueue
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed, wait, FIRST_COMPLETED, ALL_COMPLETED
 from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError, RequestError, PoolTimeout, ReadTimeout
 from typing import List
 from time import time
@@ -63,18 +63,20 @@ class TaskManager:
         elif self.execution_mode == 'process' and self.process_pool is None:
             self.process_pool = ProcessPoolExecutor(max_workers=self.worker_limit)
 
-    def set_chain_context(self, next_stages: List[TaskManager] = None, stage_mode: str = None, name: str = None):
+    def set_chain_context(self, next_stages: List[TaskManager] = None, stage_mode: str = None, stage_name: str = None):
         """
-        设置链式上下文
+        设置链式上下文(仅限组成chain时)
         :param next_stages: 后续节点列表
         :param stage_mode: 当前节点执行模式, 可以是 'serial'（串行）或 'process'（并行）
+        :param name: 当前节点名称
         """
         next_stages = next_stages or []  # 默认为空列表
         stage_mode = stage_mode or 'serial'
-        self.name = name or id(self)
+        stage_name = stage_name or id(self)
 
         self.set_next_stages(next_stages)
         self.set_stage_mode(stage_mode)
+        self.set_stage_name(stage_name)
 
     def set_next_stages(self, next_stages: List[TaskManager]):
         """
@@ -88,12 +90,24 @@ class TaskManager:
         """
         self.stage_mode = stage_mode
 
+    def set_stage_name(self, name: str):
+        """
+        设置当前节点名称
+        """
+        self.stage_name = name
+
     def set_execution_mode(self, execution_mode):
         """
         设置执行模式
         :param execution_mode: 执行模式，可以是 'thread'（线程）, 'process'（进程）, 'async'（异步）, 'serial'（串行）
         """
         self.execution_mode = execution_mode
+
+    def add_retry_exceptions(self, *exceptions):
+        """
+        添加需要重试的异常类型
+        """
+        self.retry_exceptions = self.retry_exceptions + tuple(exceptions)
 
     def is_duplicate(self, task, task_set):
         return task in task_set
@@ -198,7 +212,7 @@ class TaskManager:
             # delay_time = 2 ** retry_time
             task_logger.task_retry(self.func.__name__, self.get_task_info(task), self.retry_time_dict[task])
             # sleep(delay_time)  # 指数退避
-            self.will_try = True
+            self.will_retry = True
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
@@ -222,7 +236,7 @@ class TaskManager:
             # delay_time = 2 ** retry_time
             task_logger.task_retry(self.func.__name__, self.get_task_info(task), self.retry_time_dict[task])
             # sleep(delay_time)  # 指数退避
-            will_try = True
+            self.will_retry = True
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
@@ -288,7 +302,7 @@ class TaskManager:
         """
         start_time = time()
         self.init_env()
-        task_logger.start_stage(self.name, self.func.__name__, self.execution_mode, self.worker_limit)
+        task_logger.start_stage(self.stage_name, self.func.__name__, self.execution_mode, self.worker_limit)
 
         broadcast_manager = None
         if len(output_queues) == 1:
@@ -313,7 +327,7 @@ class TaskManager:
 
         self.result_queue.put(TERMINATION_SIGNAL)
         broadcast_manager.stop() if broadcast_manager else None # 停止广播管理器
-        task_logger.end_stage(self.name, self.func.__name__, self.execution_mode, time() - start_time,
+        task_logger.end_stage(self.stage_name, self.func.__name__, self.execution_mode, time() - start_time,
                               len(self.result_dict), len(self.error_dict), self.duplicates_num)
  
     def run_in_serial(self):
@@ -365,6 +379,8 @@ class TaskManager:
         """
         start_time = time()
         self.will_retry = False
+        futures_list = []
+        temp_task_set = set()  # 用于存储临时任务，避免重复执行
         
         progress_manager = ProgressManager(
             total_tasks=self.task_queue.qsize(),
@@ -372,7 +388,6 @@ class TaskManager:
             mode=self.execution_mode,
             show_progress=self.show_progress
         )
-        temp_task_set = set()  # 用于存储临时任务，避免重复执行
 
         # 从任务队列中提交任务到执行池
         while True:
@@ -388,10 +403,11 @@ class TaskManager:
                 continue
             future = executor.submit(self.func, *self.get_args(task))
             future.add_done_callback(lambda f, t=task: self._on_task_done(f, t, start_time, progress_manager))
+            futures_list.append(future)
             temp_task_set.add(task)
 
         # 在跳出循环后，等待所有已提交的任务完成再关闭progress_manager
-        executor.shutdown(wait=True)
+        done, not_done = wait(futures_list, return_when=ALL_COMPLETED)
         progress_manager.close()
 
         if self.will_retry:
@@ -402,12 +418,12 @@ class TaskManager:
         """
         任务完成后的回调函数
         """
+        progress_manager.update(1)
         try:
             result = future.result()
             self.process_task_success(task, result, start_time)
         except Exception as error:
             self.handle_task_exception(task, error)
-        progress_manager.update(1)
 
     async def run_in_async(self):
         """

@@ -154,14 +154,14 @@ class TaskChain:
                 stage_task = stage_result_dict[stage_task]
             elif stage_task in stage_error_dict:
                 stage_task = (stage_error_dict[stage_task], stage.func.__name__)
-                return [(stage_task, stage.name)]
+                return [(stage_task, stage.stage_name)]
             else:
                 dispear_exception = Exception("Task not found.")
                 stage_task = (dispear_exception, stage.func.__name__)
-                return [(stage_task, stage.name)]
+                return [(stage_task, stage.stage_name)]
             
             if not stage.next_stages:
-                return [(stage_task, stage.name)]
+                return [(stage_task, stage.stage_name)]
             
             for next_stage in stage.next_stages:
                 next_stage_final_list = update_final_result_dict(stage_task, next_stage)
@@ -179,7 +179,7 @@ class TaskChain:
         def update_error_dict(stage: TaskManager):
             stage_error_dict = stage.get_error_dict()
             for task, error in stage_error_dict.items():
-                error_key = (f'{type(error).__name__}({error})', stage.func.__name__, stage.name)
+                error_key = (f'{type(error).__name__}({error})', stage.func.__name__, stage.stage_name)
                 self.final_error_dict[error_key].append(task)
             for next_stage in stage.next_stages:
                 update_error_dict(next_stage)
@@ -217,7 +217,7 @@ class TaskChain:
         visited.add(task_manager)
 
         # 打印当前 TaskManager
-        scructure_list.append(f"{task_manager.name} (stage_mode: {task_manager.stage_mode}, func: {task_manager.func.__name__})")
+        scructure_list.append(f"{task_manager.stage_name} (stage_mode: {task_manager.stage_mode}, func: {task_manager.func.__name__})")
 
         # 遍历后续节点
         for next_stage in task_manager.next_stages:
