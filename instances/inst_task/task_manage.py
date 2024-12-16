@@ -412,7 +412,8 @@ class TaskManager:
             temp_task_set.add(task)
 
         # 在跳出循环后，等待所有已提交的任务完成再关闭progress_manager
-        done, not_done = wait(futures_list, return_when=ALL_COMPLETED)
+        # done, not_done = wait(futures_list, return_when=ALL_COMPLETED)
+        executor.shutdown(wait=True)
         progress_manager.close()
 
         if self.will_retry:

@@ -21,7 +21,9 @@ class SaveManager(ExampleTaskManager):
     
 
 class Saver(object):
-    def __init__(self, base_path = '.'):
+    def __init__(self, base_path = '.', overwrite = False):
+        self.overwrite = overwrite
+
         self.set_base_path(base_path)
         self.set_add_path('')
 
@@ -49,6 +51,9 @@ class Saver(object):
             return None
         
         path = self.get_path(file_name, suffix_name)
+        if not self.overwrite and self.is_exist(path):
+            return path
+        
         with open(path, 'w', encoding = encoding) as f:
             f.write(text.encode(encoding, 'ignore').decode(encoding, "ignore"))
         return path
@@ -58,12 +63,18 @@ class Saver(object):
             return None
     
         path = self.get_path(file_name, suffix_name)
+        if not self.overwrite and self.is_exist(path):
+            return path
+        
         with open(path, 'a', encoding = encoding) as f:
             f.write(text.encode(encoding, 'ignore').decode(encoding, "ignore"))
         return path
 
     def save_content(self, file_name, content, suffix_name='.dat'):
         path = self.get_path(file_name, suffix_name)
+        if not self.overwrite and self.is_exist(path):
+            return path
+        
         with open(path, 'wb') as f:
             f.write(content)
         return path
@@ -103,15 +114,19 @@ class Saver(object):
         # await self.fetcher.close_session()
         pass
 
-    def download_m3u8(self, output_path, m3u8_url):
+    def download_m3u8(self, m3u8_url, file_name, suffix_name = '.mp4'):
+        path = self.get_path(file_name, suffix_name)
+        if not self.overwrite and self.is_exist(path):
+            return path
+        
         command = [
             'ffmpeg',
             '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
             '-i', m3u8_url,
-            '-c', 'copy',
-            output_path
+            '-c', 'copy', path
             ]
         subprocess.run(command)
+        return path
 
     def download_texts(self, text_list, encoding = 'utf-8', suffix_name = '.md'):
         for file_name,text in text_list:

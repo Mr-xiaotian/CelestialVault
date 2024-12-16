@@ -65,7 +65,7 @@ async def test_task_manager_async():
     logging.info(f'run_in_async: {time() - start}')
 
 # 测试 TaskChain 的功能
-def _test_task_chain():
+def test_task_chain():
     # 定义多个阶段的 TaskManager 实例，假设我们使用 Fibonacci 作为每个阶段的任务
     stage1 = ExampleTaskManager(fibonacci, execution_mode='thread', worker_limit=4, max_retries = 1, show_progress=False)
     stage2 = ExampleTaskManager(square, execution_mode='thread', worker_limit=4, max_retries = 1, show_progress=False)
