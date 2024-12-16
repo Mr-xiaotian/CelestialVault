@@ -1,8 +1,9 @@
 from __future__ import annotations
 import asyncio
+from asyncio import Queue as AsyncQueue
 from queue import Queue as ThreadQueue
 from multiprocessing import Queue as MPQueue
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed, wait, FIRST_COMPLETED, ALL_COMPLETED
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, wait, ALL_COMPLETED
 from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError, RequestError, PoolTimeout, ReadTimeout
 from typing import List
 from time import time
@@ -47,7 +48,7 @@ class TaskManager:
     def init_env(self):
         queue_map = {
             "process": MPQueue,
-            "async": asyncio.Queue,
+            "async": AsyncQueue,
             "thread": ThreadQueue,
             "serial": ThreadQueue,
         }
@@ -207,7 +208,7 @@ class TaskManager:
 
         # 基于异常类型决定重试策略
         if isinstance(exception, self.retry_exceptions) and retry_time < self.max_retries: # isinstance(exception, self.retry_exceptions) and
-            self.task_queue.put(task)
+            self.retry_queue.put(task)
             self.retry_time_dict[task] += 1
             # delay_time = 2 ** retry_time
             task_logger.task_retry(self.func.__name__, self.get_task_info(task), self.retry_time_dict[task])
@@ -231,7 +232,7 @@ class TaskManager:
 
         # 基于异常类型决定重试策略
         if isinstance(exception, self.retry_exceptions) and retry_time < self.max_retries: # isinstance(exception, self.retry_exceptions) and
-            await self.task_queue.put(task)
+            await self.retry_queue.put(task)
             self.retry_time_dict[task] += 1
             # delay_time = 2 ** retry_time
             task_logger.task_retry(self.func.__name__, self.get_task_info(task), self.retry_time_dict[task])
@@ -341,6 +342,7 @@ class TaskManager:
             show_progress=self.show_progress
         )
         self.will_retry = False
+        self.retry_queue = MPQueue()
         temp_task_set = set()  # 用于存储临时任务，避免重复执行
 
         # 从队列中依次获取任务并执行
@@ -367,6 +369,8 @@ class TaskManager:
         progress_manager.close()
 
         if self.will_retry:
+            task_logger.logger.debug(f"Retrying tasks for {self.func.__name__}")
+            self.task_queue = self.retry_queue
             self.task_queue.put(TERMINATION_SIGNAL)
             self.run_in_serial()
     
@@ -379,6 +383,7 @@ class TaskManager:
         """
         start_time = time()
         self.will_retry = False
+        self.retry_queue = MPQueue()
         futures_list = []
         temp_task_set = set()  # 用于存储临时任务，避免重复执行
         
@@ -411,6 +416,8 @@ class TaskManager:
         progress_manager.close()
 
         if self.will_retry:
+            task_logger.logger.debug(f"Retrying tasks for {self.func.__name__}")
+            self.task_queue = self.retry_queue
             self.task_queue.put(TERMINATION_SIGNAL)
             self.run_with_executor(executor)
 
@@ -431,6 +438,7 @@ class TaskManager:
         """
         semaphore = asyncio.Semaphore(self.worker_limit)  # 限制并发数量
         self.will_retry = False
+        self.retry_queue = AsyncQueue()
         temp_task_set = set()  # 用于存储临时任务，避免重复执行
 
         async def sem_task(task):
@@ -473,6 +481,8 @@ class TaskManager:
         progress_manager.close()
 
         if self.will_retry:
+            task_logger.logger.debug(f"Retrying tasks for {self.func.__name__}")
+            self.task_queue = self.retry_queue
             await self.task_queue.put(TERMINATION_SIGNAL)
             await self.run_in_async()
 
