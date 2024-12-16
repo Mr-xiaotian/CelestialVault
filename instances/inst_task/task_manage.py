@@ -7,7 +7,7 @@ from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError, Reques
 from typing import List
 from time import time
 from instances.inst_progress import ProgressManager
-from .task_support import TERMINATION_SIGNAL, TerminationSignal, task_logger
+from .task_support import TERMINATION_SIGNAL, TerminationSignal, BroadcastQueueManager, task_logger
 
 
 class TaskManager:
@@ -282,7 +282,7 @@ class TaskManager:
         task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time, 
                              len(self.result_dict), len(self.error_dict), self.duplicates_num)
         
-    def start_stage(self, input_queue: ThreadQueue, output_queue: ThreadQueue):
+    def start_stage(self, input_queue: ThreadQueue, output_queues: List[MPQueue]):
         """
         根据 start_type 的值，选择串行、并行执行任务
 
@@ -292,6 +292,14 @@ class TaskManager:
         start_time = time()
         self.init_env()
         task_logger.start_stage(self.name, self.func.__name__, self.execution_mode)
+
+        broadcast_manager = None
+        if len(output_queues) == 1:
+            output_queue = output_queues[0]
+        else:
+            output_queue = MPQueue()
+            broadcast_manager = BroadcastQueueManager(output_queue, output_queues)
+            broadcast_manager.start()  # 启动广播管理器
 
         self.task_queue = input_queue
         self.result_queue = output_queue
@@ -307,6 +315,7 @@ class TaskManager:
             self.run_in_serial()
 
         self.result_queue.put(TERMINATION_SIGNAL)
+        broadcast_manager.stop() if broadcast_manager else None # 停止广播管理器
         task_logger.end_stage(self.name, self.func.__name__, self.execution_mode, time() - start_time,
                               len(self.result_dict), len(self.error_dict), self.duplicates_num)
  

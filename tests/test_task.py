@@ -15,8 +15,8 @@ def square(n):
 def half(n):
     return n / 2
 
-def sleep_5(n):
-    sleep(5)
+def sleep_1(n):
+    sleep(1)
     return n
 
 def fibonacci(n):
@@ -66,11 +66,11 @@ async def _test_task_manager_async():
 def test_task_chain():
     # 定义多个阶段的 TaskManager 实例，假设我们使用 Fibonacci 作为每个阶段的任务
     stage1 = ExampleTaskManager(fibonacci, execution_mode='serial', worker_limit=4, show_progress=False)
-    stage2 = ExampleTaskManager(square, execution_mode='serial', worker_limit=4, show_progress=False)
+    stage2 = ExampleTaskManager(square, execution_mode='thread', worker_limit=4, show_progress=False)
     stage3 = ExampleTaskManager(half, execution_mode='serial', worker_limit=4, show_progress=False)
-    stage4 = ExampleTaskManager(sleep_5, execution_mode='serial', worker_limit=4, show_progress=False)
+    stage4 = ExampleTaskManager(sleep_1, execution_mode='thread', worker_limit=4, show_progress=False)
 
-    stage1.set_chain_context([stage2], 'process', name='satge1')
+    stage1.set_chain_context([stage2, stage4], 'process', name='satge1')
     stage2.set_chain_context([stage3], 'process', name='satge2')
     stage3.set_chain_context([], 'process', name='satge3')
     stage4.set_chain_context([], 'process', name='satge4')

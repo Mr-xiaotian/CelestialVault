@@ -33,7 +33,7 @@ class TaskLogger:
         self.logger.info(f"The {stage_name} in '{func_name}' start tasks by {execution_mode}.")
 
     def start_chain(self, stage_structure):
-        self.logger.info(f"Starting TaskChain stages. Stage structure:")
+        self.logger.info(f"Starting TaskChain stages. Chain structure:")
         for structure in stage_structure:
             self.logger.info(f"{structure}")
 

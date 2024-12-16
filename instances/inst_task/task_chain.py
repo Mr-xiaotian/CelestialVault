@@ -86,18 +86,22 @@ class TaskChain:
         """
         递归地执行节点任务
         """
-        next_stage_queue = self.stage_queues_dict[stage.next_stages[0]] if stage.next_stages else MPQueue()
-        if len(stage.next_stages) > 1:
-            pass
+        if not stage.next_stages:
+            next_stage_queues = [MPQueue()]
+        elif len(stage.next_stages) > 1:
+            next_stage_queues = [self.stage_queues_dict[next_stage] 
+                                for next_stage in stage.next_stages]
+        else:
+            next_stage_queues = [self.stage_queues_dict[stage.next_stages[0]]]
 
         if stage.stage_mode == 'process':
             stage.init_result_error_dict(self.manager.dict(), self.manager.dict())
-            p = multiprocessing.Process(target=stage.start_stage, args=(self.stage_queues_dict[stage], next_stage_queue))
+            p = multiprocessing.Process(target=stage.start_stage, args=(self.stage_queues_dict[stage], next_stage_queues))
             p.start()
             self.processes.append(p)
         else:
             stage.init_result_error_dict(dict(), dict())
-            stage.start_stage(self.stage_queues_dict[stage], next_stage_queue)
+            stage.start_stage(self.stage_queues_dict[stage], next_stage_queues)
 
         for next_stage in stage.next_stages:
             self._execute_stage(next_stage)
@@ -237,9 +241,9 @@ class TaskChain:
             for line in structure_list
         ]
 
-        # # 添加顶部和底部边框
-        # border = "+" + "-" * (max_length + 2) + "+"
-        # formatted_list = [border] + formatted_list + [border]
+        # 添加顶部和底部边框
+        border = "+" + "-" * (max_length + 2) + "+"
+        formatted_list = [border] + formatted_list + [border]
         
         return formatted_list
     
