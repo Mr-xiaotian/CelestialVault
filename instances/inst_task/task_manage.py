@@ -190,7 +190,6 @@ class TaskManager:
         :return 是否需要重试
         """
         retry_time = self.retry_time_dict.setdefault(task, 0)
-        will_try = False
 
         # 基于异常类型决定重试策略
         if isinstance(exception, self.retry_exceptions) and retry_time < self.max_retries: # isinstance(exception, self.retry_exceptions) and
@@ -199,13 +198,11 @@ class TaskManager:
             # delay_time = 2 ** retry_time
             task_logger.task_retry(self.func.__name__, self.get_task_info(task), self.retry_time_dict[task])
             # sleep(delay_time)  # 指数退避
-            will_try = True
+            self.will_try = True
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
             task_logger.task_fail(self.func.__name__, self.get_task_info(task), exception)
-
-        return will_try
     
     async def handle_task_exception_async(self, task, exception: Exception):
         """
@@ -291,7 +288,7 @@ class TaskManager:
         """
         start_time = time()
         self.init_env()
-        task_logger.start_stage(self.name, self.func.__name__, self.execution_mode)
+        task_logger.start_stage(self.name, self.func.__name__, self.execution_mode, self.worker_limit)
 
         broadcast_manager = None
         if len(output_queues) == 1:
@@ -329,12 +326,13 @@ class TaskManager:
             mode="sync",
             show_progress=self.show_progress
         )
-        will_retry = False
+        self.will_retry = False
         temp_task_set = set()  # 用于存储临时任务，避免重复执行
 
         # 从队列中依次获取任务并执行
         while True:
             task = self.task_queue.get()
+            task_logger.logger.debug(f"Task {task} is submitted to {self.func.__name__}")
             if isinstance(task, TerminationSignal):
                 progress_manager.update(1)
                 break
@@ -348,13 +346,13 @@ class TaskManager:
                 result = self.func(*self.get_args(task))
                 self.process_task_success(task, result, start_time)
             except Exception as error:
-                will_retry = self.handle_task_exception(task, error)
+                self.handle_task_exception(task, error)
             progress_manager.update(1)
             temp_task_set.add(task)
 
         progress_manager.close()
 
-        if will_retry:
+        if self.will_retry:
             self.task_queue.put(TERMINATION_SIGNAL)
             self.run_in_serial()
     
@@ -366,8 +364,7 @@ class TaskManager:
         :param pool_type: "thread" 表示线程池, "process" 表示进程池, 用于日志记录和进度条显示
         """
         start_time = time()
-        futures = {}
-        will_retry = False
+        self.will_retry = False
         
         progress_manager = ProgressManager(
             total_tasks=self.task_queue.qsize(),
@@ -380,6 +377,7 @@ class TaskManager:
         # 从任务队列中提交任务到执行池
         while True:
             task = self.task_queue.get()
+            task_logger.logger.debug(f"Task {task} is submitted to {self.func.__name__}")
             if isinstance(task, TerminationSignal):
                 progress_manager.update(1)
                 break
@@ -388,33 +386,35 @@ class TaskManager:
                 progress_manager.update(1)
                 task_logger.task_duplicate(self.func.__name__, task)
                 continue
-            futures[executor.submit(self.func, *self.get_args(task))] = task
+            future = executor.submit(self.func, *self.get_args(task))
+            future.add_done_callback(lambda f, t=task: self._on_task_done(f, t, start_time, progress_manager))
             temp_task_set.add(task)
 
-        # 处理已完成的任务
-        for future in as_completed(futures):
-            task = futures[future]
-            try:
-                result = future.result()  # 获取任务结果
-                self.process_task_success(task, result, start_time)
-            except Exception as error:
-                will_retry = self.handle_task_exception(task, error)
-                # 动态更新进度条总数
-                # progress_manager.add_total(1)
-            progress_manager.update(1)
-
+        # 在跳出循环后，等待所有已提交的任务完成再关闭progress_manager
+        executor.shutdown(wait=True)
         progress_manager.close()
 
-        if will_retry:
+        if self.will_retry:
             self.task_queue.put(TERMINATION_SIGNAL)
             self.run_with_executor(executor)
+
+    def _on_task_done(self, future, task, start_time, progress_manager):
+        """
+        任务完成后的回调函数
+        """
+        try:
+            result = future.result()
+            self.process_task_success(task, result, start_time)
+        except Exception as error:
+            self.handle_task_exception(task, error)
+        progress_manager.update(1)
 
     async def run_in_async(self):
         """
         异步地执行任务，限制并发数量
         """
         semaphore = asyncio.Semaphore(self.worker_limit)  # 限制并发数量
-        will_retry = False
+        self.will_retry = False
         temp_task_set = set()  # 用于存储临时任务，避免重复执行
 
         async def sem_task(task):
@@ -434,6 +434,7 @@ class TaskManager:
 
         while True:
             task = await self.task_queue.get()
+            task_logger.logger.debug(f"Task {task} is submitted to {self.func.__name__}")
             if isinstance(task, TerminationSignal):
                 progress_manager.update(1)
                 break
@@ -450,12 +451,12 @@ class TaskManager:
             if not isinstance(result, Exception):
                 self.process_task_success(task, result, start_time)
             else:
-                will_retry = await self.handle_task_exception_async(task, result)
+                await self.handle_task_exception_async(task, result)
             progress_manager.update(1)
 
         progress_manager.close()
 
-        if will_retry:
+        if self.will_retry:
             await self.task_queue.put(TERMINATION_SIGNAL)
             await self.run_in_async()
 

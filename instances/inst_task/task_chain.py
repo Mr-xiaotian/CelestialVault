@@ -16,23 +16,27 @@ class TaskChain:
         """
         self.root_stage = root_stage
 
+    def init_env(self, tasks: list):
+        """
+        初始化环境
+        """
+        self.processes: List[multiprocessing.Process] = []
+        self.manager = multiprocessing.Manager()
+
+        self.init_dict()
+        self.init_queues(tasks)
+
     def init_dict(self):
         """
         初始化字典
         """
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
         self.final_error_dict = defaultdict(list)  # 用于保存初始任务到最终错误的映射
-
-    def init_env(self, tasks: list):
-        self.processes: List[multiprocessing.Process] = []
-        self.manager = multiprocessing.Manager()
-
-        self.init_dict()
-        self.initialize_queues(tasks)
     
-    def initialize_queues(self, tasks: list):
+    def init_queues(self, tasks: list):
         """
         初始化任务队列
+        :param tasks: 待处理的任务列表
         :return: 节点与队列的映射关系
         """
         def collect_queue(stage: TaskManager):
@@ -55,7 +59,7 @@ class TaskChain:
     def set_chain_mode(self, mode: str):
         """
         统一设置整个chain中所有节点的执行模式
-        :param mode: 执行模式
+        :param mode: 执行模式, 可选值为 'serial' 或 'process'
         """
         def set_subsequent_satge_mode(stage: TaskManager):
             stage.set_stage_mode(mode)
@@ -213,7 +217,7 @@ class TaskChain:
         visited.add(task_manager)
 
         # 打印当前 TaskManager
-        scructure_list.append(f"{task_manager.name} (stage mode: {task_manager.stage_mode}, func: {task_manager.func.__name__})")
+        scructure_list.append(f"{task_manager.name} (stage_mode: {task_manager.stage_mode}, func: {task_manager.func.__name__})")
 
         # 遍历后续节点
         for next_stage in task_manager.next_stages:

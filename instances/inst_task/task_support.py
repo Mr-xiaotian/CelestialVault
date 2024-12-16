@@ -29,8 +29,10 @@ class TaskLogger:
         start_text += f"({worker_limit} workers)." if execution_mode != 'serial' else "."
         self.logger.info(start_text)
 
-    def start_stage(self, stage_name, func_name, execution_mode):
-        self.logger.info(f"The {stage_name} in '{func_name}' start tasks by {execution_mode}.")
+    def start_stage(self, stage_name, func_name, execution_mode, worker_limit):
+        start_text = f"The {stage_name} in '{func_name}' start tasks by {execution_mode}"
+        start_text += f"({worker_limit} workers)." if execution_mode != 'serial' else "."
+        self.logger.info(start_text)
 
     def start_chain(self, stage_structure):
         self.logger.info(f"Starting TaskChain stages. Chain structure:")
@@ -40,8 +42,8 @@ class TaskLogger:
     def end_task(self, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
         self.logger.info(f"'{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
 
-    def end_stage(self, stage_index, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
-        self.logger.info(f"The {stage_index} stage '{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
+    def end_stage(self, stage_name, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
+        self.logger.info(f"The {stage_name} in '{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
     
     def end_chain(self, use_time):
         self.logger.info(f"TaskChain end. Use {use_time:.2f} second.")
@@ -94,7 +96,7 @@ class BroadcastQueueManager:
 
     def _broadcast_to_all(self, item):
         """广播数据到所有目标队列"""
-        # task_logger.logger.info(f"Broadcasting {item} to all target queues.")
+        task_logger.logger.debug(f"Broadcasting {item} to all target queues.")
         for queue in self.target_queues:
             queue.put(item)
 
