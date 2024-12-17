@@ -43,8 +43,8 @@ class Saver(object):
             path += suffix_name
         return path
     
-    def is_exist(self, file_name, suffix_name):
-        return exists(self.get_path(file_name, suffix_name))
+    def is_exist(self, path):
+        return exists(path)
 
     def save_text(self, file_name, text, encoding = 'utf-8', suffix_name = '.txt'):
         if not file_name:
@@ -125,14 +125,23 @@ class Saver(object):
             '-i', m3u8_url,
             '-c', 'copy', path
             ]
-        subprocess.run(command)
-        return path
+        # 运行命令并捕获错误
+        result = subprocess.run(command, stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True, encoding='utf-8')
+
+        # 检查 FFmpeg 是否返回了错误
+        if result.returncode != 0:
+            raise Exception(f"m3u8 file download failed.")
+        else:
+            return path
 
     def download_texts(self, text_list, encoding = 'utf-8', suffix_name = '.md'):
         for file_name,text in text_list:
-            self.download_text(file_name, text, encoding, suffix_name)
+            self.save_text(file_name, text, encoding, suffix_name)
 
     def download_dataframe(self, file_name, dataframe, suffix_name = '.csv'):
         path = self.get_path(file_name, suffix_name)
+        if not self.overwrite and self.is_exist(path):
+            return path
+        
         dataframe.to_csv(path, index=False, sep=',',encoding = 'utf-8-sig')
         
