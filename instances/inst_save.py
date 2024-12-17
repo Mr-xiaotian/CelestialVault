@@ -2,7 +2,6 @@
 
 import subprocess
 from pathlib import Path
-from os.path import splitext, join, exists
 from instances.inst_task import ExampleTaskManager, SimpleTaskChain
 from instances.inst_fetch import Fetcher
 
@@ -29,33 +28,35 @@ class Saver(object):
 
     def set_base_path(self, base_path):
         self.base_path = Path(base_path)
-        self.base_path.mkdir(parents=True, exist_ok=True)
+        self.base_path.mkdir(parents=True, exist_ok=True) # 创建目录
 
     def set_add_path(self, add_path):
         self.add_path = Path(add_path)
 
     def get_path(self, file_name, suffix_name):
-        middle_path = self.base_path / self.add_path
-        middle_path.mkdir(parents=True, exist_ok=True)
-        path = join(middle_path, str(file_name))
-        
-        if splitext(path)[1] == '':
-            path += suffix_name
+        middle_path = self.base_path / self.add_path  # 拼接路径
+        middle_path.mkdir(parents=True, exist_ok=True)  # 确保目录存在
+
+        path: Path = middle_path / str(file_name)  # 拼接文件路径
+        if not path.suffix:  # 如果没有文件后缀
+            path = path.with_suffix(suffix_name)  # 添加后缀
         return path
     
-    def is_exist(self, path):
-        return exists(path)
+    def can_overwrite(self, path):
+        if not self.overwrite and Path(path).exists():  # 使用 Path 的 exists 方法
+            return False
+        return True
 
     def save_text(self, file_name, text, encoding = 'utf-8', suffix_name = '.txt'):
         if not file_name:
             return None
         
         path = self.get_path(file_name, suffix_name)
-        if not self.overwrite and self.is_exist(path):
+        if not self.can_overwrite(path):
             return path
         
-        with open(path, 'w', encoding = encoding) as f:
-            f.write(text.encode(encoding, 'ignore').decode(encoding, "ignore"))
+        # 使用 Path 对象的写入操作
+        path.write_text(text, encoding=encoding, errors="ignore")
         return path
 
     def add_text(self, file_name, text, encoding = 'utf-8', suffix_name = '.txt'):
@@ -63,7 +64,7 @@ class Saver(object):
             return None
     
         path = self.get_path(file_name, suffix_name)
-        if not self.overwrite and self.is_exist(path):
+        if not self.can_overwrite(path):
             return path
         
         with open(path, 'a', encoding = encoding) as f:
@@ -72,11 +73,11 @@ class Saver(object):
 
     def save_content(self, file_name, content, suffix_name='.dat'):
         path = self.get_path(file_name, suffix_name)
-        if not self.overwrite and self.is_exist(path):
+        if not self.can_overwrite(path):
             return path
         
-        with open(path, 'wb') as f:
-            f.write(content)
+        # 写入二进制内容
+        path.write_bytes(content)
         return path
 
     def download_urls(self, task_list:list[tuple[str,str,str]], chain_mode="serial", show_progress=False):
@@ -116,7 +117,7 @@ class Saver(object):
 
     def download_m3u8(self, m3u8_url, file_name, suffix_name = '.mp4'):
         path = self.get_path(file_name, suffix_name)
-        if not self.overwrite and self.is_exist(path):
+        if not self.can_overwrite(path):
             return path
         
         command = [
@@ -134,13 +135,9 @@ class Saver(object):
         else:
             return path
 
-    def download_texts(self, text_list, encoding = 'utf-8', suffix_name = '.md'):
-        for file_name,text in text_list:
-            self.save_text(file_name, text, encoding, suffix_name)
-
     def download_dataframe(self, file_name, dataframe, suffix_name = '.csv'):
         path = self.get_path(file_name, suffix_name)
-        if not self.overwrite and self.is_exist(path):
+        if not self.can_overwrite(path):
             return path
         
         dataframe.to_csv(path, index=False, sep=',',encoding = 'utf-8-sig')
