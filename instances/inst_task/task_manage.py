@@ -3,6 +3,7 @@ import asyncio
 from asyncio import Queue as AsyncQueue
 from queue import Queue as ThreadQueue
 from multiprocessing import Queue as MPQueue
+from threading import Event, Lock
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, wait, ALL_COMPLETED
 from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError, RequestError, PoolTimeout, ReadTimeout
 from typing import List
@@ -379,12 +380,17 @@ class TaskManager:
         使用指定的执行池（线程池或进程池）来并行执行任务。
 
         :param executor: 线程池或进程池
-        :param pool_type: "thread" 表示线程池, "process" 表示进程池, 用于日志记录和进度条显示
         """
         start_time = time()
         self.will_retry = False
         self.retry_queue = MPQueue()
-        futures_list = []
+
+        # 用于追踪进行中任务数的计数器和事件
+        in_flight = 0
+        in_flight_lock = Lock()
+        all_done_event = Event()
+        all_done_event.set()  # 初始为无任务状态，设为完成状态
+
         temp_task_set = set()  # 用于存储临时任务，避免重复执行
         
         progress_manager = ProgressManager(
@@ -394,11 +400,28 @@ class TaskManager:
             show_progress=self.show_progress
         )
 
+        def on_task_done(future, task, start_time, progress_manager):
+            # 回调函数中处理任务结果
+            progress_manager.update(1)
+            try:
+                result = future.result()
+                self.process_task_success(task, result, start_time)
+            except Exception as error:
+                self.handle_task_exception(task, error)
+            # 任务完成后减少in_flight计数
+            with in_flight_lock:
+                nonlocal in_flight
+                in_flight -= 1
+                if in_flight == 0:
+                    all_done_event.set()
+
         # 从任务队列中提交任务到执行池
         while True:
             task = self.task_queue.get()
             task_logger.logger.debug(f"Task {task} is submitted to {self.func.__name__}")
+            
             if isinstance(task, TerminationSignal):
+                # 收到终止信号后不再提交新任务
                 progress_manager.update(1)
                 break
             elif self.is_duplicate(task, temp_task_set):
@@ -406,14 +429,20 @@ class TaskManager:
                 progress_manager.update(1)
                 task_logger.task_duplicate(self.func.__name__, task)
                 continue
+
+            # 提交新任务时增加in_flight计数，并清除完成事件
+            with in_flight_lock:
+                in_flight += 1
+                all_done_event.clear()
+
             future = executor.submit(self.func, *self.get_args(task))
-            future.add_done_callback(lambda f, t=task: self._on_task_done(f, t, start_time, progress_manager))
-            futures_list.append(future)
+            future.add_done_callback(lambda f, t=task: on_task_done(f, t, start_time, progress_manager))
             temp_task_set.add(task)
 
-        # 在跳出循环后，等待所有已提交的任务完成再关闭progress_manager
-        # done, not_done = wait(futures_list, return_when=ALL_COMPLETED)
-        executor.shutdown(wait=True)
+        # 等待所有已提交任务完成（包括回调）
+        all_done_event.wait()
+
+        # 所有任务和回调都完成了，现在可以安全关闭进度条
         progress_manager.close()
 
         if self.will_retry:
@@ -421,17 +450,6 @@ class TaskManager:
             self.task_queue = self.retry_queue
             self.task_queue.put(TERMINATION_SIGNAL)
             self.run_with_executor(executor)
-
-    def _on_task_done(self, future, task, start_time, progress_manager):
-        """
-        任务完成后的回调函数
-        """
-        progress_manager.update(1)
-        try:
-            result = future.result()
-            self.process_task_success(task, result, start_time)
-        except Exception as error:
-            self.handle_task_exception(task, error)
 
     async def run_in_async(self):
         """

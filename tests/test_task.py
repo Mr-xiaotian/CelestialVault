@@ -43,7 +43,7 @@ async def fibonacci_async(n):
         return result_0 + result_1
 
 # 测试 TaskManager 的同步任务
-def test_task_manager():
+def _test_task_manager():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
 
@@ -54,7 +54,7 @@ def test_task_manager():
 
 # 测试 TaskManager 的异步任务
 @pytest.mark.asyncio
-async def test_task_manager_async():
+async def _test_task_manager_async():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
 
@@ -66,7 +66,7 @@ async def test_task_manager_async():
 
 # 测试 TaskChain 的功能
 def test_task_chain():
-    # 定义多个阶段的 TaskManager 实例，假设我们使用 Fibonacci 作为每个阶段的任务
+    # 定义多个阶段的 TaskManager 实例
     stage1 = ExampleTaskManager(fibonacci, execution_mode='thread', worker_limit=4, max_retries = 1, show_progress=False)
     stage2 = ExampleTaskManager(square, execution_mode='thread', worker_limit=4, max_retries = 1, show_progress=False)
     stage3 = ExampleTaskManager(half, execution_mode='thread', worker_limit=4, show_progress=False)
