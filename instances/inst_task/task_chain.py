@@ -1,8 +1,9 @@
 
 import multiprocessing
+from itertools import product
 from collections import defaultdict
 from queue import Queue as ThreadQueue
-from multiprocessing import Process, Queue as MPQueue
+from multiprocessing import Queue as MPQueue
 from typing import List, Any, Dict, Union
 from time import time
 from .task_manage import TaskManager
@@ -56,13 +57,15 @@ class TaskChain:
             self.stage_queues_dict[self.root_stage].put(task)
         self.stage_queues_dict[self.root_stage].put(TERMINATION_SIGNAL)
     
-    def set_chain_mode(self, mode: str):
+    def set_chain_mode(self, stage_mode: str, execution_mode: str):
         """
-        统一设置整个chain中所有节点的执行模式
-        :param mode: 执行模式, 可选值为 'serial' 或 'process'
+        设置任务链的执行模式
+        :param stage_mode: 节点执行模式, 可选值为 'serial' 或 'process'
+        :param execution_mode: 节点内部执行模式, 可选值为 'serial' 或 'thread''
         """
         def set_subsequent_satge_mode(stage: TaskManager):
-            stage.set_stage_mode(mode)
+            stage.set_stage_mode(stage_mode)
+            stage.set_execution_mode(execution_mode)
             for next_stage in stage.next_stages:
                 set_subsequent_satge_mode(next_stage)
 
@@ -90,22 +93,21 @@ class TaskChain:
         """
         递归地执行节点任务
         """
+        input_queue = self.stage_queues_dict[stage]
         if not stage.next_stages:
-            next_stage_queues = [MPQueue()]
-        elif len(stage.next_stages) > 1:
-            next_stage_queues = [self.stage_queues_dict[next_stage] 
-                                for next_stage in stage.next_stages]
+            output_queues = [MPQueue()]
         else:
-            next_stage_queues = [self.stage_queues_dict[stage.next_stages[0]]]
+            output_queues = [self.stage_queues_dict[next_stage]
+                             for next_stage in stage.next_stages]
 
         if stage.stage_mode == 'process':
             stage.init_result_error_dict(self.manager.dict(), self.manager.dict())
-            p = multiprocessing.Process(target=stage.start_stage, args=(self.stage_queues_dict[stage], next_stage_queues))
+            p = multiprocessing.Process(target=stage.start_stage, args=(input_queue, output_queues))
             p.start()
             self.processes.append(p)
         else:
             stage.init_result_error_dict(dict(), dict())
-            stage.start_stage(self.stage_queues_dict[stage], next_stage_queues)
+            stage.start_stage(input_queue, output_queues)
 
         for next_stage in stage.next_stages:
             self._execute_stage(next_stage)
@@ -259,11 +261,14 @@ class TaskChain:
         :return: 包含两种执行模式下的执行时间的字典
         """
         results = {}
-        for mode in ['serial', 'process']:
+        stage_modes = ['serial', 'process']
+        execution_modes = ['serial', 'thread']
+
+        for stage_mode, execution_mode in product(stage_modes, execution_modes):
             start_time = time()
-            self.set_chain_mode(mode)
+            self.set_chain_mode(stage_mode, execution_mode)
             self.start_chain(task_list)
-            results[f'{mode} chain'] = time() - start_time
+            results[f'(stage){stage_mode} (execution){execution_mode}'] = time() - start_time
         results['Final result dict'] = self.get_final_result_dict()
         results['Final error dict'] = self.get_final_error_dict()
         return results

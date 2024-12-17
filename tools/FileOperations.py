@@ -471,7 +471,7 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
         report.append("")
 
     hash_value, file_size = max_file_key
-    report.append(f"\nTotal size of duplicate files: {bytes_to_human_readable(total_size)}")
+    report.append(f"Total size of duplicate files: {bytes_to_human_readable(total_size)}")
     report.append(f"Total number of duplicate files: {total_file_num}")
     report.append(f"File with the most duplicates: {hash_value}(hash) {bytes_to_human_readable(file_size)}(size) {max_file_num}(number)")
         

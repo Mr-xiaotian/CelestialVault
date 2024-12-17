@@ -42,6 +42,24 @@ async def fibonacci_async(n):
         result_1 = await fibonacci_async(n-2)
         return result_0 + result_1
 
+def add_one(x):
+    return x + 1
+
+def subtract_one(x):
+    return x - 1
+
+def multiply_by_two(x):
+    return x * 2
+
+def divide_by_two(x):
+    return x / 2
+
+def square(x):
+    return x ** 2
+
+def square_root(x):
+    return x ** 0.5
+
 # 测试 TaskManager 的同步任务
 def _test_task_manager():
     test_task_0 = range(25, 37)
@@ -65,10 +83,10 @@ async def _test_task_manager_async():
     logging.info(f'run_in_async: {time() - start}')
 
 # 测试 TaskChain 的功能
-def test_task_chain():
+def _test_task_chain_0():
     # 定义多个阶段的 TaskManager 实例
-    stage1 = ExampleTaskManager(fibonacci, execution_mode='thread', worker_limit=4, max_retries = 1, show_progress=False)
-    stage2 = ExampleTaskManager(square, execution_mode='thread', worker_limit=4, max_retries = 1, show_progress=False)
+    stage1 = ExampleTaskManager(fibonacci, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
+    stage2 = ExampleTaskManager(square, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
     stage3 = ExampleTaskManager(half, execution_mode='thread', worker_limit=4, show_progress=False)
     stage4 = ExampleTaskManager(sleep_1, execution_mode='thread', worker_limit=4, show_progress=False)
 
@@ -88,11 +106,35 @@ def test_task_chain():
     tasks_1 = list(range(25, 32)) + [0, 27, None, 0, '']
 
     # 开始任务链
-    result = chain.test_methods(tasks_1)
-    logging.info(f"{'serial chain':<17}: {result['serial chain']}")
-    logging.info(f"{'process chain':<17}: {result['process chain']}")
-    logging.info(f"{'Final result dict':<17}: {result['Final result dict']}")
-    logging.info(f"{'Final error dict':<17}: {result['Final error dict']}")
+    result = chain.test_methods(tasks_0)
+    for key, value in result.items():
+        logging.info(f"{key}: {value}")
+
+def test_task_chain_1():
+
+    # 定义任务节点
+    A = ExampleTaskManager(func=add_one, execution_mode='thread')
+    B = ExampleTaskManager(func=subtract_one, execution_mode='serial')
+    C = ExampleTaskManager(func=multiply_by_two, execution_mode='serial')
+    D = ExampleTaskManager(func=divide_by_two, execution_mode='thread')
+    E = ExampleTaskManager(func=square, execution_mode='thread')
+    F = ExampleTaskManager(func=square_root, execution_mode='serial')
+
+    # 设置链式上下文
+    A.set_chain_context(next_stages=[B, C], stage_mode='serial', stage_name="Task_A")
+    B.set_chain_context(next_stages=[D, F], stage_mode='serial', stage_name="Task_B")
+    C.set_chain_context(next_stages=[], stage_mode='serial', stage_name="Task_C")
+    D.set_chain_context(next_stages=[E], stage_mode='serial', stage_name="Task_D")
+    E.set_chain_context(next_stages=[], stage_mode='serial', stage_name="Task_E")
+    F.set_chain_context(next_stages=[], stage_mode='serial', stage_name="Task_F")
+
+    # 初始化 TaskChain, 并设置根节点
+    chain = TaskChain(A)
+
+    # 开始任务链
+    result = chain.test_methods(range(10))
+    for key, value in result.items():
+        logging.info(f"{key}: {value}")
 
 def profile_task_chain():
     target_func = 'test_task_manager'

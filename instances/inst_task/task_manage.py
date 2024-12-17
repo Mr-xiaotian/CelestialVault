@@ -311,7 +311,7 @@ class TaskManager:
             output_queue = output_queues[0]
         else:
             output_queue = MPQueue()
-            broadcast_manager = BroadcastQueueManager(output_queue, output_queues)
+            broadcast_manager = BroadcastQueueManager(output_queue, output_queues, self.func.__name__)
             broadcast_manager.start()  # 启动广播管理器
 
         self.task_queue = input_queue
@@ -349,7 +349,7 @@ class TaskManager:
         # 从队列中依次获取任务并执行
         while True:
             task = self.task_queue.get()
-            task_logger.logger.debug(f"Task {task} is submitted to {self.func.__name__}")
+            task_logger.logger.trace(f"Task {task} is submitted to {self.func.__name__}")
             if isinstance(task, TerminationSignal):
                 progress_manager.update(1)
                 break
@@ -370,7 +370,7 @@ class TaskManager:
         progress_manager.close()
 
         if self.will_retry:
-            task_logger.logger.debug(f"Retrying tasks for {self.func.__name__}")
+            task_logger.logger.trace(f"Retrying tasks for {self.func.__name__}")
             self.task_queue = self.retry_queue
             self.task_queue.put(TERMINATION_SIGNAL)
             self.run_in_serial()
@@ -418,7 +418,7 @@ class TaskManager:
         # 从任务队列中提交任务到执行池
         while True:
             task = self.task_queue.get()
-            task_logger.logger.debug(f"Task {task} is submitted to {self.func.__name__}")
+            task_logger.logger.trace(f"Task {task} is submitted to {self.func.__name__}")
             
             if isinstance(task, TerminationSignal):
                 # 收到终止信号后不再提交新任务
@@ -446,7 +446,7 @@ class TaskManager:
         progress_manager.close()
 
         if self.will_retry:
-            task_logger.logger.debug(f"Retrying tasks for {self.func.__name__}")
+            task_logger.logger.trace(f"Retrying tasks for {self.func.__name__}")
             self.task_queue = self.retry_queue
             self.task_queue.put(TERMINATION_SIGNAL)
             self.run_with_executor(executor)
@@ -477,7 +477,7 @@ class TaskManager:
 
         while True:
             task = await self.task_queue.get()
-            task_logger.logger.debug(f"Task {task} is submitted to {self.func.__name__}")
+            task_logger.logger.trace(f"Task {task} is submitted to {self.func.__name__}")
             if isinstance(task, TerminationSignal):
                 progress_manager.update(1)
                 break
@@ -500,7 +500,7 @@ class TaskManager:
         progress_manager.close()
 
         if self.will_retry:
-            task_logger.logger.debug(f"Retrying tasks for {self.func.__name__}")
+            task_logger.logger.trace(f"Retrying tasks for {self.func.__name__}")
             self.task_queue = self.retry_queue
             await self.task_queue.put(TERMINATION_SIGNAL)
             await self.run_in_async()

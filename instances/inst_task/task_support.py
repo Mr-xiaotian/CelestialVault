@@ -62,7 +62,7 @@ class TaskLogger:
 
 
 class BroadcastQueueManager:
-    def __init__(self, input_queue: Union[MPQueue, ThreadQueue], target_queues: List[Union[MPQueue, ThreadQueue]]):
+    def __init__(self, input_queue: Union[MPQueue, ThreadQueue], target_queues: List[Union[MPQueue, ThreadQueue]], func_name: str):
         """
         广播队列管理器
         :param input_queue: 源输入队列
@@ -70,7 +70,7 @@ class BroadcastQueueManager:
         """
         self.input_queue = input_queue
         self.target_queues = target_queues
-        self.running = True
+        self.func_name = func_name
 
     def start(self):
         """开始广播线程"""
@@ -79,24 +79,23 @@ class BroadcastQueueManager:
 
     def stop(self):
         """停止广播线程"""
-        self.running = False
         self.thread.join()
 
     def broadcast(self):
         """将输入队列的数据广播到目标队列"""
-        while self.running:
+        while True:
             try:
                 item = self.input_queue.get()  # 从输入队列获取数据
                 if isinstance(item, TerminationSignal):  # 检测到终止信号时广播并退出
                     break
                 self._broadcast_to_all(item)
             except Exception as e:
-                print(f"Broadcast thread error: {e}")
+                task_logger.logger.error(f"{self.func_name} broadcast thread error: {e}")
         self._broadcast_to_all(TERMINATION_SIGNAL)
 
     def _broadcast_to_all(self, item):
         """广播数据到所有目标队列"""
-        task_logger.logger.debug(f"Broadcasting {item} to all target queues.")
+        task_logger.logger.trace(f"{self.func_name} broadcasting {item} to all target queues.")
         for queue in self.target_queues:
             queue.put(item)
 
