@@ -461,3 +461,34 @@ def find_nth_occurrence(target_str: str, similar_str: str, occurrence: int) -> t
         if count == occurrence:  # 如果找到了指定次数的匹配
             return (start_index, start_index + len(similar_str))  # 返回坐标
         
+from bs4 import BeautifulSoup, NavigableString, Tag
+from json import loads
+def bs_traverse(element: Tag, md_list: list, video_list: list, img_list: list):
+    # 定义一个递归函数来遍历所有元素
+    if not element:
+        return
+    
+    if isinstance(element, NavigableString):  # 如果元素是文本
+        text = element.strip()
+        if text:  # 如果文本非空
+            md_list.append(f"{text}")  # 添加文本到Markdown内容
+    elif isinstance(element, Tag):  # 如果元素是一个HTML标签
+        if element.name == 'img'and element.get('title') != None:  # 如果元素是<img>标签
+            img_src = element.get('data-xkrkllgl')
+            img_title = element.get('title').replace(':', '_')
+            if img_src:
+                md_list.append(f"![{img_src}]({img_title})")  # 添加图片到Markdown内容
+                img_list.append((img_title, img_src))
+        elif 'dplayer' in element.get('class', []):  # 如果是视频
+            video_config = element.get('data-config')
+            if video_config:
+                config_json = loads(video_config)
+                video_url = config_json.get('url', '')
+                video_name = re.search('([0-9 a-z]*?).m3u8', video_url, re.S).group(1)
+
+                # 添加视频链接到Markdown内容
+                md_list.append(f'<video controls src="{video_name}.mp4" width="480" height="320">{video_url}</video>')
+                video_list.append(video_url)
+        # 递归遍历所有子元素
+        for child in element.children:
+            bs_traverse(child, md_list, video_list, img_list)
