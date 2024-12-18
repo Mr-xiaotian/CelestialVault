@@ -1,52 +1,26 @@
 import fitz, shutil, re
-import markdown
-import pdfkit
 import PyPDF2
+import subprocess
 from PIL import Image
 from pathlib import Path
+from typing import Union
 
 
-def md_to_pdf(input_directory: str | Path, output_directory: str | Path=None):
+def md_to_pdf(md_file_path: Union[str, Path], pdf_file_path: Union[str, Path]):
     """
-    将输入目录中的Markdown文件转换为PDF文件
+    使用pandoc将指定的Markdown文件转换为PDF文件。
 
-    :param input_directory: 输入目录
-    :param output_directory: 输出目录
-    :return: None
+    :param md_file_path: 输入的Markdown文件路径
+    :param pdf_file_path: 输出的PDF文件路径
     """
-    # 将输入路径和输出路径转换为Path对象
-    input_dir = Path(input_directory)
-    output_dir = Path(output_directory) if output_directory else input_dir
+    md_file_path = Path(md_file_path)
+    pdf_file_path = Path(pdf_file_path)
 
-    path_to_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'  # Windows
-    # path_to_wkhtmltopdf = '/usr/local/bin/wkhtmltopdf'  # macOS 或 Linux
-
-    config = pdfkit.configuration(wkhtmltopdf=path_to_wkhtmltopdf)
-    options = {
-        'no-outline': None,  # 去掉边框
-        'encoding': 'UTF-8',  # 设置编码
-        'custom-header': [
-            ('Accept-Encoding', 'gzip')
-            ]
-    }
-
-    # 获取输入目录中的所有Markdown文件
-    md_files = [f for f in input_dir.glob('*.md')]
-
-    # 遍历所有Markdown文件
-    for md_file in md_files:
-        # 获取输出路径
-        output_path = output_dir / md_file.with_suffix('.pdf').name
-
-        # 读取Markdown文件内容
-        md_content = md_file.read_text(encoding='utf-8')
-
-        # 将Markdown文件内容转换为HTML
-        html_content = markdown.markdown(md_content)
-
-        # 将HTML文件转换为PDF
-        pdfkit.from_string(html_content, output_path, configuration=config, options=options)
-        # print(f"Converted {md_file.name} to PDF")
+    # 使用pandoc进行转换, 可根据需要增加其它参数，如:
+    # --pdf-engine=xelatex 用于支持Unicode字符
+    # --toc 生成目录
+    # --template 指定latex模板
+    subprocess.run(["pandoc", str(md_file_path), "-o", str(pdf_file_path), "--pdf-engine=xelatex"], check=True)
 
 def transfer_pdf_to_img(pdf_path: str | Path, img_path: str | Path):
     """

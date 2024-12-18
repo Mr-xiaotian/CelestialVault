@@ -56,14 +56,12 @@ class HTMLContentParser:
         self.md_list.append(text)
 
     def _handle_image(self, img_tag: Tag):
-        img_src = img_tag.get('data-xkrkllgl')
-        img_title = img_tag.get('title').replace(':', '_')
-        if not img_src:
+        img_url = img_tag.get('data-xkrkllgl')
+        img_src = img_tag.get('title').replace(':', '_')
+        if not img_url:
             return
-        # 确保markdown中图片语法：![alt_text](url)
-        # 这里假设img_title作为alt文本，img_src为图片URL
-        self.md_list.append(f"![{img_title}]({img_src})")
-        self.img_list.append((img_title, img_src))
+        self.md_list.append(f"![{img_url}]({img_src})")
+        self.img_list.append((img_src, img_url))
 
     def _handle_video(self, video_tag: Tag):
         video_config = video_tag.get('data-config')

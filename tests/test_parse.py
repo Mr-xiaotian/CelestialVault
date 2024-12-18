@@ -10,7 +10,7 @@ def test_html_content_parser():
     html_content = """
     <div>
         <p>这是一些文本内容。</p>
-        <img title="示例图片" data-xkrkllgl="http://example.com/image.jpg" />
+        <img title="示例图片.jpg" data-xkrkllgl="http://example.com/image.jpg" />
         <div class="dplayer" data-config='{"url":"http://example.com/video123.m3u8"}'></div>
         <div>
             <p>另一段文本</p>

@@ -112,10 +112,9 @@ class Saver(object):
         """
         fetcher = Fetcher()  # 创建用于获取 URL 内容的 Fetcher 实例
         fetch_manager = FetchManager(fetcher.getContent, execution_mode='thread',
-                                    progress_desc='urlsFetchProcess', show_progress=show_progress)
-        
+                                     progress_desc='urlsFetchProcess', show_progress=show_progress)        
         save_manager = SaveManager(self.save_content, execution_mode='serial',
-                                progress_desc='urlsSaveProcess', show_progress=False)
+                                   progress_desc='urlsSaveProcess', show_progress=False)
 
         # 创建 SimpleTaskChain 来管理 Fetch 和 Save 两个阶段的任务处理
         chain = SimpleTaskChain([fetch_manager, save_manager], chain_mode)

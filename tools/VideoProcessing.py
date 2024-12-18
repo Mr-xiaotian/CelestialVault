@@ -6,7 +6,7 @@ from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip, clips_ar
 from moviepy.config import change_settings
 
 
-def compress_video(old_video_path: Path, new_video_path: Path):
+def compress_video(old_video_path: Path|str, new_video_path: Path|str):
     """
     使用ffmpeg压缩视频
     
