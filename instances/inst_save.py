@@ -6,6 +6,21 @@ from instances.inst_task import ExampleTaskManager, SimpleTaskChain
 from instances.inst_fetch import Fetcher
 
 
+class DownloadError(Exception):
+    """Raised when the download process fails."""
+    pass
+
+class TimeoutError(DownloadError):
+    """Raised when the download process times out."""
+    pass
+
+class FFmpegError(DownloadError):
+    """Raised when FFmpeg execution fails."""
+    def __init__(self, message, stderr):
+        super().__init__(message)
+        self.stderr = stderr
+
+
 class FetchManager(ExampleTaskManager):
     def get_args(self, task: object):
         return (task[1], )
@@ -124,15 +139,19 @@ class Saver(object):
         command = [
             'ffmpeg',
             '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
-            '-i', m3u8_url,
+            '-i', str(m3u8_url),
             '-c', 'copy', m3u8_path
             ]
         # 运行命令并捕获错误
-        result = subprocess.run(command, stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True, encoding='utf-8')
+        try:
+            result = subprocess.run(command, stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True, encoding='utf-8', timeout=600)
+        except subprocess.TimeoutExpired:
+            raise TimeoutError(f"Download process timed out for {m3u8_url}.")
 
         # 检查 FFmpeg 是否返回了错误
         if result.returncode != 0:
-            raise Exception(f"{m3u8_path} download from {m3u8_url} failed.")
+            error_msg = result.stderr.strip()
+            raise FFmpegError(f"Failed to download {m3u8_url}. FFmpeg error: {error_msg}.")
         else:
             print(f"{m3u8_path} download from {m3u8_url} success.")
             return m3u8_path
