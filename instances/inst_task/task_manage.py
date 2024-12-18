@@ -180,7 +180,9 @@ class TaskManager:
         if len(result) < self.max_info:
             return result
         else:
-            return f"{result[:self.max_info]}..."
+            first_info = result[:int(self.max_info*2//3)]
+            second_info = result[-int(self.max_info*1//3):]
+            return f"{first_info}...{second_info}"
         
     def process_task_success(self, task, result, start_time):
         """

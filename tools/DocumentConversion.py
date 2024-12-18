@@ -6,7 +6,7 @@ from PIL import Image
 from pathlib import Path
 
 
-def md_to_pdf(input_directory: str | Path, output_directory: str | Path):
+def md_to_pdf(input_directory: str | Path, output_directory: str | Path=None):
     """
     将输入目录中的Markdown文件转换为PDF文件
 
@@ -16,7 +16,19 @@ def md_to_pdf(input_directory: str | Path, output_directory: str | Path):
     """
     # 将输入路径和输出路径转换为Path对象
     input_dir = Path(input_directory)
-    output_dir = Path(output_directory)
+    output_dir = Path(output_directory) if output_directory else input_dir
+
+    path_to_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'  # Windows
+    # path_to_wkhtmltopdf = '/usr/local/bin/wkhtmltopdf'  # macOS 或 Linux
+
+    config = pdfkit.configuration(wkhtmltopdf=path_to_wkhtmltopdf)
+    options = {
+        'no-outline': None,  # 去掉边框
+        'encoding': 'UTF-8',  # 设置编码
+        'custom-header': [
+            ('Accept-Encoding', 'gzip')
+            ]
+    }
 
     # 获取输入目录中的所有Markdown文件
     md_files = [f for f in input_dir.glob('*.md')]
@@ -33,7 +45,7 @@ def md_to_pdf(input_directory: str | Path, output_directory: str | Path):
         html_content = markdown.markdown(md_content)
 
         # 将HTML文件转换为PDF
-        pdfkit.from_string(html_content, output_path)
+        pdfkit.from_string(html_content, output_path, configuration=config, options=options)
         # print(f"Converted {md_file.name} to PDF")
 
 def transfer_pdf_to_img(pdf_path: str | Path, img_path: str | Path):

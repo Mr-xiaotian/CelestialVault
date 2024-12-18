@@ -116,24 +116,26 @@ class Saver(object):
         pass
 
     def download_m3u8(self, m3u8_url, file_name, suffix_name = '.mp4'):
-        path = self.get_path(file_name, suffix_name)
-        if not self.can_overwrite(path):
-            return path
+        m3u8_path = self.get_path(file_name, suffix_name)
+        if not self.can_overwrite(m3u8_path):
+            print(f"{m3u8_path} exist")
+            return m3u8_path
         
         command = [
             'ffmpeg',
             '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
             '-i', m3u8_url,
-            '-c', 'copy', path
+            '-c', 'copy', m3u8_path
             ]
         # 运行命令并捕获错误
         result = subprocess.run(command, stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True, encoding='utf-8')
 
         # 检查 FFmpeg 是否返回了错误
         if result.returncode != 0:
-            raise Exception(f"m3u8 file download failed.")
+            raise Exception(f"{m3u8_path} download from {m3u8_url} failed.")
         else:
-            return path
+            print(f"{m3u8_path} download from {m3u8_url} success.")
+            return m3u8_path
 
     def download_dataframe(self, file_name, dataframe, suffix_name = '.csv'):
         path = self.get_path(file_name, suffix_name)
