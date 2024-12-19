@@ -156,10 +156,12 @@ class TaskChain:
                 stage_task = stage_result_dict[stage_task]
             elif stage_task in stage_error_dict:
                 stage_task = (stage_error_dict[stage_task], stage.func.__name__)
+                task_execution_status[initial_task] = False
                 return [(stage_task, stage.stage_name)]
             else:
                 dispear_exception = TaskError("Task not found.")
                 stage_task = (dispear_exception, stage.func.__name__)
+                task_execution_status[initial_task] = False
                 return [(stage_task, stage.stage_name)]
             
             if not stage.next_stages:
@@ -171,8 +173,11 @@ class TaskChain:
 
             return final_list
 
+        task_execution_status = {}
         for initial_task in initial_tasks:
+            task_execution_status[initial_task] = True
             self.final_result_dict[initial_task] = update_final_result_dict(initial_task, self.root_stage)
+        self.failed_tasks = [task for task, pass_flag in task_execution_status.items() if not pass_flag]
 
     def handle_final_error_dict(self):
         """
@@ -199,6 +204,12 @@ class TaskChain:
         返回最终错误字典
         """
         return self.final_error_dict
+    
+    def get_failed_tasks(self):
+        """
+        返回失败的任务列表
+        """
+        return self.failed_tasks
     
     def get_structure_list(self, task_manager: TaskManager, indent=0, visited=None):
         """
@@ -261,16 +272,25 @@ class TaskChain:
         :return: 包含两种执行模式下的执行时间的字典
         """
         results = {}
+        final_result_dict = {}
+        final_error_dict = {}
+        failed_tasks = []
+
         stage_modes = ['serial', 'process']
         execution_modes = ['serial', 'thread']
-
         for stage_mode, execution_mode in product(stage_modes, execution_modes):
             start_time = time()
             self.set_chain_mode(stage_mode, execution_mode)
             self.start_chain(task_list)
+
             results[f'(stage){stage_mode} (execution){execution_mode}'] = time() - start_time
-        results['Final result dict'] = self.get_final_result_dict()
-        results['Final error dict'] = self.get_final_error_dict()
+            final_result_dict.update(self.get_final_result_dict())
+            final_error_dict.update(self.get_final_error_dict())
+            failed_tasks += [task for task in self.get_failed_tasks() if task not in failed_tasks]
+
+        results['Final result dict'] = final_result_dict
+        results['Final error dict'] = final_error_dict
+        results['Failed tasks'] = failed_tasks
         return results
     
 

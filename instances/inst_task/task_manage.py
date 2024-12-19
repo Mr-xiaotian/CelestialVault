@@ -436,8 +436,8 @@ class TaskManager:
                 in_flight += 1
                 all_done_event.clear()
 
-            future = executor.submit(self.func, *self.get_args(task))
             task_start_dict[task] = time()
+            future = executor.submit(self.func, *self.get_args(task))
             future.add_done_callback(lambda f, t=task: on_task_done(f, t, progress_manager))
 
         # 等待所有已提交任务完成（包括回调）
