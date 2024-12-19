@@ -377,23 +377,21 @@ class TaskManager:
             self.task_queue.put(TERMINATION_SIGNAL)
             self.run_in_serial()
     
-    def run_with_executor(self, executor):
+    def run_with_executor(self, executor: ThreadPoolExecutor|ProcessPoolExecutor):
         """
         使用指定的执行池（线程池或进程池）来并行执行任务。
 
         :param executor: 线程池或进程池
         """
-        start_time = time()
         self.will_retry = False
         self.retry_queue = MPQueue()
+        task_start_dict = {}  # 用于存储任务开始时间
 
         # 用于追踪进行中任务数的计数器和事件
         in_flight = 0
         in_flight_lock = Lock()
         all_done_event = Event()
         all_done_event.set()  # 初始为无任务状态，设为完成状态
-
-        temp_task_set = set()  # 用于存储临时任务，避免重复执行
         
         progress_manager = ProgressManager(
             total_tasks=self.task_queue.qsize(),
@@ -402,11 +400,12 @@ class TaskManager:
             show_progress=self.show_progress
         )
 
-        def on_task_done(future, task, start_time, progress_manager):
+        def on_task_done(future, task, progress_manager: ProgressManager):
             # 回调函数中处理任务结果
             progress_manager.update(1)
             try:
                 result = future.result()
+                start_time = task_start_dict[task]
                 self.process_task_success(task, result, start_time)
             except Exception as error:
                 self.handle_task_exception(task, error)
@@ -426,7 +425,7 @@ class TaskManager:
                 # 收到终止信号后不再提交新任务
                 progress_manager.update(1)
                 break
-            elif self.is_duplicate(task, temp_task_set):
+            elif self.is_duplicate(task, task_start_dict):
                 self.duplicates_num += 1
                 progress_manager.update(1)
                 task_logger.task_duplicate(self.func.__name__, task)
@@ -437,9 +436,9 @@ class TaskManager:
                 in_flight += 1
                 all_done_event.clear()
 
+            task_start_dict[task] = time()
             future = executor.submit(self.func, *self.get_args(task))
-            future.add_done_callback(lambda f, t=task: on_task_done(f, t, start_time, progress_manager))
-            temp_task_set.add(task)
+            future.add_done_callback(lambda f, t=task: on_task_done(f, t, progress_manager))
 
         # 等待所有已提交任务完成（包括回调）
         all_done_event.wait()
