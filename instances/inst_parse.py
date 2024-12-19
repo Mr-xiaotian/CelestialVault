@@ -37,13 +37,17 @@ class HTMLContentParser:
             self._handle_text(element)
         elif isinstance(element, Tag):
             # 处理图片
-            if element.name == 'img' and element.get('title') is not None:
-                self._handle_image(element)
+            if element.name == 'img':
+                img_name, img_url = self.get_image_info(element)
+                if img_name and img_url:
+                    self._handle_image(img_name, img_url)
 
             # 处理视频
             classes = element.get('class', [])
             if 'dplayer' in classes:
-                self._handle_video(element)
+                video_name, video_url = self.get_video_info(element)
+                if video_name and video_url:
+                    self._handle_video(video_name, video_url)
 
             # 递归子元素
             for child in element.children:
@@ -55,33 +59,43 @@ class HTMLContentParser:
             return
         self.md_list.append(text)
 
-    def _handle_image(self, img_tag: Tag):
-        img_url = img_tag.get('data-xkrkllgl')
-        img_name = img_tag.get('title').replace(':', '_')
-        if not img_name:
-            img_name = re.search('/(\d+\..*)', img_url, re.S).group(1)
-        if not img_url:
-            return
+    def _handle_image(self, img_name: str, img_url: str):
         self.md_list.append(f"![{img_url}]({img_name})")
         self.img_list.append((img_name, img_url))
 
-    def _handle_video(self, video_tag: Tag):
+    def _handle_video(self, video_name: str, video_url: str):
+        self.md_list.append(f'<video controls src="{video_name}.mp4" width="480" height="320">{video_url}</video>')
+        self.video_list.append((video_name, video_url))
+
+    def get_image_info(self, img_tag: Tag) -> Tuple[str, str]:
+        """
+        获取图片相关信息的方法，可以在子类中重写。
+        返回 (img_name, img_url)
+        """
+        img_url = img_tag.get('data-xkrkllgl')
+        img_name = img_tag.get('title').replace(':', '_')
+        if not img_name and img_url:
+            match = re.search(r'/(\d+\..*)', img_url, re.S)
+            if match:
+                img_name = match.group(1)
+        return img_name, img_url
+
+    def get_video_info(self, video_tag: Tag) -> Tuple[str, str]:
+        """
+        获取视频相关信息的方法，可以在子类中重写。
+        返回 (video_name, video_url)
+        """
         video_config = video_tag.get('data-config')
         if not video_config:
-            return
+            return None, None
         try:
             config_json = loads(video_config)
         except JSONDecodeError:
             config_json = {}
-
         video_url = config_json.get('url', '')
         match = re.search(r'([0-9a-z]*?).m3u8', video_url, re.S)
         if match:
             video_name = match.group(1)
         else:
             video_name = "unknown_video_name"
-
-        # 将视频以<video>标签的HTML形式插入md_list
-        # 注：Markdown本身不支持原生video标签，如果需要严格纯Markdown，这里可改为文字链接或其它方案
-        self.md_list.append(f'<video controls src="{video_name}.mp4" width="480" height="320">{video_url}</video>')
-        self.video_list.append((video_name, video_url))
+        return video_name, video_url
