@@ -2,22 +2,31 @@ import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest, logging, asyncio
-import cProfile, subprocess
+import cProfile, subprocess, random
 from time import time, strftime, localtime, sleep
 from instances.inst_task import ExampleTaskManager, TaskChain
 
 
-def square(n):
-    if n == 317811:
-        raise ValueError("Test error in 317811")
-    return n * n
-
-def half(n):
-    return n / 2
-
 def sleep_1(n):
     sleep(1)
     return n
+
+def sleep_random(n):
+    sleep(random.randint(0, 1))
+    return n
+
+def sleep_random_A(n):
+    return sleep_random(n)
+def sleep_random_B(n):
+    return sleep_random(n)
+def sleep_random_C(n):
+    return sleep_random(n)
+def sleep_random_D(n):
+    return sleep_random(n)
+def sleep_random_E(n):
+    return sleep_random(n)
+def sleep_random_F(n):
+    return sleep_random(n)
 
 def fibonacci(n):
     if n <= 0:
@@ -55,6 +64,8 @@ def divide_by_two(x):
     return x / 2
 
 def square(x):
+    if x == 317811:
+        raise ValueError("Test error in 317811")
     return x ** 2
 
 def square_root(x):
@@ -87,7 +98,7 @@ def _test_task_chain_0():
     # 定义多个阶段的 TaskManager 实例
     stage1 = ExampleTaskManager(fibonacci, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
     stage2 = ExampleTaskManager(square, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
-    stage3 = ExampleTaskManager(half, execution_mode='thread', worker_limit=4, show_progress=False)
+    stage3 = ExampleTaskManager(divide_by_two, execution_mode='thread', worker_limit=4, show_progress=False)
     stage4 = ExampleTaskManager(sleep_1, execution_mode='thread', worker_limit=4, show_progress=False)
 
     stage1.set_chain_context([stage2, stage4], 'process', stage_name='satge1')
@@ -112,20 +123,20 @@ def _test_task_chain_0():
 
 def test_task_chain_1():
     # 定义任务节点
-    A = ExampleTaskManager(func=add_one, execution_mode='thread')
-    B = ExampleTaskManager(func=subtract_one, execution_mode='serial')
-    C = ExampleTaskManager(func=multiply_by_two, execution_mode='serial')
-    D = ExampleTaskManager(func=divide_by_two, execution_mode='thread')
-    E = ExampleTaskManager(func=square, execution_mode='thread')
-    F = ExampleTaskManager(func=square_root, execution_mode='serial')
+    A = ExampleTaskManager(func=sleep_random_A, execution_mode='thread')
+    B = ExampleTaskManager(func=sleep_random_B, execution_mode='serial')
+    C = ExampleTaskManager(func=sleep_random_C, execution_mode='serial')
+    D = ExampleTaskManager(func=sleep_random_D, execution_mode='thread')
+    E = ExampleTaskManager(func=sleep_random_E, execution_mode='thread')
+    F = ExampleTaskManager(func=sleep_random_F, execution_mode='serial')
 
     # 设置链式上下文
-    A.set_chain_context(next_stages=[B, C], stage_mode='serial', stage_name="Task_A")
-    B.set_chain_context(next_stages=[D, F], stage_mode='serial', stage_name="Task_B")
-    C.set_chain_context(next_stages=[], stage_mode='serial', stage_name="Task_C")
-    D.set_chain_context(next_stages=[E], stage_mode='serial', stage_name="Task_D")
-    E.set_chain_context(next_stages=[], stage_mode='serial', stage_name="Task_E")
-    F.set_chain_context(next_stages=[], stage_mode='serial', stage_name="Task_F")
+    A.set_chain_context(next_stages=[B, C], stage_mode='process', stage_name="Stage_A")
+    B.set_chain_context(next_stages=[D, F], stage_mode='process', stage_name="Stage_B")
+    C.set_chain_context(next_stages=[], stage_mode='process', stage_name="Stage_C")
+    D.set_chain_context(next_stages=[E], stage_mode='process', stage_name="Stage_D")
+    E.set_chain_context(next_stages=[], stage_mode='process', stage_name="Stage_E")
+    F.set_chain_context(next_stages=[], stage_mode='process', stage_name="Stage_F")
 
     # 初始化 TaskChain, 并设置根节点
     chain = TaskChain(A)
