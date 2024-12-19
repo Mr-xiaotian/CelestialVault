@@ -72,30 +72,11 @@ class HTMLContentParser:
         获取图片相关信息的方法，可以在子类中重写。
         返回 (img_name, img_url)
         """
-        img_url = img_tag.get('data-xkrkllgl')
-        img_name = img_tag.get('title').replace(':', '_')
-        if not img_name and img_url:
-            match = re.search(r'/(\d+\..*)', img_url, re.S)
-            if match:
-                img_name = match.group(1)
-        return img_name, img_url
+        return "unknown_img_name", "unknown_img_url"
 
     def get_video_info(self, video_tag: Tag) -> Tuple[str, str]:
         """
         获取视频相关信息的方法，可以在子类中重写。
         返回 (video_name, video_url)
         """
-        video_config = video_tag.get('data-config')
-        if not video_config:
-            return None, None
-        try:
-            config_json = loads(video_config)
-        except JSONDecodeError:
-            config_json = {}
-        video_url = config_json.get('url', '')
-        match = re.search(r'([0-9a-z]*?).m3u8', video_url, re.S)
-        if match:
-            video_name = match.group(1)
-        else:
-            video_name = "unknown_video_name"
-        return video_name, video_url
+        return "unknown_video_name", "unknown_video_url"
