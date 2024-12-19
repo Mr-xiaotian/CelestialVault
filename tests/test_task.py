@@ -111,7 +111,6 @@ def _test_task_chain_0():
         logging.info(f"{key}: {value}")
 
 def test_task_chain_1():
-
     # 定义任务节点
     A = ExampleTaskManager(func=add_one, execution_mode='thread')
     B = ExampleTaskManager(func=subtract_one, execution_mode='serial')
@@ -137,7 +136,7 @@ def test_task_chain_1():
         logging.info(f"{key}: {value}")
 
 def profile_task_chain():
-    target_func = 'test_task_manager'
+    target_func = 'test_task_chain_1'
     now_time = strftime("%m-%d-%H-%M", localtime())
     output_file = f'profile/{target_func}({now_time}).prof'
     cProfile.run(target_func + '()', output_file)

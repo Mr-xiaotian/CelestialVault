@@ -8,7 +8,7 @@ from typing import Callable, Tuple, Dict, List
 from collections import defaultdict
 from constants import FILE_ICONS
 from instances.inst_task import TaskManager, ExampleTaskManager
-from tools.Utilities import bytes_to_human_readable
+from .Utilities import bytes_to_human_readable
 
 class HandleFileManager(TaskManager):
     def __init__(self, func, folder_path: Path, new_folder_path: Path, rules: Dict[str, Tuple[Callable, Callable]], 

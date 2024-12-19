@@ -4,7 +4,7 @@ from itertools import product
 from collections import defaultdict
 from queue import Queue as ThreadQueue
 from multiprocessing import Queue as MPQueue
-from typing import List, Any, Dict, Union
+from typing import List, Any, Dict
 from time import time
 from .task_manage import TaskManager
 from .task_support import TERMINATION_SIGNAL, task_logger, TaskError

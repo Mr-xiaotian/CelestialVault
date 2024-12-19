@@ -5,7 +5,7 @@ from tqdm import tqdm
 from itertools import permutations
 from typing import List, Dict, Union, Tuple
 from constants.pi_digit import PI_STR_1E6
-from tools.ListDictTools import list_to_square_matrix
+from .ListDictTools import list_to_square_matrix
 
 
 def get_pi_digits(start: int, end: int) -> str:

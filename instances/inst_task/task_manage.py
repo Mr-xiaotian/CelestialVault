@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, wait, AL
 from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError, RequestError, PoolTimeout, ReadTimeout
 from typing import List
 from time import time
-from instances.inst_progress import ProgressManager
+from ..inst_progress import ProgressManager
 from .task_support import TERMINATION_SIGNAL, TerminationSignal, BroadcastQueueManager, task_logger
 
 
