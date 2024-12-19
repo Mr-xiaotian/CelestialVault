@@ -162,7 +162,7 @@ def compress_folder(folder_path: str | Path, execution_mode: str = 'thread') -> 
     from constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 
     rules = {suffix: (compress_img, lambda x: x) for suffix in IMG_SUFFIXES}
-    rules.update({suffix: (compress_video,rename_mp4) for suffix in VIDEO_SUFFIXES})
+    rules.update({suffix: (compress_video, rename_mp4) for suffix in VIDEO_SUFFIXES})
     # rules.update({'.pdf': (compress_pdf,rename_pdf)})
 
     return handle_folder(folder_path, rules, execution_mode, progress_desc='Compressing folder')

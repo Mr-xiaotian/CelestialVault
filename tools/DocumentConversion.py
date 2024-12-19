@@ -61,7 +61,7 @@ def compress_pdf(old_pdf_path: str | Path, new_pdf_path: str | Path):
     combine_imgs_to_pdf(temp_img_path, new_pdf_path)
     shutil.rmtree(temp_img_path)
 
-def merge_pdfs_in_order(folder_path: str | Path, pdf_path: str | Path = None):
+def merge_pdfs_in_order(folder_path: str | Path):
     """
     将指定文件夹下的所有PDF文件按照指定顺序拼接，并输出到指定文件名的PDF文件中。
     :param folder_path: 存放PDF文件的文件夹路径。

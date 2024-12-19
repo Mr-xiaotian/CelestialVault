@@ -132,7 +132,7 @@ class Saver(object):
     def download_m3u8(self, m3u8_url, file_name, suffix_name = '.mp4'):
         m3u8_path = self.get_path(file_name, suffix_name)
         if not self.can_overwrite(m3u8_path):
-            print(f"{m3u8_path} exist")
+            # print(f"{m3u8_path} exist")
             return m3u8_path
         
         command = [
@@ -150,9 +150,9 @@ class Saver(object):
         # 检查 FFmpeg 是否返回了错误
         if result.returncode != 0:
             error_msg = result.stderr.strip()
-            raise FFmpegError(f"Failed to download {m3u8_url}. FFmpeg error: {error_msg}.")
+            raise FFmpegError(f"Failed to download {m3u8_url}.", stderr=error_msg)
         else:
-            print(f"{m3u8_path} download from {m3u8_url} success.")
+            # print(f"{m3u8_path} download from {m3u8_url} success.")
             return m3u8_path
 
     def download_dataframe(self, file_name, dataframe, suffix_name = '.csv'):

@@ -14,7 +14,7 @@ class HTMLContentParser:
 
     def init_list(self):
         self.md_list: List[str] = []
-        self.video_list: List[str] = []
+        self.video_list: List[Tuple[str, str]] = []
         self.img_list: List[Tuple[str, str]] = []
 
     def parse(self, element: Tag):
@@ -57,11 +57,13 @@ class HTMLContentParser:
 
     def _handle_image(self, img_tag: Tag):
         img_url = img_tag.get('data-xkrkllgl')
-        img_src = img_tag.get('title').replace(':', '_')
+        img_name = img_tag.get('title').replace(':', '_')
+        if not img_name:
+            img_name = re.search('/(\d+\..*)', img_url, re.S).group(1)
         if not img_url:
             return
-        self.md_list.append(f"![{img_url}]({img_src})")
-        self.img_list.append((img_src, img_url))
+        self.md_list.append(f"![{img_url}]({img_name})")
+        self.img_list.append((img_name, img_url))
 
     def _handle_video(self, video_tag: Tag):
         video_config = video_tag.get('data-config')

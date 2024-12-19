@@ -11,6 +11,11 @@ class TerminationSignal:
     pass
 
 
+class TaskError(Exception):
+    """用于标记任务执行错误的异常类"""
+    pass
+
+
 class TaskLogger:
     """
     用于记录任务执行日志的类

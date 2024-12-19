@@ -7,7 +7,7 @@ from multiprocessing import Queue as MPQueue
 from typing import List, Any, Dict, Union
 from time import time
 from .task_manage import TaskManager
-from .task_support import TERMINATION_SIGNAL, task_logger
+from .task_support import TERMINATION_SIGNAL, task_logger, TaskError
 
 
 class TaskChain:
@@ -158,7 +158,7 @@ class TaskChain:
                 stage_task = (stage_error_dict[stage_task], stage.func.__name__)
                 return [(stage_task, stage.stage_name)]
             else:
-                dispear_exception = Exception("Task not found.")
+                dispear_exception = TaskError("Task not found.")
                 stage_task = (dispear_exception, stage.func.__name__)
                 return [(stage_task, stage.stage_name)]
             
