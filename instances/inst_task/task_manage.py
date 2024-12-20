@@ -72,10 +72,6 @@ class TaskManager:
         :param stage_mode: 当前节点执行模式, 可以是 'serial'（串行）或 'process'（并行）
         :param name: 当前节点名称
         """
-        next_stages = next_stages or []  # 默认为空列表
-        stage_mode = stage_mode or 'serial'
-        stage_name = stage_name or id(self)
-
         self.set_next_stages(next_stages)
         self.set_stage_mode(stage_mode)
         self.set_stage_name(stage_name)
@@ -84,26 +80,26 @@ class TaskManager:
         """
         设置后续节点列表
         """
-        self.next_stages = next_stages
+        self.next_stages = next_stages or []  # 默认为空列表
 
     def set_stage_mode(self, stage_mode: str):
         """
         设置当前节点在chain中的执行模式, 可以是 'serial'（串行）或 'process'（并行）
         """
-        self.stage_mode = stage_mode
+        self.stage_mode = stage_mode if stage_mode == 'process' else 'serial'
 
     def set_stage_name(self, name: str):
         """
         设置当前节点名称
         """
-        self.stage_name = name
+        self.stage_name = name or id(self)
 
     def set_execution_mode(self, execution_mode):
         """
         设置执行模式
         :param execution_mode: 执行模式，可以是 'thread'（线程）, 'process'（进程）, 'async'（异步）, 'serial'（串行）
         """
-        self.execution_mode = execution_mode
+        self.execution_mode = execution_mode if execution_mode in ['thread', 'process', 'async', 'serial'] else 'serial'
 
     def add_retry_exceptions(self, *exceptions):
         """
