@@ -4,7 +4,7 @@ from asyncio import Queue as AsyncQueue
 from queue import Queue as ThreadQueue
 from multiprocessing import Queue as MPQueue
 from threading import Event, Lock
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, wait, ALL_COMPLETED
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError, RequestError, PoolTimeout, ReadTimeout
 from typing import List
 from time import time
@@ -106,6 +106,18 @@ class TaskManager:
         添加需要重试的异常类型
         """
         self.retry_exceptions = self.retry_exceptions + tuple(exceptions)
+
+    def put_task_queue(self, task_source):
+        for item in task_source:
+            self.task_queue.put(item)
+
+        self.task_queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
+
+    async def put_task_queue_async(self, task_source):
+        for item in task_source:
+            await self.task_queue.put(item)
+
+        await self.task_queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
 
     def is_duplicate(self, task, task_set):
         return task in task_set
@@ -244,20 +256,22 @@ class TaskManager:
 
         return will_try
 
-    def start(self, task_list):
+    def start(self, task_source):
         """
         根据 start_type 的值，选择串行、并行、异步或多进程执行任务
 
-        :param task_list: 任务列表
+        :param task_source: 任务迭代器或者生成器
         """
         start_time = time()
         self.init_env()
-        task_logger.start_task(self.func.__name__, len(task_list), self.execution_mode, self.worker_limit)
 
-        for item in task_list:
-            self.task_queue.put(item)
+        try:
+            total_tasks = len(task_source)
+        except TypeError:
+            total_tasks = 'Generator'
+        task_logger.start_task(self.func.__name__, total_tasks, self.execution_mode, self.worker_limit)
 
-        self.task_queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
+        self.put_task_queue(task_source)
 
         # 根据模式运行对应的任务处理函数
         if self.execution_mode == "thread":
@@ -273,21 +287,23 @@ class TaskManager:
         task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time,
                              len(self.result_dict), len(self.error_dict), self.duplicates_num)
 
-    async def start_async(self, task_list):
+    async def start_async(self, task_source):
         """
         异步地执行任务
 
-        :param task_list: 任务列表
+        :param task_source: 任务迭代器或者生成器
         """
         start_time = time()
         self.set_execution_mode('async')
         self.init_env()
-        task_logger.start_task(self.func.__name__, len(task_list), 'async(await)', self.worker_limit)
 
-        for item in task_list:
-            await self.task_queue.put(item)
+        try:
+            total_tasks = len(task_source)
+        except TypeError:
+            total_tasks = 'Generator'
+        task_logger.start_task(self.func.__name__, total_tasks, 'async(await)', self.worker_limit)
 
-        await self.task_queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
+        await self.put_task_queue_async(task_source)
         await self.run_in_async()
 
         task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time, 
@@ -554,10 +570,14 @@ class TaskManager:
         self.start(task_list)
         return time() - start
 
-    def test_methods(self, task_list: list) -> dict:
+    def test_methods(self, task_source: list|tuple|set) -> dict:
         """
         测试多种方法
         """
+        # 如果 task_source 是生成器或一次性可迭代对象，需要提前转化成列表
+        # 确保对不同模式的测试使用同一批任务数据
+        task_list = list(task_source)
+
         results = {}
         for mode in ['serial', 'thread', 'process']:
             results[f'run_in_{mode}'] = self.test_method(mode, task_list)

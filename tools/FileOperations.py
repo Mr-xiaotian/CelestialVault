@@ -126,11 +126,11 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
     new_folder_path = folder_path.parent / (folder_path.name + "_re")
 
     handlefile_manager = HandleFileManager(handle_file, folder_path, new_folder_path, rules,
-                                           execution_mode=execution_mode, worker_limit=6, 
+                                           execution_mode=execution_mode, worker_limit=6,
                                            progress_desc=progress_desc, show_progress=True)
 
-    file_path_list = [file_path for file_path in folder_path.glob('**/*') if file_path.is_file()]
-    handlefile_manager.start(file_path_list)
+    file_path_iter = (file_path for file_path in folder_path.glob('**/*') if file_path.is_file())
+    handlefile_manager.start(file_path_iter)
 
     error_path_dict = handlefile_manager.handle_error_dict()
     return error_path_dict
@@ -425,13 +425,13 @@ def detect_identical_files(folder_path: str | Path, execution_mode: str ='thread
                                                       progress_desc='Calculating file hashes', show_progress=True)
 
     # 根据文件大小进行初步筛选
-    file_path_list = [path for path in folder_path.rglob('*') if path.is_file()]
-    scan_file_manager.start(file_path_list)
+    file_path_iter = (path for path in folder_path.rglob('*') if path.is_file())
+    scan_file_manager.start(file_path_iter)
     size_dict = scan_file_manager.process_result_dict()
     
     # 对于相同大小的文件，进一步计算哈希值, 找出哈希值相同的文件
-    file_task_list = [(file_path, size) for size, files in size_dict.items() for file_path in files]
-    detect_identical_manager.start(file_task_list)
+    file_task_iter = ((file_path, size) for size, files in size_dict.items() for file_path in files)
+    detect_identical_manager.start(file_task_iter)
     identical_dict = detect_identical_manager.process_result_dict()
     
     return identical_dict
