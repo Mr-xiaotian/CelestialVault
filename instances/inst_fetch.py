@@ -43,23 +43,19 @@ class Fetcher(object):
 
     def getText(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
         self.init_client()
-        return self.obtainText(self.cl.get, url=url,
-                               *args, **kwargs)[1]
+        return self.obtainText(self.cl.get, url=url, *args, **kwargs)[1]
 
     def postText(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
         self.init_client()
-        return self.obtainText(self.cl.post, url=url, 
-                               *args, **kwargs)[1]
+        return self.obtainText(self.cl.post, url=url,  *args, **kwargs)[1]
     
     def getContent(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
         self.init_client()
-        return self.obtainContent(self.cl.get, url=url,
-                                  *args, **kwargs)[1]
+        return self.obtainContent(self.cl.get, url=url, *args, **kwargs)[1]
 
     def postContent(self, url: str, *args, **kwargs) -> Tuple[int, Any, str]:
         self.init_client()
-        return self.obtainContent(self.cl.post, url=url,
-                                  *args, **kwargs)[1]
+        return self.obtainContent(self.cl.post, url=url, *args, **kwargs)[1]
     
     # 以下为异步代码, 需要结合inst_task中的start_async与run_in_async使用
     async def getText_async(self, url, encoding='utf-8'):

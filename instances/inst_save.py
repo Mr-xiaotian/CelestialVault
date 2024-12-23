@@ -104,9 +104,9 @@ class Saver(object):
                         - 文件名 (str): 要保存内容的文件名
                         - URL (str): 要下载内容的 URL
                         - 文件后缀 (str): 要保存文件的后缀名（例如 '.txt', '.jpg' 等）
-        :param chain_mode: "serial" 或 "parallel" 
+        :param chain_mode: "serial" 或 "process" 
                         - "serial": 任务链将串行执行
-                        - "parallel": 任务链将并行执行
+                        - "process": 任务链将并行执行
         :param show_progress: 是否显示下载和保存进度 (默认值为 False)
         :return: 一个字典，包含每个任务的最终结果
         """
@@ -114,7 +114,7 @@ class Saver(object):
         fetch_manager = FetchManager(fetcher.getContent, execution_mode='thread',
                                      progress_desc='urlsFetchProcess', show_progress=show_progress)        
         save_manager = SaveManager(self.save_content, execution_mode='serial',
-                                   progress_desc='urlsSaveProcess', show_progress=False)
+                                   progress_desc='urlsSaveProcess', show_progress=show_progress)
 
         # 创建 SimpleTaskChain 来管理 Fetch 和 Save 两个阶段的任务处理
         chain = SimpleTaskChain([fetch_manager, save_manager], chain_mode)

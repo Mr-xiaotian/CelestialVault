@@ -71,19 +71,19 @@ class TaskChain:
 
         set_subsequent_satge_mode(self.root_stage)
     
-    def start_chain(self, tasks):
+    def start_chain(self, init_tasks):
         start_time = time()
         structure_list = self.format_structure_list()
         task_logger.start_chain(structure_list)
 
-        self.init_env(tasks)
+        self.init_env(init_tasks)
         self._execute_stage(self.root_stage)
 
         # 等待所有进程结束
         for p in self.processes:
             p.join()
 
-        self.process_final_result_dict(tasks)
+        self.process_final_result_dict(init_tasks)
         self.handle_final_error_dict()
         self.release_resources()
 
@@ -222,15 +222,16 @@ class TaskChain:
         visited = visited or set()
         scructure_list = []
 
+        stage_info = f"{task_manager.stage_name} (stage_mode: {task_manager.stage_mode}, func: {task_manager.func.__name__})"
+
         # 防止重复访问
         if task_manager in visited:
-            scructure_list.append("  " * indent + f"{task_manager.name} (already visited)")
-            return
-
-        visited.add(task_manager)
+            scructure_list.append(f"{stage_info} (already visited)")
+            return scructure_list
 
         # 打印当前 TaskManager
-        scructure_list.append(f"{task_manager.stage_name} (stage_mode: {task_manager.stage_mode}, func: {task_manager.func.__name__})")
+        visited.add(task_manager)
+        scructure_list.append(stage_info)
 
         # 遍历后续节点
         for next_stage in task_manager.next_stages:
