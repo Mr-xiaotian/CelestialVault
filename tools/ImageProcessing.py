@@ -327,3 +327,14 @@ def compare_images_by_ssim(folder1: Path | str, folder2: Path | str) -> pd.DataF
     # 返回包含图像名称和 SSIM 值的 DataFrame
     df = pd.DataFrame(data, columns=['Image Name', 'SSIM'])
     return df
+
+def convert_svg_to_png(svg_path: str, png_path: str) -> str:
+    """
+    将指定的 SVG 文件转换为 PNG 文件。
+    
+    :param svg_path: SVG 文件的路径
+    :param png_path: PNG 文件的路径
+    """
+    from cairosvg import svg2png
+    # 使用 cairosvg 将 svg 转换为 png
+    svg2png(url=str(svg_path), write_to=str(png_path))

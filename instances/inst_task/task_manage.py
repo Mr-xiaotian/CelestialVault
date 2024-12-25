@@ -224,7 +224,6 @@ class TaskManager:
             # delay_time = 2 ** retry_time
             task_logger.task_retry(self.func.__name__, self.get_task_info(task), self.retry_time_dict[task])
             # sleep(delay_time)  # 指数退避
-            self.will_retry = True
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
@@ -248,7 +247,6 @@ class TaskManager:
             # delay_time = 2 ** retry_time
             task_logger.task_retry(self.func.__name__, self.get_task_info(task), self.retry_time_dict[task])
             # sleep(delay_time)  # 指数退避
-            self.will_retry = True
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
@@ -356,7 +354,6 @@ class TaskManager:
             mode="sync",
             show_progress=self.show_progress
         )
-        self.will_retry = False
         self.retry_queue = MPQueue()
         temp_task_set = set()  # 用于存储临时任务，避免重复执行
 
@@ -383,7 +380,7 @@ class TaskManager:
 
         progress_manager.close()
 
-        if self.will_retry:
+        if self.retry_queue.qsize():
             task_logger.logger.trace(f"Retrying tasks for {self.func.__name__}")
             self.task_queue = self.retry_queue
             self.task_queue.put(TERMINATION_SIGNAL)
@@ -395,7 +392,6 @@ class TaskManager:
 
         :param executor: 线程池或进程池
         """
-        self.will_retry = False
         self.retry_queue = MPQueue()
         task_start_dict = {}  # 用于存储任务开始时间
 
@@ -458,7 +454,7 @@ class TaskManager:
         # 所有任务和回调都完成了，现在可以安全关闭进度条
         progress_manager.close()
 
-        if self.will_retry:
+        if self.retry_queue.qsize():
             task_logger.logger.trace(f"Retrying tasks for {self.func.__name__}")
             self.task_queue = self.retry_queue
             self.task_queue.put(TERMINATION_SIGNAL)
@@ -469,7 +465,6 @@ class TaskManager:
         异步地执行任务，限制并发数量
         """
         semaphore = asyncio.Semaphore(self.worker_limit)  # 限制并发数量
-        self.will_retry = False
         self.retry_queue = AsyncQueue()
         temp_task_set = set()  # 用于存储临时任务，避免重复执行
 
@@ -512,7 +507,7 @@ class TaskManager:
 
         progress_manager.close()
 
-        if self.will_retry:
+        if self.retry_queue.qsize():
             task_logger.logger.trace(f"Retrying tasks for {self.func.__name__}")
             self.task_queue = self.retry_queue
             await self.task_queue.put(TERMINATION_SIGNAL)
