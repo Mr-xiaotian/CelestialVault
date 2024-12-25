@@ -42,14 +42,16 @@ class TaskChain:
         """
         def collect_queue(stage: TaskManager):
             # 为每个节点创建队列
-            next_stages = stage.next_stages
-            stage_mode = stage.stage_mode
-
             self.stage_queues_dict[stage] = MPQueue()
-            for next_stage in next_stages:
+            visited_stages.add(stage)
+
+            for next_stage in stage.next_stages:
+                if next_stage in visited_stages:
+                    continue
                 collect_queue(next_stage)
 
         # 初始化每个节点的队列
+        visited_stages = set()
         self.stage_queues_dict = {}
         collect_queue(self.root_stage)
 
@@ -66,9 +68,14 @@ class TaskChain:
         def set_subsequent_satge_mode(stage: TaskManager):
             stage.set_stage_mode(stage_mode)
             stage.set_execution_mode(execution_mode)
+            visited_stages.add(stage)
+
             for next_stage in stage.next_stages:
+                if next_stage in visited_stages:
+                    continue
                 set_subsequent_satge_mode(next_stage)
 
+        visited_stages = set()
         set_subsequent_satge_mode(self.root_stage)
     
     def start_chain(self, init_tasks):
@@ -77,7 +84,7 @@ class TaskChain:
         task_logger.start_chain(structure_list)
 
         self.init_env(init_tasks)
-        self._execute_stage(self.root_stage)
+        self._execute_stage(self.root_stage, set())
 
         # 等待所有进程结束
         for p in self.processes:
@@ -89,10 +96,11 @@ class TaskChain:
 
         task_logger.end_chain(time() - start_time)
 
-    def _execute_stage(self, stage: TaskManager):
+    def _execute_stage(self, stage: TaskManager, stage_visited: set):
         """
         递归地执行节点任务
         """
+        stage_visited.add(stage)
         input_queue = self.stage_queues_dict[stage]
         if not stage.next_stages:
             output_queues = [MPQueue()]
@@ -110,7 +118,9 @@ class TaskChain:
             stage.start_stage(input_queue, output_queues)
 
         for next_stage in stage.next_stages:
-            self._execute_stage(next_stage)
+            if next_stage in stage_visited:
+                continue
+            self._execute_stage(next_stage, stage_visited)
 
     def release_resources(self):
         """
@@ -118,7 +128,10 @@ class TaskChain:
         """
         def clean_stage(stage: TaskManager):
             stage.clean_env()
+            visited_stages.add(stage)
             for next_stage in stage.next_stages:
+                if next_stage in visited_stages:
+                    continue
                 clean_stage(next_stage)
 
         # 关闭所有队列并确保它们的后台线程被终止
@@ -139,6 +152,7 @@ class TaskChain:
             p.join()  # 确保进程终止
 
         # 关闭所有stage的线程池
+        visited_stages = set()
         clean_stage(self.root_stage)
 
     def process_final_result_dict(self, initial_tasks):
@@ -150,6 +164,7 @@ class TaskChain:
         def update_final_result_dict(stage_task, stage: TaskManager):
             stage_result_dict = stage.get_result_dict()
             stage_error_dict = stage.get_error_dict()
+            visited_stages.add(stage)
 
             final_list = []
             if stage_task in stage_result_dict:
@@ -168,6 +183,9 @@ class TaskChain:
                 return [(stage_task, stage.stage_name)]
             
             for next_stage in stage.next_stages:
+                if next_stage in visited_stages:
+                    task_logger.logger.info(f"Stage {next_stage.stage_name} has been visited.")
+                    continue
                 next_stage_final_list = update_final_result_dict(stage_task, next_stage)
                 final_list.extend(next_stage_final_list)
 
@@ -175,6 +193,7 @@ class TaskChain:
 
         task_execution_status = {}
         for initial_task in initial_tasks:
+            visited_stages = set()
             task_execution_status[initial_task] = True
             self.final_result_dict[initial_task] = update_final_result_dict(initial_task, self.root_stage)
         self.failed_tasks = [task for task, pass_flag in task_execution_status.items() if not pass_flag]
@@ -185,12 +204,16 @@ class TaskChain:
         """
         def update_error_dict(stage: TaskManager):
             stage_error_dict = stage.get_error_dict()
+            visited_stages.add(stage)
             for task, error in stage_error_dict.items():
                 error_key = (f'{type(error).__name__}({error})', stage.func.__name__, stage.stage_name)
                 self.final_error_dict[error_key].append(task)
             for next_stage in stage.next_stages:
+                if next_stage in visited_stages:
+                    continue
                 update_error_dict(next_stage)
 
+        visited_stages = set()
         update_error_dict(self.root_stage)
     
     def get_final_result_dict(self):
@@ -211,31 +234,31 @@ class TaskChain:
         """
         return self.failed_tasks
     
-    def get_structure_list(self, task_manager: TaskManager, indent=0, visited=None):
+    def get_structure_list(self, task_manager: TaskManager, indent=0, visited_stages=None):
         """
         递归生成任务链的打印列表
         :param task_manager: 当前处理的 TaskManager
         :param indent: 当前缩进级别
-        :param visited: 已访问的 TaskManager 集合，避免重复访问
+        :param visited_stages: 已访问的 TaskManager 集合，避免重复访问
         :return: 打印内容列表
         """
-        visited = visited or set()
+        visited_stages = visited_stages or set()
         scructure_list = []
 
         stage_info = f"{task_manager.stage_name} (stage_mode: {task_manager.stage_mode}, func: {task_manager.func.__name__})"
 
         # 防止重复访问
-        if task_manager in visited:
+        if task_manager in visited_stages:
             scructure_list.append(f"{stage_info} (already visited)")
             return scructure_list
 
         # 打印当前 TaskManager
-        visited.add(task_manager)
+        visited_stages.add(task_manager)
         scructure_list.append(stage_info)
 
         # 遍历后续节点
         for next_stage in task_manager.next_stages:
-            sub_scructure_list = self.get_structure_list(next_stage, indent + 2, visited)
+            sub_scructure_list = self.get_structure_list(next_stage, indent + 2, visited_stages)
             scructure_list.append("  " * indent + "╘-->")
             scructure_list[-1] += sub_scructure_list[0]
             scructure_list.extend(sub_scructure_list[1:])

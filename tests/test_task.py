@@ -96,7 +96,7 @@ async def _test_task_manager_async():
     logging.info(f'run_in_async: {time() - start}')
 
 # 测试 TaskChain 的功能
-def test_task_chain_0():
+def _test_task_chain_0():
     # 定义多个阶段的 TaskManager 实例
     stage1 = ExampleTaskManager(fibonacci, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
     stage2 = ExampleTaskManager(square, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
@@ -124,7 +124,7 @@ def test_task_chain_0():
     for key, value in result.items():
         logging.info(f"{key}: {value}")
 
-def _test_task_chain_1():
+def test_task_chain_1():
     # 定义任务节点
     A = ExampleTaskManager(func=sleep_random_A, execution_mode='thread')
     B = ExampleTaskManager(func=sleep_random_B, execution_mode='serial')
