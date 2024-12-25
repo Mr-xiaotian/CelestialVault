@@ -119,8 +119,8 @@ class TaskManager:
 
         await self.task_queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
 
-    def is_duplicate(self, task, task_set):
-        return task in task_set
+    def is_duplicate(self, task):
+        return task in self.get_result_dict() or task in self.get_error_dict()
 
     def get_args(self, task):
         """
@@ -219,7 +219,7 @@ class TaskManager:
 
         # 基于异常类型决定重试策略
         if isinstance(exception, self.retry_exceptions) and retry_time < self.max_retries: # isinstance(exception, self.retry_exceptions) and
-            self.retry_queue.put(task)
+            self.task_queue.put(task)
             self.retry_time_dict[task] += 1
             # delay_time = 2 ** retry_time
             task_logger.task_retry(self.func.__name__, self.get_task_info(task), self.retry_time_dict[task])
@@ -242,7 +242,7 @@ class TaskManager:
 
         # 基于异常类型决定重试策略
         if isinstance(exception, self.retry_exceptions) and retry_time < self.max_retries: # isinstance(exception, self.retry_exceptions) and
-            await self.retry_queue.put(task)
+            await self.task_queue.put(task)
             self.retry_time_dict[task] += 1
             # delay_time = 2 ** retry_time
             task_logger.task_retry(self.func.__name__, self.get_task_info(task), self.retry_time_dict[task])
@@ -354,8 +354,6 @@ class TaskManager:
             mode="sync",
             show_progress=self.show_progress
         )
-        self.retry_queue = MPQueue()
-        temp_task_set = set()  # 用于存储临时任务，避免重复执行
 
         # 从队列中依次获取任务并执行
         while True:
@@ -364,10 +362,10 @@ class TaskManager:
             if isinstance(task, TerminationSignal):
                 progress_manager.update(1)
                 break
-            elif self.is_duplicate(task, temp_task_set):
+            elif self.is_duplicate(task):
                 self.duplicates_num += 1
                 progress_manager.update(1)
-                task_logger.task_duplicate(self.func.__name__, task)
+                task_logger.task_duplicate(self.func.__name__, self.get_task_info(task))
                 continue
             try:
                 start_time = time()
@@ -376,13 +374,12 @@ class TaskManager:
             except Exception as error:
                 self.handle_task_exception(task, error)
             progress_manager.update(1)
-            temp_task_set.add(task)
 
         progress_manager.close()
 
-        if self.retry_queue.qsize():
+        if self.task_queue.qsize():
             task_logger.logger.trace(f"Retrying tasks for {self.func.__name__}")
-            self.task_queue = self.retry_queue
+            # self.task_queue = self.retry_queue
             self.task_queue.put(TERMINATION_SIGNAL)
             self.run_in_serial()
     
@@ -392,7 +389,6 @@ class TaskManager:
 
         :param executor: 线程池或进程池
         """
-        self.retry_queue = MPQueue()
         task_start_dict = {}  # 用于存储任务开始时间
 
         # 用于追踪进行中任务数的计数器和事件
@@ -433,10 +429,10 @@ class TaskManager:
                 # 收到终止信号后不再提交新任务
                 progress_manager.update(1)
                 break
-            elif self.is_duplicate(task, task_start_dict):
+            elif self.is_duplicate(task):
                 self.duplicates_num += 1
                 progress_manager.update(1)
-                task_logger.task_duplicate(self.func.__name__, task)
+                task_logger.task_duplicate(self.func.__name__, self.get_task_info(task))
                 continue
 
             # 提交新任务时增加in_flight计数，并清除完成事件
@@ -454,9 +450,9 @@ class TaskManager:
         # 所有任务和回调都完成了，现在可以安全关闭进度条
         progress_manager.close()
 
-        if self.retry_queue.qsize():
+        if self.task_queue.qsize():
             task_logger.logger.trace(f"Retrying tasks for {self.func.__name__}")
-            self.task_queue = self.retry_queue
+            # self.task_queue = self.retry_queue
             self.task_queue.put(TERMINATION_SIGNAL)
             self.run_with_executor(executor)
 
@@ -465,8 +461,6 @@ class TaskManager:
         异步地执行任务，限制并发数量
         """
         semaphore = asyncio.Semaphore(self.worker_limit)  # 限制并发数量
-        self.retry_queue = AsyncQueue()
-        temp_task_set = set()  # 用于存储临时任务，避免重复执行
 
         async def sem_task(task):
             start_time = time()  # 记录任务开始时间
@@ -489,13 +483,12 @@ class TaskManager:
             if isinstance(task, TerminationSignal):
                 progress_manager.update(1)
                 break
-            elif self.is_duplicate(task, temp_task_set):
+            elif self.is_duplicate(task):
                 self.duplicates_num += 1
                 progress_manager.update(1)
-                task_logger.task_duplicate(self.func.__name__, task)
+                task_logger.task_duplicate(self.func.__name__, self.get_task_info(task))
                 continue
             async_tasks.append(sem_task(task))  # 使用信号量包裹的任务
-            temp_task_set.add(task)
 
         # 并发运行所有任务
         for task, result, start_time in await asyncio.gather(*async_tasks, return_exceptions=True):
@@ -507,9 +500,9 @@ class TaskManager:
 
         progress_manager.close()
 
-        if self.retry_queue.qsize():
+        if self.task_queue.qsize():
             task_logger.logger.trace(f"Retrying tasks for {self.func.__name__}")
-            self.task_queue = self.retry_queue
+            # self.task_queue = self.retry_queue
             await self.task_queue.put(TERMINATION_SIGNAL)
             await self.run_in_async()
 
