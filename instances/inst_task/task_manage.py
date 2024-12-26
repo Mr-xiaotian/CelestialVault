@@ -194,7 +194,7 @@ class TaskManager:
         
     def process_task_success(self, task, result, start_time):
         """
-        统一处理任务成功
+        统一处理成功任务
 
         :param task: 完成的任务
         :param result: 任务的结果
@@ -208,7 +208,7 @@ class TaskManager:
         
     def handle_task_exception(self, task, exception: Exception):
         """
-        统一处理任务异常
+        统一处理异常任务
 
         :param task: 发生异常的任务
         :param exception: 捕获的异常
@@ -218,12 +218,12 @@ class TaskManager:
         retry_time = self.retry_time_dict.setdefault(task, 0)
 
         # 基于异常类型决定重试策略
-        if isinstance(exception, self.retry_exceptions) and retry_time < self.max_retries: # isinstance(exception, self.retry_exceptions) and
+        if isinstance(exception, self.retry_exceptions) and retry_time < self.max_retries: 
             self.task_queue.put(task)
             self.retry_time_dict[task] += 1
             # delay_time = 2 ** retry_time
-            task_logger.task_retry(self.func.__name__, self.get_task_info(task), self.retry_time_dict[task])
             # sleep(delay_time)  # 指数退避
+            task_logger.task_retry(self.func.__name__, self.get_task_info(task), self.retry_time_dict[task])
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception

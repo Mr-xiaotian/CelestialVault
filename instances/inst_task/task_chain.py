@@ -184,7 +184,6 @@ class TaskChain:
             
             for next_stage in stage.next_stages:
                 if next_stage in visited_stages:
-                    task_logger.logger.info(f"Stage {next_stage.stage_name} has been visited.")
                     continue
                 next_stage_final_list = update_final_result_dict(stage_task, next_stage)
                 final_list.extend(next_stage_final_list)

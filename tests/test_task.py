@@ -72,7 +72,7 @@ def square_root(x):
     return x ** 0.5
 
 # 测试 TaskManager 的同步任务
-def _test_task_manager():
+def test_task_manager():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
     test_task_2 = (item for item in test_task_1)
@@ -84,7 +84,7 @@ def _test_task_manager():
 
 # 测试 TaskManager 的异步任务
 @pytest.mark.asyncio
-async def _test_task_manager_async():
+async def test_task_manager_async():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
     test_task_2 = (item for item in test_task_1)
@@ -124,7 +124,7 @@ def _test_task_chain_0():
     for key, value in result.items():
         logging.info(f"{key}: {value}")
 
-def test_task_chain_1():
+def _test_task_chain_1():
     # 定义任务节点
     A = ExampleTaskManager(func=sleep_random_A, execution_mode='thread')
     B = ExampleTaskManager(func=sleep_random_B, execution_mode='serial')

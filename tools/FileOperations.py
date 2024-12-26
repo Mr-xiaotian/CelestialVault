@@ -42,7 +42,7 @@ class HandleFileManager(TaskManager):
         return error_path_dict
     
 
-class ScanFileManager(ExampleTaskManager):
+class ScanSizeManager(ExampleTaskManager):
     def process_result_dict(self):
         size_dict = defaultdict(list)
 
@@ -53,7 +53,7 @@ class ScanFileManager(ExampleTaskManager):
         return size_dict
     
 
-class DetectIdenticalManager(TaskManager):
+class ScanHashManager(TaskManager):
     def get_args(self, task):
         return (task[0], )
     
@@ -355,7 +355,7 @@ def compare_structure(dir1, dir2, indent=''):
     if not dir1.is_dir() or not dir2.is_dir():
         raise ValueError(f"输入路径必须是有效的文件夹: {dir1} 或 {dir2}")
 
-    def get_structure_list(dir1, dir2, dir1_name, dir2_name, indent):
+    def get_structure_list(dir1: Path, dir2: Path, dir1_name, dir2_name, indent):
         # 获取文件和文件夹
         dir1_files = set(os.listdir(dir1))
         dir2_files = set(os.listdir(dir2))
@@ -392,10 +392,28 @@ def compare_structure(dir1, dir2, indent=''):
             elif (item_path1.is_file() and item_path2.is_dir()) or (item_path1.is_dir() and item_path2.is_file()):
                 print_file_list.append(f"{indent}{item} (one is a file, the other is a folder)")
 
+            # 打印文件与文件的比较结果
+            elif item_path1.is_file() and item_path2.is_file():
+                item_path1_size = get_file_size(item_path1)
+                item_path2_size = get_file_size(item_path2)
+                if item_path1_size != item_path2_size:
+                    icon = FILE_ICONS.get(item_path1.suffix, FILE_ICONS['default'])
+                    print_file_list.append(f"{indent}{icon} [{dir1_name}] {item} ({bytes_to_human_readable(item_path1_size)})")
+                    print_file_list.append(f"{indent}{icon} [{dir2_name}] {item} ({bytes_to_human_readable(item_path2_size)})")
+
         return print_folder_list + print_file_list
     
     structure_list = get_structure_list(dir1, dir2, dir1_name, dir2_name, indent)
     print('\n'.join(structure_list))
+
+def get_file_size(file_path: Path) -> int:
+    """
+    获取文件大小。
+
+    :param file_path: 文件路径。
+    :return: 文件大小（字节）。
+    """
+    return file_path.stat().st_size
 
 def get_file_hash(file_path: Path) -> str:
     """
@@ -419,20 +437,20 @@ def detect_identical_files(folder_path: str | Path, execution_mode: str ='thread
     """
     folder_path = Path(folder_path)
     
-    scan_file_manager = ScanFileManager(lambda x: x.stat().st_size, execution_mode, 
-                                        progress_desc='Scanning files', show_progress=True)
-    detect_identical_manager = DetectIdenticalManager(get_file_hash, execution_mode, 
-                                                      progress_desc='Calculating file hashes', show_progress=True)
+    scan_size_manager = ScanSizeManager(get_file_size, execution_mode, 
+                                        progress_desc='Scanning file size', show_progress=True)
+    scan_hash_manager = ScanHashManager(get_file_hash, execution_mode, 
+                                        progress_desc='Calculating file hashes', show_progress=True)
 
     # 根据文件大小进行初步筛选
     file_path_iter = (path for path in folder_path.rglob('*') if path.is_file())
-    scan_file_manager.start(file_path_iter)
-    size_dict = scan_file_manager.process_result_dict()
+    scan_size_manager.start(file_path_iter)
+    size_dict = scan_size_manager.process_result_dict()
     
     # 对于相同大小的文件，进一步计算哈希值, 找出哈希值相同的文件
     file_task_iter = ((file_path, size) for size, files in size_dict.items() for file_path in files)
-    detect_identical_manager.start(file_task_iter)
-    identical_dict = detect_identical_manager.process_result_dict()
+    scan_hash_manager.start(file_task_iter)
+    identical_dict = scan_hash_manager.process_result_dict()
     
     return identical_dict
 
