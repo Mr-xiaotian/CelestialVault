@@ -274,12 +274,11 @@ def delete_files(file_path: str | Path):
             
     logging.info(f'删除完成:{file_path}')
 
-def print_directory_structure(folder_path: str='.', indent: str='    ', exclude_dirs: list=None, exclude_exts: list=None, max_depth: int=3):
+def print_directory_structure(folder_path: str='.', exclude_dirs: list=None, exclude_exts: list=None, max_depth: int=3):
     """
     打印指定文件夹的目录结构。
     
     :param folder_path: 起始文件夹的路径，默认为当前目录。
-    :param indent: 缩进字符串，用于格式化输出。
     :param exclude_dirs: 要排除的目录列表，默认为空列表。
     :param exclude_exts: 要排除的文件扩展名列表，默认为空列表。
     :param max_depth: 最大递归深度，默认为3。
@@ -291,7 +290,7 @@ def print_directory_structure(folder_path: str='.', indent: str='    ', exclude_
     if exclude_exts is None:
         exclude_exts = []
 
-    def get_structure_list(folder_path, indent, max_depth):
+    def get_structure_list(folder_path: Path, indent, max_depth):
         if max_depth < 1:
             return [], 0
         if not any(folder_path.iterdir()):
@@ -332,19 +331,18 @@ def print_directory_structure(folder_path: str='.', indent: str='    ', exclude_
         structure_list = folder_structure_list + file_structure_list
         return structure_list, folder_size
 
-    structure_list, folder_size = get_structure_list(folder_path, indent, max_depth)
+    structure_list, folder_size = get_structure_list(folder_path, '    ', max_depth)
     reable_folder_size = bytes_to_human_readable(folder_size)
 
     structure_list = [f"📁 {folder_path.name}/    ({reable_folder_size})"] + structure_list
     print('\n'.join(structure_list))
 
-def compare_structure(dir1, dir2, indent=''):
+def compare_structure(dir1, dir2):
     """
     比较两个文件夹的结构，并打印出仅在一个文件夹中存在的文件或文件夹。
     
     :param dir1: 第一个文件夹路径
     :param dir2: 第二个文件夹路径
-    :param indent: 缩进字符串，用于格式化输出
     """
     dir1 = Path(dir1)
     dir2 = Path(dir2)
@@ -403,7 +401,7 @@ def compare_structure(dir1, dir2, indent=''):
 
         return print_folder_list + print_file_list
     
-    structure_list = get_structure_list(dir1, dir2, dir1_name, dir2_name, indent)
+    structure_list = get_structure_list(dir1, dir2, dir1_name, dir2_name, '')
     print('\n'.join(structure_list))
 
 def get_file_size(file_path: Path) -> int:
