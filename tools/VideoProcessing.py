@@ -4,9 +4,19 @@ import ffmpeg
 from tqdm import tqdm
 from pathlib import Path
 from typing import Tuple, List
+from collections import defaultdict
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip, clips_array
 from moviepy.config import change_settings
+from instances.inst_task import ExampleTaskManager
 
+
+class GetCodecManager(ExampleTaskManager):
+    def process_result_dict(self):
+        codec_dict = defaultdict(list)
+        for path, codec in self.result_dict.items():
+            codec_dict[codec].append(path)
+
+        return codec_dict
 
 def compress_video(old_video_path: Path|str, new_video_path: Path|str):
     """
@@ -161,6 +171,17 @@ def rotate_video(video_path: str | Path, angle: int):
 
     return out_path
 
+def get_video_codec(video_path: Path):
+    """
+    获取视频文件的编码格式。
+
+    :param video_path: 视频文件路径
+    :return: 编码格式
+    """
+    probe = ffmpeg.probe(video_path, v='error', select_streams='v:0', show_entries='stream=codec_name')
+    codec_name = probe['streams'][0]['codec_name']
+    return codec_name
+
 def find_h265_videos(folder_path: Path):
     """
     查找文件夹中所有不是H264编码的视频文件。
@@ -174,20 +195,13 @@ def find_h265_videos(folder_path: Path):
     folder_path = Path(folder_path)
     if not folder_path.is_dir():
         raise ValueError(f"{folder_path} 不是有效的文件夹路径")
+    
+    get_codec_manager = GetCodecManager(get_video_codec, execution_mode='thread', progress_desc="Getting video codec", show_progress=True)
 
     file_path_list = [file_path for file_path in folder_path.rglob("*.mp4") if file_path.is_file()] # 使用glob('**/*')遍历目录中的文件和子目录
-    # 遍历文件夹中的所有文件
-    for file in tqdm(file_path_list, desc="Processing files"):
-        try:
-            # 获取视频编码信息
-            probe = ffmpeg.probe(file, v='error', select_streams='v:0', show_entries='stream=codec_name')
-            codec_name = probe['streams'][0]['codec_name']
-            # video_codec_list.append((file, codec_name))
-            
-            if codec_name.lower() != 'h264':
-                h265_videos.append((file, codec_name))
-        
-        except ffmpeg.Error as e:
-            print(f"处理文件 {file} 时出错: {e}")
+    get_codec_manager.start(file_path_list)
+    codec_dict = get_codec_manager.process_result_dict()
+
+    h265_videos = [file_path for codec, file_path in codec_dict.items() if codec != 'h264']
     
     return h265_videos
