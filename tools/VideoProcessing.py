@@ -1,11 +1,9 @@
-import subprocess, os
-import cv2
+import subprocess
 import ffmpeg
 from pathlib import Path
 from typing import Tuple, List
 from collections import defaultdict
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip, clips_array
-from moviepy.config import change_settings
 from instances.inst_task import ExampleTaskManager
 
 
@@ -46,39 +44,70 @@ def compress_video(old_video_path: Path|str, new_video_path: Path|str):
 
     subprocess.run(command, check=True)
 
-def join_and_label_videos(video_path1: str, video_path2: str, output_path: str):
+def join_and_label_videos(video_path1: Path|str, video_path2: Path|str, output_path: str, duration: int=10, label1: str = None, label2: str = None):
     """
     将两个视频拼接，并在左上角添加文本标签
 
     :param video_path1: 第一个视频文件路径
     :param video_path2: 第二个视频文件路径
     :param output_path: 输出视频文件路径
+    :param duration: 视频时长（秒）
+    :param label1: 第一个视频的标签（默认文件名）
+    :param label2: 第二个视频的标签（默认文件名）
     """
-    change_settings({"IMAGEMAGICK_BINARY": r"G:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"})
+    # 检查输入文件
+    video_path1 = Path(video_path1)
+    video_path2 = Path(video_path2)
+    if not video_path1.is_file():
+        raise FileNotFoundError(f"视频文件不存在: {video_path1}")
+    if not video_path2.is_file():
+        raise FileNotFoundError(f"视频文件不存在: {video_path2}")
 
-    # 加载视频，设置持续时间为10秒
-    clip1 = VideoFileClip(video_path1).subclip(0, 10)
-    clip2 = VideoFileClip(video_path2).subclip(0, 10)
+    # 检查输出目录
+    output_dir = Path(output_path).parent
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    # 在视频左上角添加文本标签
-    video_name1 = os.path.basename(video_path1)
-    video_name2 = os.path.basename(video_path2)
+    # 加载视频
+    clip1 = VideoFileClip(str(video_path1))
+    clip2 = VideoFileClip(str(video_path2))
 
-    txt_clip1 = TextClip(video_name1, fontsize=24, color='white')
-    txt_clip1 = txt_clip1.set_position(('left', 'top')).set_duration(10)
-    
-    txt_clip2 = TextClip(video_name2, fontsize=24, color='white')
-    txt_clip2 = txt_clip2.set_position(('left', 'top')).set_duration(10)
+    # 确定最短视频长度
+    min_duration = min(clip1.duration, clip2.duration, duration)
+    clip1 = clip1.subclip(0, min_duration)
+    clip2 = clip2.subclip(0, min_duration)
 
-    # 将文本标签与视频组合
+    # 调整分辨率
+    target_height = min(clip1.size[1], clip2.size[1])
+    clip1 = clip1.resize(height=target_height, width=int(clip1.size[0] * (target_height / clip1.size[1])))
+    clip2 = clip2.resize(height=target_height, width=int(clip2.size[0] * (target_height / clip2.size[1])))
+
+    # 获取分辨率和帧率
+    width1, height1 = clip1.size
+    fps = int(clip1.fps)
+
+    # 动态设置标签
+    label1 = label1 or video_path1.stem
+    label2 = label2 or video_path2.stem
+    fontsize = max(min(width1 // 20, 50), 12)  # 根据分辨率调整字体大小
+
+    # 添加文本标签
+    txt_clip1 = TextClip(label1, fontsize=fontsize, color='white', bg_color='black', size=(width1 // 2, height1 // 10))
+    txt_clip1 = txt_clip1.set_position(('left', 'top')).set_duration(min_duration)
+    txt_clip2 = TextClip(label2, fontsize=fontsize, color='white', bg_color='black', size=(width1 // 2, height1 // 10))
+    txt_clip2 = txt_clip2.set_position(('left', 'top')).set_duration(min_duration)
+
+    # 组合视频和标签
     video_with_label1 = CompositeVideoClip([clip1, txt_clip1])
     video_with_label2 = CompositeVideoClip([clip2, txt_clip2])
 
-    # 将两个视频左右拼接
+    # 拼接视频
     final_video = clips_array([[video_with_label1, video_with_label2]])
 
     # 保存结果
-    final_video.write_videofile(output_path, fps=24)
+    final_video.write_videofile(
+        output_path, fps=fps, codec='libx264', preset='medium', threads=4
+    )
+
 
 def transfer_gif_to_video(gif_path, output_path):
     """
