@@ -1,5 +1,7 @@
 import subprocess, os
 import cv2
+import ffmpeg
+from tqdm import tqdm
 from pathlib import Path
 from typing import Tuple, List
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip, clips_array
@@ -158,3 +160,34 @@ def rotate_video(video_path: str | Path, angle: int):
     cv2.destroyAllWindows()
 
     return out_path
+
+def find_h265_videos(folder_path: Path):
+    """
+    查找文件夹中所有不是H264编码的视频文件。
+
+    :param folder_path: 文件夹路径
+    :return: 所有不是H264编码的视频文件列表
+    """
+    h265_videos = []
+    
+    # 确保传入的是一个文件夹路径
+    folder_path = Path(folder_path)
+    if not folder_path.is_dir():
+        raise ValueError(f"{folder_path} 不是有效的文件夹路径")
+
+    file_path_list = [file_path for file_path in folder_path.rglob("*.mp4") if file_path.is_file()] # 使用glob('**/*')遍历目录中的文件和子目录
+    # 遍历文件夹中的所有文件
+    for file in tqdm(file_path_list, desc="Processing files"):
+        try:
+            # 获取视频编码信息
+            probe = ffmpeg.probe(file, v='error', select_streams='v:0', show_entries='stream=codec_name')
+            codec_name = probe['streams'][0]['codec_name']
+            # video_codec_list.append((file, codec_name))
+            
+            if codec_name.lower() != 'h264':
+                h265_videos.append((file, codec_name))
+        
+        except ffmpeg.Error as e:
+            print(f"处理文件 {file} 时出错: {e}")
+    
+    return h265_videos

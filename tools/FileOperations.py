@@ -125,9 +125,8 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
     folder_path = Path(folder_path)
     new_folder_path = folder_path.parent / (folder_path.name + "_re")
 
-    handlefile_manager = HandleFileManager(handle_file, folder_path, new_folder_path, rules,
-                                           execution_mode=execution_mode, worker_limit=6,
-                                           progress_desc=progress_desc, show_progress=True)
+    handlefile_manager = HandleFileManager(handle_file, folder_path, new_folder_path, rules, execution_mode=execution_mode, 
+                                           worker_limit=6, max_info=100, progress_desc=progress_desc, show_progress=True)
 
     file_path_iter = (file_path for file_path in folder_path.glob('**/*') if file_path.is_file())
     handlefile_manager.start(file_path_iter)
@@ -337,7 +336,7 @@ def print_directory_structure(folder_path: str='.', exclude_dirs: list=None, exc
     structure_list = [f"📁 {folder_path.name}/    ({reable_folder_size})"] + structure_list
     print('\n'.join(structure_list))
 
-def compare_structure(dir1, dir2):
+def compare_structure(dir1, dir2, compare_size=False):
     """
     比较两个文件夹的结构，并打印出仅在一个文件夹中存在的文件或文件夹。
     
@@ -391,7 +390,7 @@ def compare_structure(dir1, dir2):
                 print_file_list.append(f"{indent}{item} (one is a file, the other is a folder)")
 
             # 打印文件与文件的比较结果
-            elif item_path1.is_file() and item_path2.is_file():
+            elif item_path1.is_file() and item_path2.is_file() and compare_size:
                 item_path1_size = get_file_size(item_path1)
                 item_path2_size = get_file_size(item_path2)
                 if item_path1_size != item_path2_size:
@@ -466,11 +465,13 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
     total_size = 0
     total_file_num = 0
     max_file_num = 0
+    index = 0
     sort_identical_dict = dict(sorted(identical_dict.items(), key=lambda item: item[0][1], reverse=True))
 
     report.append("\nIdentical files found:\n")
     for (hash_value, file_size), file_list in sort_identical_dict.items():
-        report.append(f"Hash: {hash_value} (Size: {file_size} bytes)")
+        report.append(f"{index}.Hash: {hash_value} (Size: {file_size} bytes)")
+        index += 1
 
         file_num = len(file_list)
         total_size += file_size * file_num
@@ -587,15 +588,17 @@ def replace_filenames(folder_path: Path | str, pattern: str, replacement: str):
     :param replacement: 替换后的新内容。
     """
     folder_path = Path(folder_path)  # 将传入的路径转换为Path对象
-    for file in folder_path.glob('**/*'):  # 使用glob('**/*')遍历目录中的文件和子目录
-        if not file.is_file():  # 检查是否为文件
-            continue
-        
+    file_path_list = [file_path for file_path in folder_path.glob('**/*') if file_path.is_file()] # 使用glob('**/*')遍历目录中的文件和子目录
+
+    for file in tqdm(file_path_list, desc='Replacing filenames'): 
         new_filename = re.sub(pattern, replacement, file.name)
         if new_filename == file.name:
             continue
         
         new_file_path = file.with_name(new_filename)  # 使用with_name方法生成新文件路径
+        if new_file_path.exists():
+            continue
+
         file.rename(new_file_path)  # 重命名文件
 
 def get_folder_size(folder_path: Path | str) -> int:
