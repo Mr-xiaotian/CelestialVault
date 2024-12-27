@@ -1,7 +1,6 @@
 import subprocess, os
 import cv2
 import ffmpeg
-from tqdm import tqdm
 from pathlib import Path
 from typing import Tuple, List
 from collections import defaultdict
@@ -81,7 +80,6 @@ def join_and_label_videos(video_path1: str, video_path2: str, output_path: str):
     # 保存结果
     final_video.write_videofile(output_path, fps=24)
 
-
 def transfer_gif_to_video(gif_path, output_path):
     """
     将GIF文件转换为MP4视频文件
@@ -120,58 +118,50 @@ def transfer_gif_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]
     rules = {'.gif': (transfer_gif_to_video, rename_mp4)}
     return handle_folder(folder_path, rules)
 
-def rotate_video(video_path: str | Path, angle: int):
+def rotate_video(video_path: str | Path, angle: int) -> Path:
     """
     旋转视频文件。
     
     :param video_path: 视频路径（str 或 Path 对象）
-    :param angle: 旋转角度，顺时针方向（int 或 float）
+    :param angle: 旋转角度（仅支持 0, 90, 180, 270）
     :return: 输出文件路径（Path 对象）
     """
     # 确保 video_path 是 Path 对象
     video_path = Path(video_path)
 
-    # 打开视频文件
-    cap = cv2.VideoCapture(str(video_path))
-    if not cap.isOpened():
-        raise ValueError(f"无法打开视频文件: {video_path}")
+    # 检查角度是否有效
+    if angle not in {0, 90, 180, 270}:
+        raise ValueError(f"不支持的旋转角度: {angle}，仅支持 0, 90, 180, 270")
 
-    # 获取视频属性
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    if fps <= 0:
-        fps = 25  # 默认值
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    # 构造输出路径
+    output_path = video_path.with_name(f"{video_path.stem}_rotated({angle}).mp4")
 
-    # 根据角度调整输出尺寸
-    if angle in [90, 270]:
-        output_size = (height, width)
-    else:
-        output_size = (width, height)
+    # 构造 FFmpeg 命令
+    if angle == 90:
+        transpose = 1
+    elif angle == 180:
+        transpose = "2,transpose=2"
+    elif angle == 270:
+        transpose = 2
+    
+    command = [
+        "ffmpeg",
+        "-i", str(video_path),
+        "-vf", f"transpose={transpose}",
+        "-c:a", "copy",  # 复制音频，无需重新编码
+        str(output_path)
+    ]
 
-    # 设置输出路径和编码器
-    out_path = video_path.with_name(video_path.stem + '_rotated.mp4')
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(str(out_path), fourcc, fps, output_size)
+    # 执行命令
+    try:
+        subprocess.run(command, check=True, text=True)
+    except subprocess.CalledProcessError as e:
+        print(f"FFmpeg 执行失败: {e}")
+        raise
+    
+    return output_path
 
-    # 旋转视频
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        # 获取旋转矩阵并应用旋转
-        M = cv2.getRotationMatrix2D((width / 2, height / 2), angle, 1)
-        rotated_frame = cv2.warpAffine(frame, M, output_size)
-        out.write(rotated_frame)
-
-    # 释放资源
-    cap.release()
-    out.release()
-    cv2.destroyAllWindows()
-
-    return out_path
-
-def get_video_codec(video_path: Path):
+def get_video_codec(video_path: Path) -> str:
     """
     获取视频文件的编码格式。
 
@@ -182,15 +172,14 @@ def get_video_codec(video_path: Path):
     codec_name = probe['streams'][0]['codec_name']
     return codec_name
 
-def find_h265_videos(folder_path: Path):
+def get_videos_codec(folder_path: Path, exclude_codecs: list[str]=['h264']) -> dict[str, list[Path]]:
     """
-    查找文件夹中所有不是H264编码的视频文件。
+    获取文件夹中所有视频文件的编码格式。
 
     :param folder_path: 文件夹路径
-    :return: 所有不是H264编码的视频文件列表
+    :param exclude_codecs: 需要排除的编码格式列表
+    :return: 编码格式字典
     """
-    h265_videos = []
-    
     # 确保传入的是一个文件夹路径
     folder_path = Path(folder_path)
     if not folder_path.is_dir():
@@ -198,10 +187,9 @@ def find_h265_videos(folder_path: Path):
     
     get_codec_manager = GetCodecManager(get_video_codec, execution_mode='thread', progress_desc="Getting video codec", show_progress=True)
 
-    file_path_list = [file_path for file_path in folder_path.rglob("*.mp4") if file_path.is_file()] # 使用glob('**/*')遍历目录中的文件和子目录
-    get_codec_manager.start(file_path_list)
+    file_path_iter = (file_path for file_path in folder_path.rglob("*.mp4") if file_path.is_file()) # 使用glob('**/*')遍历目录中的文件和子目录
+    get_codec_manager.start(file_path_iter)
     codec_dict = get_codec_manager.process_result_dict()
-
-    h265_videos = [file_path for codec, file_path in codec_dict.items() if codec != 'h264']
+    codec_dict = {codec: path_list for codec, path_list in codec_dict.items() if codec not in exclude_codecs}
     
-    return h265_videos
+    return codec_dict
