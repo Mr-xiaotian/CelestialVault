@@ -32,16 +32,6 @@ def compress_video(old_video_path: Path|str, new_video_path: Path|str):
         str(new_video_path)
     ]
 
-    # command = [
-    #     'ffmpeg', 
-    #     '-i', str(old_video_path), 
-    #     '-vcodec', 'libx265', 
-    #     '-crf', '23', 
-    #     '-preset', 'medium',
-    #     '-acodec', 'aac',
-    #     str(new_video_path)
-    # ]
-
     subprocess.run(command, check=True)
 
 def join_and_label_videos(video_path1: Path|str, video_path2: Path|str, output_path: str, duration: int=10, label1: str = None, label2: str = None):

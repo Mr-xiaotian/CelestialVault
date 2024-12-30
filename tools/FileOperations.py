@@ -1,5 +1,4 @@
 import shutil, re, os
-import logging
 import hashlib
 import zipfile, rarfile, tarfile, py7zr
 from pathlib import Path
@@ -256,23 +255,6 @@ def unzip_folder(folder_path: str | Path):
 
     return handle_folder(folder_path, rules, progress_desc="Unziping folder")
 
-def delete_files(file_path: str | Path):
-    """
-    删除指定文件夹中的所有文件和文件夹。
-    
-    :param file_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
-    """
-    file_path = Path(file_path)
-    logging.info(f'开始删除:{file_path}')
-    
-    for file in tqdm(list(file_path.iterdir())):
-        if file.is_file():
-            file.unlink()
-        elif file.is_dir():
-            shutil.rmtree(file)
-            
-    logging.info(f'删除完成:{file_path}')
-
 def print_directory_structure(folder_path: str='.', exclude_dirs: list=None, exclude_exts: list=None, max_depth: int=3):
     """
     打印指定文件夹的目录结构。
@@ -345,28 +327,38 @@ def compare_structure(dir1, dir2, compare_size=False):
     """
     dir1 = Path(dir1)
     dir2 = Path(dir2)
-    dir1_name = str(dir1)
-    dir2_name = str(dir2)
 
     # 检查目录是否有效
     if not dir1.is_dir() or not dir2.is_dir():
         raise ValueError(f"输入路径必须是有效的文件夹: {dir1} 或 {dir2}")
 
-    def get_structure_list(dir1: Path, dir2: Path, dir1_name, dir2_name, indent):
+    diff = {
+        'only_in_dir1': [],
+        'only_in_dir2': [],
+        'different_files': []
+    }
+
+    def get_structure_list(d1: Path, d2: Path, indent):
         # 获取文件和文件夹
-        dir1_files = set(os.listdir(dir1))
-        dir2_files = set(os.listdir(dir2))
-        only_in_dir1 = sorted(dir1_files - dir2_files)
-        only_in_dir2 = sorted(dir2_files - dir1_files)
-        common_files = sorted(dir1_files & dir2_files)
+        d1_files = set(os.listdir(d1))
+        d2_files = set(os.listdir(d2))
+        only_in_d1 = sorted(d1_files - d2_files)
+        only_in_d2 = sorted(d2_files - d1_files)
+        common_files = sorted(d1_files & d2_files)
 
         print_folder_list = []
         print_file_list = []
 
-        # 打印仅在 dir1 和 dir2 中存在的项目
-        for item in only_in_dir1 + only_in_dir2:
-            item_path = dir1 / item if item in only_in_dir1 else dir2 / item
-            location = dir1_name if item in only_in_dir1 else dir2_name
+        # 打印仅在 d1 和 d2 中存在的项目
+        for item in only_in_d1 + only_in_d2:
+            if item in only_in_d1:
+                item_path = d1 / item
+                location = dir1
+                diff['only_in_dir1'].append((item_path).relative_to(dir1))
+            else:
+                item_path = d2 / item
+                location = dir2
+                diff['only_in_dir2'].append((item_path).relative_to(dir2))
 
             if item_path.is_dir():
                 print_folder_list.append(f"{indent}📁 [{location}] {item}")
@@ -376,11 +368,11 @@ def compare_structure(dir1, dir2, compare_size=False):
 
         # 打印共同项目
         for item in common_files:
-            item_path1, item_path2 = dir1 / item, dir2 / item
+            item_path1, item_path2 = d1 / item, d2 / item
 
             # 打印文件夹与文件夹的比较结果
             if item_path1.is_dir() and item_path2.is_dir():
-                subfolder_print_list = get_structure_list(item_path1, item_path2, dir1_name, dir2_name, indent + '    ')
+                subfolder_print_list = get_structure_list(item_path1, item_path2, indent + '    ')
                 if subfolder_print_list:
                     print_folder_list.append(f"{indent}📁 {item}/")
                     print_folder_list.extend(subfolder_print_list)
@@ -390,18 +382,92 @@ def compare_structure(dir1, dir2, compare_size=False):
                 print_file_list.append(f"{indent}{item} (one is a file, the other is a folder)")
 
             # 打印文件与文件的比较结果
-            elif item_path1.is_file() and item_path2.is_file() and compare_size:
+            elif compare_size and item_path1.is_file() and item_path2.is_file():
                 item_path1_size = get_file_size(item_path1)
                 item_path2_size = get_file_size(item_path2)
                 if item_path1_size != item_path2_size:
                     icon = FILE_ICONS.get(item_path1.suffix, FILE_ICONS['default'])
-                    print_file_list.append(f"{indent}{icon} [{dir1_name}] {item} ({bytes_to_human_readable(item_path1_size)})")
-                    print_file_list.append(f"{indent}{icon} [{dir2_name}] {item} ({bytes_to_human_readable(item_path2_size)})")
+                    print_file_list.append(f"{indent}{icon} [{dir1}] {item} ({bytes_to_human_readable(item_path1_size)})")
+                    print_file_list.append(f"{indent}{icon} [{dir2}] {item} ({bytes_to_human_readable(item_path2_size)})")
+                    diff['different_files'].append(item_path1.relative_to(dir1))
 
         return print_folder_list + print_file_list
     
-    structure_list = get_structure_list(dir1, dir2, dir1_name, dir2_name, '')
+    structure_list = get_structure_list(dir1, dir2, '')
     print('\n'.join(structure_list))
+    return diff
+
+def sync_folders(diff, dir1, dir2, mode='a'):
+    """
+    根据差异字典同步两个文件夹。
+
+    :param diff: 差异字典
+    :param dir1: 第一个文件夹路径
+    :param dir2: 第二个文件夹路径
+    :param mode: 同步模式，'a' 表示以第一个文件夹为主，
+                 'b' 表示以第二个文件夹为主，
+                 'sync' 表示双向同步
+    """
+    dir1 = Path(dir1)
+    dir2 = Path(dir2)
+
+    if mode in ['a', 'b']:
+        # 确定主目录和次目录
+        main_dir = dir1 if mode == 'a' else dir2
+        minor_dir = dir2 if mode == 'a' else dir1
+        
+        # 差异分配
+        main_dir_diff = diff['only_in_' + ('dir1' if mode == 'a' else 'dir2')] + [p for p in diff['different_files']]
+        minor_dir_diff = diff['only_in_' + ('dir2' if mode == 'a' else 'dir1')]
+
+        # 删除 minor_dir 中多余的文件
+        for rel_path in minor_dir_diff:
+            target = minor_dir / rel_path
+            if target.is_file():
+                print(f"删除文件: {target}")
+                target.unlink()
+            elif target.is_dir():
+                print(f"删除文件夹: {target}")
+                shutil.rmtree(target)
+
+        # 从 main_dir 复制到 minor_dir
+        for rel_path in main_dir_diff:
+            source = main_dir / rel_path
+            target = minor_dir / rel_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if source.is_file():
+                print(f"复制文件: {source} -> {target}")
+                shutil.copy2(source, target)
+            elif source.is_dir():
+                print(f"复制文件夹: {source} -> {target}")
+                shutil.copytree(source, target, dirs_exist_ok=True)
+
+    elif mode == 'sync':
+        # 双向同步
+        for rel_path in diff['only_in_dir1'] + [p for p in diff['different_files']]:
+            source = dir1 / rel_path
+            target = dir2 / rel_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if source.is_file():
+                print(f"同步文件: {source} -> {target}")
+                shutil.copy2(source, target)
+            elif source.is_dir():
+                print(f"同步文件夹: {source} -> {target}")
+                shutil.copytree(source, target, dirs_exist_ok=True)
+
+        for rel_path in diff['only_in_dir2'] + [p for p in diff['different_files']]:
+            source = dir2 / rel_path
+            target = dir1 / rel_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if source.is_file():
+                print(f"同步文件: {source} -> {target}")
+                shutil.copy2(source, target)
+            elif source.is_dir():
+                print(f"同步文件夹: {source} -> {target}")
+                shutil.copytree(source, target, dirs_exist_ok=True)
+
+    else:
+        raise ValueError("无效的模式，必须为 'a', 'b' 或 'sync'")
 
 def get_file_size(file_path: Path) -> int:
     """
