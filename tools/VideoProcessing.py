@@ -208,6 +208,7 @@ def get_videos_codec(folder_path: Path, exclude_codecs: list[str]=['h264']) -> d
 
     file_path_iter = (file_path for file_path in folder_path.rglob("*.mp4") if file_path.is_file()) # 使用glob('**/*')遍历目录中的文件和子目录
     get_codec_manager.start(file_path_iter)
+    
     codec_dict = get_codec_manager.process_result_dict()
     codec_dict = {codec: path_list for codec, path_list in codec_dict.items() if codec not in exclude_codecs}
     

@@ -491,14 +491,14 @@ def get_file_hash(file_path: Path) -> str:
             hash_algo.update(chunk)
     return hash_algo.hexdigest()
 
-def detect_identical_files(folder_path: str | Path, execution_mode: str ='thread') -> Dict[Tuple[str, int], List[Path]]:
+def detect_identical_files(folder_list: List[Path], execution_mode: str ='thread') -> Dict[Tuple[str, int], List[Path]]:
     """
     检测文件夹中是否存在相同内容的文件，并在文件名后添加文件大小。
 
-    :param folder_path: 要检测的文件夹路径。
+    :param folder_list: 文件夹路径列表。
     :return: 相同文件的字典，键为文件大小和哈希值，值为文件路径列表。
     """
-    folder_path = Path(folder_path)
+    folder_list = (Path(folder_path) for folder_path in folder_list)
     
     scan_size_manager = ScanSizeManager(get_file_size, execution_mode, 
                                         progress_desc='Scanning file size', show_progress=True)
@@ -506,7 +506,12 @@ def detect_identical_files(folder_path: str | Path, execution_mode: str ='thread
                                         progress_desc='Calculating file hashes', show_progress=True)
 
     # 根据文件大小进行初步筛选
-    file_path_iter = (path for path in folder_path.rglob('*') if path.is_file())
+    file_path_iter = (
+        path
+        for folder_path in folder_list
+        for path in folder_path.rglob('*')
+        if path.is_file()
+    )
     scan_size_manager.start(file_path_iter)
     size_dict = scan_size_manager.process_result_dict()
     
