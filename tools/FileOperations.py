@@ -69,6 +69,29 @@ class ScanHashManager(TaskManager):
         return identical_dict
 
 
+class DeleteManager(ExampleTaskManager):
+    def __init__(self, func, main_dir, minor_dir):
+        super().__init__(func, progress_desc="Delete files/folders", show_progress=True)
+        self.main_dir = main_dir
+        self.minor_dir = minor_dir
+
+    def get_args(self, rel_path):
+        target = self.minor_dir / rel_path
+        return (target, )
+    
+
+class CopyManager(ExampleTaskManager):
+    def __init__(self, func, main_dir, minor_dir):
+        super().__init__(func, progress_desc="Copy files/folders", show_progress=True)
+        self.main_dir = main_dir
+        self.minor_dir = minor_dir
+
+    def get_args(self, rel_path):
+        source = self.main_dir / rel_path
+        target = self.minor_dir / rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        return (source, target)
+
 def create_folder(path: str | Path) -> Path:
     """
     判断系统是否存在该路径,没有则创建。
@@ -324,6 +347,7 @@ def compare_structure(dir1, dir2, compare_size=False):
     
     :param dir1: 第一个文件夹路径
     :param dir2: 第二个文件夹路径
+    :param compare_size: 是否比较文件大小（默认 False）
     """
     dir1 = Path(dir1)
     dir2 = Path(dir2)
@@ -340,8 +364,14 @@ def compare_structure(dir1, dir2, compare_size=False):
 
     def get_structure_list(d1: Path, d2: Path, indent):
         # 获取文件和文件夹
-        d1_files = set(os.listdir(d1))
-        d2_files = set(os.listdir(d2))
+        try:
+            d1_files = set(os.listdir(d1))
+            d2_files = set(os.listdir(d2))
+        except FileNotFoundError:
+            return [f'{indent}📁 [{d1}] 或 [{d2}] 不存在']
+        except PermissionError:
+            return [f'{indent}📁 [{d1}] 或 [{d2}] 没有权限访问']
+        
         only_in_d1 = sorted(d1_files - d2_files)
         only_in_d2 = sorted(d2_files - d1_files)
         common_files = sorted(d1_files & d2_files)
@@ -354,11 +384,11 @@ def compare_structure(dir1, dir2, compare_size=False):
             if item in only_in_d1:
                 item_path = d1 / item
                 location = dir1
-                diff['only_in_dir1'].append((item_path).relative_to(dir1))
+                diff['only_in_dir1'].append(item_path.relative_to(dir1))
             else:
                 item_path = d2 / item
                 location = dir2
-                diff['only_in_dir2'].append((item_path).relative_to(dir2))
+                diff['only_in_dir2'].append(item_path.relative_to(dir2))
 
             if item_path.is_dir():
                 print_folder_list.append(f"{indent}📁 [{location}] {item}")
@@ -417,57 +447,47 @@ def sync_folders(diff, dir1, dir2, mode='a'):
         minor_dir = dir2 if mode == 'a' else dir1
         
         # 差异分配
-        main_dir_diff = diff['only_in_' + ('dir1' if mode == 'a' else 'dir2')] + [p for p in diff['different_files']]
+        main_dir_diff = diff['only_in_' + ('dir1' if mode == 'a' else 'dir2')] + diff['different_files']
         minor_dir_diff = diff['only_in_' + ('dir2' if mode == 'a' else 'dir1')]
+        
+        delete_manager = DeleteManager(delete_file_or_folder, main_dir, minor_dir)
+        copy_manager = CopyManager(copy_file_or_folder, main_dir, minor_dir)
 
-        # 删除 minor_dir 中多余的文件
-        for rel_path in minor_dir_diff:
-            target = minor_dir / rel_path
-            if target.is_file():
-                print(f"删除文件: {target}")
-                target.unlink()
-            elif target.is_dir():
-                print(f"删除文件夹: {target}")
-                shutil.rmtree(target)
-
-        # 从 main_dir 复制到 minor_dir
-        for rel_path in main_dir_diff:
-            source = main_dir / rel_path
-            target = minor_dir / rel_path
-            target.parent.mkdir(parents=True, exist_ok=True)
-            if source.is_file():
-                print(f"复制文件: {source} -> {target}")
-                shutil.copy2(source, target)
-            elif source.is_dir():
-                print(f"复制文件夹: {source} -> {target}")
-                shutil.copytree(source, target, dirs_exist_ok=True)
+        delete_manager.start(minor_dir_diff)
+        copy_manager.start(main_dir_diff)
 
     elif mode == 'sync':
-        # 双向同步
-        for rel_path in diff['only_in_dir1'] + [p for p in diff['different_files']]:
-            source = dir1 / rel_path
-            target = dir2 / rel_path
-            target.parent.mkdir(parents=True, exist_ok=True)
-            if source.is_file():
-                print(f"同步文件: {source} -> {target}")
-                shutil.copy2(source, target)
-            elif source.is_dir():
-                print(f"同步文件夹: {source} -> {target}")
-                shutil.copytree(source, target, dirs_exist_ok=True)
+        copy_a_to_b_manager = CopyManager(copy_file_or_folder, dir1, dir2)
+        copy_b_to_a_manager = CopyManager(copy_file_or_folder, dir2, dir1)
 
-        for rel_path in diff['only_in_dir2'] + [p for p in diff['different_files']]:
-            source = dir2 / rel_path
-            target = dir1 / rel_path
-            target.parent.mkdir(parents=True, exist_ok=True)
-            if source.is_file():
-                print(f"同步文件: {source} -> {target}")
-                shutil.copy2(source, target)
-            elif source.is_dir():
-                print(f"同步文件夹: {source} -> {target}")
-                shutil.copytree(source, target, dirs_exist_ok=True)
+        copy_a_to_b_manager.start(diff['only_in_dir1'])
+        copy_b_to_a_manager.start(diff['only_in_dir2'])
 
     else:
         raise ValueError("无效的模式，必须为 'a', 'b' 或 'sync'")
+    
+def delete_file_or_folder(path: Path) -> None:
+    """
+    删除文件或文件夹。
+
+    :param path: 文件或文件夹路径。
+    """
+    if path.is_file():
+        path.unlink()
+    elif path.is_dir():
+        shutil.rmtree(path)
+
+def copy_file_or_folder(source: Path, target: Path) -> None:
+    """
+    复制文件或文件夹。
+
+    :param source: 源文件或文件夹路径。
+    :param target: 目标文件或文件夹路径。
+    """
+    if source.is_file():
+        shutil.copy2(source, target)
+    elif source.is_dir():
+        shutil.copytree(source, target, dirs_exist_ok=True)
 
 def get_file_size(file_path: Path) -> int:
     """
