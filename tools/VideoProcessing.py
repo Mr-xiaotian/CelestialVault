@@ -142,6 +142,7 @@ def rotate_video(video_path: str | Path, output_path, angle: int) -> Path:
     旋转视频文件。
     
     :param video_path: 视频路径（str 或 Path 对象）
+    :param output_path: 输出文件路径（str 或 Path 对象）
     :param angle: 旋转角度（仅支持 0, 90, 180, 270）
     :return: 输出文件路径（Path 对象）
     """
@@ -149,21 +150,15 @@ def rotate_video(video_path: str | Path, output_path, angle: int) -> Path:
     video_path = Path(video_path)
 
     # 检查角度是否有效
-    if angle not in {0, 90, 180, 270}:
+    valid_transpose = {90: 1, 180: "2,transpose=2", 270: 2}
+    if angle not in valid_transpose and angle != 0:
         raise ValueError(f"不支持的旋转角度: {angle}，仅支持 0, 90, 180, 270")
-
-    # 构造 FFmpeg 命令
-    if angle == 90:
-        transpose = 1
-    elif angle == 180:
-        transpose = "2,transpose=2"
-    elif angle == 270:
-        transpose = 2
     
+    transpose = valid_transpose.get(angle, None)
     command = [
         "ffmpeg",
         "-i", str(video_path),
-        "-vf", f"transpose={transpose}",
+        "-vf", f"transpose={transpose}" if transpose else "",
         "-c:a", "copy",  # 复制音频，无需重新编码
         str(output_path)
     ]
@@ -185,36 +180,18 @@ def rotate_video_folder(folder_path: str | Path, angle: int) -> List[Tuple[Path,
     :param angle: 旋转角度（仅支持 0, 90, 180, 270）
     :return: 转换结果列表，每个元素是一个元组，包含输出文件路径和可能的异常
     """
-    def rename_mp4_90(file_path: Path) -> Path:
+    def rename_mp4(file_path: Path, angle: int) -> Path:
         name = file_path.stem
         parent = file_path.parent
-        return parent / Path(name + '_rotated(90).mp4')
-    def rename_mp4_180(file_path: Path) -> Path:
-        name = file_path.stem
-        parent = file_path.parent
-        return parent / Path(name + '_rotated(180).mp4')
-    def rename_mp4_270(file_path: Path) -> Path:
-        name = file_path.stem
-        parent = file_path.parent
-        return parent / Path(name + '_rotated(270).mp4')
-
-    def rotate_video_90(video_path: str | Path, output_path: str | Path) -> Path:
-        return rotate_video(video_path, output_path, 90)
-
-    def rotate_video_180(video_path: str | Path, output_path: str | Path) -> Path:
-        return rotate_video(video_path, output_path, 180)
-
-    def rotate_video_270(video_path: str | Path, output_path: str | Path) -> Path:
-        return rotate_video(video_path, output_path, 270)
+        return parent / Path(name + f'_rotated({angle}).mp4')
     
     from tools.FileOperations import handle_folder
 
-    if angle == 90:
-        rules = {'.mp4': (rotate_video_90, rename_mp4_90)}
-    elif angle == 180:
-        rules = {'.mp4': (rotate_video_180, rename_mp4_180)}
-    elif angle == 270:
-        rules = {'.mp4': (rotate_video_270, rename_mp4_270)}
+    if angle in [90, 180, 270]:
+        rules = {'.mp4': (
+            lambda video_path, output_path: rotate_video(video_path, output_path, angle), 
+            lambda file_path: rename_mp4(file_path, angle)
+            )}
     else:
         raise ValueError(f"不支持的旋转角度: {angle}，仅支持 0, 90, 180, 270")
     return handle_folder(folder_path, rules, 'serial', progress_desc=f"Rotating videos by {angle} degrees")
@@ -247,7 +224,7 @@ def get_videos_codec(folder_path: Path, exclude_codecs: list[str]=['h264']) -> d
 
     file_path_iter = (file_path for file_path in folder_path.rglob("*.mp4") if file_path.is_file()) # 使用glob('**/*')遍历目录中的文件和子目录
     get_codec_manager.start(file_path_iter)
-    
+
     codec_dict = get_codec_manager.process_result_dict()
     codec_dict = {codec: path_list for codec, path_list in codec_dict.items() if codec not in exclude_codecs}
     

@@ -52,12 +52,9 @@ class ScanSizeManager(ExampleTaskManager):
         return size_dict
     
 
-class ScanHashManager(TaskManager):
+class ScanHashManager(ExampleTaskManager):
     def get_args(self, task):
         return (task[0], )
-    
-    def process_result(self, task: Path, result):
-        return result
     
     def process_result_dict(self):
         identical_dict = defaultdict(list)
@@ -91,6 +88,7 @@ class CopyManager(ExampleTaskManager):
         target = self.minor_dir / rel_path
         target.parent.mkdir(parents=True, exist_ok=True)
         return (source, target)
+    
 
 def create_folder(path: str | Path) -> Path:
     """
