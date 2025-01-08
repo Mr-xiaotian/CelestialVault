@@ -67,13 +67,12 @@ class ScanHashManager(ExampleTaskManager):
 
 
 class DeleteManager(ExampleTaskManager):
-    def __init__(self, func, main_dir, minor_dir):
+    def __init__(self, func, target_dir):
         super().__init__(func, progress_desc="Delete files/folders", show_progress=True)
-        self.main_dir = main_dir
-        self.minor_dir = minor_dir
+        self.target_dir = target_dir
 
     def get_args(self, rel_path):
-        target = self.minor_dir / rel_path
+        target = self.target_dir / rel_path
         return (target, )
     
 
@@ -425,7 +424,7 @@ def compare_structure(dir1, dir2, compare_size=False):
     print('\n'.join(structure_list))
     return diff
 
-def sync_folders(diff, dir1, dir2, mode='a'):
+def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str='a'):
     """
     根据差异字典同步两个文件夹。
 
@@ -436,6 +435,14 @@ def sync_folders(diff, dir1, dir2, mode='a'):
                  'b' 表示以第二个文件夹为主，
                  'sync' 表示双向同步
     """
+    def append_hash_to_filename(file_path: Path):
+        """在文件名中添加哈希值标识"""
+        hash_value = get_file_hash(file_path)
+        name, ext = file_path.stem, file_path.suffix
+        new_file_path = file_path.with_name(f"{name}({hash_value}){ext}")
+        file_path.rename(new_file_path)
+        return new_file_path.name
+    
     dir1 = Path(dir1)
     dir2 = Path(dir2)
 
@@ -448,7 +455,7 @@ def sync_folders(diff, dir1, dir2, mode='a'):
         main_dir_diff = diff['only_in_' + ('dir1' if mode == 'a' else 'dir2')] + diff['different_files']
         minor_dir_diff = diff['only_in_' + ('dir2' if mode == 'a' else 'dir1')]
         
-        delete_manager = DeleteManager(delete_file_or_folder, main_dir, minor_dir)
+        delete_manager = DeleteManager(delete_file_or_folder, minor_dir)
         copy_manager = CopyManager(copy_file_or_folder, main_dir, minor_dir)
 
         delete_manager.start(minor_dir_diff)
@@ -458,8 +465,20 @@ def sync_folders(diff, dir1, dir2, mode='a'):
         copy_a_to_b_manager = CopyManager(copy_file_or_folder, dir1, dir2)
         copy_b_to_a_manager = CopyManager(copy_file_or_folder, dir2, dir1)
 
-        copy_a_to_b_manager.start(diff['only_in_dir1'])
-        copy_b_to_a_manager.start(diff['only_in_dir2'])
+        diff_file_in_dir1 = []
+        diff_file_in_dir2 = []
+        for rel_path in diff['different_files']:
+            file1 = dir1 / rel_path
+            file2 = dir2 / rel_path
+
+            new_file1_name = append_hash_to_filename(file1)
+            new_file2_name = append_hash_to_filename(file2)
+
+            diff_file_in_dir1.append(new_file1_name)
+            diff_file_in_dir2.append(new_file2_name)
+
+        copy_a_to_b_manager.start(diff['only_in_dir1'] + diff_file_in_dir1)
+        copy_b_to_a_manager.start(diff['only_in_dir2'] + diff_file_in_dir2)
 
     else:
         raise ValueError("无效的模式，必须为 'a', 'b' 或 'sync'")
@@ -496,16 +515,17 @@ def get_file_size(file_path: Path) -> int:
     """
     return file_path.stat().st_size
 
-def get_file_hash(file_path: Path) -> str:
+def get_file_hash(file_path: Path, chunk_size: int = 65536) -> str:
     """
     计算文件的哈希值。
 
     :param file_path: 文件路径。
+    :param chunk_size: 读取文件块的大小。
     :return: 文件的哈希值。
     """
     hash_algo = hashlib.sha256()
     with open(file_path, 'rb') as f:
-        for chunk in iter(lambda: f.read(4096), b""):
+        for chunk in iter(lambda: f.read(chunk_size), b""):
             hash_algo.update(chunk)
     return hash_algo.hexdigest()
 
