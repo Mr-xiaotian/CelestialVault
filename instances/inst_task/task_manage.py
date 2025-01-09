@@ -5,6 +5,7 @@ from queue import Queue as ThreadQueue
 from multiprocessing import Queue as MPQueue
 from threading import Event, Lock
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from collections import defaultdict
 from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError, RequestError, PoolTimeout, ReadTimeout
 from typing import List
 from time import time
@@ -594,3 +595,29 @@ class ExampleTaskManager(TaskManager):
         在这个示例中，我们只是简单地返回结果
         """
         return result
+
+    def process_result_dict(self):
+        """
+        处理结果字典
+
+        在这个示例中，我们合并了字典并返回
+        """
+        result_dict = self.get_result_dict()
+        error_dict = self.get_error_dict()
+
+        return {**result_dict, **error_dict}
+    
+    def handle_error_dict(self):
+        """
+        处理错误字典
+
+        在这个示例中，我们将列表合并为错误组
+        """
+        error_dict = self.get_error_dict()
+
+        error_groups = defaultdict(list)
+        for task, error in error_dict.items():
+            error_groups[error].append(task)
+
+        return dict(error_groups)  # 转换回普通字典
+        

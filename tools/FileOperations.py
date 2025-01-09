@@ -38,7 +38,7 @@ class HandleFileManager(TaskManager):
             new_file_path = self.new_folder_path / rel_path
             shutil.copy(file_path, new_file_path)
             error_path_dict[(type(error).__name__, str(error))].append(new_file_path)
-        return error_path_dict
+        return dict(error_path_dict)
     
 
 class ScanSizeManager(ExampleTaskManager):
@@ -49,7 +49,8 @@ class ScanSizeManager(ExampleTaskManager):
             size_dict[size].append(path)
 
         size_dict = {k: v for k, v in size_dict.items() if len(v) > 1}
-        return size_dict
+        file_size_iter = ((file_path, size) for size, files in size_dict.items() for file_path in files)
+        return file_size_iter
     
 
 class ScanHashManager(ExampleTaskManager):
@@ -67,22 +68,22 @@ class ScanHashManager(ExampleTaskManager):
 
 
 class DeleteManager(ExampleTaskManager):
-    def __init__(self, func, target_dir):
+    def __init__(self, func, parent_dir: Path):
         super().__init__(func, progress_desc="Delete files/folders", show_progress=True)
-        self.target_dir = target_dir
+        self.parent_dir = parent_dir
 
     def get_args(self, rel_path):
-        target = self.target_dir / rel_path
+        target = self.parent_dir / rel_path
         return (target, )
     
 
 class CopyManager(ExampleTaskManager):
-    def __init__(self, func, main_dir, minor_dir):
+    def __init__(self, func, main_dir: Path, minor_dir: Path):
         super().__init__(func, progress_desc="Copy files/folders", show_progress=True)
         self.main_dir = main_dir
         self.minor_dir = minor_dir
 
-    def get_args(self, rel_path):
+    def get_args(self, rel_path: Path):
         source = self.main_dir / rel_path
         target = self.minor_dir / rel_path
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -543,17 +544,13 @@ def detect_identical_files(folder_list: List[Path], execution_mode: str ='thread
 
     # 根据文件大小进行初步筛选
     file_path_iter = (
-        path
-        for folder_path in map(Path, folder_list)
-        for path in folder_path.rglob('*')
-        if path.is_file()
+        path for folder_path in folder_list for path in Path(folder_path).rglob('*') if path.is_file()
     )
     scan_size_manager.start(file_path_iter)
-    size_dict = scan_size_manager.process_result_dict()
+    file_size_iter = scan_size_manager.process_result_dict()
     
     # 对于相同大小的文件，进一步计算哈希值, 找出哈希值相同的文件
-    file_task_iter = ((file_path, size) for size, files in size_dict.items() for file_path in files)
-    scan_hash_manager.start(file_task_iter)
+    scan_hash_manager.start(file_size_iter)
     identical_dict = scan_hash_manager.process_result_dict()
     
     return identical_dict
