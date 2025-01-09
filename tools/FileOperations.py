@@ -536,8 +536,6 @@ def detect_identical_files(folder_list: List[Path], execution_mode: str ='thread
     :param folder_list: 文件夹路径列表。
     :return: 相同文件的字典，键为文件大小和哈希值，值为文件路径列表。
     """
-    folder_list = (Path(folder_path) for folder_path in folder_list)
-    
     scan_size_manager = ScanSizeManager(get_file_size, execution_mode, 
                                         progress_desc='Scanning file size', show_progress=True)
     scan_hash_manager = ScanHashManager(get_file_hash, execution_mode, 
@@ -546,7 +544,7 @@ def detect_identical_files(folder_list: List[Path], execution_mode: str ='thread
     # 根据文件大小进行初步筛选
     file_path_iter = (
         path
-        for folder_path in folder_list
+        for folder_path in map(Path, folder_list)
         for path in folder_path.rglob('*')
         if path.is_file()
     )
