@@ -237,106 +237,87 @@ def get_video_info(video_path: str):
     :param video_path: 视频文件的路径。
     :return: 一个字典，包含分辨率（width, height）和显示宽高比（DAR）。
     """
-    try:
-        # 使用 ffprobe 获取视频信息
-        result = subprocess.run(
-            [
-                "ffprobe",
-                "-v", "error",
-                "-select_streams", "v:0",
-                "-show_entries", "stream=width,height,display_aspect_ratio",
-                "-of", "default=noprint_wrappers=1",
-                str(video_path)
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
+    # 使用 ffprobe 获取视频信息
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v", "error",
+            "-select_streams", "v:0",
+            "-show_entries", "stream=width,height,display_aspect_ratio",
+            "-of", "default=noprint_wrappers=1",
+            str(video_path)
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
 
-        # 提取结果
-        output = result.stdout
+    # 提取结果
+    output = result.stdout
 
-        # 使用正则解析结果
-        width = re.search(r'width=(\d+)', output)
-        height = re.search(r'height=(\d+)', output)
-        dar = re.search(r'display_aspect_ratio=(\S+)', output)
+    # 使用正则解析结果
+    width = re.search(r'width=(\d+)', output)
+    height = re.search(r'height=(\d+)', output)
+    dar = re.search(r'display_aspect_ratio=(\S+)', output)
 
-        # 格式化输出
-        video_info = {
-            "width": int(width.group(1)) if width else None,
-            "height": int(height.group(1)) if height else None,
-            "display_aspect_ratio": dar.group(1) if dar else None
-        }
+    # 格式化输出
+    video_info = {
+        "width": int(width.group(1)) if width else None,
+        "height": int(height.group(1)) if height else None,
+        "display_aspect_ratio": dar.group(1) if dar else None
+    }
 
-        return video_info
+    return video_info
 
-    except Exception as e:
-        print(f"Error occurred: {e}")
-        return None
-
-def is_container_ratio_matching_resolution(video_info: dict):
+def is_container_ratio_matching_resolution(video_path):
     """
     检查视频容器的宽高比是否与分辨率比例一致。
 
     :param video_info: 包含视频信息的字典，需包含 width, height, display_aspect_ratio。
     :return: 布尔值，表示是否一致。
     """
-    try:
-        width = video_info["width"]
-        height = video_info["height"]
-        dar = video_info["display_aspect_ratio"]
+    video_info = get_video_info(video_path)
+    width = video_info["width"]
+    height = video_info["height"]
+    dar = video_info["display_aspect_ratio"]
 
-        if not width or not height or not dar:
-            print("缺少必要的视频信息。")
-            return False
-
-        # 计算分辨率的比例
-        resolution_ratio = width / height
-
-        # 解析 DAR
-        dar_width, dar_height = map(int, dar.split(":"))
-        container_ratio = dar_width / dar_height
-
-        # 比较两者
-        return abs(resolution_ratio - container_ratio) < 1e-6  # 允许微小误差
-
-    except Exception as e:
-        print(f"Error checking container ratio: {e}")
+    if not width or not height or not dar or dar == 'N/A':
         return False
 
-def set_container_ratio_to_resolution(video_path: str, output_path: str):
+    # 计算分辨率的比例
+    resolution_ratio = width / height
+
+    # 解析 DAR
+    dar_width, dar_height = map(int, dar.split(":"))
+    container_ratio = dar_width / dar_height
+
+    # 比较两者
+    return abs(resolution_ratio - container_ratio) < 1e-6  # 允许微小误差
+
+
+def set_container_ratio_to_resolution(video_path, output_path):
     """
     修改视频容器宽高比，使其与分辨率比例一致。
 
     :param video_path: 输入视频文件路径。
     :param output_path: 输出视频文件路径。
     """
-    try:
-        video_info = get_video_info(video_path)
-        if not video_info or not video_info["width"] or not video_info["height"]:
-            print("无法获取视频分辨率信息。")
-            return
-        if is_container_ratio_matching_resolution(video_info):
-            print("容器比例与分辨率比例一致，无需修改。")
-            return
+    video_info = get_video_info(video_path)
+    if not video_info or not video_info["width"] or not video_info["height"]:
+        raise ValueError("无法获取视频分辨率信息。")
 
-        # 获取分辨率的宽高比
-        width = video_info["width"]
-        height = video_info["height"]
-        resolution_ratio = f"{width}:{height}"
+    # 获取分辨率的宽高比
+    width = video_info["width"]
+    height = video_info["height"]
+    resolution_ratio = f"{width}:{height}"
 
-        # 使用 ffmpeg 修改 DAR
-        subprocess.run(
-            [
-                "ffmpeg",
-                "-i", video_path,
-                "-c", "copy",
-                "-aspect", resolution_ratio,
-                str(output_path)
-            ]
-        )
-
-        print(f"视频容器宽高比已修改为与分辨率一致，输出文件：{output_path}")
-
-    except Exception as e:
-        print(f"Error setting container ratio: {e}")
+    # 使用 ffmpeg 修改 DAR
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-i", video_path,
+            "-c", "copy",
+            "-aspect", resolution_ratio,
+            str(output_path)
+        ]
+    )
