@@ -230,7 +230,7 @@ def get_videos_codec(folder_path: Path, exclude_codecs: list[str]=['h264']) -> d
     
     return codec_dict
 
-def get_video_info(video_path):
+def get_video_info(video_path: str):
     """
     获取视频的分辨率和显示宽高比（容器宽高比）。
 
@@ -246,7 +246,7 @@ def get_video_info(video_path):
                 "-select_streams", "v:0",
                 "-show_entries", "stream=width,height,display_aspect_ratio",
                 "-of", "default=noprint_wrappers=1",
-                video_path
+                str(video_path)
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -274,7 +274,7 @@ def get_video_info(video_path):
         print(f"Error occurred: {e}")
         return None
 
-def is_container_ratio_matching_resolution(video_info):
+def is_container_ratio_matching_resolution(video_info: dict):
     """
     检查视频容器的宽高比是否与分辨率比例一致。
 
@@ -304,7 +304,7 @@ def is_container_ratio_matching_resolution(video_info):
         print(f"Error checking container ratio: {e}")
         return False
 
-def set_container_ratio_to_resolution(video_path, output_path):
+def set_container_ratio_to_resolution(video_path: str, output_path: str):
     """
     修改视频容器宽高比，使其与分辨率比例一致。
 
@@ -332,7 +332,7 @@ def set_container_ratio_to_resolution(video_path, output_path):
                 "-i", video_path,
                 "-c", "copy",
                 "-aspect", resolution_ratio,
-                output_path
+                str(output_path)
             ]
         )
 

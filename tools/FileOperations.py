@@ -177,7 +177,7 @@ def compress_folder(folder_path: str | Path, execution_mode: str = 'thread') -> 
 
     from tools.ImageProcessing import compress_img
     from tools.VideoProcessing import compress_video
-    from tools.DocumentConversion import compress_pdf
+    # from tools.DocumentConversion import compress_pdf
     from constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 
     rules = {suffix: (compress_img, lambda x: x) for suffix in IMG_SUFFIXES}
