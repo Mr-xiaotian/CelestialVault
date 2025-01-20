@@ -14,6 +14,7 @@ tests/__pycache__/
 *$py.class
 
 # 忽略IDE文件
+.vscode/
 result.json
 _preview.ipynb
 

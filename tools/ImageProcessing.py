@@ -28,12 +28,12 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path = None, max
     :param pdf_path: 输出的PDF文件路径。
     :return: None
     """
-    def extract_number(file_name: Path) -> tuple:
+    def extract_number(file_name: Path) -> int:
         """
-        从文件名中提取数字用于排序，没有数字的文件排在后面。
+        从文件名中提取数字，用于排序。
         """
         matches = re.findall(r'\d+', file_name.name)
-        return (int(matches[0]),) if matches else (float('inf'), file_name.name)
+        return int(''.join(matches)) if matches else float('inf')
     
     from constants import IMG_SUFFIXES
     from tools.FileOperations import folder_to_file_path
