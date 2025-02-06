@@ -464,11 +464,16 @@ def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str='a
 
     if mode in ['a', 'b']:
         # 确定主目录和次目录
-        main_dir,minor_dir = dir1,dir2 if mode == 'a' else dir2,dir1
-        
+        is_mode_a = (mode == 'a')
+        main_dir, minor_dir = (dir1, dir2) if is_mode_a else (dir2, dir1)
+
+        # 预计算 diff 访问键
+        main_dir_key = 'only_in_' + ('dir1' if is_mode_a else 'dir2')
+        minor_dir_key = 'only_in_' + ('dir2' if is_mode_a else 'dir1')
+
         # 差异分配
-        main_dir_diff = diff['only_in_' + ('dir1' if mode == 'a' else 'dir2')] + diff['different_files']
-        minor_dir_diff = diff['only_in_' + ('dir2' if mode == 'a' else 'dir1')]
+        main_dir_diff = diff[main_dir_key] + diff['different_files']
+        minor_dir_diff = diff[minor_dir_key]
         
         delete_manager = DeleteManager(delete_file_or_folder, minor_dir)
         copy_manager = CopyManager(copy_file_or_folder, main_dir, minor_dir)
