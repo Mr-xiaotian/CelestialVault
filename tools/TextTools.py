@@ -460,3 +460,48 @@ def find_nth_occurrence(target_str: str, similar_str: str, occurrence: int) -> t
         count += 1  # 增加找到的次数
         if count == occurrence:  # 如果找到了指定次数的匹配
             return (start_index, start_index + len(similar_str))  # 返回坐标
+
+def format_table(data: list, column_names: list=None, fill_value: str='N/A') -> str:
+    """
+    格式化并打印表格。
+
+    :param data: 表格数据，二维列表，每行代表一行数据
+    :param column_names: 列名，列表，每列的名称
+    :param fill_value: 当数据为空时填充的值
+    :return: 格式化后的表格字符串
+    """
+    
+    # 获取列数
+    num_columns = len(data[0]) if data else 0
+    # 如果未提供列名，则自动生成
+    if column_names is None:
+        column_names = [f"Column {i+1}" for i in range(num_columns)]
+
+    # 计算每列的最大宽度（包括列名和数据）
+    col_widths = [max(len(str(row[i])) if i < len(row) else len(fill_value) for row in data) for i in range(num_columns)]
+    col_widths = [max(len(name), width) for name, width in zip(column_names, col_widths)]
+
+    # 创建表格的顶部
+    table = "+" + "+".join(["-" * (width + 2) for width in col_widths]) + "+"
+    table += "\n"
+    
+    # 添加列名行
+    header = "| " + " | ".join([f"{name:<{col_widths[i]}}" for i, name in enumerate(column_names)]) + " |"
+    table += header + "\n"
+    
+    # 添加分隔行
+    table += "+" + "+".join(["-" * (width + 2) for width in col_widths]) + "+" 
+    table += "\n"
+    
+    # 添加数据行
+    for row in data:
+        table += "| " + " | ".join([
+            f"{str(row[i]) if i < len(row) else fill_value:<{col_widths[i]}}"
+            for i in range(num_columns)
+        ]) + " |"
+        table += "\n"
+    
+    # 添加底部分隔行
+    table += "+" + "+".join(["-" * (width + 2) for width in col_widths]) + "+"
+    
+    return table
