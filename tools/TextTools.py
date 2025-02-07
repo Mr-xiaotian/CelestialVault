@@ -461,21 +461,30 @@ def find_nth_occurrence(target_str: str, similar_str: str, occurrence: int) -> t
         if count == occurrence:  # 如果找到了指定次数的匹配
             return (start_index, start_index + len(similar_str))  # 返回坐标
 
-def format_table(data: list, column_names: list = None, fill_value: str = 'N/A') -> str:
+def format_table(data: list, column_names: list = None, row_names: list = None, fill_value: str = 'N/A') -> str:
     """
     格式化并打印表格。
 
     :param data: 表格数据，二维列表，每行代表一行数据
     :param column_names: 列名，列表，每列的名称
+    :param row_names: 自定义的行号，列表，如果为None则使用默认行号（0, 1, 2, 3...）
     :param fill_value: 当数据为空时填充的值
     :return: 格式化后的表格字符串
     """
+    for num, row in enumerate(data):
+        add_colnum = row_names[num] if row_names else num
+        data[num] = [add_colnum, ] + list(row)
+
     # 获取列数
     num_columns = len(column_names) if column_names else max(len(row) for row in data)
+    num_columns += 1
 
     # 如果未提供列名，则自动生成
     if column_names is None:
-        column_names = [f"Column {i+1}" for i in range(num_columns)]
+        column_names = [f"Column {i+1}" for i in range(num_columns-1)]
+
+    # 为表格添加序列列标题
+    column_names = ["#"] + column_names
 
     # 计算每列的最大宽度（包括列名和数据）
     col_widths = [max(len(str(row[i])) if i < len(row) else len(fill_value) for row in data) for i in range(num_columns)]

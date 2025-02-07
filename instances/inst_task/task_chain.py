@@ -8,6 +8,7 @@ from typing import List, Any, Dict
 from time import time
 from .task_manage import TaskManager
 from .task_support import TERMINATION_SIGNAL, task_logger, TaskError
+from CelestialVault.tools.TextTools import format_table
 
 
 class TaskChain:
@@ -295,22 +296,30 @@ class TaskChain:
         :return: 包含两种执行模式下的执行时间的字典
         """
         results = {}
+        test_table_list = []
         final_result_dict = {}
         final_error_dict = {}
         failed_tasks = []
 
         stage_modes = ['serial', 'process']
         execution_modes = ['serial', 'thread']
-        for stage_mode, execution_mode in product(stage_modes, execution_modes):
-            start_time = time()
-            self.set_chain_mode(stage_mode, execution_mode)
-            self.start_chain(task_list)
+        for stage_mode in stage_modes:
+            temp_list = []
+            for execution_mode in execution_modes:
+                start_time = time()
+                self.set_chain_mode(stage_mode, execution_mode)
+                self.start_chain(task_list)
 
-            results[f'(stage){stage_mode} (execution){execution_mode}'] = time() - start_time
-            final_result_dict.update(self.get_final_result_dict())
-            final_error_dict.update(self.get_final_error_dict())
-            failed_tasks += [task for task in self.get_failed_tasks() if task not in failed_tasks]
+                temp_list.append(time() - start_time)
+                final_result_dict.update(self.get_final_result_dict())
+                final_error_dict.update(self.get_final_error_dict())
+                failed_tasks += [task for task in self.get_failed_tasks() if task not in failed_tasks]
+            test_table_list.append(temp_list)
 
+        column_names = [f"{execution_mode}(execution)" for execution_mode in execution_modes]
+        row_names = [f"{stage_mode}(stage)" for stage_mode in stage_modes]
+
+        results['Test table'] = format_table(test_table_list, column_names = column_names, row_names = row_names)
         results['Final result dict'] = final_result_dict
         results['Final error dict'] = final_error_dict
         results['Failed tasks'] = failed_tasks
