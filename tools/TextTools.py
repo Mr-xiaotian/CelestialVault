@@ -2,10 +2,10 @@ import jieba, re, string, zlib, base64, charset_normalizer
 from tqdm import tqdm
 from pathlib import Path
 from jieba import analyse
-from wcwidth import wcswidth
 from itertools import zip_longest
 from typing import List, Dict, Union, Tuple
 from pprint import pprint
+from wcwidth import wcswidth
 
 
 def pro_slash(input_str: str) -> str:

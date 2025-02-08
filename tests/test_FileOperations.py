@@ -11,7 +11,7 @@ def test_print_directory_structure():
     print()
     print_directory_structure(r'Q:\Project\test', exclude_dirs = exclude_dirs, exclude_exts = exclude_exts)
 
-def test_compress_folder():
+def _test_compress_folder():
     # Test with a valid directory
     # compress_folder(r'C:\Users\27342\OneDrive\Videos\compress_temp')
     pass

@@ -5,6 +5,7 @@ from pathlib import Path
 from tqdm import tqdm
 from typing import Callable, Tuple, Dict, List
 from collections import defaultdict
+from wcwidth import wcswidth
 from constants import FILE_ICONS
 from instances.inst_task import TaskManager, ExampleTaskManager
 from .TextTools import format_table
@@ -301,7 +302,7 @@ def print_directory_structure(folder_path: str='.', exclude_dirs: list=None, exc
 
         # 计算文件名的最大长度，如果没有文件，设置默认长度
         files = [item for item in folder_path.iterdir() if item.is_file()]
-        max_name_len = max((len(str(item.name)) for item in files), default=0)
+        max_name_len = max((wcswidth(str(item.name)) for item in files), default=0)
 
         folder_structure_list = []
         file_structure_list = []
@@ -329,7 +330,7 @@ def print_directory_structure(folder_path: str='.', exclude_dirs: list=None, exc
                 folder_size += file_size
                 reable_file_size = bytes_to_human_readable(file_size)
 
-                file_structure_list.append(f"{indent}{icon} {item.name:<{max_name_len}}\t({reable_file_size})")
+                file_structure_list.append(f"{indent}{icon} {item.name:<{max_name_len - (wcswidth(item.name)-len(item.name))}}\t({reable_file_size})")
 
         structure_list = folder_structure_list + file_structure_list
         return structure_list, folder_size
@@ -609,10 +610,10 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
             max_file_num = file_num
             max_file_key = (hash_value, file_size)
 
-        max_name_len = max(len(str(file)) for file in file_list)
+        max_name_len = max(wcswidth(str(file)) for file in file_list)
         readable_size = bytes_to_human_readable(file_size)
         for file in file_list:
-            report.append(f" - {str(file):<{max_name_len}} (Size: {readable_size})")
+            report.append(f" - {str(file):<{max_name_len - (wcswidth(str(file))-len(str(file)))}} (Size: {readable_size})")
         report.append("")
 
     hash_value, file_size = max_file_key

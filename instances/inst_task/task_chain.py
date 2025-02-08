@@ -8,7 +8,7 @@ from typing import List, Any, Dict
 from time import time
 from .task_manage import TaskManager
 from .task_support import TERMINATION_SIGNAL, task_logger, TaskError
-from CelestialVault.tools.TextTools import format_table
+from tools.TextTools import format_table
 
 
 class TaskChain:
