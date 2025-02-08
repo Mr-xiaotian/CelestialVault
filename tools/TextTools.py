@@ -2,8 +2,10 @@ import jieba, re, string, zlib, base64, charset_normalizer
 from tqdm import tqdm
 from pathlib import Path
 from jieba import analyse
-from pprint import pprint
+from wcwidth import wcswidth
+from itertools import zip_longest
 from typing import List, Dict, Union, Tuple
+from pprint import pprint
 
 
 def pro_slash(input_str: str) -> str:
@@ -461,56 +463,58 @@ def find_nth_occurrence(target_str: str, similar_str: str, occurrence: int) -> t
         if count == occurrence:  # 如果找到了指定次数的匹配
             return (start_index, start_index + len(similar_str))  # 返回坐标
 
-def format_table(data: list, column_names: list = None, row_names: list = None, fill_value: str = 'N/A') -> str:
+def format_table(data: list, column_names: list = None, row_names: list = None, index_header: str = "#", fill_value: str = 'N/A') -> str:
     """
     格式化并打印表格。
 
     :param data: 表格数据，二维列表，每行代表一行数据
     :param column_names: 列名，列表，每列的名称
     :param row_names: 自定义的行号，列表，如果为None则使用默认行号（0, 1, 2, 3...）
+    :param index_header: 左上角的名称，默认为 "#"
     :param fill_value: 当数据为空时填充的值
     :return: 格式化后的表格字符串
     """
-    for num, row in enumerate(data):
-        add_colnum = row_names[num] if row_names else num
-        data[num] = [add_colnum, ] + list(row)
+    # 计算数据的列数
+    max_cols = max(len(row) for row in data) if data else 0
 
-    # 获取列数
-    num_columns = len(column_names) if column_names else max(len(row) for row in data)
-    num_columns += 1
-
-    # 如果未提供列名，则自动生成
+    # 生成列名
     if column_names is None:
-        column_names = [f"Column {i+1}" for i in range(num_columns-1)]
+        column_names = [f"Column {i+1}" for i in range(max_cols)]
+    elif len(column_names) < max_cols:
+        column_names.extend([f"Column {i+1}" for i in range(len(column_names), max_cols)])
 
-    # 为表格添加序列列标题
-    column_names = ["#"] + column_names
+    # 生成行名
+    if row_names is None:
+        row_names = range(len(data))
+    elif len(row_names) < len(data):
+        row_names.extend([f"Row {i+1}" for i in range(len(row_names), len(data))])
+    
+    # 添加行号列
+    column_names = [index_header] + column_names
+    num_columns = len(column_names)
 
-    # 计算每列的最大宽度（包括列名和数据）
-    col_widths = [max(len(str(row[i])) if i < len(row) else len(fill_value) for row in data) for i in range(num_columns)]
-    col_widths = [max(len(name), width) for name, width in zip(column_names, col_widths)]
+    # 处理行号
+    formatted_data = []
+    for i, row in enumerate(data):
+        row_label = row_names[i] if row_names else i
+        formatted_data.append([row_label] + list(row))
 
-    # 创建表格的顶部
-    table = "+" + "+".join(["-" * (width + 2) for width in col_widths]) + "+"
-    table += "\n"
+    # 统一填充数据行，确保所有行长度一致
+    formatted_data = zip_longest(*formatted_data, fillvalue=fill_value)
+    formatted_data = list(zip(*formatted_data))  # 转置回来
 
-    # 添加列名行
-    table += "| " + " | ".join([f"{name:<{col_widths[i]}}" for i, name in enumerate(column_names)]) + " |"
-    table += "\n"
+    # 计算每列的最大宽度
+    col_widths = [max(wcswidth(str(item)) for item in col) for col in zip(column_names, *formatted_data)]
 
-    # 添加分隔行
-    table += "+" + "+".join(["-" * (width + 2) for width in col_widths]) + "+"
-    table += "\n"
+    # 生成表格
+    separator = "+" + "+".join(["-" * (width + 2) for width in col_widths]) + "+"
+    header = "| " + " | ".join([f"{name:<{col_widths[i] - (wcswidth(name)-len(name))}}" for i, name in enumerate(column_names)]) + " |"
+    
+    rows_list = []
+    for row in formatted_data:
+        rows_list.append("| " + " | ".join([f"{str(row[i]):<{col_widths[i]- (wcswidth(str(row[i]))-len(str(row[i])))}}" for i in range(num_columns)]) + " |")
+    rows = "\n".join(rows_list)
 
-    # 添加数据行
-    for row in data:
-        table += "| " + " | ".join([
-            f"{str(row[i]) if i < len(row) else fill_value:<{col_widths[i]}}"
-            for i in range(num_columns)
-        ]) + " |"
-        table += "\n"
-
-    # 添加底部分隔行
-    table += "+" + "+".join(["-" * (width + 2) for width in col_widths]) + "+"
-
+    # 拼接表格
+    table = f"{separator}\n{header}\n{separator}\n{rows}\n{separator}"
     return table

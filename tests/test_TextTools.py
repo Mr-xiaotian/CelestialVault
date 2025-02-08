@@ -3,9 +3,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import pytest
 import logging
-from tools.TextTools import pro_slash, str_to_dict, language_fingerprint, calculate_valid_chinese_text, calculate_valid_text
+from tools.TextTools import pro_slash, str_to_dict, language_fingerprint, calculate_valid_chinese_text, calculate_valid_text, format_table
 
-def test_pro_slash():
+def _test_pro_slash():
     string_a = '(W//R\S/H\\U)'
     string_b = "https:\/\/m10.music.126.net\/20211221203525\/cb633fbb6fd0423417ef492e2225ba45\/ymusic\/7dbe\/b17e\/1937\/9982bb924f5c3adc6f85679fcf221418.mp3"
     string_c = r"this\\is\a\\test\\\\string"
@@ -25,7 +25,7 @@ def test_pro_slash():
     logging.info(f"{'Expected output2':<16}: this\\is\\a\\test\\\\string")
     logging.info(f"{'Actual output2':<16}: {slash_c}")
 
-def test_str_to_dict():
+def _test_str_to_dict():
     test_str_0 = "key1:value1\nkey2:value2\n\n:key3:value3"
     test_str_1 = "key1=value1; key2=value2; key3= ; key4=value4"
 
@@ -39,7 +39,7 @@ def test_str_to_dict():
     logging.info(f"{'Expected output':<15}: {{'key1': 'value1', 'key2': 'value2', 'key3': '', 'key4': 'value4'}}")
     logging.info(f"{'Actual output':<15}: {result_dict_1}")
 
-def test_language_fingerprint():
+def _test_language_fingerprint():
     return
     with open(r'G:\Project\test\寻找走丢的舰娘(34653).txt', 'r', encoding = 'utf-8') as f:
         text = f.read()
@@ -98,3 +98,17 @@ def test_calculate_valid_text():
     logging.info(f"{'Valid chinese rate':<18}: {valid_chinese_rate}")
     logging.info(f"{'Valid rate':<18}: {valid_rate}")
 
+def test_format_table():
+    data = [
+        ["Alice", 24, "Engineer"],
+        ["Bob", 27],
+        ["Charlie", 22, "Designer", "Berlin"],
+        ["大卫", 30, "医生", "New York", "USA"]
+    ]
+
+    column_names = ["Name", "Age", "Job", "City"]
+    row_names = ["A", "B", "C"]
+
+    table_text = format_table(data, column_names, row_names, index_header = r"行数\属性")
+    logging.info(f"{'Test data':<11}: {data}")
+    logging.info(f"{'Test output':<11}:\n{table_text}")

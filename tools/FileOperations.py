@@ -439,7 +439,7 @@ def compare_structure(dir1, dir2, compare_common_file=False):
     structure_list = get_structure_list(dir1, dir2, '')
     dir1_data = [dir1, bytes_to_human_readable(dir1_diff_size)]
     dir2_data = [dir2, bytes_to_human_readable(dir2_diff_size)]
-    table_text = format_table([dir1_data, dir2_data], column_names = ["Directory", "Size"])
+    table_text = format_table([dir1_data, dir2_data], column_names = ["Directory", "Diff Size"])
 
     print('\n'.join(structure_list))
     print('\n' + table_text)
