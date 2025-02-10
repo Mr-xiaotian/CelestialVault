@@ -316,7 +316,7 @@ class TaskChain:
                 failed_tasks += [task for task in self.get_failed_tasks() if task not in failed_tasks]
             test_table_list.append(temp_list)
 
-        results['Test table'] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = r"stage\execution")
+        results['Time table'] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = r"stage\execution")
         results['Final result dict'] = final_result_dict
         results['Final error dict'] = final_error_dict
         results['Failed tasks'] = failed_tasks

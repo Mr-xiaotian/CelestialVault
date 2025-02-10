@@ -463,7 +463,14 @@ def find_nth_occurrence(target_str: str, similar_str: str, occurrence: int) -> t
         if count == occurrence:  # 如果找到了指定次数的匹配
             return (start_index, start_index + len(similar_str))  # 返回坐标
 
-def format_table(data: list, column_names: list = None, row_names: list = None, index_header: str = "#", fill_value: str = 'N/A') -> str:
+def format_table(
+    data: list, 
+    column_names: list = None, 
+    row_names: list = None, 
+    index_header: str = "#", 
+    fill_value: str = 'N/A', 
+    align: str = "left",
+) -> str:
     """
     格式化并打印表格。
 
@@ -472,10 +479,14 @@ def format_table(data: list, column_names: list = None, row_names: list = None, 
     :param row_names: 自定义的行号，列表，如果为None则使用默认行号（0, 1, 2, 3...）
     :param index_header: 左上角的名称，默认为 "#"
     :param fill_value: 当数据为空时填充的值
+    :param align: 对齐方式，默认为 "left"
     :return: 格式化后的表格字符串
     """
-    # 计算数据的列数
-    max_cols = max(len(row) for row in data) if data else 0
+    if not data:  
+        return "表格数据为空！"
+    
+    # 计算列数
+    max_cols = max(map(len, data))
 
     # 生成列名
     if column_names is None:
@@ -506,13 +517,21 @@ def format_table(data: list, column_names: list = None, row_names: list = None, 
     # 计算每列的最大宽度
     col_widths = [max(wcswidth(str(item)) for item in col) for col in zip(column_names, *formatted_data)]
 
+    # 选择对齐方式
+    align_funcs = {
+        "left": lambda text, width: f"{text:<{width - (wcswidth(text) - len(text))}}",
+        "right": lambda text, width: f"{text:>{width - (wcswidth(text) - len(text))}}",
+        "center": lambda text, width: f"{text:^{width - (wcswidth(text) - len(text))}}"
+    }
+    align_func = align_funcs.get(align, align_funcs["left"])  # 默认左对齐
+
     # 生成表格
     separator = "+" + "+".join(["-" * (width + 2) for width in col_widths]) + "+"
-    header = "| " + " | ".join([f"{name:<{col_widths[i] - (wcswidth(name)-len(name))}}" for i, name in enumerate(column_names)]) + " |"
+    header = "| " + " | ".join([f"{align_func(name, col_widths[i])}" for i, name in enumerate(column_names)]) + " |"
     
     rows_list = []
     for row in formatted_data:
-        rows_list.append("| " + " | ".join([f"{str(row[i]):<{col_widths[i]- (wcswidth(str(row[i]))-len(str(row[i])))}}" for i in range(num_columns)]) + " |")
+        rows_list.append("| " + " | ".join([f"{align_func(str(row[i]), col_widths[i])}" for i in range(num_columns)]) + " |")
     rows = "\n".join(rows_list)
 
     # 拼接表格

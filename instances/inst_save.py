@@ -131,7 +131,7 @@ class Saver(object):
         # await self.fetcher.close_session()
         pass
 
-    def download_m3u8(self, m3u8_url, file_name, suffix_name = '.mp4'):
+    def download_m3u8(self, m3u8_url, file_name, suffix_name = '.mp4', timeout=3600):
         m3u8_path = self.get_path(file_name, suffix_name)
         if not self.can_overwrite(m3u8_path):
             # print(f"{m3u8_path} exist")
@@ -145,7 +145,7 @@ class Saver(object):
             ]
         # 运行命令并捕获错误
         try:
-            result = subprocess.run(command, stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True, encoding='utf-8', timeout=600)
+            result = subprocess.run(command, stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True, encoding='utf-8', timeout=timeout)
         except subprocess.TimeoutExpired:
             raise TimeoutError(f"Download process timed out for {m3u8_url}.")
 

@@ -102,13 +102,13 @@ def test_format_table():
     data = [
         ["Alice", 24, "Engineer"],
         ["Bob", 27],
-        ["Charlie", 22, "Designer", "Berlin"],
-        ["大卫", 30, "医生", "New York", "USA"]
+        ["Charlie", 22, "设计师", "Berlin"],
+        ["大卫", 30, "Doctor", "New York", "USA"]
     ]
 
     column_names = ["Name", "Age", "Job", "City"]
     row_names = ["A", "B", "C"]
 
-    table_text = format_table(data, column_names, row_names, index_header = r"行数\属性")
+    table_text = format_table(data, column_names, row_names, index_header = r"行数\属性", align="center")
     logging.info(f"{'Test data':<11}: {data}")
     logging.info(f"{'Test output':<11}:\n{table_text}")
