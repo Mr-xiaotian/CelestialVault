@@ -610,11 +610,10 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
             max_file_num = file_num
             max_file_key = (hash_value, file_size)
 
-        max_name_len = max(wcswidth(str(file)) for file in file_list)
         readable_size = bytes_to_human_readable(file_size)
-        for file in file_list:
-            report.append(f" - {str(file):<{max_name_len - (wcswidth(str(file))-len(str(file)))}} (Size: {readable_size})")
-        report.append("")
+        data = [(str(file), readable_size) for file in file_list]
+        table_text = format_table(data, column_names=["File", "Size"])
+        report.append(table_text + "\n")
 
     hash_value, file_size = max_file_key
     report.append(f"Total size of duplicate files: {bytes_to_human_readable(total_size)}")

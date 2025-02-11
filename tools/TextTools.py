@@ -371,7 +371,7 @@ def get_lcs(str1: str, str2: str) -> List[str]:
     找出两个字符串的最大相似部分。
     返回一个包含最大相似部分的字符串，如 "1-234-6"。
     """
-    def update_common(common_parts, current_part):
+    def update_common(common_parts: list, current_part):
         if current_part:
             common_parts.append(''.join(reversed(current_part)))
         return common_parts, []  # 重置 current_part 为一个空列表
@@ -529,6 +529,7 @@ def format_table(
     separator = "+" + "+".join(["-" * (width + 2) for width in col_widths]) + "+"
     header = "| " + " | ".join([f"{align_func(name, col_widths[i])}" for i, name in enumerate(column_names)]) + " |"
     
+    # 生成行
     rows_list = []
     for row in formatted_data:
         rows_list.append("| " + " | ".join([f"{align_func(str(row[i]), col_widths[i])}" for i in range(num_columns)]) + " |")
