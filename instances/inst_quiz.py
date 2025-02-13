@@ -3,9 +3,10 @@ import ipywidgets as widgets
 from IPython.display import display, clear_output
 
 class MultiplicationQuiz:
-    def __init__(self, n, m):
-        self.n = max(1, n)  # 处理 n=0 的情况
-        self.m = max(1, m)  # 处理 m=0 的情况
+    def __init__(self, digit_num, mode: list = ["random"]):
+        self.digit_num = max(1, digit_num)
+        self.mode = mode
+
         self.num1, self.num2 = self.generate_problem()
         self.score = 0
         self.total_questions = 0
@@ -28,9 +29,51 @@ class MultiplicationQuiz:
         display(self.question_label, self.answer_input, self.check_button, self.next_button, self.exit_button, self.output)
 
     def generate_problem(self):
-        """生成新的乘法题目"""
-        num1 = random.randint(10**(self.n-1), 10**self.n - 1)
-        num2 = random.randint(10**(self.m-1), 10**self.m - 1)
+        """根据模式生成不同的乘法题目"""
+        problem_list = []
+        if "square_with_5" in self.mode:
+            problem_list.append(self.generate_square_with_5())
+        if "varied_digit_sum_10" in self.mode:
+            problem_list.append(self.generate_varied_digit_sum_10_multiplication())
+        if "fixed_digit_sum_10" in self.mode:
+            problem_list.append(self.generate_fixed_digit_sum_10_multiplication())
+        if "random" in self.mode:
+            problem_list.append(self.generate_random_problem())
+
+        return random.choice(problem_list)
+    
+    def generate_square_with_5(self):
+        """生成一个两位数的平方，个位数为5"""
+        ten_place = random.randint(1, 10**(self.digit_num-1) - 1)
+        num = ten_place * 10 + 5
+        return num, num
+
+    def generate_varied_digit_sum_10_multiplication(self):
+        """生成个位数相加为10的数的乘积题目"""
+        ten_place = random.randint(1, 10**(self.digit_num-1) - 1)
+
+        tens1 = random.randint(1, 9)
+        num1 = ten_place * 10 + tens1 # 例如 14, 26, 37, ...
+
+        tens2 = 10 - tens1
+        num2 = ten_place * 10 + tens2 # 例如 16, 24, 33, ...
+        return num1, num2
+
+    def generate_fixed_digit_sum_10_multiplication(self):
+        """生成十位数相加为10的数的乘积题目"""
+        one_place = random.randint(1, 9)
+
+        tens1 = random.randint(1, 9)
+        num1 = tens1 * 10 + one_place  # 例如14, 26, 37, ...
+        
+        tens2 = 10 - tens1
+        num2 = tens2 * 10 + one_place  # 例如94, 86, 77, ...
+        return num1, num2
+
+    def generate_random_problem(self):
+        """生成随机乘法题目"""
+        num1 = random.randint(1, 10**self.digit_num - 1)
+        num2 = random.randint(1, 10**self.digit_num - 1)
         return num1, num2
 
     def check_answer(self, _):
