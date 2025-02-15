@@ -1,11 +1,12 @@
 import random, re
 import ipywidgets as widgets
+from typing import Callable, Tuple, Dict, List
 from IPython.display import display, clear_output
 
 class MultiplicationQuiz:
-    def __init__(self, digit_num, mode: list = ["random"]):
+    def __init__(self, digit_num, modes: list = ["random"]):
         self.digit_num = max(1, digit_num)
-        self.mode = mode
+        self.modes: List[str] = modes
 
         self.num1, self.num2 = self.generate_problem()
         self.score = 0
@@ -31,28 +32,30 @@ class MultiplicationQuiz:
     def generate_problem(self):
         """根据模式生成不同的乘法题目"""
         problem_list = []
-        if "square" in self.mode:
+        for mode in self.modes:
+            if mode.startswith("multiply"):
+                multiplicand = int(re.search(r'\d+', mode).group())
+                problem_list.append(self.generate_multiply_num(multiplicand))
+            elif mode.startswith("nearby"):
+                near_num = near_num = int(re.search(r'\d+', mode).group())
+                problem_list.append(self.generate_nearby(near_num))
+
+        if "square" in self.modes:
             problem_list.append(self.generate_square())
-        if "square_with_5" in self.mode:
+        if "square_with_5" in self.modes:
             problem_list.append(self.generate_square_with_5())
-        if "varied_digit_sum_10" in self.mode:
+        if "varied_digit_sum_10" in self.modes:
             problem_list.append(self.generate_varied_digit_sum_10_multiplication())
-        if "fixed_digit_sum_10" in self.mode:
+        if "fixed_digit_sum_10" in self.modes:
             problem_list.append(self.generate_fixed_digit_sum_10_multiplication())
-        if 'multiply' in self.mode:
-            multiplicand = re.match(r'\d+', self.mode).group()
-            problem_list.append(self.generate_multiply_num(multiplicand))
-        if "nearby" in self.mode:
-            near_num = re.match(r'\d+', self.mode).group()
-            problem_list.append(self.generate_nearby(near_num))
-        if "random" in self.mode:
+        if "random" in self.modes or not problem_list:
             problem_list.append(self.generate_random_problem())
 
         return random.choice(problem_list)
     
     def generate_nearby(self, near_num):
         near_0 = random.randint(-9, 9)
-        near_1 = near_num + near_0
+        near_1 = random.randint(-9, 9)
         return near_num + near_0, near_num + near_1
     
     def generate_multiply_num(self, multiplicand):
@@ -66,7 +69,7 @@ class MultiplicationQuiz:
     
     def generate_square_with_5(self):
         """生成一个两位数的平方，个位数为5"""
-        ten_place = random.randint(1, 10**(self.digit_num-1) - 1)
+        ten_place = random.randint(1, 10**(self.digit_num-1) - 1) if self.digit_num > 1 else 0
         num = ten_place * 10 + 5
         return num, num
 
@@ -82,12 +85,15 @@ class MultiplicationQuiz:
 
     def generate_fixed_digit_sum_10_multiplication(self):
         """生成十位数相加为10的数的乘积题目"""
-        one_place = random.randint(1, 9)
-        ten_place_0 = random.randint(1, 9)
-        ten_place_1 = 10 - ten_place_0
-
-        num1 = ten_place_0 * 10 + one_place  # 例如14, 26, 37, ...
-        num2 = ten_place_1 * 10 + one_place  # 例如94, 86, 77, ...
+        if self.digit_num < 2:
+            return self.generate_random_problem()
+        
+        higher_digits = random.randint(0, 10**(self.digit_num-2)-1)
+        ten_place0 = random.randint(1,9)
+        ten_place1 = 10 - ten_place0
+        one_place = random.randint(0,9)
+        num1 = higher_digits * 100 + ten_place0 * 10 + one_place
+        num2 = higher_digits * 100 + ten_place1 * 10 + one_place
         return num1, num2
 
     def generate_random_problem(self):
@@ -139,7 +145,10 @@ class MultiplicationQuiz:
         with self.output:
             clear_output(wait=True)
             print(f"🎯 训练结束！\n最终得分：{self.score}/{self.total_questions}（正确率：{accuracy:.2f}%）")
-            print("历史记录：", self.history)
+            print("历史记录：")
+            for q, ans, correct in self.history:
+                status = "✅" if correct else "❌"
+                print(f"{status} {q} 正确答案：{ans}")
         self.question_label.value = "日积跬步 × 日行不缀 = ?"
         self.answer_input.disabled = True
         self.check_button.disabled = True
