@@ -48,6 +48,8 @@ class MultiplicationQuiz:
             problem_list.append(self.generate_varied_digit_sum_10_multiplication())
         if "fixed_digit_sum_10" in self.modes:
             problem_list.append(self.generate_fixed_digit_sum_10_multiplication())
+        if "square_difference" in self.modes:
+            problem_list.append(self.generate_square_difference_multiplication())
         if "random" in self.modes or not problem_list:
             problem_list.append(self.generate_random_problem())
 
@@ -68,19 +70,21 @@ class MultiplicationQuiz:
         return num, num
     
     def generate_square_with_5(self):
-        """生成一个两位数的平方，个位数为5"""
+        """生成一个数的平方，个位数为5"""
         ten_place = random.randint(1, 10**(self.digit_num-1) - 1) if self.digit_num > 1 else 0
         num = ten_place * 10 + 5
         return num, num
 
     def generate_varied_digit_sum_10_multiplication(self):
         """生成个位数相加为10的数的乘积题目"""
-        ten_place = random.randint(1, 10**(self.digit_num-1) - 1)
+        if self.digit_num < 2:
+            return self.generate_random_problem()  # 避免个位数情况
+        
+        ten_place = random.randint(1, 10**(self.digit_num - 2) - 1)  # 确保不会超出位数范围
         one_place_0 = random.randint(1, 9)
         one_place_1 = 10 - one_place_0
-
-        num1 = ten_place * 10 + one_place_0 # 例如 14, 26, 37, ...
-        num2 = ten_place * 10 + one_place_1 # 例如 16, 24, 33, ...
+        num1 = ten_place * 10 + one_place_0
+        num2 = ten_place * 10 + one_place_1
         return num1, num2
 
     def generate_fixed_digit_sum_10_multiplication(self):
@@ -95,6 +99,19 @@ class MultiplicationQuiz:
         num1 = higher_digits * 100 + ten_place0 * 10 + one_place
         num2 = higher_digits * 100 + ten_place1 * 10 + one_place
         return num1, num2
+    
+    def generate_square_difference_multiplication(self):
+        """生成形如 (a+b)(a-b) 的速算乘法题"""
+        # 生成以 5 或 0 结尾的数
+        base = random.randint(1, 10**(self.digit_num - 1)) * 10  # 生成 xx0
+        if random.choice([True, False]):
+            base += 5  # 50% 机会变成 xx5
+
+        # 生成 1-9 的随机数
+        diff = random.randint(1, 9)
+
+        # 返回 (a+b) 和 (a-b)
+        return base + diff, base - diff
 
     def generate_random_problem(self):
         """生成随机乘法题目"""
@@ -145,10 +162,15 @@ class MultiplicationQuiz:
         with self.output:
             clear_output(wait=True)
             print(f"🎯 训练结束！\n最终得分：{self.score}/{self.total_questions}（正确率：{accuracy:.2f}%）")
-            print("历史记录：")
-            for q, ans, correct in self.history:
-                status = "✅" if correct else "❌"
-                print(f"{status} {q} 正确答案：{ans}")
+            history_table = widgets.HTML(
+                "<table><tr><th>题目</th><th>正确答案</th><th>状态</th></tr>" +
+                "".join(
+                    f"<tr><td>{q}</td><td>{ans}</td><td>{'✅' if correct else '❌'}</td></tr>"
+                    for q, ans, correct in self.history
+                ) +
+                "</table>"
+            )
+            display(history_table)
         self.question_label.value = "日积跬步 × 日行不缀 = ?"
         self.answer_input.disabled = True
         self.check_button.disabled = True
