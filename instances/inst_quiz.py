@@ -58,11 +58,13 @@ class MultiplicationQuiz:
         return random.choice(problem_list)
     
     def generate_nearby(self, near_num):
-        near_0 = random.randint(-9, 9)
-        near_1 = random.randint(-9, 9)
+        """生成一个接近指定数字的乘法题目"""
+        near_0 = random.choice(list(range(-9, 0)) + list(range(1, 10)))
+        near_1 = random.choice(list(range(-9, 0)) + list(range(1, 10)))
         return near_num + near_0, near_num + near_1
     
     def generate_multiply_num(self, multiplicand):
+        """生成一个乘数为指定数字的乘法题目"""
         num = random.randint(1, 10**self.digit_num - 1)
         return num, multiplicand
     
