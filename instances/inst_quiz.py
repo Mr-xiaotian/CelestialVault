@@ -50,6 +50,8 @@ class MultiplicationQuiz:
             problem_list.append(self.generate_fixed_digit_sum_10_multiplication())
         if "square_difference" in self.modes:
             problem_list.append(self.generate_square_difference_multiplication())
+        if "repeated_number_9" in self.modes:
+            problem_list.append(self.generate_repeated_number_times_9())
         if "random" in self.modes or not problem_list:
             problem_list.append(self.generate_random_problem())
 
@@ -112,6 +114,17 @@ class MultiplicationQuiz:
 
         # 返回 (a+b) 和 (a-b)
         return base + diff, base - diff
+    
+    def generate_repeated_number_times_9(self):
+        """生成重复数字乘以 9 的乘法题"""
+        if self.digit_num < 2:
+            return random.randint(1, 9), 9
+        
+        repeat_digit = random.randint(1, 9)  # 选择 1-9 的重复数字
+        repeat_count = random.randint(2, self.digit_num)  # 选择重复次数（例如 2 到 digit_num 位）
+        
+        num = int(str(repeat_digit) * repeat_count)  # 生成重复数，如 2222, 999, 66
+        return num, 9
 
     def generate_random_problem(self):
         """生成随机乘法题目"""
