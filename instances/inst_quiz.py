@@ -65,17 +65,17 @@ class MultiplicationQuiz:
     
     def generate_multiply_num(self, multiplicand):
         """生成一个乘数为指定数字的乘法题目"""
-        num = random.randint(1, 10**self.digit_num - 1)
+        num = random.randint(10**(self.digit_num-1), 10**self.digit_num - 1)
         return num, multiplicand
     
     def generate_square(self):
-        """生成一个两位数的平方"""
-        num = random.randint(10, 10**self.digit_num - 1) if self.digit_num > 1 else random.randint(1, 9)
+        """生成一个数的平方"""
+        num = random.randint(10**(self.digit_num-1), 10**self.digit_num - 1) if self.digit_num > 1 else random.randint(1, 9)
         return num, num
     
     def generate_square_with_5(self):
         """生成一个数的平方，个位数为5"""
-        ten_place = random.randint(1, 10**(self.digit_num-1) - 1) if self.digit_num > 1 else 0
+        ten_place = random.randint(10**(self.digit_num-2), 10**(self.digit_num-1) - 1) if self.digit_num > 1 else 0
         num = ten_place * 10 + 5
         return num, num
 
@@ -84,7 +84,7 @@ class MultiplicationQuiz:
         if self.digit_num < 2:
             return self.generate_random_problem()  # 避免个位数情况
         
-        ten_place = random.randint(1, 10**(self.digit_num - 2) - 1)  # 确保不会超出位数范围
+        ten_place = random.randint(10**(self.digit_num-2), 10**(self.digit_num-1) - 1)  # 确保不会超出位数范围
         one_place_0 = random.randint(1, 9)
         one_place_1 = 10 - one_place_0
         num1 = ten_place * 10 + one_place_0
@@ -96,18 +96,17 @@ class MultiplicationQuiz:
         if self.digit_num < 2:
             return self.generate_random_problem()
         
-        higher_digits = random.randint(0, 10**(self.digit_num-2)-1)
         ten_place0 = random.randint(1,9)
         ten_place1 = 10 - ten_place0
         one_place = random.randint(0,9)
-        num1 = higher_digits * 100 + ten_place0 * 10 + one_place
-        num2 = higher_digits * 100 + ten_place1 * 10 + one_place
+        num1 = ten_place0 * 10 + one_place
+        num2 = ten_place1 * 10 + one_place
         return num1, num2
     
     def generate_square_difference_multiplication(self):
         """生成形如 (a+b)(a-b) 的速算乘法题"""
         # 生成以 5 或 0 结尾的数
-        base = random.randint(1, 10**(self.digit_num - 1)) * 10  # 生成 xx0
+        base = random.randint(10**(self.digit_num-2), 10**(self.digit_num - 1)) * 10  # 生成 xx0
         if random.choice([True, False]):
             base += 5  # 50% 机会变成 xx5
 
@@ -123,7 +122,7 @@ class MultiplicationQuiz:
             return random.randint(1, 9), 9
         
         repeat_digit = random.randint(1, 9)  # 选择 1-9 的重复数字
-        repeat_count = random.randint(2, self.digit_num)  # 选择重复次数（例如 2 到 digit_num 位）
+        repeat_count = random.randint(self.digit_num-1, self.digit_num)  # 选择重复次数（例如 2 到 digit_num 位）
         
         num = int(str(repeat_digit) * repeat_count)  # 生成重复数，如 2222, 999, 66
         return num, 9
