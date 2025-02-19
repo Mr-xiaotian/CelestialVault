@@ -119,13 +119,14 @@ class MultiplicationQuiz:
     def generate_repeated_number_times_9(self):
         """生成重复数字乘以 9 的乘法题"""
         if self.digit_num < 2:
-            return random.randint(1, 9), 9
+            return random.randint(2, 9), 9
         
-        repeat_digit = random.randint(1, 9)  # 选择 1-9 的重复数字
-        repeat_count = random.randint(self.digit_num-1, self.digit_num)  # 选择重复次数（例如 2 到 digit_num 位）
+        repeat_digit = random.randint(2, 9)  # 选择 2-9 的重复数字
+        repeat_count = random.randint(self.digit_num, self.digit_num + 2)  # 重复次数为位数或位数加一
         
-        num = int(str(repeat_digit) * repeat_count)  # 生成重复数，如 2222, 999, 66
-        return num, 9
+        repeat_num = int(str(repeat_digit) * repeat_count)  # 生成重复数，如 2222, 999, 66
+        repeat_9 = int("9" * repeat_count)  # 生成重复数乘以 9，如 22228, 9999, 6666
+        return random.choice([[repeat_num, 9], [repeat_9, repeat_digit]])
 
     def generate_random_problem(self):
         """生成随机乘法题目"""
