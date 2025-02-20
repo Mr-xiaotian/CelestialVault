@@ -39,17 +39,18 @@ class MultiplicationQuiz:
             elif mode.startswith("nearby"):
                 near_num = near_num = int(re.search(r'\d+', mode).group())
                 problem_list.append(self.generate_nearby(near_num))
+            elif mode.startswith("square_difference"):
+                end_num = int(re.search(r'\d+', mode).group())
+                problem_list.append(self.generate_square_difference(end_num))
 
         if "square" in self.modes:
             problem_list.append(self.generate_square())
         if "square_with_5" in self.modes:
             problem_list.append(self.generate_square_with_5())
         if "varied_digit_sum_10" in self.modes:
-            problem_list.append(self.generate_varied_digit_sum_10_multiplication())
+            problem_list.append(self.generate_varied_digit_sum_10())
         if "fixed_digit_sum_10" in self.modes:
-            problem_list.append(self.generate_fixed_digit_sum_10_multiplication())
-        if "square_difference" in self.modes:
-            problem_list.append(self.generate_square_difference_multiplication())
+            problem_list.append(self.generate_fixed_digit_sum_10())
         if "repeated_number_9" in self.modes:
             problem_list.append(self.generate_repeated_number_times_9())
         if "random" in self.modes or not problem_list:
@@ -79,7 +80,7 @@ class MultiplicationQuiz:
         num = ten_place * 10 + 5
         return num, num
 
-    def generate_varied_digit_sum_10_multiplication(self):
+    def generate_varied_digit_sum_10(self):
         """生成个位数相加为10的数的乘积题目"""
         if self.digit_num < 2:
             return self.generate_random_problem()  # 避免个位数情况
@@ -91,7 +92,7 @@ class MultiplicationQuiz:
         num2 = ten_place * 10 + one_place_1
         return num1, num2
 
-    def generate_fixed_digit_sum_10_multiplication(self):
+    def generate_fixed_digit_sum_10(self):
         """生成十位数相加为10的数的乘积题目"""
         if self.digit_num < 2:
             return self.generate_random_problem()
@@ -103,12 +104,11 @@ class MultiplicationQuiz:
         num2 = ten_place1 * 10 + one_place
         return num1, num2
     
-    def generate_square_difference_multiplication(self):
+    def generate_square_difference(self, end_num):
         """生成形如 (a+b)(a-b) 的速算乘法题"""
         # 生成以 5 或 0 结尾的数
         base = random.randint(10**(self.digit_num-2), 10**(self.digit_num - 1)) * 10  # 生成 xx0
-        if random.choice([True, False]):
-            base += 5  # 50% 机会变成 xx5
+        base += end_num 
 
         # 生成 1-9 的随机数
         diff = random.randint(1, 9)
