@@ -341,32 +341,35 @@ def print_directory_structure(folder_path: str='.', exclude_dirs: list=None, exc
     structure_list = [f"📁 {folder_path.name}/    ({reable_folder_size})"] + structure_list
     print('\n'.join(structure_list))
 
-def compare_structure(dir1, dir2, compare_common_file=False):
+def compare_structure(dir1, dir2, exclude_dirs: list=None, exclude_exts: list=None, compare_common_file=False):
     """
     比较两个文件夹的结构，并打印出仅在一个文件夹中存在的文件或文件夹。
     
     :param dir1: 第一个文件夹路径
     :param dir2: 第二个文件夹路径
+    :param exclude_dirs: 要排除的目录列表，默认为空列表
+    :param exclude_exts: 要排除的文件扩展名列表，默认为空列表
     :param compare_common_file: 是否比较两个文件夹中相同文件的大小
     """
     dir1 = Path(dir1)
     dir2 = Path(dir2)
 
+    exclude_dirs = exclude_dirs or []
+    exclude_exts = exclude_exts or []
+
     # 检查目录是否有效
     if not dir1.is_dir() or not dir2.is_dir():
         raise ValueError(f"输入路径必须是有效的文件夹: {dir1} 或 {dir2}")
 
-    diff = {
+    diff_dir = {
         'only_in_dir1': [],
         'only_in_dir2': [],
         'different_files': []
     }
 
-    dir1_diff_size = 0
-    dir2_diff_size = 0
+    diff_size = {'dir1': 0, 'dir2': 0}
 
     def get_structure_list(d1: Path, d2: Path, indent):
-        nonlocal dir1_diff_size, dir2_diff_size
         # 获取文件和文件夹
         try:
             d1_files = set(os.listdir(d1))
@@ -388,24 +391,28 @@ def compare_structure(dir1, dir2, compare_common_file=False):
             if item in only_in_d1:
                 item_path = d1 / item
                 location = dir1
-                diff['only_in_dir1'].append(item_path.relative_to(dir1))
+                diff_dir['only_in_dir1'].append(item_path.relative_to(dir1))
             else:
                 item_path = d2 / item
                 location = dir2
-                diff['only_in_dir2'].append(item_path.relative_to(dir2))
+                diff_dir['only_in_dir2'].append(item_path.relative_to(dir2))
 
             if item_path.is_dir():
+                if item in exclude_dirs:
+                    continue
                 item_size = get_folder_size(item_path)
                 print_folder_list.append(f"{indent}📁 [{location}] {item} ({bytes_to_human_readable(item_size)})")
             elif item_path.is_file():
+                if item_path.suffix in exclude_exts:
+                    continue
                 item_size = get_file_size(item_path)
                 icon = FILE_ICONS.get(item_path.suffix, FILE_ICONS['default'])
                 print_file_list.append(f"{indent}{icon} [{location}] {item} ({bytes_to_human_readable(item_size)})")
 
             if item in only_in_d1:
-                dir1_diff_size += item_size
+                diff_size['dir1'] += item_size
             else:
-                dir2_diff_size += item_size
+                diff_size['dir2'] += item_size
 
         # 打印共同项目
         for item in common_files:
@@ -413,6 +420,8 @@ def compare_structure(dir1, dir2, compare_common_file=False):
 
             # 打印文件夹与文件夹的比较结果
             if item_path1.is_dir() and item_path2.is_dir():
+                if item in exclude_dirs:
+                    continue
                 subfolder_print_list = get_structure_list(item_path1, item_path2, indent + '    ')
                 if subfolder_print_list:
                     print_folder_list.append(f"{indent}📁 {item}/")
@@ -424,27 +433,29 @@ def compare_structure(dir1, dir2, compare_common_file=False):
 
             # 打印文件与文件的比较结果
             elif compare_common_file and item_path1.is_file() and item_path2.is_file():
+                if item_path1.suffix in exclude_exts or item_path2.suffix in exclude_exts:
+                    continue
                 item_path1_size = get_file_size(item_path1)
                 item_path2_size = get_file_size(item_path2)
                 if item_path1_size != item_path2_size:
-                    dir1_diff_size += item_path1_size
-                    dir2_diff_size += item_path2_size
+                    diff_size['dir1'] += item_size
+                    diff_size['dir2'] += item_size
 
                     icon = FILE_ICONS.get(item_path1.suffix, FILE_ICONS['default'])
                     print_file_list.append(f"{indent}{icon} [{dir1}] {item} ({bytes_to_human_readable(item_path1_size)})")
                     print_file_list.append(f"{indent}{icon} [{dir2}] {item} ({bytes_to_human_readable(item_path2_size)})")
-                    diff['different_files'].append(item_path1.relative_to(dir1))
+                    diff_dir['different_files'].append(item_path1.relative_to(dir1))
 
         return print_folder_list + print_file_list
     
     structure_list = get_structure_list(dir1, dir2, '')
-    dir1_data = [dir1, bytes_to_human_readable(dir1_diff_size)]
-    dir2_data = [dir2, bytes_to_human_readable(dir2_diff_size)]
+    dir1_data = [dir1, bytes_to_human_readable(diff_size['dir1'])]
+    dir2_data = [dir2, bytes_to_human_readable(diff_size['dir2'])]
     table_text = format_table([dir1_data, dir2_data], column_names = ["Directory", "Diff Size"])
 
     print('\n'.join(structure_list))
     print('\n' + table_text)
-    return diff
+    return diff_dir
 
 def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str='a'):
     """
