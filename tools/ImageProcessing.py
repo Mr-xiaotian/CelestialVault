@@ -26,14 +26,19 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path = None, max
 
     :param image_path: 包含JPEG图片的文件夹路径。
     :param pdf_path: 输出的PDF文件路径。
+    :param max_width: 图片的最大宽度，如果为None，则使用图片中最大宽度。
     :return: None
     """
-    def extract_number(file_name: Path) -> int:
+    def extract_number(file_path: Path) -> tuple:
         """
-        从文件名中提取数字，用于排序。
+        提取文件路径中的文件夹名称和文件名中的数字，作为排序依据。
+        一级排序：文件夹名称
+        二级排序：文件名中的数字
         """
-        matches = re.findall(r'\d+', file_name.name)
-        return int(''.join(matches)) if matches else float('inf')
+        folder_name = file_path.parent.name
+        matches = re.findall(r'\d+', file_path.name)
+        number = int(''.join(matches)) if matches else float('inf')
+        return (folder_name, number)
     
     from constants import IMG_SUFFIXES
     from tools.FileOperations import folder_to_file_path
