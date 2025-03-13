@@ -34,17 +34,17 @@ x-zse-86: 1.0_aXNqFh9q2_NYUhtqM8xqQQ90rM2x27F0ZwFBHDUqS_SX
 '''
 
 #            R    G    B
-GRAY     = (100, 100, 100)
-NAVYBLUE = ( 60,  60, 100)
-WHITE    = (240, 240, 240)
-RED      = (255,   0,   0)
-GREEN    = (  0, 255,   0)
-BLUE     = (  0,   0, 255)
-YELLOW   = (255, 255,   0)
-ORANGE   = (255, 128,   0)
-PURPLE   = (255,   0, 255)
-CYAN     = (  0, 255, 255)
-BLACK    = (  0,   0,   0)
+GRAY      = (100, 100, 100)
+NAVYBLUE  = ( 60,  60, 100)
+WHITE     = (240, 240, 240)
+RED       = (255,   0,   0)
+GREEN     = (  0, 255,   0)
+BLUE      = (  0,   0, 255)
+YELLOW    = (255, 255,   0)
+ORANGE    = (255, 128,   0)
+PURPLE    = (255,   0, 255)
+CYAN      = (  0, 255, 255)
+BLACK     = (  0,   0,   0)
 DARKGREEN = (  0, 155,   0)
 DARKGRAY  = ( 40,  40,  40)
 

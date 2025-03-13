@@ -464,13 +464,13 @@ def find_nth_occurrence(target_str: str, similar_str: str, occurrence: int) -> t
             return (start_index, start_index + len(similar_str))  # 返回坐标
 
 def format_table(
-    data: list, 
-    column_names: list = None, 
-    row_names: list = None, 
-    index_header: str = "#", 
-    fill_value: str = 'N/A', 
-    align: str = "left",
-) -> str:
+        data: list, 
+        column_names: list = None, 
+        row_names: list = None, 
+        index_header: str = "#", 
+        fill_value: str = 'N/A', 
+        align: str = "left",
+    ) -> str:
     """
     格式化并打印表格。
 
