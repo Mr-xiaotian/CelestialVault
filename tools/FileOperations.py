@@ -186,7 +186,7 @@ def compress_folder(folder_path: str | Path, execution_mode: str = 'thread') -> 
     rules.update({suffix: (compress_video, rename_mp4) for suffix in VIDEO_SUFFIXES})
     # rules.update({'.pdf': (compress_pdf,rename_pdf)})
 
-    return handle_folder(folder_path, rules, execution_mode, progress_desc='Compressing folder')
+    return handle_folder(folder_path, rules, execution_mode, progress_desc='Compressing Folder')
 
 def unzip_zip_file(zip_file: Path, destination: Path):
     """
