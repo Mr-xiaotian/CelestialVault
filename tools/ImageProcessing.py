@@ -340,6 +340,7 @@ def convert_svg_to_png(svg_path: str, png_path: str) -> str:
     :param svg_path: SVG 文件的路径
     :param png_path: PNG 文件的路径
     """
-    from cairosvg import svg2png
+    # from cairosvg import svg2png
     # 使用 cairosvg 将 svg 转换为 png
-    svg2png(url=str(svg_path), write_to=str(png_path))
+    # svg2png(url=str(svg_path), write_to=str(png_path))
+    pass
