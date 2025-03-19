@@ -109,7 +109,7 @@ def merge_pdfs_in_order(folder_path: str | Path) -> list:
 
     return pdf_files
 
-def resize_pdf_to_max_width(pdf_path: str | Path, output_path: str | Path):
+def resize_pdf_to_max_width(pdf_path: str | Path, output_path: str | Path, max_width: int = None):
     """
     将 PDF 文件中的每一页的宽度调整为最大宽度，保持纵横比不变。
 
@@ -117,50 +117,72 @@ def resize_pdf_to_max_width(pdf_path: str | Path, output_path: str | Path):
     :param output_path: 输出 PDF 文件路径
     :return: None
     """
+    def get_max_width(doc):
+        """
+        获取 PDF 文件中所有页面的最大宽度。
+        """
+        return max(page.rect.width for page in doc)
+    
     pdf_path = Path(pdf_path)
     output_path = Path(output_path)
 
     # 检查输出文件是否已存在，避免意外覆盖
     if output_path.exists():
-        print(f"错误：文件 '{output_path}' 已存在。使用 overwrite=True 参数可覆盖原文件。")
-        return
+        raise FileExistsError(f"错误：文件 '{output_path}' 已存在。")
+    
+    # 确保输出目录存在
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # 打开 PDF 文件, 获取 PDF 中每一页的最大宽度
-    doc = fitz.open(pdf_path)
-    max_width = max(page.mediabox.width for page in doc)
+    with fitz.open(pdf_path) as doc, fitz.open() as output_pdf:
+        max_width = max_width or get_max_width(doc)
 
-    # 创建一个新的 PDF 文档用于存储调整后的页面
-    output_pdf = fitz.open()
+        # 第二次遍历，缩放每一页
+        for page in doc:
+            original_width, original_height = page.rect.width, page.rect.height
+            scale_ratio = max_width / original_width
+            new_height = original_height * scale_ratio
 
-    # 遍历 PDF 每一页并缩放
-    for page in doc:
-        # 当前页的原始宽度和高度
-        original_width = page.mediabox.width
-        original_height = page.mediabox.height
+            # 创建新页面并渲染
+            new_page = output_pdf.new_page(width=max_width, height=new_height)
+            new_page.show_pdf_page(
+                new_page.rect,
+                doc,
+                page.number,
+                fitz.Matrix(scale_ratio, scale_ratio)
+            )
 
-        # 计算缩放比例，确保纵横比不变
-        scale_ratio = max_width / original_width
-        new_height = original_height * scale_ratio
+        # 保存调整后的 PDF
+        output_pdf.save(output_path)
 
-        # 创建一个新页面，宽度为最大宽度，高度按比例缩放
-        new_page = output_pdf.new_page(width=max_width, height=new_height)
+    return max_width
 
-        # 使用 `show_pdf_page()` 按比例将原始页面绘制到新页面上
-        new_page.show_pdf_page(
-            new_page.rect,  # 目标矩形区域
-            doc,            # 原始 PDF
-            page.number,    # 当前页码
-            fitz.Matrix(scale_ratio, scale_ratio)  # 缩放矩阵
-        )
+def get_max_pdf_width(folder_path: str | Path) -> float:
+    """
+    检测指定文件夹中所有 PDF 文件中每一页的最大宽度。
 
-    # 保存调整后的 PDF 文件
-    output_pdf.save(output_path)
+    :param folder_path: 输入的文件夹路径
+    :return: 所有 PDF 文件中每一页的最大宽度
+    """
+    folder_path = Path(folder_path)
+    if not folder_path.is_dir():
+        raise NotADirectoryError(f"错误：'{folder_path}' 不是一个有效的文件夹路径。")
 
-    # 关闭文件
-    doc.close()
-    output_pdf.close()
+    max_width = 0.0
+
+    # 遍历文件夹中的所有 PDF 文件
+    for pdf_file in folder_path.rglob("*.pdf"):
+        try:
+            with fitz.open(pdf_file) as doc:
+                for page in doc:
+                    max_width = max(max_width, page.rect.width)
+        except Exception as e:
+            print(f"警告：处理文件 '{pdf_file}' 时发生错误: {e}")
+
+    return max_width
 
 def resize_pdfs(folder_path: Path, execution_mode: str = 'serial'): 
+    def resize_pdf(pdf_path: Path, output_path: Path) -> Path:
+        return resize_pdf_to_max_width(pdf_path, output_path, max_pdf_width)
     def rename_pdf(file_path: Path) -> Path:
         name = file_path.stem.replace("_resized", "")
         new_name = f"{name}_resized.pdf"
@@ -168,5 +190,6 @@ def resize_pdfs(folder_path: Path, execution_mode: str = 'serial'):
     
     from tools.FileOperations import handle_folder
 
-    rules = {'.pdf': (resize_pdf_to_max_width, rename_pdf)}
+    max_pdf_width = get_max_pdf_width(folder_path)
+    rules = {'.pdf': (resize_pdf, rename_pdf)}
     return handle_folder(folder_path, rules, execution_mode, progress_desc='Resize PDFs')

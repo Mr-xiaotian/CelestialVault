@@ -3,7 +3,7 @@ import hashlib
 import zipfile, rarfile, tarfile, py7zr
 from pathlib import Path
 from tqdm import tqdm
-from typing import Callable, Tuple, Dict, List
+from typing import Callable, Tuple, Dict, List, Any
 from collections import defaultdict
 from wcwidth import wcswidth
 from constants import FILE_ICONS
@@ -113,23 +113,25 @@ def create_folder(path: str | Path) -> Path:
 
     return path
 
-def handle_file(source: Path, destination: Path, action: Callable[[Path, Path], None]):
+def handle_file(source: Path, destination: Path, action: Callable[[Path, Path], Any]):
     """
     处理文件，如果目标文件不存在则执行指定的操作。
     
     :param source: 源文件路径。
     :param destination: 目标文件路径。
     :param action: 处理文件的函数或方法。
+    :return: 如果目标文件已存在，则返回 None；否则返回 action 的结果。
     """
     if destination.exists():
-        return
+        return f"{destination} already exists."
     
     # 判断 destination 是文件还是文件夹
     if destination.suffix:
         destination.parent.mkdir(parents=True, exist_ok=True)
     else:
         destination.mkdir(parents=True, exist_ok=True)
-    action(source, destination)
+    action_result = action(source, destination)
+    return action_result
 
 def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path, Path], None], Callable[[Path], Path]]], 
                   execution_mode: str = 'serial', progress_desc: str = "Processing files") -> Dict[Exception, List[Path]]:
