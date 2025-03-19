@@ -20,7 +20,7 @@ def compress_img(old_img_path: str | Path, new_img_path: str | Path):
     img = Image.open(old_img_path)
     img.save(new_img_path, optimize=True, quality=75)
 
-def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path = None):
+def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path = None, special_keywords: dict = None):
     """
     将指定文件夹中的JPEG图片组合成单个PDF文件。
 
@@ -28,29 +28,19 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path = None):
     :param pdf_path: 输出的PDF文件路径。
     :return: None
     """
-    def extract_number(file_path: Path) -> tuple:
-        """
-        提取文件路径中的文件夹名称和文件名中的数字，作为排序依据。
-        一级排序：文件夹名称
-        二级排序：文件名中的数字
-        """
-        folder_name = file_path.parent.name
-        matches = re.findall(r'\d+', file_path.name)
-        number = int(''.join(matches)) if matches else float('inf')
-        return (folder_name, number)
-    
     from constants import IMG_SUFFIXES
-    from tools.FileOperations import folder_to_file_path
+    from tools.FileOperations import folder_to_file_path, sort_by_folder_and_number
     # 转换路径为 Path 对象
     image_path = Path(image_path)
     pdf_path = folder_to_file_path(image_path, 'pdf') if pdf_path is None else Path(pdf_path)
+    special_keywords = special_keywords or {}
     
     if not image_path.is_dir():
         raise ValueError(f"The provided image path {image_path} is not a directory.")
     
     # 使用 rglob 查找所有图片路径
     image_paths = [p for p in image_path.rglob('*') if p.suffix in IMG_SUFFIXES]
-    image_paths = sorted(image_paths, key=extract_number)  # 按文件名中的数字排序
+    image_paths = sorted(image_paths, key=lambda path: sort_by_folder_and_number(path, special_keywords))  # 按文件名中的数字排序
 
     if not image_paths:
         raise ValueError(f"No images found in {image_path} with suffixes: \n{IMG_SUFFIXES}")

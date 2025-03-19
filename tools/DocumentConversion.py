@@ -73,18 +73,7 @@ def merge_pdfs_in_order(folder_path: str | Path) -> list:
     :param folder_path: 存放PDF文件的文件夹路径。
     :return : 拼接后的PDF文件路径。
     """
-    def extract_number(file_path: Path) -> tuple:
-        """
-        提取文件路径中的文件夹名称和文件名中的数字，作为排序依据。
-        一级排序：文件夹名称
-        二级排序：文件名中的数字
-        """
-        folder_name = file_path.parent.name
-        matches = re.findall(r'\d+', file_path.name)
-        number = [int(num) for num in matches] if matches else [float('inf')]
-        return (folder_name, *number)
-    
-    from tools.FileOperations import folder_to_file_path
+    from tools.FileOperations import folder_to_file_path, sort_by_folder_and_number
     # 创建一个PdfWriter对象，用于输出拼接后的PDF文件
     output_pdf = PyPDF2.PdfWriter()
     
@@ -93,10 +82,10 @@ def merge_pdfs_in_order(folder_path: str | Path) -> list:
     pdf_path = folder_to_file_path(folder_path, 'pdf')  # 拼接输出文件路径
     
     # 获取该文件夹下的所有PDF文件，并根据文件名中的数字进行排序
-    pdf_files = sorted(folder_path.glob('*.pdf'), key=extract_number)
+    pdf_files = sorted(folder_path.glob('*.pdf'), key=lambda path: sort_by_folder_and_number(path, {}))
 
     # 按照指定顺序依次合并PDF文件
-    for pdf_file in tqdm(pdf_files):
+    for pdf_file in tqdm(pdf_files, desc="Merging PDFs"):
         with open(pdf_file, 'rb') as f:
             pdf_reader = PyPDF2.PdfReader(f)
             for page in pdf_reader.pages:
@@ -105,7 +94,6 @@ def merge_pdfs_in_order(folder_path: str | Path) -> list:
     # 将输出对象中的内容写入到输出文件中
     with open(pdf_path, 'wb') as f:
         output_pdf.write(f)
-    print(f'PDF files from {folder_path.name} have been merged into {pdf_path}')
 
     return pdf_files
 
