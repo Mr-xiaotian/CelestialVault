@@ -363,13 +363,12 @@ def compare_structure(dir1, dir2, exclude_dirs: list=None, exclude_exts: list=No
     if not dir1.is_dir() or not dir2.is_dir():
         raise ValueError(f"输入路径必须是有效的文件夹: {dir1} 或 {dir2}")
 
+    diff_size = {'dir1': 0, 'dir2': 0}
     diff_dir = {
         'only_in_dir1': [],
         'only_in_dir2': [],
         'different_files': []
     }
-
-    diff_size = {'dir1': 0, 'dir2': 0}
 
     def get_structure_list(d1: Path, d2: Path, indent):
         # 获取文件和文件夹
@@ -393,11 +392,9 @@ def compare_structure(dir1, dir2, exclude_dirs: list=None, exclude_exts: list=No
             if item in only_in_d1:
                 item_path = d1 / item
                 location = dir1
-                diff_dir['only_in_dir1'].append(item_path.relative_to(dir1))
             else:
                 item_path = d2 / item
                 location = dir2
-                diff_dir['only_in_dir2'].append(item_path.relative_to(dir2))
 
             if item_path.is_dir():
                 if item in exclude_dirs:
@@ -413,8 +410,10 @@ def compare_structure(dir1, dir2, exclude_dirs: list=None, exclude_exts: list=No
 
             if item in only_in_d1:
                 diff_size['dir1'] += item_size
+                diff_dir['only_in_dir1'].append(item_path.relative_to(dir1))
             else:
                 diff_size['dir2'] += item_size
+                diff_dir['only_in_dir2'].append(item_path.relative_to(dir2))
 
         # 打印共同项目
         for item in common_files:
@@ -432,6 +431,7 @@ def compare_structure(dir1, dir2, exclude_dirs: list=None, exclude_exts: list=No
             # 打印文件夹与文件的混合情况
             elif (item_path1.is_file() and item_path2.is_dir()) or (item_path1.is_dir() and item_path2.is_file()):
                 print_file_list.append(f"{indent}{item} (one is a file, the other is a folder)")
+                diff_dir['different_files'].append(item_path1.relative_to(dir1))
 
             # 打印文件与文件的比较结果
             elif compare_common_file and item_path1.is_file() and item_path2.is_file():
@@ -440,12 +440,12 @@ def compare_structure(dir1, dir2, exclude_dirs: list=None, exclude_exts: list=No
                 item_path1_size = get_file_size(item_path1)
                 item_path2_size = get_file_size(item_path2)
                 if item_path1_size != item_path2_size:
-                    diff_size['dir1'] += item_size
-                    diff_size['dir2'] += item_size
-
                     icon = FILE_ICONS.get(item_path1.suffix, FILE_ICONS['default'])
                     print_file_list.append(f"{indent}{icon} [{dir1}] {item} ({bytes_to_human_readable(item_path1_size)})")
                     print_file_list.append(f"{indent}{icon} [{dir2}] {item} ({bytes_to_human_readable(item_path2_size)})")
+                    
+                    diff_size['dir1'] += item_size
+                    diff_size['dir2'] += item_size
                     diff_dir['different_files'].append(item_path1.relative_to(dir1))
 
         return print_folder_list + print_file_list

@@ -1,4 +1,4 @@
-import fitz, shutil, re
+import fitz, shutil
 import PyPDF2
 import subprocess
 from PIL import Image
