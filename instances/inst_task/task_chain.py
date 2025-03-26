@@ -1,6 +1,5 @@
 
 import multiprocessing
-from itertools import product
 from collections import defaultdict
 from queue import Queue as ThreadQueue
 from multiprocessing import Queue as MPQueue
@@ -8,7 +7,6 @@ from typing import List, Any, Dict
 from time import time
 from .task_manage import TaskManager
 from .task_support import TERMINATION_SIGNAL, task_logger, TaskError
-from tools.TextTools import format_table
 
 
 class TaskChain:
@@ -304,19 +302,19 @@ class TaskChain:
         stage_modes = ['serial', 'process']
         execution_modes = ['serial', 'thread']
         for stage_mode in stage_modes:
-            temp_list = []
+            time_list = []
             for execution_mode in execution_modes:
                 start_time = time()
                 self.set_chain_mode(stage_mode, execution_mode)
                 self.start_chain(task_list)
 
-                temp_list.append(time() - start_time)
+                time_list.append(time() - start_time)
                 final_result_dict.update(self.get_final_result_dict())
                 final_error_dict.update(self.get_final_error_dict())
                 failed_tasks += [task for task in self.get_failed_tasks() if task not in failed_tasks]
-            test_table_list.append(temp_list)
+            test_table_list.append(time_list)
 
-        results['Time table'] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = r"stage\execution")
+        results['Time table'] = (test_table_list, execution_modes, stage_modes, r"stage\execution")
         results['Final result dict'] = final_result_dict
         results['Final error dict'] = final_error_dict
         results['Failed tasks'] = failed_tasks

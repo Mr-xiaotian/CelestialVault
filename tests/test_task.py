@@ -4,8 +4,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import pytest, logging, asyncio
 import cProfile, subprocess, random
 from time import time, strftime, localtime, sleep
+from tools.TextTools import format_table
 from instances.inst_task import ExampleTaskManager, TaskChain
-
 
 def sleep_1(n):
     sleep(1)
@@ -121,6 +121,7 @@ def test_task_chain_0():
 
     # 开始任务链
     result = chain.test_methods(test_task_1)
+    # ['Time table'] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = r"stage\execution")
     for key, value in result.items():
         logging.info(f"{key}: \n{value}")
 
