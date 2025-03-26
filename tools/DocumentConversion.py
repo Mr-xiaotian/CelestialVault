@@ -69,31 +69,49 @@ def compress_pdf(old_pdf_path: str | Path, new_pdf_path: str | Path):
 
 def merge_pdfs_in_order(folder_path: str | Path) -> list:
     """
-    将指定文件夹下的所有PDF文件按照指定顺序拼接，并输出到指定文件名的PDF文件中。
-    :param folder_path: 存放PDF文件的文件夹路径。
-    :return : 拼接后的PDF文件路径。
+    将指定文件夹下的所有 PDF 文件按指定顺序合并，并在输出 PDF 中为每个源文件添加
+    一个一级目录（书签），书签名称为该 PDF 文件的文件名（去掉后缀）。
+
+    :param folder_path: 存放 PDF 文件的文件夹路径。
+    :return: 合并时所使用的 PDF 文件列表（按合并顺序）。
     """
     from tools.FileOperations import folder_to_file_path, sort_by_folder_and_number
-    # 创建一个PdfWriter对象，用于输出拼接后的PDF文件
-    output_pdf = PyPDF2.PdfWriter()
-    
-    # 使用pathlib.Path来处理路径
-    folder_path = Path(folder_path)
-    pdf_path = folder_to_file_path(folder_path, 'pdf')  # 拼接输出文件路径
-    
-    # 获取该文件夹下的所有PDF文件，并根据文件名中的数字进行排序
-    pdf_files = sorted(folder_path.glob('*.pdf'), key=lambda path: sort_by_folder_and_number(path, {}))
 
-    # 按照指定顺序依次合并PDF文件
+    folder_path = Path(folder_path)
+    pdf_path = folder_to_file_path(folder_path, "pdf")
+
+    # 初始化 PdfWriter 用来输出合并后的 PDF
+    output_pdf = PyPDF2.PdfWriter()
+
+    # 按自定义规则排序 PDF 文件，这里用 sort_by_folder_and_number
+    pdf_files = sorted(folder_path.glob("*.pdf"), key=lambda path: sort_by_folder_and_number(path, {}))
+
+    # 用来记录当前合并后 PDF 的已有页数，下一个文件的起始页就是它
+    current_page_count = 0
     for pdf_file in tqdm(pdf_files, desc="Merging PDFs"):
-        with open(pdf_file, 'rb') as f:
+        with open(pdf_file, "rb") as f:
             pdf_reader = PyPDF2.PdfReader(f)
+            start_page = current_page_count  # 记录此 PDF 添加前的起始页
+
+            # 把此文件所有页追加到 output_pdf
             for page in pdf_reader.pages:
                 output_pdf.add_page(page)
-    
-    # 将输出对象中的内容写入到输出文件中
-    with open(pdf_path, 'wb') as f:
-        output_pdf.write(f)
+
+            # 为此文件创建一个书签（即一级目录），标题用文件名（去后缀），
+            # 指向它在合并 PDF 中的第一页位置
+            # 注：如果要让阅读器显示的“第 1 页”与书签一致，可能需要 +1
+            output_pdf.add_outline_item(
+                title=pdf_file.stem,        # 例如 "MyDocument"
+                page_number=start_page,     # 0-based index
+                parent=None                 # 为空表示加在顶级目录
+            )
+            
+            # 更新总页数
+            current_page_count += len(pdf_reader.pages)
+
+    # 最后写出合并后的 PDF
+    with open(pdf_path, "wb") as f_out:
+        output_pdf.write(f_out)
 
     return pdf_files
 
