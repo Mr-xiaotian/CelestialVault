@@ -712,6 +712,7 @@ def folder_to_file_path(folder_path: Path, file_extension: str, parent_dir: Path
     :return: 与文件夹同名的文件路径。
     """
     # 获取文件夹的父目录和文件夹名称
+    folder_path = Path(folder_path)
     folder_name = folder_path.stem  # 获取文件夹名称，不带路径
     parent_dir = parent_dir or folder_path.parent  # 获取文件夹的父目录路径
     

@@ -77,14 +77,16 @@ def merge_pdfs_in_order(folder_path: str | Path) -> list:
     """
     from tools.FileOperations import folder_to_file_path, sort_by_folder_and_number
 
-    folder_path = Path(folder_path)
+    resize_pdfs(folder_path)
+
+    temp_folder_path = Path(folder_path + '_resized')
     pdf_path = folder_to_file_path(folder_path, "pdf")
 
     # 初始化 PdfWriter 用来输出合并后的 PDF
     output_pdf = PyPDF2.PdfWriter()
 
     # 按自定义规则排序 PDF 文件，这里用 sort_by_folder_and_number
-    pdf_files = sorted(folder_path.glob("*.pdf"), key=lambda path: sort_by_folder_and_number(path, {}))
+    pdf_files = sorted(temp_folder_path.glob("*.pdf"), key=lambda path: sort_by_folder_and_number(path, {}))
 
     # 用来记录当前合并后 PDF 的已有页数，下一个文件的起始页就是它
     current_page_count = 0
@@ -112,6 +114,8 @@ def merge_pdfs_in_order(folder_path: str | Path) -> list:
     # 最后写出合并后的 PDF
     with open(pdf_path, "wb") as f_out:
         output_pdf.write(f_out)
+
+    shutil.rmtree(temp_folder_path)
 
     return pdf_files
 
@@ -197,5 +201,5 @@ def resize_pdfs(folder_path: Path, execution_mode: str = 'serial'):
     from tools.FileOperations import handle_folder
 
     max_pdf_width = get_max_pdf_width(folder_path)
-    rules = {'.pdf': (resize_pdf, rename_pdf)}
+    rules = {'.pdf': (resize_pdf, lambda x: x)}
     return handle_folder(folder_path, rules, execution_mode, progress_desc='Resize PDFs', folder_name_siffix='_resized')

@@ -20,37 +20,37 @@ def compress_img(old_img_path: str | Path, new_img_path: str | Path):
     img = Image.open(old_img_path)
     img.save(new_img_path, optimize=True, quality=75)
 
-def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path = None, special_keywords: dict = None):
+def combine_imgs_to_pdf(root_path: str | Path, pdf_path: str | Path = None, special_keywords: dict = None):
     """
     将指定文件夹中的JPEG图片组合成单个PDF文件。
 
-    :param image_path: 包含JPEG图片的文件夹路径。
+    :param root_path: 包含JPEG图片的文件夹路径。
     :param pdf_path: 输出的PDF文件路径。
     :return: None
     """
     from constants import IMG_SUFFIXES
     from tools.FileOperations import folder_to_file_path, sort_by_folder_and_number
     # 转换路径为 Path 对象
-    image_path = Path(image_path)
-    pdf_path = folder_to_file_path(image_path, 'pdf') if pdf_path is None else Path(pdf_path)
+    root_path = Path(root_path)
+    pdf_path = folder_to_file_path(root_path, 'pdf') if pdf_path is None else Path(pdf_path)
     special_keywords = special_keywords or {}
     
-    if not image_path.is_dir():
-        raise ValueError(f"The provided image path {image_path} is not a directory.")
+    if not root_path.is_dir():
+        raise ValueError(f"The provided image path {root_path} is not a directory.")
     
     # 使用 rglob 查找所有图片路径
-    image_paths = [p for p in image_path.rglob('*') if p.suffix in IMG_SUFFIXES]
+    image_paths = [p for p in root_path.rglob('*') if p.suffix in IMG_SUFFIXES]
     image_paths = sorted(image_paths, key=lambda path: sort_by_folder_and_number(path, special_keywords))  # 按文件名中的数字排序
 
     if not image_paths:
-        raise ValueError(f"No images found in {image_path} with suffixes: \n{IMG_SUFFIXES}")
+        raise ValueError(f"No images found in {root_path} with suffixes: \n{IMG_SUFFIXES}")
 
     # 找到最大宽度的图片
     max_width = max(img.size[0] for img in (Image.open(p) for p in image_paths))
     
     # 生成器函数：逐步处理图片，调整宽度
     def generate_resized_images():
-        for img_path in tqdm(image_paths, desc="Combining images"):
+        for img_path in tqdm(image_paths, desc=f"Combining {root_path.name} imgs"):
             img = Image.open(img_path).convert('RGB')
             width, height = img.size
             if width != max_width:
