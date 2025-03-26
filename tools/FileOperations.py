@@ -134,7 +134,7 @@ def handle_file(source: Path, destination: Path, action: Callable[[Path, Path], 
     return action_result
 
 def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path, Path], None], Callable[[Path], Path]]], 
-                  execution_mode: str = 'serial', progress_desc: str = "Processing files") -> Dict[Exception, List[Path]]:
+                  execution_mode: str = 'serial', progress_desc: str = "Processing files", folder_name_siffix: str = "_re") -> Dict[Exception, List[Path]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行处理，并将处理后的文件存储到新的目录中。
     不属于指定后缀的文件将被直接复制到新目录中。处理后的文件会保持原始的目录结构。
@@ -147,7 +147,7 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
     folder_path = Path(folder_path)
-    new_folder_path = folder_path.parent / (folder_path.name + "_re")
+    new_folder_path = folder_path.parent / (folder_path.name + folder_name_siffix)
 
     handlefile_manager = HandleFileManager(handle_file, folder_path, new_folder_path, rules, execution_mode=execution_mode, 
                                            worker_limit=6, max_info=100, progress_desc=progress_desc, show_progress=True)
@@ -701,18 +701,19 @@ def move_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]], targ
 
     return moved_files
 
-def folder_to_file_path(folder_path: Path, file_extension: str) -> Path:
+def folder_to_file_path(folder_path: Path, file_extension: str, parent_dir: Path = None) -> Path:
     """
     将文件夹路径转换为与文件夹同名的文件路径。
     例如，给定文件夹路径 '/home/user/folder1' 和文件扩展名 'txt'，函数会返回文件路径 '/home/user/folder1.txt'。
 
     :param folder_path: 文件夹的路径。
     :param file_extension: 文件扩展名。
+    :param parent_dir: 文件夹的父目录路径，如果为 None，则使用文件夹的父目录。
     :return: 与文件夹同名的文件路径。
     """
     # 获取文件夹的父目录和文件夹名称
     folder_name = folder_path.stem  # 获取文件夹名称，不带路径
-    parent_dir = folder_path.parent  # 获取文件夹的父目录路径
+    parent_dir = parent_dir or folder_path.parent  # 获取文件夹的父目录路径
     
     # 生成与文件夹同名的文件路径
     file_name = f"{folder_name}.{file_extension}"

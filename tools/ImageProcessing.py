@@ -64,6 +64,26 @@ def combine_imgs_to_pdf(image_path: str | Path, pdf_path: str | Path = None, spe
     
     first_image.save(pdf_path, save_all=True, append_images=resized_images)
 
+def combine_imgs_folder(folder_path: Path, special_keywords: dict = None):
+    """
+    将指定文件夹中的JPEG图片组合成单个PDF文件。
+
+    :param folder_path: 包含JPEG图片的文件夹路径。
+    :param execution_mode: 执行模式，可选 'serial' 或 'parallel'。
+    :param special_keywords: 特殊关键词，用于排序图片。
+    :return: None
+    """
+    from tools.FileOperations import folder_to_file_path
+
+    folder_path = Path(folder_path)
+    subfolders = [f for f in sorted(folder_path.iterdir()) if f.is_dir()]
+
+    new_folder_path = folder_path.parent / (folder_path.name + "_img2pdf")
+    new_folder_path.mkdir(exist_ok=True)
+
+    for folder in subfolders:
+        combine_imgs_to_pdf(folder, folder_to_file_path(folder, 'pdf', new_folder_path), special_keywords)
+
 def img_to_binary(img: Image.Image) -> bytes:
     """
     将Image对象转换为二进制数据。

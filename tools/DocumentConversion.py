@@ -198,4 +198,4 @@ def resize_pdfs(folder_path: Path, execution_mode: str = 'serial'):
 
     max_pdf_width = get_max_pdf_width(folder_path)
     rules = {'.pdf': (resize_pdf, rename_pdf)}
-    return handle_folder(folder_path, rules, execution_mode, progress_desc='Resize PDFs')
+    return handle_folder(folder_path, rules, execution_mode, progress_desc='Resize PDFs', folder_name_siffix='_resized')
