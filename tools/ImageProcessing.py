@@ -29,7 +29,7 @@ def combine_imgs_to_pdf(root_path: str | Path, pdf_path: str | Path = None, spec
     :return: None
     """
     from constants import IMG_SUFFIXES
-    from tools.FileOperations import folder_to_file_path, sort_by_folder_and_number
+    from tools.FileOperations import folder_to_file_path, sort_by_number
     # 转换路径为 Path 对象
     root_path = Path(root_path)
     pdf_path = folder_to_file_path(root_path, 'pdf') if pdf_path is None else Path(pdf_path)
@@ -40,7 +40,7 @@ def combine_imgs_to_pdf(root_path: str | Path, pdf_path: str | Path = None, spec
     
     # 使用 rglob 查找所有图片路径
     image_paths = [p for p in root_path.rglob('*') if p.suffix in IMG_SUFFIXES]
-    image_paths = sorted(image_paths, key=lambda path: sort_by_folder_and_number(path, special_keywords))  # 按文件名中的数字排序
+    image_paths = sorted(image_paths, key=lambda path: sort_by_number(path, special_keywords))  # 按文件名中的数字排序
 
     if not image_paths:
         raise ValueError(f"No images found in {root_path} with suffixes: \n{IMG_SUFFIXES}")
@@ -50,7 +50,7 @@ def combine_imgs_to_pdf(root_path: str | Path, pdf_path: str | Path = None, spec
     
     # 生成器函数：逐步处理图片，调整宽度
     def generate_resized_images():
-        for img_path in tqdm(image_paths, desc=f"Combining {root_path.name} imgs"):
+        for img_path in tqdm(image_paths, desc=f"Combining '{root_path.name}'"):
             img = Image.open(img_path).convert('RGB')
             width, height = img.size
             if width != max_width:
@@ -69,7 +69,6 @@ def combine_imgs_folder(folder_path: Path, special_keywords: dict = None):
     将指定文件夹中的JPEG图片组合成单个PDF文件。
 
     :param folder_path: 包含JPEG图片的文件夹路径。
-    :param execution_mode: 执行模式，可选 'serial' 或 'parallel'。
     :param special_keywords: 特殊关键词，用于排序图片。
     :return: None
     """
@@ -82,7 +81,10 @@ def combine_imgs_folder(folder_path: Path, special_keywords: dict = None):
     new_folder_path.mkdir(exist_ok=True)
 
     for folder in subfolders:
-        combine_imgs_to_pdf(folder, folder_to_file_path(folder, 'pdf', new_folder_path), special_keywords)
+        pdf_path = folder_to_file_path(folder, 'pdf', new_folder_path)
+        if pdf_path.exists():
+            continue
+        combine_imgs_to_pdf(folder, pdf_path, special_keywords)
 
 def img_to_binary(img: Image.Image) -> bytes:
     """

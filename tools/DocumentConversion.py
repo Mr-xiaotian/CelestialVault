@@ -67,26 +67,28 @@ def compress_pdf(old_pdf_path: str | Path, new_pdf_path: str | Path):
     combine_imgs_to_pdf(temp_img_path, new_pdf_path)
     shutil.rmtree(temp_img_path)
 
-def merge_pdfs_in_order(folder_path: str | Path) -> list:
+def merge_pdfs_in_order(folder_path: str | Path, special_keywords: dict = None) -> list:
     """
     将指定文件夹下的所有 PDF 文件按指定顺序合并，并在输出 PDF 中为每个源文件添加
     一个一级目录（书签），书签名称为该 PDF 文件的文件名（去掉后缀）。
 
     :param folder_path: 存放 PDF 文件的文件夹路径。
+    :param special_keywords: 特殊关键词，用于排序图片。
     :return: 合并时所使用的 PDF 文件列表（按合并顺序）。
     """
-    from tools.FileOperations import folder_to_file_path, sort_by_folder_and_number
+    from tools.FileOperations import folder_to_file_path, sort_by_number
 
     resize_pdfs(folder_path)
 
     temp_folder_path = Path(folder_path + '_resized')
     pdf_path = folder_to_file_path(folder_path, "pdf")
+    special_keywords = special_keywords or {}
 
     # 初始化 PdfWriter 用来输出合并后的 PDF
     output_pdf = PyPDF2.PdfWriter()
 
-    # 按自定义规则排序 PDF 文件，这里用 sort_by_folder_and_number
-    pdf_files = sorted(temp_folder_path.glob("*.pdf"), key=lambda path: sort_by_folder_and_number(path, {}))
+    # 按自定义规则排序 PDF 文件，这里用 sort_by_number
+    pdf_files = sorted(temp_folder_path.glob("*.pdf"), key=lambda path: sort_by_number(path, special_keywords))
 
     # 用来记录当前合并后 PDF 的已有页数，下一个文件的起始页就是它
     current_page_count = 0

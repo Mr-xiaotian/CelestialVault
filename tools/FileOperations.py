@@ -760,19 +760,18 @@ def get_folder_size(folder_path: Path | str) -> int:
             total_size += file.stat().st_size  # 获取文件大小
     return total_size
 
-def sort_by_folder_and_number(file_path: Path, special_keywords: dict) -> tuple:
+def sort_by_number(file_path: Path, special_keywords: dict) -> tuple:
     """
     提取文件路径中的文件夹名称和文件名中的数字，作为排序依据。
     一级排序: 关键字优先级
-    二级排序：文件夹名称
-    三级排序：文件名中的数字
+    二级排序：文件名中的数字
     """
-    folder_name = file_path.parent.name
+    file_name = file_path.name
 
     # 关键字优先级控制
     folder_priority = min((special_keywords[keyword]
-                            for keyword in special_keywords if keyword in folder_name), default=0)
+                            for keyword in special_keywords if keyword in file_name), default=0)
 
     matches = re.findall(r'\d+', file_path.name)
     number = [int(num) for num in matches] if matches else [float('inf')]
-    return (folder_priority, folder_name, *number)
+    return (folder_priority, *number, file_name)
