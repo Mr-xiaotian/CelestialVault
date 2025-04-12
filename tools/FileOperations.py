@@ -387,6 +387,8 @@ def compare_structure(dir1, dir2, exclude_dirs: list=None, exclude_exts: list=No
         print_folder_list = []
         print_file_list = []
 
+        item_size = 0
+
         # 打印仅在 d1 和 d2 中存在的项目
         for item in only_in_d1 + only_in_d2:
             if item in only_in_d1:
@@ -459,16 +461,16 @@ def compare_structure(dir1, dir2, exclude_dirs: list=None, exclude_exts: list=No
     print('\n' + table_text)
     return diff_dir
 
-def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str='a'):
+def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str='->'):
     """
     根据差异字典同步两个文件夹。
 
     :param diff: 差异字典
     :param dir1: 第一个文件夹路径
     :param dir2: 第二个文件夹路径
-    :param mode: 同步模式，'a' 表示以第一个文件夹为主，
-                 'b' 表示以第二个文件夹为主，
-                 'sync' 表示双向同步
+    :param mode: 同步模式，'->' 表示以第一个文件夹为主，
+                 '<-' 表示以第二个文件夹为主，
+                 '<->' 表示双向同步
     """
     def append_hash_to_filename(file_path: Path):
         """在文件名中添加哈希值标识"""
@@ -481,9 +483,9 @@ def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str='a
     dir1 = Path(dir1)
     dir2 = Path(dir2)
 
-    if mode in ['a', 'b']:
+    if mode in ['->', '<-']:
         # 确定主目录和次目录
-        is_mode_a = (mode == 'a')
+        is_mode_a = (mode == '->')
         main_dir, minor_dir = (dir1, dir2) if is_mode_a else (dir2, dir1)
 
         # 预计算 diff 访问键
@@ -500,7 +502,7 @@ def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str='a
         delete_manager.start(minor_dir_diff)
         copy_manager.start(main_dir_diff)
 
-    elif mode == 'sync':
+    elif mode == '<->':
         copy_a_to_b_manager = CopyManager(copy_file_or_folder, dir1, dir2)
         copy_b_to_a_manager = CopyManager(copy_file_or_folder, dir2, dir1)
 
@@ -520,7 +522,7 @@ def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str='a
         copy_b_to_a_manager.start(diff['only_in_dir2'] + diff_file_in_dir2)
 
     else:
-        raise ValueError("无效的模式，必须为 'a', 'b' 或 'sync'")
+        raise ValueError("无效的模式，必须为 '->', '<-' 或 '<->'")
     
 def delete_file_or_folder(path: Path) -> None:
     """
