@@ -1,16 +1,17 @@
-import sys, re
+import sys, re, time
 from types import FunctionType
 from typing import Callable
 from collections.abc import Mapping, Container
+from functools import wraps
 from time import strftime, localtime
 
-
-def get_now_time():
+def get_format_time(now_time=None):
     """
     获取当前时间
     :return:
     """
-    return strftime("%Y-%m-%d", localtime())
+    now_time = localtime(now_time) or localtime()
+    return strftime("%Y-%m-%d %H:%M:%S", now_time)
 
 def functions_are_equal(func1: Callable, func2: Callable) -> bool:
     """
@@ -101,3 +102,21 @@ def get_total_size(obj, seen=None):
 
     return size
 
+def log_time(func: Callable) -> Callable:
+    """
+    记录函数执行时间的装饰器
+    :param func: 要装饰的函数
+    :return:
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        print(f"[{func.__name__}] 开始执行: {get_format_time(start_time)}")
+
+        result = func(*args, **kwargs)
+
+        end_time = time.time()
+        print(f"[{func.__name__}] 结束执行: {get_format_time(end_time)}")
+        print(f"[{func.__name__}] 总耗时: {end_time - start_time:.4f} 秒")
+        return result
+    return wrapper

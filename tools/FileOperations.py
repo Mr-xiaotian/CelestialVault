@@ -77,7 +77,6 @@ class DeleteManager(ExampleTaskManager):
     def get_args(self, rel_path):
         target = self.parent_dir / rel_path
         return (target, )
-    
 
 class CopyManager(ExampleTaskManager):
     def __init__(self, func, main_dir: Path, minor_dir: Path):
@@ -91,6 +90,15 @@ class CopyManager(ExampleTaskManager):
         target.parent.mkdir(parents=True, exist_ok=True)
         return (source, target)
     
+class DeleteReturnSizeManager(ExampleTaskManager):
+    def get_args(self, task):
+        return (*task, )
+    
+    def process_result_dict(self):
+        delete_size = 0
+        for size in self.get_result_dict().values():
+            delete_size += size
+        return delete_size
 
 def create_folder(path: str | Path) -> Path:
     """
@@ -285,8 +293,8 @@ def print_directory_structure(folder_path: str='.', exclude_dirs: list=None, exc
     打印指定文件夹的目录结构。
     
     :param folder_path: 起始文件夹的路径，默认为当前目录。
-    :param exclude_dirs: 要排除的目录列表，默认为空列表。
-    :param exclude_exts: 要排除的文件扩展名列表，默认为空列表。
+    :param exclude_dirs: 要排除的目录列表，例如["log"], 默认为空列表。
+    :param exclude_exts: 要排除的文件扩展名列表，例如[".db"], 默认为空列表。
     :param max_depth: 最大递归深度，默认为3。
     """
     folder_path: Path = Path(folder_path)
@@ -556,6 +564,21 @@ def get_file_size(file_path: Path) -> int:
     """
     return file_path.stat().st_size
 
+def get_folder_size(folder_path: Path | str) -> int:
+    """
+    计算文件夹的大小（以字节为单位）。
+    遍历指定文件夹中的所有文件和子目录，并计算它们的大小总和。
+
+    :param folder_path: 文件夹的路径。
+    :return: 文件夹的总大小（以字节为单位）。
+    """
+    total_size = 0
+    folder = Path(folder_path)
+    for file in folder.rglob('*'):  # rglob('*') 遍历所有文件和子目录
+        if file.is_file():
+            total_size += file.stat().st_size  # 获取文件大小
+    return total_size
+
 def get_file_hash(file_path: Path, chunk_size: int = 65536) -> str:
     """
     计算文件的哈希值。
@@ -645,19 +668,19 @@ def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
     :param identical_dict: 相同文件的字典，由 detect_identical_files 函数返回。
     :return: 删除的文件列表。
     """
-    report = []
-    delete_size = 0
+    def delete_and_return_size(path: Path, size: int):
+        path.unlink()
+        return size
+        
+    delete_list = []
     for (hash_value,file_size), file_list in identical_dict.items():
-        for file in tqdm(file_list, desc='Deleting files'):
-            try:
-                file.unlink()
-                delete_size += file_size
-                report.append(f"Deleted: {file}")
-            except Exception as e:
-                report.append(f"Error deleting {file}: {e}")
+        delete_list.extend([(file_path, file_size) for file_path in file_list])
 
-    report.append(f"\nTotal size of deleted files: {bytes_to_human_readable(delete_size)}")
-    print("\n".join(report))
+    delete_return_size_manager = DeleteReturnSizeManager(delete_and_return_size)
+    delete_return_size_manager.start(delete_list)
+    delete_size = delete_return_size_manager.process_result_dict()
+
+    print(f"\nTotal size of deleted files: {bytes_to_human_readable(delete_size)}")
 
 def move_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]], target_folder: str | Path, size_threshold: int = None):
     """
@@ -746,21 +769,6 @@ def replace_filenames(folder_path: Path | str, pattern: str, replacement: str):
             continue
 
         file.rename(new_file_path)  # 重命名文件
-
-def get_folder_size(folder_path: Path | str) -> int:
-    """
-    计算文件夹的大小（以字节为单位）。
-    遍历指定文件夹中的所有文件和子目录，并计算它们的大小总和。
-
-    :param folder_path: 文件夹的路径。
-    :return: 文件夹的总大小（以字节为单位）。
-    """
-    total_size = 0
-    folder = Path(folder_path)
-    for file in folder.rglob('*'):  # rglob('*') 遍历所有文件和子目录
-        if file.is_file():
-            total_size += file.stat().st_size  # 获取文件大小
-    return total_size
 
 def sort_by_number(file_path: Path, special_keywords: dict) -> tuple:
     """

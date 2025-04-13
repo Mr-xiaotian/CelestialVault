@@ -517,13 +517,13 @@ class TaskManager:
         except Exception as error:
             return error
             
-    def get_result_dict(self):
+    def get_result_dict(self) -> dict:
         """
         获取结果字典
         """
         return self.result_dict
     
-    def get_error_dict(self):
+    def get_error_dict(self) -> dict:
         """
         获取错误字典
         """
