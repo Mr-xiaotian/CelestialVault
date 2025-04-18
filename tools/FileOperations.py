@@ -736,6 +736,9 @@ def folder_to_file_path(folder_path: Path, file_extension: str, parent_dir: Path
     :param parent_dir: 文件夹的父目录路径，如果为 None，则使用文件夹的父目录。
     :return: 与文件夹同名的文件路径。
     """
+    if folder_path.is_file():
+        raise ValueError("The provided path is a file, not a folder.")
+
     # 获取文件夹的父目录和文件夹名称
     folder_path = Path(folder_path)
     folder_name = folder_path.name  # 获取文件夹名称，不带路径

@@ -69,7 +69,7 @@ def combine_imgs_folder(folder_path: Path, special_keywords: dict = None):
     将指定文件夹中的JPEG图片组合成单个PDF文件。
 
     :param folder_path: 包含JPEG图片的文件夹路径。
-    :param special_keywords: 特殊关键词，用于排序图片。
+    :param special_keywords: 特殊关键词，用于排序图片。eg: {'番外': 1, '特典': 1, '原画': 2}
     :return: None
     """
     from tools.FileOperations import folder_to_file_path
@@ -80,13 +80,11 @@ def combine_imgs_folder(folder_path: Path, special_keywords: dict = None):
     new_folder_path = folder_path.parent / (folder_path.name + "_img2pdf")
     new_folder_path.mkdir(exist_ok=True)
 
-    for folder in subfolders:
-        pdf_path = folder_to_file_path(folder, 'pdf', parent_dir=new_folder_path)
+    for subfolder in subfolders:
+        pdf_path = folder_to_file_path(subfolder, 'pdf', parent_dir=new_folder_path)
         if pdf_path.exists():
             continue
-        elif folder.is_file():
-            continue
-        combine_imgs_to_pdf(folder, pdf_path, special_keywords)
+        combine_imgs_to_pdf(subfolder, pdf_path, special_keywords)
 
 def img_to_binary(img: Image.Image) -> bytes:
     """
