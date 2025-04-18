@@ -81,8 +81,10 @@ def combine_imgs_folder(folder_path: Path, special_keywords: dict = None):
     new_folder_path.mkdir(exist_ok=True)
 
     for folder in subfolders:
-        pdf_path = folder_to_file_path(folder, 'pdf', new_folder_path)
+        pdf_path = folder_to_file_path(folder, 'pdf', parent_dir=new_folder_path)
         if pdf_path.exists():
+            continue
+        elif folder.is_file():
             continue
         combine_imgs_to_pdf(folder, pdf_path, special_keywords)
 

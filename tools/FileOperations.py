@@ -738,7 +738,7 @@ def folder_to_file_path(folder_path: Path, file_extension: str, parent_dir: Path
     """
     # 获取文件夹的父目录和文件夹名称
     folder_path = Path(folder_path)
-    folder_name = folder_path.stem  # 获取文件夹名称，不带路径
+    folder_name = folder_path.name  # 获取文件夹名称，不带路径
     parent_dir = parent_dir or folder_path.parent  # 获取文件夹的父目录路径
     
     # 生成与文件夹同名的文件路径
@@ -784,4 +784,4 @@ def sort_by_number(file_path: Path, special_keywords: dict) -> tuple:
 
     matches = re.findall(r'\d+', file_path.name)
     number = [int(num) for num in matches] if matches else [float('inf')]
-    return (folder_priority, *number, file_name)
+    return (folder_priority, *number)
