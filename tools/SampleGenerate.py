@@ -38,7 +38,12 @@ def generate_test_images(root_dir: str | Path, num_folders: int = 3, images_per_
     print(f"✅ 成功生成 {num_folders} 个子文件夹，每个包含 {images_per_folder} 张测试图片。")
 
 
-def create_sample_pdf(file_path):
+def create_sample_pdf(file_path: str | Path):
+    """
+    创建一个包含不同尺寸页面的示例 PDF 文件。
+
+    :param file_path: 输出 PDF 文件的路径
+    """
     # 创建新的 PDF 文档
     doc = fitz.open()
 
@@ -52,10 +57,12 @@ def create_sample_pdf(file_path):
     page.insert_text((72, 100), "页面 2：A4 尺寸 (595x842)", fontsize=14)
     page.insert_text((72, 130), "该页面的宽度较上一页更大，适用于文本内容较多的场景。")
 
-    # # 页面 3 - A3 尺寸 (842x1191)
-    # page = doc.new_page(width=842, height=1191)
-    # page.insert_text((72, 100), "页面 3：A3 尺寸 (842x1191)", fontsize=14)
-    # page.insert_text((72, 130), "这是一个超宽页面，适用于需要展示更大图片或表格的场景。")
+    # 页面 3 - A3 尺寸 (842x1191)
+    page = doc.new_page(width=842, height=1191)
+    page.insert_text((72, 100), "页面 3：A3 尺寸 (842x1191)", fontsize=14)
+    page.insert_text((72, 130), "这是一个超宽页面，适用于需要展示更大图片或表格的场景。")
 
     # 保存 PDF 文件
-    doc.save(file_path)
+    doc.save(str(file_path))
+
+    print(f"✅ 成功创建示例 PDF 文件：{file_path}")
