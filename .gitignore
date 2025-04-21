@@ -20,3 +20,4 @@ _preview.ipynb
 
 # 忽略临时文件
 profile/
+.pytest_cache

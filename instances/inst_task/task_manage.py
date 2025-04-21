@@ -400,7 +400,7 @@ class TaskManager:
         
         progress_manager = ProgressManager(
             total_tasks=self.task_queue.qsize(),
-            desc=f'{self.progress_desc}({self.execution_mode})',
+            desc=f'{self.progress_desc}({self.execution_mode}-{self.worker_limit})',
             mode=self.execution_mode,
             show_progress=self.show_progress
         )
@@ -473,7 +473,7 @@ class TaskManager:
         async_tasks = []
         progress_manager = ProgressManager(
             total_tasks=self.task_queue.qsize(),
-            desc=f'{self.progress_desc}(async)',
+            desc=f'{self.progress_desc}(async-{self.worker_limit})',
             mode="async",
             show_progress=self.show_progress
         )

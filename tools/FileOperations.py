@@ -79,8 +79,8 @@ class DeleteManager(ExampleTaskManager):
         return (target, )
 
 class CopyManager(ExampleTaskManager):
-    def __init__(self, func, main_dir: Path, minor_dir: Path):
-        super().__init__(func, progress_desc="Copy files/folders", show_progress=True)
+    def __init__(self, func, main_dir: Path, minor_dir: Path, copy_mode: str):
+        super().__init__(func, progress_desc=f"Copy files/folders[{copy_mode}]", show_progress=True)
         self.main_dir = main_dir
         self.minor_dir = minor_dir
 
@@ -505,14 +505,14 @@ def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str='-
         minor_dir_diff = diff[minor_dir_key]
         
         delete_manager = DeleteManager(delete_file_or_folder, minor_dir)
-        copy_manager = CopyManager(copy_file_or_folder, main_dir, minor_dir)
+        copy_manager = CopyManager(copy_file_or_folder, main_dir, minor_dir, copy_mode=mode)
 
         delete_manager.start(minor_dir_diff)
         copy_manager.start(main_dir_diff)
 
     elif mode == '<->':
-        copy_a_to_b_manager = CopyManager(copy_file_or_folder, dir1, dir2)
-        copy_b_to_a_manager = CopyManager(copy_file_or_folder, dir2, dir1)
+        copy_a_to_b_manager = CopyManager(copy_file_or_folder, dir1, dir2, copy_mode='->')
+        copy_b_to_a_manager = CopyManager(copy_file_or_folder, dir2, dir1, copy_mode='<-')
 
         diff_file_in_dir1 = []
         diff_file_in_dir2 = []
@@ -736,6 +736,7 @@ def folder_to_file_path(folder_path: Path, file_extension: str, parent_dir: Path
     :param parent_dir: 文件夹的父目录路径，如果为 None，则使用文件夹的父目录。
     :return: 与文件夹同名的文件路径。
     """
+    folder_path = Path(folder_path)
     if folder_path.is_file():
         raise ValueError("The provided path is a file, not a folder.")
 
@@ -788,3 +789,27 @@ def sort_by_number(file_path: Path, special_keywords: dict) -> tuple:
     matches = re.findall(r'\d+', file_path.name)
     number = [int(num) for num in matches] if matches else [float('inf')]
     return (folder_priority, *number)
+
+def move_files_with_keyword(source_folder: Path | str, keyword: str, target_folder: Path | str):
+    """
+    将 source_folder 中所有文件名包含 keyword 的文件移动到 target_folder。
+
+    :param source_folder: 源文件夹路径（str 或 Path）
+    :param keyword: 需要匹配的关键词（str）
+    :param target_folder: 目标文件夹路径（str 或 Path）
+    """
+    source = Path(source_folder)
+    target = Path(target_folder)
+
+    if not source.exists() or not source.is_dir():
+        raise ValueError(f"源文件夹不存在: {source}")
+
+    target.mkdir(parents=True, exist_ok=True)
+
+    moved_count = 0
+    for file in source.glob('**/*'):
+        if file.is_file() and keyword in file.name:
+            shutil.move(str(file), str(target / file.name))
+            moved_count += 1
+
+    print(f"已移动 {moved_count} 个文件到 {target}")
