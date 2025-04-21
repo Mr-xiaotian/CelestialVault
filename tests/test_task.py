@@ -76,9 +76,13 @@ def generate_urls(x):
     return tuple([f"url_{x}_{i}" for i in range(random.randint(1, 4))])
 
 def save(data):
+    if data == ('url_1_0', 'url_1_1'):
+        raise ValueError("Test error in ('url_1_0', 'url_1_1')")
     return f"Saved({data})"
 
 def download(url):
+    if url == "url_3_0":
+        raise ValueError("Test error in url_3_0")
     return f"Downloaded({url})"
 
 def parse(url):

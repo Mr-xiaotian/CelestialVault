@@ -20,7 +20,9 @@ class TaskSplitter(ExampleTaskManager):
         处理不可迭代的任务结果
         """
         if not hasattr(result, '__iter__') or isinstance(result, (str, bytes)):
-            result = [result]
+            result = (result, )
+        elif isinstance(result, list):
+            result = tuple(result)
 
         return result
 
