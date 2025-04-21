@@ -14,6 +14,15 @@ class TaskSplitter(ExampleTaskManager):
         实际上这个函数不执行逻辑，仅用于符合 TaskManager 架构
         """
         return task
+    
+    def process_result(self, task, result):
+        """
+        处理不可迭代的任务结果
+        """
+        if not hasattr(result, '__iter__') or isinstance(result, (str, bytes)):
+            result = [result]
+
+        return result
 
     def process_task_success(self, task, result, start_time):
         """
@@ -24,11 +33,8 @@ class TaskSplitter(ExampleTaskManager):
         :param start_time: 任务开始时间
         """
         processed_result = self.process_result(task, result)
-        self.result_dict[task] = None
+        self.result_dict[task] = processed_result
         split_count = 0
-
-        if not hasattr(processed_result, '__iter__') or isinstance(processed_result, (str, bytes)):
-            processed_result = [processed_result]
 
         for item in processed_result:
             self.result_queue.put(item)

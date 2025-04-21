@@ -1,7 +1,7 @@
 import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import pytest, logging, asyncio
+import pytest, logging, asyncio, pprint
 import cProfile, subprocess, random
 from time import time, strftime, localtime, sleep
 from tools.TextTools import format_table
@@ -75,8 +75,14 @@ def square_root(x):
 def generate_urls(x):
     return tuple([f"url_{x}_{i}" for i in range(random.randint(1, 4))])
 
+def save(data):
+    return f"Saved({data})"
+
 def download(url):
     return f"Downloaded({url})"
+
+def parse(url):
+    return f"Parsed({url})"
 
 # 测试 TaskManager 的同步任务
 def _test_task_manager():
@@ -131,6 +137,8 @@ def _test_task_chain_0():
     test_table_list, execution_modes, stage_modes, index_header = result["Time table"]
     result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
     for key, value in result.items():
+        if isinstance(value, dict):
+            value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
 def _test_task_chain_1():
@@ -158,28 +166,30 @@ def _test_task_chain_1():
     test_table_list, execution_modes, stage_modes, index_header = result["Time table"]
     result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
     for key, value in result.items():
+        if isinstance(value, dict):
+            value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
 def split_func(lst):
     return lst
 
 def test_task_chain_2():    
-    # Stage 1: 模拟任务产出多个子任务
-    stage1 = ExampleTaskManager(func=generate_urls, execution_mode='thread', worker_limit=4)
-    
-    # Splitter: 把列表任务打散
+    # 定义任务节点
+    generate_stage = ExampleTaskManager(func=generate_urls, execution_mode='thread', worker_limit=4)
+    saver_stage = ExampleTaskManager(func=save, execution_mode='thread', worker_limit=4)
     splitter = TaskSplitter()
-
-    # Stage 2: 处理被打散的单个任务
-    stage2 = ExampleTaskManager(func=download, execution_mode='thread', worker_limit=4)
+    download_stage = ExampleTaskManager(func=download, execution_mode='thread', worker_limit=4)
+    parse_stage = ExampleTaskManager(func=parse, execution_mode='thread', worker_limit=4)
 
     # 设置链关系
-    stage1.set_chain_context([splitter], stage_mode='process', stage_name='GenURLs')
-    splitter.set_chain_context([stage2], stage_mode='serial', stage_name='Splitter')
-    stage2.set_chain_context([], stage_mode='process', stage_name='Downloader')
+    generate_stage.set_chain_context([saver_stage, splitter], stage_mode='process', stage_name='GenURLs')
+    saver_stage.set_chain_context([], stage_mode='process', stage_name='Saver')
+    splitter.set_chain_context([download_stage, parse_stage], stage_mode='serial', stage_name='Splitter')
+    download_stage.set_chain_context([], stage_mode='process', stage_name='Downloader')
+    parse_stage.set_chain_context([], stage_mode='process', stage_name='Parser')
 
     # 初始化 TaskChain
-    chain = TaskChain(stage1)
+    chain = TaskChain(generate_stage)
 
     # 测试输入：生成不同 URL 的任务
     input_tasks = range(5)
@@ -189,6 +199,8 @@ def test_task_chain_2():
     result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
 
     for key, value in result.items():
+        if isinstance(value, dict):
+            value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
     
 def profile_task_chain():

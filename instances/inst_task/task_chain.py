@@ -162,9 +162,6 @@ class TaskChain:
         :param initial_tasks: 一个包含初始任务的列表
         """
         def update_final_result_dict(stage_task, stage: TaskManager):
-            if isinstance(stage, TaskSplitter):
-                return [("split_task", stage.stage_name)]
-            
             stage_result_dict = stage.get_result_dict()
             stage_error_dict = stage.get_error_dict()
             visited_stages.add(stage)
@@ -177,7 +174,7 @@ class TaskChain:
                 task_execution_status[initial_task] = False
                 return [(stage_task, stage.stage_name)]
             else:
-                dispear_exception = TaskError("Task not found.")
+                dispear_exception = TaskError(f"({stage_task}) not found.")
                 stage_task = (dispear_exception, stage.func.__name__)
                 task_execution_status[initial_task] = False
                 return [(stage_task, stage.stage_name)]
@@ -188,8 +185,15 @@ class TaskChain:
             for next_stage in stage.next_stages:
                 if next_stage in visited_stages:
                     continue
-                next_stage_final_list = update_final_result_dict(stage_task, next_stage)
-                final_list.extend(next_stage_final_list)
+                elif not isinstance(stage, TaskSplitter):
+                    next_stage_final_list = update_final_result_dict(stage_task, next_stage)
+                    final_list.extend(next_stage_final_list)
+                    continue
+                
+                # 如果是 TaskSplitter，则递归处理每个子任务
+                for split_task in stage_task:
+                    next_stage_final_list = update_final_result_dict(split_task, next_stage)
+                    final_list.extend(next_stage_final_list)
 
             return final_list
 
