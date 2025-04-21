@@ -3,9 +3,10 @@ import multiprocessing
 from collections import defaultdict
 from queue import Queue as ThreadQueue
 from multiprocessing import Queue as MPQueue
-from typing import List, Any, Dict
+from typing import List, Dict, Any
 from time import time
 from .task_manage import TaskManager
+from .task_splitter import TaskSplitter
 from .task_support import TERMINATION_SIGNAL, task_logger, TaskError
 
 
@@ -161,6 +162,9 @@ class TaskChain:
         :param initial_tasks: 一个包含初始任务的列表
         """
         def update_final_result_dict(stage_task, stage: TaskManager):
+            if isinstance(stage, TaskSplitter):
+                return [("split_task", stage.stage_name)]
+            
             stage_result_dict = stage.get_result_dict()
             stage_error_dict = stage.get_error_dict()
             visited_stages.add(stage)

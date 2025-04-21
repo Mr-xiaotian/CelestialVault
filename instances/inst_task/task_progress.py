@@ -2,17 +2,15 @@ from tqdm import tqdm
 from tqdm.asyncio import tqdm as tqdm_asy
 
 class ProgressManager:
-    def __init__(self, total_tasks: int, desc: str = "Processing", mode: str = "sync", show_progress: bool = False):
+    def __init__(self, total_tasks: int, desc: str = "Processing", mode: str = "normal", show_progress: bool = False):
         """
         初始化进度条管理器
 
         :param total_tasks: 任务总数，用于设置进度条的总长度
         :param desc: 进度条的描述文字
-        :param mode: 任务模式，可选 "sync" 或 "async"
+        :param mode: 任务模式，可选 "async", other
         :param show_progress: 是否显示进度条
         """
-        self.show_progress = show_progress
-        self.mode = mode
         if show_progress:
             if mode == "async":
                 self.progress_bar = tqdm_asy(total=total_tasks, desc=desc)
@@ -20,6 +18,7 @@ class ProgressManager:
                 self.progress_bar = tqdm(total=total_tasks, desc=desc)
         else:
             self.progress_bar = None
+        self.show_progress = show_progress
 
     def update(self, n=1):
         """更新进度条"""

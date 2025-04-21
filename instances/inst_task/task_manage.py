@@ -145,6 +145,8 @@ class TaskManager:
 
         说明:
         这个方法必须在子类中实现。可以记录错误、发送通知或其他错误处理操作。
+        注意:
+        如果当前stage后接其他stage，则result必须为可hash对象，否则无法作为result_dict的键。
         """
         raise NotImplementedError("This method should be overridden")
     
@@ -201,9 +203,9 @@ class TaskManager:
         :param result: 任务的结果
         :param start_time: 任务开始时间
         """
-        process_result = self.process_result(task, result)
-        self.result_dict[task] = process_result
-        self.result_queue.put(process_result)
+        processed_result = self.process_result(task, result)
+        self.result_dict[task] = processed_result
+        self.result_queue.put(processed_result)
         task_logger.task_success(self.func.__name__, self.get_task_info(task), self.execution_mode,
                                  self.get_result_info(result), time() - start_time)
         
@@ -352,7 +354,7 @@ class TaskManager:
         progress_manager = ProgressManager(
             total_tasks=self.task_queue.qsize(),
             desc=f'{self.progress_desc}(serial)',
-            mode="sync",
+            mode="normal",
             show_progress=self.show_progress
         )
 
@@ -401,7 +403,7 @@ class TaskManager:
         progress_manager = ProgressManager(
             total_tasks=self.task_queue.qsize(),
             desc=f'{self.progress_desc}({self.execution_mode}-{self.worker_limit})',
-            mode=self.execution_mode,
+            mode="normal",
             show_progress=self.show_progress
         )
 

@@ -65,6 +65,9 @@ class TaskLogger:
     def task_duplicate(self, func_name, task_info):
         self.logger.success(f"In '{func_name}', Task {task_info} has been duplicated.")
 
+    def splitter_success(self, func_name, task_info, split_count, use_time):
+        self.logger.success(f"In '{func_name}', Task {task_info} has split into {split_count} parts. Used {use_time:.2f} seconds.")
+
 
 class BroadcastQueueManager:
     def __init__(self, input_queue: Union[MPQueue, ThreadQueue], target_queues: List[Union[MPQueue, ThreadQueue]], func_name: str):
