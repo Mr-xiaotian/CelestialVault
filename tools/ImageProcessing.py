@@ -1,14 +1,14 @@
-import re, io, base64, math
+import io, base64, math
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from PIL import Image
-from pathlib import Path
 from tqdm import tqdm
+from pathlib import Path
 from itertools import product
-from skimage.metrics import structural_similarity as compare_ssim
-from pillow_heif import register_heif_opener
 from colorsys import hsv_to_rgb
+from pillow_heif import register_heif_opener
+from skimage.metrics import structural_similarity as compare_ssim
 
 
 def compress_img(old_img_path: str | Path, new_img_path: str | Path):
@@ -83,6 +83,7 @@ def combine_imgs_folder(folder_path: Path, special_keywords: dict = None):
     for subfolder in subfolders:
         pdf_path = folder_to_file_path(subfolder, 'pdf', parent_dir=new_folder_path)
         if pdf_path.exists():
+            print(f"PDF already exists for {subfolder.name}. Skipping...")
             continue
         combine_imgs_to_pdf(subfolder, pdf_path, special_keywords)
 
