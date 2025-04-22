@@ -135,30 +135,30 @@ class MyTaskManager(TaskManager):
 ### 重试机制
 对于定义的 retry_exceptions，如 TimeoutError 或 ConnectionError，TaskManager 将自动重试这些任务。如果你有自定义的异常类型，可以通过设置 self.retry_exceptions 来扩展重试逻辑。
 
-# TaskChain
+# TaskTree
 
-TaskChain 是一个用于组织和执行多阶段任务链的框架。每个阶段都是由 TaskManager 实例组成，任务链可以串行或并行执行。在任务链中，任务会依次通过每个阶段的处理，并最终返回结果。
+TaskTree 是一个用于组织和执行多阶段任务链的框架。每个阶段都是由 TaskManager 实例组成，任务链可以串行或并行执行。在任务链中，任务会依次通过每个阶段的处理，并最终返回结果。
 
 ## 特性
 
-- **多阶段任务管理**：TaskChain 将多个 TaskManager 实例连接起来，形成一个任务链，每个任务经过各个阶段的处理。
+- **多阶段任务管理**：TaskTree 将多个 TaskManager 实例连接起来，形成一个任务链，每个任务经过各个阶段的处理。
 - **执行模式**：支持串行（serial）和多进程并行（process）执行方式。
 - **任务结果追踪**：能够跟踪初始任务在整个任务链中的最终结果。
 - **动态阶段管理**：可以动态添加、移除或修改任务链中的阶段。
 
 ## 依赖
-TaskChain 基于 TaskManager 构建，因此需要先安装 TaskManager 相关依赖：
+TaskTree 基于 TaskManager 构建，因此需要先安装 TaskManager 相关依赖：
 
 ```bash
 pip install loguru
 ```
 
 ## 快速上手
-### 1. 初始化 TaskChain
-首先，准备多个 TaskManager 实例，每个实例代表任务链中的一个阶段。然后，创建一个 TaskChain 实例，将这些 TaskManager 实例作为参数传递给 TaskChain。
+### 1. 初始化 TaskTree
+首先，准备多个 TaskManager 实例，每个实例代表任务链中的一个阶段。然后，创建一个 TaskTree 实例，将这些 TaskManager 实例作为参数传递给 TaskTree。
 
 ```python
-from task_manager import TaskManager, TaskChain
+from task_manager import TaskManager, TaskTree
 
 # 定义几个简单的任务函数
 def task_stage_1(x):
@@ -171,8 +171,8 @@ def task_stage_2(x):
 stage_1 = TaskManager(func=task_stage_1, execution_mode='serial')
 stage_2 = TaskManager(func=task_stage_2, execution_mode='thread')
 
-# 创建 TaskChain 实例
-task_chain = TaskChain(stages=[stage_1, stage_2])
+# 创建 TaskTree 实例
+task_chain = TaskTree(stages=[stage_1, stage_2])
 ```
 
 ### 2. 启动任务链
@@ -204,7 +204,7 @@ task_chain.start_chain(initial_tasks)
 ```
 
 ## 主要参数和方法说明
-### TaskChain 类
+### TaskTree 类
 - **stages**: 一个包含 TaskManager 实例的列表，代表任务链的各个阶段。
 - **chain_mode**: 任务链的执行模式，支持 'serial'（串行）和 'process'（并行）。默认为串行模式。
 
@@ -217,7 +217,7 @@ task_chain.start_chain(initial_tasks)
 - run_chain_in_process(tasks: List): 使用多进程并行地执行任务链中的每个阶段。
 - get_final_result_dict() -> dict: 获取初始任务在整个任务链中最终处理的结果字典。
 
-## TaskChain 关键功能解释
+## TaskTree 关键功能解释
 ### 串行模式（serial）
 
 每个任务依次经过任务链的所有阶段，前一个阶段的输出作为下一个阶段的输入。
@@ -234,8 +234,8 @@ task_chain.start_chain(initial_tasks)
 ## 示例
 ### 1. 串行任务链
 ```python
-# 创建 TaskChain 实例
-task_chain = TaskChain(stages=[stage_1, stage_2], chain_mode='serial')
+# 创建 TaskTree 实例
+task_chain = TaskTree(stages=[stage_1, stage_2], chain_mode='serial')
 
 # 定义初始任务
 initial_tasks = [1, 2, 3, 4]
@@ -249,8 +249,8 @@ print("Final Results:", final_results)
 ```
 ### 2. 并行任务链
 ```python
-# 创建 TaskChain 实例
-task_chain = TaskChain(stages=[stage_1, stage_2], chain_mode='process')
+# 创建 TaskTree 实例
+task_chain = TaskTree(stages=[stage_1, stage_2], chain_mode='process')
 
 # 定义初始任务
 initial_tasks = [1, 2, 3, 4]
@@ -263,5 +263,20 @@ final_results = task_chain.get_final_result_dict()
 print("Final Results:", final_results)
 ```
 
+# 其他节点
+
+## 下一步扩展方向
+| 模块                     | 功能                                                        |
+|--------------------------|-------------------------------------------------------------|
+| ✅ TaskSplitter          | 已完成，fan-out 成功                                        |
+| 🔄 TaskRouter（分支控制）| 根据条件将任务路由到不同的 stage                            |
+| 📦 TaskMerger            | 将多个结果聚合后处理（fan-in）                              |
+| 🔍 TaskTracer / Inspector| 给每个任务标记 trace_id、路径                               |
+| 📊 ChainVisualizer       | 结构图（networkx / graphviz）可视化链路                    |
+| 🖥️ Web UI                | 用 Flask / FastAPI + Vue 做一个小监控界面                   |
+| 💾 持久化支持            | Redis / SQLite 存 task 状态，支持断点恢复                   |
+
+
 # 贡献
 欢迎对本项目提出改进建议或提交 PR。如有任何问题，请提交 issues。
+

@@ -10,7 +10,7 @@ from .task_splitter import TaskSplitter
 from .task_support import TERMINATION_SIGNAL, task_logger, TaskError
 
 
-class TaskChain:
+class TaskTree:
     def __init__(self, root_stage: TaskManager):
         """
         :param root_stage: 任务链的根 TaskManager 节点
@@ -296,7 +296,7 @@ class TaskChain:
     
     def test_methods(self, task_list: List[Any]) -> Dict[str, Any]:
         """
-        测试 TaskChain 在 'serial' 和 'process' 模式下的执行时间。
+        测试 TaskTree 在 'serial' 和 'process' 模式下的执行时间。
         
         :param task_list: 任务列表
         :return: 包含两种执行模式下的执行时间的字典
@@ -329,7 +329,7 @@ class TaskChain:
         return results
     
 
-class SimpleTaskChain(TaskChain):
+class TaskChain(TaskTree):
     def __init__(self, stages: List[TaskManager], chain_mode: str = 'serial'):
         for num, stage in enumerate(stages):
             stage_name = f"Stage {num + 1}"

@@ -2,12 +2,14 @@ from time import time
 from .task_manage import ExampleTaskManager
 from .task_support import task_logger
 
+
 class TaskSplitter(ExampleTaskManager):
-    def __init__(self):
+    def __init__(self, split_task=None):
         """
         :param split_func: 用于分解任务的函数，默认直接返回原始值
         """
-        super().__init__(func=self.split_task, execution_mode='serial')
+        split_task = split_task or self.split_task
+        super().__init__(func=split_task, execution_mode='serial')
     
     def split_task(self, task):
         """

@@ -1,6 +1,6 @@
 # _*_ coding: utf-8 _*_
 
-from .inst_task import TaskChain, SimpleTaskChain, TaskManager, ExampleTaskManager
+from .inst_task import TaskTree, TaskChain, TaskManager, ExampleTaskManager
 # from .inst_fetch import Fetcher
 # from .inst_findiff import Findiffer
 # from .inst_imgEncoder import ImgEncoder, ImgDecoder

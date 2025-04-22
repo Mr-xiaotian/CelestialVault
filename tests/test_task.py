@@ -5,7 +5,7 @@ import pytest, logging, asyncio, pprint
 import cProfile, subprocess, random
 from time import time, strftime, localtime, sleep
 from tools.TextTools import format_table
-from instances.inst_task import ExampleTaskManager, TaskChain, TaskSplitter
+from instances.inst_task import ExampleTaskManager, TaskTree, TaskSplitter
 
 def sleep_1(n):
     sleep(1)
@@ -112,7 +112,7 @@ async def _test_task_manager_async():
     await manager.start_async(test_task_1)
     logging.info(f'run_in_async: {time() - start}')
 
-# 测试 TaskChain 的功能
+# 测试 TaskTree 的功能
 def _test_task_chain_0():
     # 定义多个阶段的 TaskManager 实例
     stage1 = ExampleTaskManager(fibonacci, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
@@ -128,8 +128,8 @@ def _test_task_chain_0():
     stage1.add_retry_exceptions(TypeError)
     stage2.add_retry_exceptions(ValueError)
 
-    # 初始化 TaskChain
-    chain = TaskChain(root_stage = stage1)
+    # 初始化 TaskTree
+    chain = TaskTree(root_stage = stage1)
 
     # 要测试的任务列表
     test_task_0 = range(25, 37)
@@ -162,8 +162,8 @@ def _test_task_chain_1():
     E.set_chain_context(next_stages=[], stage_mode='process', stage_name="Stage_E")
     F.set_chain_context(next_stages=[], stage_mode='process', stage_name="Stage_F")
 
-    # 初始化 TaskChain, 并设置根节点
-    chain = TaskChain(A)
+    # 初始化 TaskTree, 并设置根节点
+    chain = TaskTree(A)
 
     # 开始任务链
     result = chain.test_methods(range(10))
@@ -192,8 +192,8 @@ def test_task_chain_2():
     download_stage.set_chain_context([], stage_mode='process', stage_name='Downloader')
     parse_stage.set_chain_context([], stage_mode='process', stage_name='Parser')
 
-    # 初始化 TaskChain
-    chain = TaskChain(generate_stage)
+    # 初始化 TaskTree
+    chain = TaskTree(generate_stage)
 
     # 测试输入：生成不同 URL 的任务
     input_tasks = range(5)

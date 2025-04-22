@@ -2,7 +2,7 @@
 
 import subprocess
 from pathlib import Path
-from instances.inst_task import ExampleTaskManager, SimpleTaskChain
+from instances.inst_task import ExampleTaskManager, TaskChain
 from instances.inst_fetch import Fetcher
 
 
@@ -118,8 +118,8 @@ class Saver(object):
         save_manager = SaveManager(self.save_content, execution_mode='serial',
                                    progress_desc='urlsSaveProcess', show_progress=show_progress)
 
-        # 创建 SimpleTaskChain 来管理 Fetch 和 Save 两个阶段的任务处理
-        chain = SimpleTaskChain([fetch_manager, save_manager], chain_mode)
+        # 创建 TaskChain 来管理 Fetch 和 Save 两个阶段的任务处理
+        chain = TaskChain([fetch_manager, save_manager], chain_mode)
         chain.start_chain(task_list)  # 开始任务链
 
         final_result_dict = chain.get_final_result_dict()  # 获取任务链的最终结果字典

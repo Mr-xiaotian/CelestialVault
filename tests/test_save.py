@@ -44,7 +44,7 @@ def test_saver():
 
     task_list = [(num, i, '.jpg') for num,i in enumerate(li)]
     final_result_dict = saver.download_urls(task_list, chain_mode)
-    logging.info(f'TaskChain completed in {time() - start_time} seconds by {chain_mode}.')
+    logging.info(f'TaskTree completed in {time() - start_time} seconds by {chain_mode}.')
     logging.info(f"Task result: {final_result_dict}.")
 
     # saver.fetch_threader.set_execution_mode('async')

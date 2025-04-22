@@ -6,6 +6,7 @@ from time import strftime, localtime
 from typing import List, Union
 from loguru import logger as loguru_logger
 
+
 class TerminationSignal:
     """用于标记任务队列终止的哨兵对象"""
     pass
@@ -39,8 +40,8 @@ class TaskLogger:
         start_text += f"({worker_limit} workers)." if execution_mode != 'serial' else "."
         self.logger.info(start_text)
 
-    def start_chain(self, stage_structure):
-        self.logger.info(f"Starting TaskChain stages. Chain structure:")
+    def start_tree(self, stage_structure):
+        self.logger.info(f"Starting TaskTree stages. Tree structure:")
         for structure in stage_structure:
             self.logger.info(f"{structure}")
 
@@ -50,8 +51,8 @@ class TaskLogger:
     def end_stage(self, stage_name, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
         self.logger.info(f"The {stage_name} in '{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
     
-    def end_chain(self, use_time):
-        self.logger.info(f"TaskChain end. Use {use_time:.2f} second.")
+    def end_tree(self, use_time):
+        self.logger.info(f"TaskTree end. Use {use_time:.2f} second.")
 
     def task_success(self, func_name, task_info, execution_mode, result_info, use_time):
         self.logger.success(f"In '{func_name}', Task {task_info} completed by {execution_mode}. Result is {result_info}. Used {use_time:.2f} seconds.")
