@@ -59,7 +59,7 @@ class TaskTree:
             self.stage_queues_dict[self.root_stage].put(task)
         self.stage_queues_dict[self.root_stage].put(TERMINATION_SIGNAL)
     
-    def set_chain_mode(self, stage_mode: str, execution_mode: str):
+    def set_tree_mode(self, stage_mode: str, execution_mode: str):
         """
         设置任务链的执行模式
         :param stage_mode: 节点执行模式, 可选值为 'serial' 或 'process'
@@ -78,10 +78,10 @@ class TaskTree:
         visited_stages = set()
         set_subsequent_satge_mode(self.root_stage)
     
-    def start_chain(self, init_tasks):
+    def start_tree(self, init_tasks):
         start_time = time()
         structure_list = self.format_structure_list()
-        task_logger.start_chain(structure_list)
+        task_logger.start_tree(structure_list)
 
         self.init_env(init_tasks)
         self._execute_stage(self.root_stage, set())
@@ -94,7 +94,7 @@ class TaskTree:
         self.handle_final_error_dict()
         self.release_resources()
 
-        task_logger.end_chain(time() - start_time)
+        task_logger.end_tree(time() - start_time)
 
     def _execute_stage(self, stage: TaskManager, stage_visited: set):
         """
@@ -313,8 +313,8 @@ class TaskTree:
             time_list = []
             for execution_mode in execution_modes:
                 start_time = time()
-                self.set_chain_mode(stage_mode, execution_mode)
-                self.start_chain(task_list)
+                self.set_tree_mode(stage_mode, execution_mode)
+                self.start_tree(task_list)
 
                 time_list.append(time() - start_time)
                 final_result_dict.update(self.get_final_result_dict())
@@ -330,11 +330,11 @@ class TaskTree:
     
 
 class TaskChain(TaskTree):
-    def __init__(self, stages: List[TaskManager], chain_mode: str = 'serial'):
+    def __init__(self, stages: List[TaskManager], tree_mode: str = 'serial'):
         for num, stage in enumerate(stages):
             stage_name = f"Stage {num + 1}"
             next_stage = [stages[num + 1]] if num < len(stages) - 1 else []
-            stage.set_chain_context(next_stage, chain_mode, stage_name)
+            stage.set_tree_context(next_stage, tree_mode, stage_name)
 
         root_stage = stages[0]
         super().__init__(root_stage)

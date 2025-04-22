@@ -172,18 +172,18 @@ stage_1 = TaskManager(func=task_stage_1, execution_mode='serial')
 stage_2 = TaskManager(func=task_stage_2, execution_mode='thread')
 
 # 创建 TaskTree 实例
-task_chain = TaskTree(stages=[stage_1, stage_2])
+task_tree = TaskTree(stages=[stage_1, stage_2])
 ```
 
 ### 2. 启动任务链
-准备好初始任务列表后，通过 start_chain 方法启动任务链执行。任务将依次通过每个阶段进行处理。
+准备好初始任务列表后，通过 start_tree 方法启动任务链执行。任务将依次通过每个阶段进行处理。
 
 ```python
 # 定义初始任务
 initial_tasks = [1, 2, 3, 4]
 
 # 启动任务链（默认串行模式）
-task_chain.start_chain(initial_tasks)
+task_tree.start_tree(initial_tasks)
 ```
 
 ### 3. 获取最终结果
@@ -191,30 +191,30 @@ task_chain.start_chain(initial_tasks)
 
 ```python
 # 获取任务链的最终结果
-final_results = task_chain.get_final_result_dict()
+final_results = task_tree.get_final_result_dict()
 print("Final Results:", final_results)
 ```
 
 ### 4. 并行执行任务链
-如果任务链中的每个阶段需要并行处理任务，可以将 chain_mode 设置为 'process'，并启动任务链。这会使用多进程来并行处理任务链中的每个阶段，此时每个阶段的处理结果会立刻交给下一阶段进行处理。
+如果任务链中的每个阶段需要并行处理任务，可以将 tree_mode 设置为 'process'，并启动任务链。这会使用多进程来并行处理任务链中的每个阶段，此时每个阶段的处理结果会立刻交给下一阶段进行处理。
 
 ```python
-task_chain.set_chain_mode('process')
-task_chain.start_chain(initial_tasks)
+task_tree.set_tree_mode('process')
+task_tree.start_tree(initial_tasks)
 ```
 
 ## 主要参数和方法说明
 ### TaskTree 类
 - **stages**: 一个包含 TaskManager 实例的列表，代表任务链的各个阶段。
-- **chain_mode**: 任务链的执行模式，支持 'serial'（串行）和 'process'（并行）。默认为串行模式。
+- **tree_mode**: 任务链的执行模式，支持 'serial'（串行）和 'process'（并行）。默认为串行模式。
 
 ### 常用方法
-- set_chain_mode(chain_mode: str): 设置任务链的执行模式，可以选择 'serial' 或 'process'。
+- set_tree_mode(tree_mode: str): 设置任务链的执行模式，可以选择 'serial' 或 'process'。
 - add_stage(stage: TaskManager): 动态添加一个新的任务阶段到任务链中。
 - remove_stage(index: int): 移除任务链中指定索引的阶段。
-- start_chain(tasks: List): 启动任务链，传入初始任务列表。根据 chain_mode 选择串行或并行方式执行任务链。
-- run_chain_in_serial(tasks: List): 串行地执行任务链中的每个阶段。
-- run_chain_in_process(tasks: List): 使用多进程并行地执行任务链中的每个阶段。
+- start_tree(tasks: List): 启动任务链，传入初始任务列表。根据 tree_mode 选择串行或并行方式执行任务链。
+- run_tree_in_serial(tasks: List): 串行地执行任务链中的每个阶段。
+- run_tree_in_process(tasks: List): 使用多进程并行地执行任务链中的每个阶段。
 - get_final_result_dict() -> dict: 获取初始任务在整个任务链中最终处理的结果字典。
 
 ## TaskTree 关键功能解释
@@ -235,31 +235,31 @@ task_chain.start_chain(initial_tasks)
 ### 1. 串行任务链
 ```python
 # 创建 TaskTree 实例
-task_chain = TaskTree(stages=[stage_1, stage_2], chain_mode='serial')
+task_tree = TaskTree(stages=[stage_1, stage_2], tree_mode='serial')
 
 # 定义初始任务
 initial_tasks = [1, 2, 3, 4]
 
 # 启动任务链
-task_chain.start_chain(initial_tasks)
+task_tree.start_tree(initial_tasks)
 
 # 获取最终结果
-final_results = task_chain.get_final_result_dict()
+final_results = task_tree.get_final_result_dict()
 print("Final Results:", final_results)
 ```
 ### 2. 并行任务链
 ```python
 # 创建 TaskTree 实例
-task_chain = TaskTree(stages=[stage_1, stage_2], chain_mode='process')
+task_tree = TaskTree(stages=[stage_1, stage_2], tree_mode='process')
 
 # 定义初始任务
 initial_tasks = [1, 2, 3, 4]
 
 # 启动任务链（并行模式）
-task_chain.start_chain(initial_tasks)
+task_tree.start_tree(initial_tasks)
 
 # 获取最终结果
-final_results = task_chain.get_final_result_dict()
+final_results = task_tree.get_final_result_dict()
 print("Final Results:", final_results)
 ```
 

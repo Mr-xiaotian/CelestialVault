@@ -66,9 +66,9 @@ class TaskManager:
         elif self.execution_mode == 'process' and self.process_pool is None:
             self.process_pool = ProcessPoolExecutor(max_workers=self.worker_limit)
 
-    def set_chain_context(self, next_stages: List[TaskManager] = None, stage_mode: str = None, stage_name: str = None):
+    def set_tree_context(self, next_stages: List[TaskManager] = None, stage_mode: str = None, stage_name: str = None):
         """
-        设置链式上下文(仅限组成chain时)
+        设置链式上下文(仅限组成tree时)
         :param next_stages: 后续节点列表
         :param stage_mode: 当前节点执行模式, 可以是 'serial'（串行）或 'process'（并行）
         :param name: 当前节点名称
@@ -85,7 +85,7 @@ class TaskManager:
 
     def set_stage_mode(self, stage_mode: str):
         """
-        设置当前节点在chain中的执行模式, 可以是 'serial'（串行）或 'process'（并行）
+        设置当前节点在tree中的执行模式, 可以是 'serial'（串行）或 'process'（并行）
         """
         self.stage_mode = stage_mode if stage_mode == 'process' else 'serial'
 

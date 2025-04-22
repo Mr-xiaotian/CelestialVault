@@ -113,23 +113,23 @@ async def _test_task_manager_async():
     logging.info(f'run_in_async: {time() - start}')
 
 # 测试 TaskTree 的功能
-def _test_task_chain_0():
+def _test_task_tree_0():
     # 定义多个阶段的 TaskManager 实例
     stage1 = ExampleTaskManager(fibonacci, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
     stage2 = ExampleTaskManager(square, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
     stage3 = ExampleTaskManager(divide_by_two, execution_mode='thread', worker_limit=4, show_progress=False)
     stage4 = ExampleTaskManager(sleep_1, execution_mode='thread', worker_limit=4, show_progress=False)
 
-    stage1.set_chain_context([stage2, stage4], 'process', stage_name='satge1')
-    stage2.set_chain_context([stage3], 'process', stage_name='satge2')
-    stage3.set_chain_context([], 'process', stage_name='satge3')
-    stage4.set_chain_context([], 'process', stage_name='satge4')
+    stage1.set_tree_context([stage2, stage4], 'process', stage_name='satge1')
+    stage2.set_tree_context([stage3], 'process', stage_name='satge2')
+    stage3.set_tree_context([], 'process', stage_name='satge3')
+    stage4.set_tree_context([], 'process', stage_name='satge4')
 
     stage1.add_retry_exceptions(TypeError)
     stage2.add_retry_exceptions(ValueError)
 
     # 初始化 TaskTree
-    chain = TaskTree(root_stage = stage1)
+    tree = TaskTree(root_stage = stage1)
 
     # 要测试的任务列表
     test_task_0 = range(25, 37)
@@ -137,7 +137,7 @@ def _test_task_chain_0():
     # test_task_2 = (item for item in test_task_1)
 
     # 开始任务链
-    result = chain.test_methods(test_task_1)
+    result = tree.test_methods(test_task_1)
     test_table_list, execution_modes, stage_modes, index_header = result["Time table"]
     result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
     for key, value in result.items():
@@ -145,7 +145,7 @@ def _test_task_chain_0():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def _test_task_chain_1():
+def _test_task_tree_1():
     # 定义任务节点
     A = ExampleTaskManager(func=sleep_random_A, execution_mode='thread')
     B = ExampleTaskManager(func=sleep_random_B, execution_mode='serial')
@@ -155,18 +155,18 @@ def _test_task_chain_1():
     F = ExampleTaskManager(func=sleep_random_F, execution_mode='serial')
 
     # 设置链式上下文
-    A.set_chain_context(next_stages=[B, C], stage_mode='process', stage_name="Stage_A")
-    B.set_chain_context(next_stages=[D, F], stage_mode='process', stage_name="Stage_B")
-    C.set_chain_context(next_stages=[], stage_mode='process', stage_name="Stage_C")
-    D.set_chain_context(next_stages=[E], stage_mode='process', stage_name="Stage_D")
-    E.set_chain_context(next_stages=[], stage_mode='process', stage_name="Stage_E")
-    F.set_chain_context(next_stages=[], stage_mode='process', stage_name="Stage_F")
+    A.set_tree_context(next_stages=[B, C], stage_mode='process', stage_name="Stage_A")
+    B.set_tree_context(next_stages=[D, F], stage_mode='process', stage_name="Stage_B")
+    C.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_C")
+    D.set_tree_context(next_stages=[E], stage_mode='process', stage_name="Stage_D")
+    E.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_E")
+    F.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_F")
 
     # 初始化 TaskTree, 并设置根节点
-    chain = TaskTree(A)
+    tree = TaskTree(A)
 
     # 开始任务链
-    result = chain.test_methods(range(10))
+    result = tree.test_methods(range(10))
     test_table_list, execution_modes, stage_modes, index_header = result["Time table"]
     result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
     for key, value in result.items():
@@ -174,10 +174,7 @@ def _test_task_chain_1():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def split_func(lst):
-    return lst
-
-def test_task_chain_2():    
+def test_task_tree_2():    
     # 定义任务节点
     generate_stage = ExampleTaskManager(func=generate_urls, execution_mode='thread', worker_limit=4)
     saver_stage = ExampleTaskManager(func=save, execution_mode='thread', worker_limit=4)
@@ -186,19 +183,19 @@ def test_task_chain_2():
     parse_stage = ExampleTaskManager(func=parse, execution_mode='thread', worker_limit=4)
 
     # 设置链关系
-    generate_stage.set_chain_context([saver_stage, splitter], stage_mode='process', stage_name='GenURLs')
-    saver_stage.set_chain_context([], stage_mode='process', stage_name='Saver')
-    splitter.set_chain_context([download_stage, parse_stage], stage_mode='serial', stage_name='Splitter')
-    download_stage.set_chain_context([], stage_mode='process', stage_name='Downloader')
-    parse_stage.set_chain_context([], stage_mode='process', stage_name='Parser')
+    generate_stage.set_tree_context([saver_stage, splitter], stage_mode='process', stage_name='GenURLs')
+    saver_stage.set_tree_context([], stage_mode='process', stage_name='Saver')
+    splitter.set_tree_context([download_stage, parse_stage], stage_mode='serial', stage_name='Splitter')
+    download_stage.set_tree_context([], stage_mode='process', stage_name='Downloader')
+    parse_stage.set_tree_context([], stage_mode='process', stage_name='Parser')
 
     # 初始化 TaskTree
-    chain = TaskTree(generate_stage)
+    tree = TaskTree(generate_stage)
 
     # 测试输入：生成不同 URL 的任务
     input_tasks = range(5)
 
-    result = chain.test_methods(input_tasks)
+    result = tree.test_methods(input_tasks)
     test_table_list, execution_modes, stage_modes, index_header = result["Time table"]
     result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
 
@@ -207,8 +204,8 @@ def test_task_chain_2():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
     
-def profile_task_chain():
-    target_func = 'test_task_chain_1'
+def profile_task_tree():
+    target_func = 'test_task_tree_1'
     now_time = strftime("%m-%d-%H-%M", localtime())
     output_file = f'profile/{target_func}({now_time}).prof'
     cProfile.run(target_func + '()', output_file)
@@ -217,4 +214,4 @@ def profile_task_chain():
 
 # 在主函数或脚本中调用此函数，而不是在测试中
 if __name__ == "__main__":
-    test_task_chain_2()
+    test_task_tree_2()

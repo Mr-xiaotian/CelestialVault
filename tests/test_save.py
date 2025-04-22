@@ -1,7 +1,7 @@
 import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import pytest, logging
+import pytest, logging, pprint
 from time import time
 from instances.inst_save import Saver
 
@@ -44,8 +44,8 @@ def test_saver():
 
     task_list = [(num, i, '.jpg') for num,i in enumerate(li)]
     final_result_dict = saver.download_urls(task_list, chain_mode)
-    logging.info(f'TaskTree completed in {time() - start_time} seconds by {chain_mode}.')
-    logging.info(f"Task result: {final_result_dict}.")
+    logging.info(f'TaskChain completed in {time() - start_time} seconds by {chain_mode}.')
+    logging.info(f"Task result: \n{pprint.pformat(final_result_dict)}.")
 
     # saver.fetch_threader.set_execution_mode('async')
     # saver.fetch_threader.start(task_list)

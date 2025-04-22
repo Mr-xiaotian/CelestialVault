@@ -4,7 +4,7 @@
 ## instance
 
 [instances readme](./instances/README.md)
-(更新了inst_task与inst_chain)
+(更新了inst_task与inst_tree)
 
 ## tools
 
