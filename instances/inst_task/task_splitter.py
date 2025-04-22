@@ -4,17 +4,21 @@ from .task_support import task_logger
 
 
 class TaskSplitter(ExampleTaskManager):
-    def __init__(self, split_task=None):
+    def __init__(self, split_name=None):
         """
         :param split_func: 用于分解任务的函数，默认直接返回原始值
         """
-        split_task = split_task or self.split_task
-        super().__init__(func=split_task, execution_mode='serial')
+        self.split_task.__name__ = split_name or self.split_task.__name__
+        super().__init__(func=self.split_task, execution_mode='serial',
+                         progress_desc='Spliting tasks', show_progress=False)
     
-    def split_task(self, task):
+    def split_task(self, *task):
         """
         实际上这个函数不执行逻辑，仅用于符合 TaskManager 架构
         """
+        return task
+    
+    def get_args(self, task):
         return task
     
     def process_result(self, task, result):

@@ -173,14 +173,24 @@ class TaskManager:
         获取任务信息
         """
         info_list = []
-        for arg in self.get_args(task):
+        args = self.get_args(task)
+
+        def format_arg(arg):
             arg_str = f'{arg}'.replace("\\", "\\\\").replace("\n", "\\n")
             if len(arg_str) < self.max_info or not self.max_info:
-                info_list.append(arg_str)
+                return arg_str
             else:
-                first_info = arg_str[:int(self.max_info*2//3)]
-                second_info = arg_str[-int(self.max_info*1//3):]
-                info_list.append(f"{first_info}...{second_info}")
+                first_info = arg_str[:int(self.max_info * 2 // 3)]
+                second_info = arg_str[-int(self.max_info * 1 // 3):]
+                return f"{first_info}...{second_info}"
+
+        if len(args) <= 3:
+            info_list = [format_arg(arg) for arg in args]
+        else:
+            info_list = [format_arg(arg) for arg in args[:2]]
+            info_list.append("...")  # 表示中间省略
+            info_list.append(format_arg(args[-1]))
+
         return "(" + ", ".join(info_list) + ")"
     
     def get_result_info(self, result):
