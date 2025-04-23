@@ -355,11 +355,16 @@ class TaskTree:
     
 
 class TaskChain(TaskTree):
-    def __init__(self, stages: List[TaskManager], tree_mode: str = 'serial'):
+    def __init__(self, stages: List[TaskManager], chain_mode: str = 'serial'):
+        """
+        初始化 TaskChain
+        :param stages: TaskManager 列表
+        :param chain_mode: 链式模式，默认为 'serial'
+        """
         for num, stage in enumerate(stages):
             stage_name = f"Stage {num + 1}"
             next_stage = [stages[num + 1]] if num < len(stages) - 1 else []
-            stage.set_tree_context(next_stage, tree_mode, stage_name)
+            stage.set_tree_context(next_stage, chain_mode, stage_name)
 
         root_stage = stages[0]
         super().__init__(root_stage)

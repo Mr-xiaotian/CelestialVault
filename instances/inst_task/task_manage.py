@@ -65,6 +65,13 @@ class TaskManager:
             self.thread_pool = ThreadPoolExecutor(max_workers=self.worker_limit)
         elif self.execution_mode == 'process' and self.process_pool is None:
             self.process_pool = ProcessPoolExecutor(max_workers=self.worker_limit)
+            
+    def set_execution_mode(self, execution_mode):
+        """
+        设置执行模式
+        :param execution_mode: 执行模式，可以是 'thread'（线程）, 'process'（进程）, 'async'（异步）, 'serial'（串行）
+        """
+        self.execution_mode = execution_mode if execution_mode in ['thread', 'process', 'async', 'serial'] else 'serial'
 
     def set_tree_context(self, next_stages: List[TaskManager] = None, stage_mode: str = None, stage_name: str = None):
         """
@@ -94,13 +101,6 @@ class TaskManager:
         设置当前节点名称
         """
         self.stage_name = name or id(self)
-
-    def set_execution_mode(self, execution_mode):
-        """
-        设置执行模式
-        :param execution_mode: 执行模式，可以是 'thread'（线程）, 'process'（进程）, 'async'（异步）, 'serial'（串行）
-        """
-        self.execution_mode = execution_mode if execution_mode in ['thread', 'process', 'async', 'serial'] else 'serial'
 
     def get_stage_tag(self):
         """
