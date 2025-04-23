@@ -75,10 +75,10 @@ def square_root(x):
 def generate_urls(x):
     return tuple([f"url_{x}_{i}" for i in range(random.randint(1, 4))])
 
-def save(data):
+def log_urls(data):
     if data == ('url_1_0', 'url_1_1'):
         raise ValueError("Test error in ('url_1_0', 'url_1_1')")
-    return f"Saved({data})"
+    return f"logd({data})"
 
 def download(url):
     if url == "url_3_0":
@@ -174,17 +174,17 @@ def _test_task_tree_1():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def _test_task_tree_2():    
+def test_task_tree_2():    
     # 定义任务节点
     generate_stage = ExampleTaskManager(func=generate_urls, execution_mode='thread', worker_limit=4)
-    saver_stage = ExampleTaskManager(func=save, execution_mode='thread', worker_limit=4)
+    logr_stage = ExampleTaskManager(func=log_urls, execution_mode='thread', worker_limit=4)
     splitter = TaskSplitter()
     download_stage = ExampleTaskManager(func=download, execution_mode='thread', worker_limit=4)
     parse_stage = ExampleTaskManager(func=parse, execution_mode='thread', worker_limit=4)
 
     # 设置链关系
-    generate_stage.set_tree_context([saver_stage, splitter], stage_mode='process', stage_name='GenURLs')
-    saver_stage.set_tree_context([], stage_mode='process', stage_name='Saver')
+    generate_stage.set_tree_context([logr_stage, splitter], stage_mode='process', stage_name='GenURLs')
+    logr_stage.set_tree_context([], stage_mode='process', stage_name='Loger')
     splitter.set_tree_context([download_stage, parse_stage], stage_mode='serial', stage_name='Splitter')
     download_stage.set_tree_context([], stage_mode='process', stage_name='Downloader')
     parse_stage.set_tree_context([], stage_mode='process', stage_name='Parser')

@@ -102,6 +102,12 @@ class TaskManager:
         """
         self.execution_mode = execution_mode if execution_mode in ['thread', 'process', 'async', 'serial'] else 'serial'
 
+    def get_stage_tag(self):
+        """
+        获取当前节点在tree中的标签
+        """
+        return f"{self.stage_name}[{self.func.__name__}]"
+
     def add_retry_exceptions(self, *exceptions):
         """
         添加需要重试的异常类型

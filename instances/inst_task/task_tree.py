@@ -15,7 +15,7 @@ class TaskTree:
         """
         :param root_stage: 任务链的根 TaskManager 节点
         """
-        self.root_stage = root_stage
+        self.set_root_stage(root_stage)
 
     def init_env(self, tasks: list):
         """
@@ -31,8 +31,10 @@ class TaskTree:
         """
         初始化字典
         """
+        self.stage_dict = {}
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
-        self.final_error_dict = defaultdict(list)  # 用于保存初始任务到最终错误的映射
+        self.final_error_dict = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
+        self.final_fail_dict = defaultdict(list)  # 用于保存节点到节点失败任务的映射
     
     def init_queues(self, tasks: list):
         """
@@ -43,6 +45,7 @@ class TaskTree:
         def collect_queue(stage: TaskManager):
             # 为每个节点创建队列
             self.stage_queues_dict[stage] = MPQueue()
+            self.stage_dict[stage.get_stage_tag()] = stage
             visited_stages.add(stage)
 
             for next_stage in stage.next_stages:
@@ -53,11 +56,18 @@ class TaskTree:
         # 初始化每个节点的队列
         visited_stages = set()
         self.stage_queues_dict = {}
+        self.stage_dict[self.root_stage.get_stage_tag()] = self.root_stage
         collect_queue(self.root_stage)
 
         for task in tasks:
             self.stage_queues_dict[self.root_stage].put(task)
         self.stage_queues_dict[self.root_stage].put(TERMINATION_SIGNAL)
+
+    def set_root_stage(self, root_stage: TaskManager):
+        """
+        设定根节点
+        """
+        self.root_stage = root_stage
     
     def set_tree_mode(self, stage_mode: str, execution_mode: str):
         """
@@ -170,17 +180,16 @@ class TaskTree:
             if stage_task in stage_result_dict:
                 stage_task = stage_result_dict[stage_task]
             elif stage_task in stage_error_dict:
-                stage_task = (stage_error_dict[stage_task], stage.func.__name__)
+                stage_task = stage_error_dict[stage_task]
                 task_execution_status[initial_task] = False
-                return [(stage_task, stage.stage_name)]
+                return [(stage_task, stage.get_stage_tag())]
             else:
                 dispear_exception = TaskError(f"({stage_task}) not found.")
-                stage_task = (dispear_exception, stage.func.__name__)
                 task_execution_status[initial_task] = False
-                return [(stage_task, stage.stage_name)]
+                return [(dispear_exception, stage.get_stage_tag())]
             
             if not stage.next_stages:
-                return [(stage_task, stage.stage_name)]
+                return [(stage_task, stage.get_stage_tag())]
             
             for next_stage in stage.next_stages:
                 if next_stage in visited_stages:
@@ -212,8 +221,9 @@ class TaskTree:
             stage_error_dict = stage.get_error_dict()
             visited_stages.add(stage)
             for task, error in stage_error_dict.items():
-                error_key = (f'{type(error).__name__}({error})', stage.func.__name__, stage.stage_name)
+                error_key = (f'{type(error).__name__}({error})', stage.get_stage_tag())
                 self.final_error_dict[error_key].append(task)
+                self.final_fail_dict[stage.get_stage_tag()].append(task)
             for next_stage in stage.next_stages:
                 if next_stage in visited_stages:
                     continue
@@ -221,6 +231,12 @@ class TaskTree:
 
         visited_stages = set()
         update_error_dict(self.root_stage)
+
+    def get_stage_dict(self):
+        """
+        返回节点字典
+        """
+        return self.stage_dict
     
     def get_final_result_dict(self):
         """
@@ -233,6 +249,12 @@ class TaskTree:
         返回最终错误字典
         """
         return self.final_error_dict
+    
+    def get_final_fail_dict(self):
+        """
+        返回最终失败字典
+        """
+        return self.final_fail_dict
     
     def get_failed_tasks(self):
         """
@@ -305,6 +327,7 @@ class TaskTree:
         test_table_list = []
         final_result_dict = {}
         final_error_dict = {}
+        final_fail_dict = {}
         failed_tasks = []
 
         stage_modes = ['serial', 'process']
@@ -319,12 +342,14 @@ class TaskTree:
                 time_list.append(time() - start_time)
                 final_result_dict.update(self.get_final_result_dict())
                 final_error_dict.update(self.get_final_error_dict())
+                final_fail_dict.update(self.get_final_fail_dict())
                 failed_tasks += [task for task in self.get_failed_tasks() if task not in failed_tasks]
             test_table_list.append(time_list)
 
         results['Time table'] = (test_table_list, execution_modes, stage_modes, r"stage\execution")
         results['Final result dict'] = final_result_dict
         results['Final error dict'] = final_error_dict
+        results['Final fail dict'] = final_fail_dict
         results['Failed tasks'] = failed_tasks
         return results
     
