@@ -113,7 +113,7 @@ async def _test_task_manager_async():
     logging.info(f'run_in_async: {time() - start}')
 
 # 测试 TaskTree 的功能
-def _test_task_tree_0():
+def test_task_tree_0():
     # 定义多个阶段的 TaskManager 实例
     stage1 = ExampleTaskManager(fibonacci, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
     stage2 = ExampleTaskManager(square, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
@@ -174,7 +174,7 @@ def _test_task_tree_1():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def test_task_tree_2():    
+def _test_task_tree_2():    
     # 定义任务节点
     generate_stage = ExampleTaskManager(func=generate_urls, execution_mode='thread', worker_limit=4)
     saver_stage = ExampleTaskManager(func=save, execution_mode='thread', worker_limit=4)
@@ -214,4 +214,5 @@ def profile_task_tree():
 
 # 在主函数或脚本中调用此函数，而不是在测试中
 if __name__ == "__main__":
-    test_task_tree_2()
+    # test_task_tree_2()
+    pass

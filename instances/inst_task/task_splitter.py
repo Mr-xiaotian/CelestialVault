@@ -4,11 +4,11 @@ from .task_support import task_logger
 
 
 class TaskSplitter(ExampleTaskManager):
-    def __init__(self, split_name=None):
+    def __init__(self, name=None):
         """
         :param split_func: 用于分解任务的函数，默认直接返回原始值
         """
-        self.split_task.__name__ = split_name or self.split_task.__name__
+        self.split_task.__name__ = name or self.split_task.__name__
         super().__init__(func=self.split_task, execution_mode='serial',
                          progress_desc='Spliting tasks', show_progress=False)
     

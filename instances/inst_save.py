@@ -1,26 +1,11 @@
 # _*_ coding: utf-8 _*_
 
-import subprocess
+import subprocess, json, pickle
+import pandas as pd
 from pathlib import Path
 from instances.inst_task import ExampleTaskManager, TaskChain
 from instances.inst_fetch import Fetcher
-
-
-class DownloadError(Exception):
-    """Raised when the download process fails."""
-    pass
-
-
-class TimeoutError(DownloadError):
-    """Raised when the download process times out."""
-    pass
-
-
-class FFmpegError(DownloadError):
-    """Raised when FFmpeg execution fails."""
-    def __init__(self, message, stderr=None):
-        super().__init__(message)
-        self.stderr = stderr
+from instances.inst_error import FFmpegError
 
 
 class FetchManager(ExampleTaskManager):
@@ -45,7 +30,6 @@ class Saver(object):
 
     def set_base_path(self, base_path):
         self.base_path = Path(base_path)
-        self.base_path.mkdir(parents=True, exist_ok=True) # 创建目录
 
     def set_add_path(self, add_path):
         self.add_path = Path(add_path)
@@ -65,9 +49,6 @@ class Saver(object):
         return True
 
     def save_text(self, file_name, text, encoding = 'utf-8', suffix_name = '.txt'):
-        if not file_name:
-            return None
-        
         path = self.get_path(file_name, suffix_name)
         if not self.can_overwrite(path):
             return path
@@ -77,9 +58,6 @@ class Saver(object):
         return path
 
     def add_text(self, file_name, text, encoding = 'utf-8', suffix_name = '.txt'):
-        if not file_name:
-            return None
-    
         path = self.get_path(file_name, suffix_name)
         if not self.can_overwrite(path):
             return path
@@ -95,6 +73,31 @@ class Saver(object):
         
         # 写入二进制内容
         path.write_bytes(content)
+        return path
+
+    def save_dataframe(self, file_name: str, dataframe: pd.DataFrame, suffix_name = '.csv'):
+        path = self.get_path(file_name, suffix_name)
+        if not self.can_overwrite(path):
+            return path
+        
+        dataframe.to_csv(path, index=False, sep=',', encoding = 'utf-8-sig')
+
+    def save_pickle(self, file_name, obj, suffix_name='.pkl'):
+        path = self.get_path(file_name, suffix_name)
+        if not self.can_overwrite(path):
+            return path
+
+        with open(path, 'wb') as f:
+            pickle.dump(obj, f)
+        return path
+    
+    def save_json(self, file_name, data, suffix_name='.json', encoding='utf-8'):
+        path = self.get_path(file_name, suffix_name)
+        if not self.can_overwrite(path):
+            return path
+
+        with open(path, 'w', encoding=encoding) as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
         return path
 
     def download_urls(self, task_list:list[tuple[str,str,str]], chain_mode="serial", show_progress=False):
@@ -120,7 +123,7 @@ class Saver(object):
 
         # 创建 TaskChain 来管理 Fetch 和 Save 两个阶段的任务处理
         chain = TaskChain([fetch_manager, save_manager], chain_mode)
-        chain.start_tree(task_list)  # 开始任务链
+        chain.start_tree(task_list)  # 开始任务树
 
         final_result_dict = chain.get_final_result_dict()  # 获取任务链的最终结果字典
         return final_result_dict  # 返回结果
@@ -134,7 +137,6 @@ class Saver(object):
     def download_m3u8(self, m3u8_url, file_name, suffix_name = '.mp4', timeout=3600):
         m3u8_path = self.get_path(file_name, suffix_name)
         if not self.can_overwrite(m3u8_path):
-            # print(f"{m3u8_path} exist")
             return m3u8_path
         
         command = [
@@ -148,19 +150,14 @@ class Saver(object):
             result = subprocess.run(command, stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True, encoding='utf-8', timeout=timeout)
         except subprocess.TimeoutExpired:
             raise TimeoutError(f"Download process timed out for {m3u8_url}.")
+        except Exception as e:
+            raise FFmpegError(f"Failed to download {m3u8_url}.", stderr=str(e))
 
         # 检查 FFmpeg 是否返回了错误
         if result.returncode != 0:
             error_msg = result.stderr.strip()
             raise FFmpegError(f"Failed to download {m3u8_url}.", stderr=error_msg)
-        else:
-            # print(f"{m3u8_path} download from {m3u8_url} success.")
-            return m3u8_path
-
-    def download_dataframe(self, file_name, dataframe, suffix_name = '.csv'):
-        path = self.get_path(file_name, suffix_name)
-        if not self.can_overwrite(path):
-            return path
         
-        dataframe.to_csv(path, index=False, sep=',',encoding = 'utf-8-sig')
+        return m3u8_path
+
         
