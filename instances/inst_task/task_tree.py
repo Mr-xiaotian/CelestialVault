@@ -1,5 +1,7 @@
 
-import multiprocessing
+import multiprocessing, json
+from pathlib import Path
+from datetime import datetime
 from collections import defaultdict
 from queue import Queue as ThreadQueue
 from multiprocessing import Queue as MPQueue
@@ -316,6 +318,33 @@ class TaskTree:
         
         return formatted_list
     
+    def save_failures(self, path="./fallback", name=None):
+        """
+        保存失败信息到 JSON 文件
+        :param path: 保存路径
+        :param name: 文件名
+        """
+        path = Path(path) / datetime.now().strftime("%Y-%m-%d")
+        path.mkdir(parents=True, exist_ok=True)
+
+        structure = self.format_structure_list()
+        timestamp = datetime.now().strftime("%H-%M-%S-%f")[:-3]
+        chain_name = self.root_stage.stage_name  # 🧠 添加 task_chain_name
+
+        data = {
+            "metadata": {
+                "timestamp": timestamp,
+                "structure": structure,
+            },
+            "failures": self.get_final_fail_dict()
+        }
+
+        file_name = name or f"{timestamp}__{chain_name}.json"
+        file_path = path / file_name
+
+        with file_path.open("w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        
     def test_methods(self, task_list: List[Any]) -> Dict[str, Any]:
         """
         测试 TaskTree 在 'serial' 和 'process' 模式下的执行时间。
@@ -344,6 +373,8 @@ class TaskTree:
                 final_error_dict.update(self.get_final_error_dict())
                 final_fail_dict.update(self.get_final_fail_dict())
                 failed_tasks += [task for task in self.get_failed_tasks() if task not in failed_tasks]
+
+                self.save_failures()
             test_table_list.append(time_list)
 
         results['Time table'] = (test_table_list, execution_modes, stage_modes, r"stage\execution")
