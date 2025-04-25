@@ -7,7 +7,7 @@ from typing import Callable, Tuple, Dict, List, Any
 from collections import defaultdict
 from wcwidth import wcswidth
 from constants import FILE_ICONS
-from instances.inst_task import TaskManager, ExampleTaskManager
+from instances.inst_task import TaskManager, TaskManager
 from .TextTools import format_table
 from .Utilities import bytes_to_human_readable
 
@@ -43,7 +43,7 @@ class HandleFileManager(TaskManager):
         return dict(error_path_dict)
     
 
-class ScanSizeManager(ExampleTaskManager):
+class ScanSizeManager(TaskManager):
     def process_result_dict(self):
         size_dict = defaultdict(list)
 
@@ -55,7 +55,7 @@ class ScanSizeManager(ExampleTaskManager):
         return file_size_iter
     
 
-class ScanHashManager(ExampleTaskManager):
+class ScanHashManager(TaskManager):
     def get_args(self, task):
         return (task[0], )
     
@@ -69,7 +69,7 @@ class ScanHashManager(ExampleTaskManager):
         return identical_dict
 
 
-class DeleteManager(ExampleTaskManager):
+class DeleteManager(TaskManager):
     def __init__(self, func, parent_dir: Path):
         super().__init__(func, progress_desc="Delete files/folders", show_progress=True)
         self.parent_dir = parent_dir
@@ -78,7 +78,7 @@ class DeleteManager(ExampleTaskManager):
         target = self.parent_dir / rel_path
         return (target, )
 
-class CopyManager(ExampleTaskManager):
+class CopyManager(TaskManager):
     def __init__(self, func, main_dir: Path, minor_dir: Path, copy_mode: str):
         super().__init__(func, progress_desc=f"Copy files/folders[{copy_mode}]", show_progress=True)
         self.main_dir = main_dir
@@ -90,7 +90,7 @@ class CopyManager(ExampleTaskManager):
         target.parent.mkdir(parents=True, exist_ok=True)
         return (source, target)
     
-class DeleteReturnSizeManager(ExampleTaskManager):
+class DeleteReturnSizeManager(TaskManager):
     def get_args(self, task):
         return (*task, )
     

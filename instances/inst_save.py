@@ -3,12 +3,12 @@
 import subprocess, json, pickle
 import pandas as pd
 from pathlib import Path
-from instances.inst_task import ExampleTaskManager, TaskChain
+from instances.inst_task import TaskManager, TaskChain
 from instances.inst_fetch import Fetcher
 from instances.inst_error import FFmpegError
 
 
-class FetchManager(ExampleTaskManager):
+class FetchManager(TaskManager):
     def get_args(self, task: object):
         return (task[1], )
     
@@ -16,7 +16,7 @@ class FetchManager(ExampleTaskManager):
         return (task[0], result, task[2])
     
     
-class SaveManager(ExampleTaskManager):
+class SaveManager(TaskManager):
     def get_args(self, task: object):
         return (task[0], task[1], task[2])
     

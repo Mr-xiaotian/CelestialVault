@@ -5,7 +5,7 @@ import pytest, logging, asyncio, pprint
 import cProfile, subprocess, random
 from time import time, strftime, localtime, sleep
 from tools.TextTools import format_table
-from instances.inst_task import ExampleTaskManager, TaskTree, TaskSplitter
+from instances.inst_task import TaskManager, TaskTree, TaskSplitter
 
 def sleep_1(n):
     sleep(1)
@@ -94,7 +94,7 @@ def _test_task_manager():
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
     test_task_2 = (item for item in test_task_1)
 
-    manager = ExampleTaskManager(fibonacci, worker_limit=6, max_retries = 1, show_progress=True)
+    manager = TaskManager(fibonacci, worker_limit=6, max_retries = 1, show_progress=True)
     manager.add_retry_exceptions(ValueError)
     results = manager.test_methods(test_task_1)
     logging.info(results)
@@ -106,7 +106,7 @@ async def _test_task_manager_async():
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
     test_task_2 = (item for item in test_task_1)
 
-    manager = ExampleTaskManager(fibonacci_async, worker_limit=6, max_retries = 1, show_progress=True)
+    manager = TaskManager(fibonacci_async, worker_limit=6, max_retries = 1, show_progress=True)
     manager.add_retry_exceptions(ValueError)
     start = time()
     await manager.start_async(test_task_1)
@@ -115,10 +115,10 @@ async def _test_task_manager_async():
 # 测试 TaskTree 的功能
 def _test_task_tree_0():
     # 定义多个阶段的 TaskManager 实例
-    stage1 = ExampleTaskManager(fibonacci, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
-    stage2 = ExampleTaskManager(square, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
-    stage3 = ExampleTaskManager(divide_by_two, execution_mode='thread', worker_limit=4, show_progress=False)
-    stage4 = ExampleTaskManager(sleep_1, execution_mode='thread', worker_limit=4, show_progress=False)
+    stage1 = TaskManager(fibonacci, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
+    stage2 = TaskManager(square, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
+    stage3 = TaskManager(divide_by_two, execution_mode='thread', worker_limit=4, show_progress=False)
+    stage4 = TaskManager(sleep_1, execution_mode='thread', worker_limit=4, show_progress=False)
 
     stage1.set_tree_context([stage2, stage4], 'process', stage_name='satge1')
     stage2.set_tree_context([stage3], 'process', stage_name='satge2')
@@ -147,12 +147,12 @@ def _test_task_tree_0():
 
 def _test_task_tree_1():
     # 定义任务节点
-    A = ExampleTaskManager(func=sleep_random_A, execution_mode='thread')
-    B = ExampleTaskManager(func=sleep_random_B, execution_mode='serial')
-    C = ExampleTaskManager(func=sleep_random_C, execution_mode='serial')
-    D = ExampleTaskManager(func=sleep_random_D, execution_mode='thread')
-    E = ExampleTaskManager(func=sleep_random_E, execution_mode='thread')
-    F = ExampleTaskManager(func=sleep_random_F, execution_mode='serial')
+    A = TaskManager(func=sleep_random_A, execution_mode='thread')
+    B = TaskManager(func=sleep_random_B, execution_mode='serial')
+    C = TaskManager(func=sleep_random_C, execution_mode='serial')
+    D = TaskManager(func=sleep_random_D, execution_mode='thread')
+    E = TaskManager(func=sleep_random_E, execution_mode='thread')
+    F = TaskManager(func=sleep_random_F, execution_mode='serial')
 
     # 设置链式上下文
     A.set_tree_context(next_stages=[B, C], stage_mode='process', stage_name="Stage_A")
@@ -176,11 +176,11 @@ def _test_task_tree_1():
 
 def test_task_tree_2():    
     # 定义任务节点
-    generate_stage = ExampleTaskManager(func=generate_urls, execution_mode='thread', worker_limit=4)
-    logr_stage = ExampleTaskManager(func=log_urls, execution_mode='thread', worker_limit=4)
+    generate_stage = TaskManager(func=generate_urls, execution_mode='thread', worker_limit=4)
+    logr_stage = TaskManager(func=log_urls, execution_mode='thread', worker_limit=4)
     splitter = TaskSplitter()
-    download_stage = ExampleTaskManager(func=download, execution_mode='thread', worker_limit=4)
-    parse_stage = ExampleTaskManager(func=parse, execution_mode='thread', worker_limit=4)
+    download_stage = TaskManager(func=download, execution_mode='thread', worker_limit=4)
+    parse_stage = TaskManager(func=parse, execution_mode='thread', worker_limit=4)
 
     # 设置链关系
     generate_stage.set_tree_context([logr_stage, splitter], stage_mode='process', stage_name='GenURLs')

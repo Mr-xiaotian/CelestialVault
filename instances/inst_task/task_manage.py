@@ -10,7 +10,7 @@ from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError, Reques
 from typing import List
 from time import time
 from .task_progress import ProgressManager
-from .task_support import TERMINATION_SIGNAL, TerminationSignal, BroadcastQueueManager, task_logger
+from .task_support import TERMINATION_SIGNAL, TerminationSignal, task_logger
 
 
 class TaskManager:
@@ -42,21 +42,23 @@ class TaskManager:
         self.retry_exceptions = (ConnectTimeout, ProtocolError, ReadError, ConnectError, PoolTimeout, ReadTimeout) # 需要重试的异常类型
 
         self.init_dict()
-        
+
+    def init_dict(self, result_dict=None, error_dict=None):
+        """
+        初始化结果字典
+        """
+        self.result_dict = result_dict if result_dict is not None else {}
+        self.error_dict = error_dict if error_dict is not None else {} 
+
     def init_env(self, task_queue=None, result_queues=None, fail_queue=None):
         """
         初始化环境
         """
         self.init_queue(task_queue, result_queues, fail_queue)
+        self.init_pool()
 
         self.retry_time_dict = {}
         self.duplicates_num = 0
-
-        # 可以复用的线程池或进程池
-        if self.execution_mode == 'thread' and self.thread_pool is None:
-            self.thread_pool = ThreadPoolExecutor(max_workers=self.worker_limit)
-        elif self.execution_mode == 'process' and self.process_pool is None:
-            self.process_pool = ProcessPoolExecutor(max_workers=self.worker_limit)
 
     def init_queue(self, task_queue=None, result_queues=None, fail_queue=None):
         """
@@ -72,12 +74,15 @@ class TaskManager:
         self.result_queues = result_queues or [ThreadQueue(),]
         self.fail_queue = fail_queue or ThreadQueue()
 
-    def init_dict(self, result_dict=None, error_dict=None):
+    def init_pool(self):
         """
-        初始化结果字典
+        初始化线程池或进程池
         """
-        self.result_dict = result_dict if result_dict is not None else {}
-        self.error_dict = error_dict if error_dict is not None else {} 
+        # 可以复用的线程池或进程池
+        if self.execution_mode == 'thread' and self.thread_pool is None:
+            self.thread_pool = ThreadPoolExecutor(max_workers=self.worker_limit)
+        elif self.execution_mode == 'process' and self.process_pool is None:
+            self.process_pool = ProcessPoolExecutor(max_workers=self.worker_limit)
 
     def set_execution_mode(self, execution_mode):
         """
@@ -133,16 +138,14 @@ class TaskManager:
         """
         for item in task_source:
             self.task_queue.put(item)
-
         self.task_queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
 
     async def put_task_queue_async(self, task_source):
         """
-        将任务放入任务队列
+        将任务放入任务队列(async模式)
         """
         for item in task_source:
             await self.task_queue.put(item)
-
         await self.task_queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
 
     def put_result_queues(self, result):
@@ -160,49 +163,44 @@ class TaskManager:
 
     def get_args(self, task):
         """
-        从任务对象中提取执行函数的参数。
+        从 obj 中获取参数S
 
-        :param task: 任务对象
-        :return 包含执行函数所需参数的元组或列表。
-        
-        说明:
-        这个方法必须在子类中实现。task 的具体结构依赖于子类的任务类型。
+        在这个示例中，我们假设 obj 是一个整数，并将其作为参数返回
         """
-        raise NotImplementedError("This method should be overridden")
+        return (task,)
 
     def process_result(self, task, result):
         """
-        处理任务的结果。
+        从结果队列中获取结果，并进行处理
 
-        :param task: 已完成的任务对象
-        :param result: 任务的执行结果
-        :return 处理后的结果。
-
-        说明:
-        这个方法必须在子类中实现。可以记录错误、发送通知或其他错误处理操作。
-        注意:
-        如果当前stage后接其他stage，则result必须为可hash对象，否则无法作为result_dict的键。
+        在这个示例中，我们只是简单地返回结果
         """
-        raise NotImplementedError("This method should be overridden")
-    
+        return result
+
     def process_result_dict(self):
         """
-        处理任务结果字典，将结果字典中的结果提取出来，并返回一个包含结果的列表。
+        处理结果字典
 
-        说明:
-        这个方法必须在子类中实现。可以记录错误、发送通知或其他错误处理操作。
+        在这个示例中，我们合并了字典并返回
         """
-        return NotImplementedError("This method should be overridden")
+        result_dict = self.get_result_dict()
+        error_dict = self.get_error_dict()
 
+        return {**result_dict, **error_dict}
+    
     def handle_error_dict(self):
         """
-        处理任务执行后的所有错误
+        处理错误字典
 
-        说明:
-        这个方法必须在子类中实现。可以记录错误、发送通知或其他错误处理操作。
+        在这个示例中，我们将列表合并为错误组
         """
-        raise NotImplementedError("This method should be overridden")
-    
+        error_dict = self.get_error_dict()
+
+        error_groups = defaultdict(list)
+        for task, error in error_dict.items():
+            error_groups[error].append(task)
+
+        return dict(error_groups)  # 转换回普通字典
     def get_task_info(self, task):
         """
         获取任务信息
@@ -362,6 +360,7 @@ class TaskManager:
 
         :param input_queue: 输入队列
         :param output_queue: 输出队列
+        :param fail_queue: 失败队列
         """
         start_time = time()
         self.init_env(input_queue, output_queues, fail_queue)
@@ -612,50 +611,5 @@ class TaskManager:
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.clean_env()
-
-
-class ExampleTaskManager(TaskManager):
-    """
-    As an example of use, we redefine the subclass of TaskManager
-    """
-    def get_args(self, task):
-        """
-        从 obj 中获取参数S
-
-        在这个示例中，我们假设 obj 是一个整数，并将其作为参数返回
-        """
-        return (task,)
-
-    def process_result(self, task, result):
-        """
-        从结果队列中获取结果，并进行处理
-
-        在这个示例中，我们只是简单地返回结果
-        """
-        return result
-
-    def process_result_dict(self):
-        """
-        处理结果字典
-
-        在这个示例中，我们合并了字典并返回
-        """
-        result_dict = self.get_result_dict()
-        error_dict = self.get_error_dict()
-
-        return {**result_dict, **error_dict}
-    
-    def handle_error_dict(self):
-        """
-        处理错误字典
-
-        在这个示例中，我们将列表合并为错误组
-        """
-        error_dict = self.get_error_dict()
-
-        error_groups = defaultdict(list)
-        for task, error in error_dict.items():
-            error_groups[error].append(task)
-
-        return dict(error_groups)  # 转换回普通字典
+ 
         

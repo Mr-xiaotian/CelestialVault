@@ -5,8 +5,8 @@
 # Github: https://github.com/Mr-xiaotian
 
 from .task_tree import TaskTree, TaskChain
-from .task_manage import TaskManager, ExampleTaskManager
-from .task_splitter import TaskSplitter
+from .task_manage import TaskManager
+from .task_nodes import TaskSplitter
 from .task_support import BroadcastQueueManager, TerminationSignal
 
-__all__ = ['TaskTree', 'TaskChain', 'TaskManager', 'ExampleTaskManager', 'TaskSplitter', "BroadcastQueueManager", "TerminationSignal"]
+__all__ = ['TaskTree', 'TaskChain', 'TaskManager', 'TaskSplitter', "BroadcastQueueManager", "TerminationSignal"]

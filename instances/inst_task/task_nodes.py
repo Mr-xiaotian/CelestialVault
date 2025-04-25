@@ -1,9 +1,9 @@
 from time import time
-from .task_manage import ExampleTaskManager
+from .task_manage import TaskManager
 from .task_support import task_logger
 
 
-class TaskSplitter(ExampleTaskManager):
+class TaskSplitter(TaskManager):
     def __init__(self):
         """
         :param split_func: 用于分解任务的函数，默认直接返回原始值
@@ -49,3 +49,17 @@ class TaskSplitter(ExampleTaskManager):
 
         task_logger.splitter_success(self.func.__name__, self.get_task_info(task), split_count, time() - start_time)
 
+
+class TaskFailHandler(TaskManager):
+    def __init__(self, func, execution_mode='serial', **kwargs):
+        super().__init__(func, execution_mode=execution_mode, **kwargs)
+        self.fail_only = True  # 表示这个节点只消费失败队列
+
+    def get_args(self, task):
+        return (task,)  # 默认单参数，可扩展
+
+    def process_result(self, task, result):
+        return f"Handled failure: {task} → {result}"
+
+    def handle_error_dict(self):
+        return self.get_error_dict()

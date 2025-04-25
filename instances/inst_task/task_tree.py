@@ -8,7 +8,7 @@ from multiprocessing import Queue as MPQueue
 from typing import List, Dict, Any
 from time import time
 from .task_manage import TaskManager
-from .task_splitter import TaskSplitter
+from .task_nodes import TaskSplitter
 from .task_support import TERMINATION_SIGNAL, task_logger, TaskError
 
 
@@ -42,11 +42,10 @@ class TaskTree:
         """
         初始化任务队列
         :param tasks: 待处理的任务列表
-        :return: 节点与队列的映射关系
         """
         def collect_queue(stage: TaskManager):
             # 为每个节点创建队列
-            self.stage_queues_dict[stage] = MPQueue()
+            self.stage_queues_dict[stage.get_stage_tag()] = MPQueue()
             self.stage_dict[stage.get_stage_tag()] = stage
             visited_stages.add(stage)
 
@@ -62,8 +61,8 @@ class TaskTree:
         collect_queue(self.root_stage)
 
         for task in tasks:
-            self.stage_queues_dict[self.root_stage].put(task)
-        self.stage_queues_dict[self.root_stage].put(TERMINATION_SIGNAL)
+            self.stage_queues_dict[self.root_stage.get_stage_tag()].put(task)
+        self.stage_queues_dict[self.root_stage.get_stage_tag()].put(TERMINATION_SIGNAL)
 
     def set_root_stage(self, root_stage: TaskManager):
         """
@@ -113,11 +112,11 @@ class TaskTree:
         递归地执行节点任务
         """
         stage_visited.add(stage)
-        input_queue = self.stage_queues_dict[stage]
+        input_queue = self.stage_queues_dict[stage.get_stage_tag()]
         if not stage.next_stages:
             output_queues = [MPQueue()]
         else:
-            output_queues = [self.stage_queues_dict[next_stage]
+            output_queues = [self.stage_queues_dict[next_stage.get_stage_tag()]
                              for next_stage in stage.next_stages]
         fail_queue = MPQueue()
 
@@ -328,13 +327,13 @@ class TaskTree:
         path = Path(path) / datetime.now().strftime("%Y-%m-%d")
         path.mkdir(parents=True, exist_ok=True)
 
-        timestamp = datetime.now().strftime("%H-%M-%S-%f")[:-3]
         structure = self.format_structure_list()
+        timestamp = datetime.now().strftime("%H-%M-%S-%f")[:-3]
         chain_name = self.root_stage.stage_name  # 🧠 添加 task_chain_name
 
         data = {
             "metadata": {
-                "timestamp": timestamp,
+                "timestamp": datetime.now().isoformat(),
                 "structure": structure,
             },
             "failures": self.get_final_fail_dict()

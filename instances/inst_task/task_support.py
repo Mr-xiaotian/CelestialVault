@@ -26,7 +26,7 @@ class TaskLogger:
 
         self.logger.remove()  # remove the default handler
         now_time = strftime("%Y-%m-%d", localtime())
-        self.logger.add(f"logs/task_manager({now_time}).log",
+        self.logger.add(f"logs/task_logger({now_time}).log",
                         format="{time:YYYY-MM-DD HH:mm:ss} {level} {message}", 
                         level="INFO")
         

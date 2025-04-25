@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import Tuple, List
 from collections import defaultdict
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip, clips_array
-from instances.inst_task import ExampleTaskManager
+from instances.inst_task import TaskManager
 
 
-class GetCodecManager(ExampleTaskManager):
+class GetCodecManager(TaskManager):
     def process_result_dict(self):
         codec_dict = defaultdict(list)
         for path, codec in self.result_dict.items():
