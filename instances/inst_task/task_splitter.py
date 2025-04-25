@@ -44,7 +44,7 @@ class TaskSplitter(ExampleTaskManager):
         split_count = 0
 
         for item in processed_result:
-            self.result_queue.put(item)
+            self.put_result_queues(item)
             split_count += 1
 
         task_logger.splitter_success(self.func.__name__, self.get_task_info(task), split_count, time() - start_time)

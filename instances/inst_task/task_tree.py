@@ -119,15 +119,16 @@ class TaskTree:
         else:
             output_queues = [self.stage_queues_dict[next_stage]
                              for next_stage in stage.next_stages]
+        fail_queue = MPQueue()
 
         if stage.stage_mode == 'process':
-            stage.init_result_error_dict(self.manager.dict(), self.manager.dict())
-            p = multiprocessing.Process(target=stage.start_stage, args=(input_queue, output_queues))
+            stage.init_dict(self.manager.dict(), self.manager.dict())
+            p = multiprocessing.Process(target=stage.start_stage, args=(input_queue, output_queues, fail_queue))
             p.start()
             self.processes.append(p)
         else:
-            stage.init_result_error_dict(dict(), dict())
-            stage.start_stage(input_queue, output_queues)
+            stage.init_dict({}, {})
+            stage.start_stage(input_queue, output_queues, fail_queue)
 
         for next_stage in stage.next_stages:
             if next_stage in stage_visited:
@@ -327,8 +328,8 @@ class TaskTree:
         path = Path(path) / datetime.now().strftime("%Y-%m-%d")
         path.mkdir(parents=True, exist_ok=True)
 
-        structure = self.format_structure_list()
         timestamp = datetime.now().strftime("%H-%M-%S-%f")[:-3]
+        structure = self.format_structure_list()
         chain_name = self.root_stage.stage_name  # 🧠 添加 task_chain_name
 
         data = {
@@ -375,6 +376,7 @@ class TaskTree:
                 failed_tasks += [task for task in self.get_failed_tasks() if task not in failed_tasks]
 
                 self.save_failures()
+                # self.release_resources()
             test_table_list.append(time_list)
 
         results['Time table'] = (test_table_list, execution_modes, stage_modes, r"stage\execution")

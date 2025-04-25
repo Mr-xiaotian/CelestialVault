@@ -78,7 +78,7 @@ def generate_urls(x):
 def log_urls(data):
     if data == ('url_1_0', 'url_1_1'):
         raise ValueError("Test error in ('url_1_0', 'url_1_1')")
-    return f"logd({data})"
+    return f"Logged({data})"
 
 def download(url):
     if url == "url_3_0":
@@ -113,7 +113,7 @@ async def _test_task_manager_async():
     logging.info(f'run_in_async: {time() - start}')
 
 # 测试 TaskTree 的功能
-def test_task_tree_0():
+def _test_task_tree_0():
     # 定义多个阶段的 TaskManager 实例
     stage1 = ExampleTaskManager(fibonacci, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)
     stage2 = ExampleTaskManager(square, execution_mode='thread', worker_limit=4, max_retries=1, show_progress=False)

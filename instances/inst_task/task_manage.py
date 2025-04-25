@@ -41,21 +41,13 @@ class TaskManager:
 
         self.retry_exceptions = (ConnectTimeout, ProtocolError, ReadError, ConnectError, PoolTimeout, ReadTimeout) # 需要重试的异常类型
 
-        self.init_result_error_dict()
+        self.init_dict()
         
-    def init_result_error_dict(self, result_dict=None, error_dict=None):
-        self.result_dict = result_dict if result_dict is not None else {}
-        self.error_dict = error_dict if error_dict is not None else {} 
-
-    def init_env(self):
-        queue_map = {
-            "process": MPQueue,
-            "async": AsyncQueue,
-            "thread": ThreadQueue,
-            "serial": ThreadQueue,
-        }
-        self.task_queue = queue_map[self.execution_mode]()
-        self.result_queue = ThreadQueue()
+    def init_env(self, task_queue=None, result_queues=None, fail_queue=None):
+        """
+        初始化环境
+        """
+        self.init_queue(task_queue, result_queues, fail_queue)
 
         self.retry_time_dict = {}
         self.duplicates_num = 0
@@ -65,7 +57,28 @@ class TaskManager:
             self.thread_pool = ThreadPoolExecutor(max_workers=self.worker_limit)
         elif self.execution_mode == 'process' and self.process_pool is None:
             self.process_pool = ProcessPoolExecutor(max_workers=self.worker_limit)
-            
+
+    def init_queue(self, task_queue=None, result_queues=None, fail_queue=None):
+        """
+        初始化队列
+        """
+        queue_map = {
+            "process": MPQueue,
+            "async": AsyncQueue,
+            "thread": ThreadQueue,
+            "serial": ThreadQueue,
+        }
+        self.task_queue = task_queue or queue_map[self.execution_mode]()
+        self.result_queues = result_queues or [ThreadQueue(),]
+        self.fail_queue = fail_queue or ThreadQueue()
+
+    def init_dict(self, result_dict=None, error_dict=None):
+        """
+        初始化结果字典
+        """
+        self.result_dict = result_dict if result_dict is not None else {}
+        self.error_dict = error_dict if error_dict is not None else {} 
+
     def set_execution_mode(self, execution_mode):
         """
         设置执行模式
@@ -115,18 +128,34 @@ class TaskManager:
         self.retry_exceptions = self.retry_exceptions + tuple(exceptions)
 
     def put_task_queue(self, task_source):
+        """
+        将任务放入任务队列
+        """
         for item in task_source:
             self.task_queue.put(item)
 
         self.task_queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
 
     async def put_task_queue_async(self, task_source):
+        """
+        将任务放入任务队列
+        """
         for item in task_source:
             await self.task_queue.put(item)
 
         await self.task_queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
 
+    def put_result_queues(self, result):
+        """
+        将结果放入所有结果队列
+        """
+        for result_queue in self.result_queues:
+            result_queue.put(result)
+
     def is_duplicate(self, task):
+        """
+        判断任务是否重复
+        """
         return task in self.get_result_dict() or task in self.get_error_dict()
 
     def get_args(self, task):
@@ -221,7 +250,7 @@ class TaskManager:
         """
         processed_result = self.process_result(task, result)
         self.result_dict[task] = processed_result
-        self.result_queue.put(processed_result)
+        self.put_result_queues(processed_result)
         task_logger.task_success(self.func.__name__, self.get_task_info(task), self.execution_mode,
                                  self.get_result_info(result), time() - start_time)
         
@@ -246,6 +275,7 @@ class TaskManager:
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
+            self.fail_queue.put(task)
             task_logger.task_fail(self.func.__name__, self.get_task_info(task), exception)
     
     async def handle_task_exception_async(self, task, exception: Exception):
@@ -326,7 +356,7 @@ class TaskManager:
         task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time, 
                              len(self.result_dict), len(self.error_dict), self.duplicates_num)
         
-    def start_stage(self, input_queue: ThreadQueue, output_queues: List[MPQueue]):
+    def start_stage(self, input_queue, output_queues, fail_queue):
         """
         根据 start_type 的值，选择串行、并行执行任务
 
@@ -334,19 +364,8 @@ class TaskManager:
         :param output_queue: 输出队列
         """
         start_time = time()
-        self.init_env()
+        self.init_env(input_queue, output_queues, fail_queue)
         task_logger.start_stage(self.stage_name, self.func.__name__, self.execution_mode, self.worker_limit)
-
-        broadcast_manager = None
-        if len(output_queues) == 1:
-            output_queue = output_queues[0]
-        else:
-            output_queue = MPQueue()
-            broadcast_manager = BroadcastQueueManager(output_queue, output_queues, self.func.__name__)
-            broadcast_manager.start()  # 启动广播管理器
-
-        self.task_queue = input_queue
-        self.result_queue = output_queue
 
         # 根据模式运行对应的任务处理函数
         if self.execution_mode == "thread":
@@ -358,8 +377,8 @@ class TaskManager:
         else:
             self.run_in_serial()
 
-        self.result_queue.put(TERMINATION_SIGNAL)
-        broadcast_manager.stop() if broadcast_manager else None # 停止广播管理器
+        self.put_result_queues(TERMINATION_SIGNAL)
+        self.fail_queue.put(TERMINATION_SIGNAL)
         task_logger.end_stage(self.stage_name, self.func.__name__, self.execution_mode, time() - start_time,
                               len(self.result_dict), len(self.error_dict), self.duplicates_num)
  
@@ -546,14 +565,6 @@ class TaskManager:
         获取错误字典
         """
         return self.error_dict
-    
-    def release_resources(self):
-        """
-        关闭线程池和进程池，释放资源
-        """
-        for pool in [self.thread_pool, self.process_pool]:
-            if pool:
-                pool.shutdown(wait=True)
 
     def clean_env(self):
         """
@@ -562,18 +573,27 @@ class TaskManager:
         self.release_resources()
         
         self.task_queue = None
-        self.result_queue = None
+        self.result_queues = None
+        self.fail_queue = None
         
         self.thread_pool = None
         self.process_pool = None
+    
+    def release_resources(self):
+        """
+        关闭线程池和进程池，释放资源
+        """
+        for pool in [self.thread_pool, self.process_pool]:
+            if pool:
+                pool.shutdown(wait=True)
     
     def test_method(self, execution_mode: str, task_list: list) -> float:
         """
         测试方法
         """
         start = time()
-        self.init_result_error_dict()
         self.set_execution_mode(execution_mode)
+        self.init_dict()
         self.start(task_list)
         return time() - start
 
