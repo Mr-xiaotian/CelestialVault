@@ -633,7 +633,7 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
     total_file_num = 0
     max_file_num = 0
     index = 0
-    sort_identical_dict = dict(sorted(identical_dict.items(), key=lambda item: item[0][1], reverse=True))
+    sort_identical_dict = dict(sorted(identical_dict.items(), key=lambda item: item[0][1] * len(item[1]), reverse=True))
 
     report.append("\nIdentical files found:\n")
     for (hash_value, file_size), file_list in sort_identical_dict.items():
