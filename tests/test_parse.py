@@ -1,9 +1,6 @@
-import os, sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import pytest, logging
 from bs4 import BeautifulSoup
-from instances.inst_parse import HTMLContentParser
+from celestialvault.instances.inst_parse import HTMLContentParser
 
 def test_html_content_parser():
     # 示例HTML片段，包含文本、图片和视频配置

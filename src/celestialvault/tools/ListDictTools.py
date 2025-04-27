@@ -43,7 +43,7 @@ def list_replace(lists: List[Any], replace_rules: List[Tuple[Any, Any]]) -> List
     :param replace_rules: 替换规则的列表，每个规则是一个包含两个元素的元组，第一个是要被替换的元素，第二个是替换后的元素
     :return: 替换后的列表
     """
-    from tools.Utilities import functions_are_equal
+    from .Utilities import functions_are_equal
     def replace_element(element: Any, replacement: Tuple[Any, Any]) -> Any:
         target, replacement_value = replacement
         if not all_elements_same_type([element, target]):

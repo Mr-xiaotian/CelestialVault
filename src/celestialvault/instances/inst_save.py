@@ -3,9 +3,9 @@
 import subprocess, json, pickle
 import pandas as pd
 from pathlib import Path
-from instances.inst_task import TaskManager, TaskChain
-from instances.inst_fetch import Fetcher
-from instances.inst_error import FFmpegError
+from .inst_task import TaskManager, TaskChain
+from .inst_fetch import Fetcher
+from .inst_error import FFmpegError
 
 
 class FetchManager(TaskManager):

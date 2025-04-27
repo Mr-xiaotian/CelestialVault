@@ -1,8 +1,5 @@
-import os, sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import pytest, logging
-from tools.Utilities import get_total_size, bytes_to_human_readable
+from celestialvault.tools.Utilities import get_total_size, bytes_to_human_readable
 
 def test_get_total_size():
     data = {

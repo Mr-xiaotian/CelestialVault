@@ -9,8 +9,11 @@ setup(
     description="A Python package for managing celestial data.",  # 短描述
     long_description=open("README.md", encoding="utf-8").read(), # 长描述，一般从README获取
     long_description_content_type="text/markdown",       # 描述的文本格式
-    url="https://github.com/Mr-xiaotian/CelestialVault", # 项目主页(如GitHub地址)
-    packages=find_packages(),        # 自动寻找项目中的包
+    url="https://github.com/Mr-xiaotian/CelestialVault", # 项目主页
+    
+    packages=find_packages(where="src"),    # <<< 1. 修改这里：告诉 setuptools 去 src 下找
+    package_dir={"": "src"},                # <<< 2. 加上这行：映射顶级目录到 src
+
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

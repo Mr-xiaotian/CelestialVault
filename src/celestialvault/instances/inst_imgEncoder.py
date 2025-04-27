@@ -2,9 +2,9 @@ import math
 from PIL import Image, PngImagePlugin
 from tqdm import tqdm
 from itertools import product
-from tools.TextTools import safe_open_txt, encode_crc, decode_crc, compress_text_to_bytes, decompress_text_from_bytes
-from tools.ImageProcessing import generate_palette
-from constants import style_params, image_mode_params
+from ..tools.TextTools import safe_open_txt, encode_crc, decode_crc, compress_text_to_bytes, decompress_text_from_bytes
+from ..tools.ImageProcessing import generate_palette
+from ..constants import style_params, image_mode_params
 
 class ImgEncoder:
     def encode_text_file(self, file_path: str, mode: str='morandi') -> Image.Image:
@@ -428,7 +428,7 @@ class ImgDecoder:
         return bytes(combined_data)
     
     def read_message_from_binary(self, binary_data: bytes) -> str:
-        from tools.ImageProcessing import binary_to_img, img_to_binary
+        from ..tools.ImageProcessing import binary_to_img, img_to_binary
 
         img_len = len(img_to_binary(binary_to_img(binary_data)))
         return binary_data[img_len:]

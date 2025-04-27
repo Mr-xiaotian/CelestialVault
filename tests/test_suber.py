@@ -1,9 +1,6 @@
-import os, sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import pytest, logging
 from time import time
-from instances.inst_sub import Suber
+from celestialvault.instances.inst_sub import Suber
 
 def test_suber():
     test_text = '''# 测试文本开始

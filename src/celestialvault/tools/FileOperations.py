@@ -6,8 +6,8 @@ from tqdm import tqdm
 from typing import Callable, Tuple, Dict, List, Any
 from collections import defaultdict
 from wcwidth import wcswidth
-from constants import FILE_ICONS
-from instances.inst_task import TaskManager, TaskManager
+from ..constants import FILE_ICONS
+from ..instances.inst_task import TaskManager, TaskManager
 from .TextTools import format_table
 from .Utilities import bytes_to_human_readable
 
@@ -187,9 +187,9 @@ def compress_folder(folder_path: str | Path, execution_mode: str = 'thread') -> 
         new_name = f"{name}_compressed.pdf"
         return file_path.with_name(new_name)
 
-    from tools.ImageProcessing import compress_img
-    from tools.VideoProcessing import compress_video
-    # from tools.DocumentConversion import compress_pdf
+    from .ImageProcessing import compress_img
+    from .VideoProcessing import compress_video
+    # from .DocumentConversion import compress_pdf
     from constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 
     rules = {suffix: (compress_img, lambda x: x) for suffix in IMG_SUFFIXES}

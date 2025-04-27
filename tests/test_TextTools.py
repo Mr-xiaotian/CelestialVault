@@ -1,9 +1,6 @@
-import os, sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import pytest
 import logging
-from tools.TextTools import pro_slash, str_to_dict, language_fingerprint, calculate_valid_chinese_text, calculate_valid_text, format_table
+from celestialvault.tools.TextTools import pro_slash, str_to_dict, language_fingerprint, calculate_valid_chinese_text, calculate_valid_text, format_table, string_split
 
 def _test_pro_slash():
     string_a = '(W//R\S/H\\U)'
@@ -112,3 +109,10 @@ def test_format_table():
     table_text = format_table(data, column_names, row_names, index_header = r"行数\属性", align="center")
     logging.info(f"{'Test data':<11}: {data}")
     logging.info(f"{'Test output':<11}:\n{table_text}")
+
+def test_string_split():
+    input_string = ('dfg4354df6g654dfg585d8gd87fg56df132e1rg8df87f56g4d3s1dg45431', '3')
+    except_result = []
+    result = string_split(*input_string)
+
+    logging.info(result)

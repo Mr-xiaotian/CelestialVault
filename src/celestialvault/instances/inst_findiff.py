@@ -3,8 +3,8 @@
 #作者：晓天
 
 from typing import List
-from tools.TextTools import string_split, get_lcs, calculate_similarity
-from tools.ListDictTools import dictkey_mix
+from ..tools.TextTools import string_split, get_lcs, calculate_similarity
+from ..tools.ListDictTools import dictkey_mix
 
 class Findiffer:
     def __init__(self, norm_end: str = '[', diff_end: str = ']', split_part_str: str = '[]') -> None:

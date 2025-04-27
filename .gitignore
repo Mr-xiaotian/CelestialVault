@@ -21,4 +21,5 @@ _preview.ipynb
 # 忽略临时文件
 profile/
 fallback/
+CelestialVault.egg-info/
 .pytest_cache

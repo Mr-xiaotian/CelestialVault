@@ -28,8 +28,8 @@ def combine_imgs_to_pdf(root_path: str | Path, pdf_path: str | Path = None, spec
     :param pdf_path: 输出的PDF文件路径。
     :return: None
     """
-    from constants import IMG_SUFFIXES
-    from tools.FileOperations import folder_to_file_path, sort_by_number
+    from ..constants import IMG_SUFFIXES
+    from .FileOperations import folder_to_file_path, sort_by_number
     # 转换路径为 Path 对象
     root_path = Path(root_path)
     pdf_path = folder_to_file_path(root_path, 'pdf') if pdf_path is None else Path(pdf_path)
@@ -72,7 +72,7 @@ def combine_imgs_folder(folder_path: Path, special_keywords: dict = None):
     :param special_keywords: 特殊关键词，用于排序图片。eg: {'番外': 1, '特典': 1, '原画': 2}
     :return: None
     """
-    from tools.FileOperations import folder_to_file_path
+    from .FileOperations import folder_to_file_path
 
     folder_path = Path(folder_path)
     subfolders = [f for f in sorted(folder_path.iterdir()) if f.is_dir()]
@@ -169,7 +169,7 @@ def generate_palette(color_num=256, style='morandi', mode='random', random_seed=
         v = value_range[0] + (value_range[1] - value_range[0]) * (np.cos(index / color_num * 2 * np.pi) / 2 + 0.5)
         return h, s, v
 
-    from constants import style_params
+    from ..constants import style_params
 
     if style not in style_params:
         raise ValueError("Unsupported style")

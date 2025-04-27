@@ -1,9 +1,6 @@
-import os, sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import pytest, logging
-from instances.inst_findiff import Findiffer
-from tools.TextTools import str_to_dict
+from celestialvault.instances.inst_findiff import Findiffer
+from celestialvault.tools.TextTools import str_to_dict
 
 def test_fd_str():
     str_0 = '1657'

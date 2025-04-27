@@ -1,11 +1,8 @@
-import os, sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import pytest, logging, asyncio, pprint
 import cProfile, subprocess, random
 from time import time, strftime, localtime, sleep
-from tools.TextTools import format_table
-from instances.inst_task import TaskManager, TaskTree, TaskSplitter
+from celestialvault.tools.TextTools import format_table
+from celestialvault.instances.inst_task import TaskManager, TaskTree, TaskSplitter
 
 def sleep_1(n):
     sleep(1)

@@ -1,8 +1,5 @@
-import os, sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import pytest, logging
-from instances.inst_imgEncoder import ImgEncoder, ImgDecoder
+from celestialvault.instances.inst_imgEncoder import ImgEncoder, ImgDecoder
 
 def test_imgEncoder():
     text_path = r"Q:\Project\test\text\test.txt"

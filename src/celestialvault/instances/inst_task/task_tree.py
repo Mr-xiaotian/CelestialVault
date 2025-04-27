@@ -336,7 +336,8 @@ class TaskTree:
                 "timestamp": datetime.now().isoformat(),
                 "structure": structure,
             },
-            "failures": self.get_final_fail_dict()
+            "fail tasks": self.get_final_fail_dict(),
+            "fail init tasks": self.get_failed_tasks(),
         }
 
         file_name = name or f"{timestamp}__{chain_name}.json"
