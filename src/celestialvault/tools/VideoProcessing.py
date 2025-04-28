@@ -133,7 +133,7 @@ def transfer_gif_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]
         parent = file_path.parent
         return parent / Path(name + '_compressed.mp4')
     
-    from tools.FileOperations import handle_folder
+    from .FileOperations import handle_folder
 
     rules = {'.gif': (transfer_gif_to_video, rename_mp4)}
     return handle_folder(folder_path, rules)
@@ -186,7 +186,7 @@ def rotate_video_folder(folder_path: str | Path, angle: int) -> List[Tuple[Path,
         parent = file_path.parent
         return parent / Path(name + f'_rotated({angle}).mp4')
     
-    from tools.FileOperations import handle_folder
+    from .FileOperations import handle_folder
 
     if angle in [90, 180, 270]:
         rules = {'.mp4': (

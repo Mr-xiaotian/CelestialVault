@@ -43,11 +43,11 @@ class TaskManager:
 
         self.init_dict()
 
-    def init_dict(self, result_dict=None, error_dict=None):
+    def init_dict(self, success_dict=None, error_dict=None):
         """
         初始化结果字典
         """
-        self.result_dict = result_dict if result_dict is not None else {}
+        self.success_dict = success_dict if success_dict is not None else {}
         self.error_dict = error_dict if error_dict is not None else {} 
 
     def init_env(self, task_queue=None, result_queues=None, fail_queue=None):
@@ -159,7 +159,7 @@ class TaskManager:
         """
         判断任务是否重复
         """
-        return task in self.get_result_dict() or task in self.get_error_dict()
+        return task in self.get_success_dict() or task in self.get_error_dict()
 
     def get_args(self, task):
         """
@@ -183,10 +183,10 @@ class TaskManager:
 
         在这个示例中，我们合并了字典并返回
         """
-        result_dict = self.get_result_dict()
+        success_dict = self.get_success_dict()
         error_dict = self.get_error_dict()
 
-        return {**result_dict, **error_dict}
+        return {**success_dict, **error_dict}
     
     def handle_error_dict(self):
         """
@@ -201,6 +201,7 @@ class TaskManager:
             error_groups[error].append(task)
 
         return dict(error_groups)  # 转换回普通字典
+    
     def get_task_info(self, task):
         """
         获取任务信息
@@ -247,7 +248,7 @@ class TaskManager:
         :param start_time: 任务开始时间
         """
         processed_result = self.process_result(task, result)
-        self.result_dict[task] = processed_result
+        self.success_dict[task] = processed_result
         self.put_result_queues(processed_result)
         task_logger.task_success(self.func.__name__, self.get_task_info(task), self.execution_mode,
                                  self.get_result_info(result), time() - start_time)
@@ -330,7 +331,7 @@ class TaskManager:
             self.run_in_serial()
 
         task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time,
-                             len(self.result_dict), len(self.error_dict), self.duplicates_num)
+                             len(self.success_dict), len(self.error_dict), self.duplicates_num)
 
     async def start_async(self, task_source):
         """
@@ -352,7 +353,7 @@ class TaskManager:
         await self.run_in_async()
 
         task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time, 
-                             len(self.result_dict), len(self.error_dict), self.duplicates_num)
+                             len(self.success_dict), len(self.error_dict), self.duplicates_num)
         
     def start_stage(self, input_queue, output_queues, fail_queue):
         """
@@ -379,7 +380,7 @@ class TaskManager:
         self.put_result_queues(TERMINATION_SIGNAL)
         self.fail_queue.put(TERMINATION_SIGNAL)
         task_logger.end_stage(self.stage_name, self.func.__name__, self.execution_mode, time() - start_time,
-                              len(self.result_dict), len(self.error_dict), self.duplicates_num)
+                              len(self.success_dict), len(self.error_dict), self.duplicates_num)
  
     def run_in_serial(self):
         """
@@ -553,11 +554,11 @@ class TaskManager:
         except Exception as error:
             return error
             
-    def get_result_dict(self) -> dict:
+    def get_success_dict(self) -> dict:
         """
         获取结果字典
         """
-        return self.result_dict
+        return self.success_dict
     
     def get_error_dict(self) -> dict:
         """

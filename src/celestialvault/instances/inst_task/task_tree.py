@@ -103,6 +103,7 @@ class TaskTree:
 
         self.process_final_result_dict(init_tasks)
         self.handle_final_error_dict()
+        self.save_failures()
         self.release_resources()
 
         task_logger.end_tree(time() - start_time)
@@ -174,13 +175,13 @@ class TaskTree:
         :param initial_tasks: 一个包含初始任务的列表
         """
         def update_final_result_dict(stage_task, stage: TaskManager):
-            stage_result_dict = stage.get_result_dict()
+            stage_success_dict = stage.get_success_dict()
             stage_error_dict = stage.get_error_dict()
             visited_stages.add(stage)
 
             final_list = []
-            if stage_task in stage_result_dict:
-                stage_task = stage_result_dict[stage_task]
+            if stage_task in stage_success_dict:
+                stage_task = stage_success_dict[stage_task]
             elif stage_task in stage_error_dict:
                 stage_task = stage_error_dict[stage_task]
                 task_execution_status[initial_task] = False
@@ -374,9 +375,7 @@ class TaskTree:
                 final_error_dict.update(self.get_final_error_dict())
                 final_fail_dict.update(self.get_final_fail_dict())
                 failed_tasks += [task for task in self.get_failed_tasks() if task not in failed_tasks]
-
-                self.save_failures()
-                # self.release_resources()
+                
             test_table_list.append(time_list)
 
         results['Time table'] = (test_table_list, execution_modes, stage_modes, r"stage\execution")

@@ -40,7 +40,7 @@ class TaskSplitter(TaskManager):
         :param start_time: 任务开始时间
         """
         processed_result = self.process_result(task, result)
-        self.result_dict[task] = processed_result
+        self.success_dict[task] = processed_result
         split_count = 0
 
         for item in processed_result:
