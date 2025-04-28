@@ -57,7 +57,7 @@ def compress_pdf(old_pdf_path: str | Path, new_pdf_path: str | Path):
     :param new_pdf_path: 新PDF路径
     :return: None
     '''
-    from tools.ImageProcessing import combine_imgs_to_pdf
+    from .ImageProcessing import combine_imgs_to_pdf
 
     old_pdf_path = Path(old_pdf_path)
     new_pdf_path = Path(new_pdf_path)
@@ -76,7 +76,7 @@ def merge_pdfs_in_order(folder_path: str | Path, special_keywords: dict = None) 
     :param special_keywords: 特殊关键词，用于排序图片。
     :return: 合并时所使用的 PDF 文件列表（按合并顺序）。
     """
-    from tools.FileOperations import folder_to_file_path, sort_by_number
+    from .FileOperations import folder_to_file_path, sort_by_number
 
     resize_pdfs(folder_path)
 
@@ -200,7 +200,7 @@ def resize_pdfs(folder_path: Path, execution_mode: str = 'serial'):
         new_name = f"{name}_resized.pdf"
         return file_path.with_name(new_name)
     
-    from tools.FileOperations import handle_folder
+    from .FileOperations import handle_folder
 
     max_pdf_width = get_max_pdf_width(folder_path)
     rules = {'.pdf': (resize_pdf, lambda x: x)}

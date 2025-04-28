@@ -1,15 +1,16 @@
-import shutil, re, os
-import hashlib
+import shutil, re, os, hashlib
 import zipfile, rarfile, tarfile, py7zr
-from pathlib import Path
 from tqdm import tqdm
+from pathlib import Path
 from typing import Callable, Tuple, Dict, List, Any
 from collections import defaultdict
 from wcwidth import wcswidth
-from ..constants import FILE_ICONS
-from ..instances.inst_task import TaskManager, TaskManager
+
+from ..constants import FILE_ICONS, IMG_SUFFIXES, VIDEO_SUFFIXES
+from ..instances.inst_task import TaskManager
 from .TextTools import format_table
 from .Utilities import bytes_to_human_readable
+
 
 class HandleFileManager(TaskManager):
     def __init__(self, func, folder_path: Path, new_folder_path: Path, rules: Dict[str, Tuple[Callable, Callable]], 
@@ -190,7 +191,6 @@ def compress_folder(folder_path: str | Path, execution_mode: str = 'thread') -> 
     from .ImageProcessing import compress_img
     from .VideoProcessing import compress_video
     # from .DocumentConversion import compress_pdf
-    from constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 
     rules = {suffix: (compress_img, lambda x: x) for suffix in IMG_SUFFIXES}
     rules.update({suffix: (compress_video, rename_mp4) for suffix in VIDEO_SUFFIXES})

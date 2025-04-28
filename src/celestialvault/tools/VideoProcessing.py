@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Tuple, List
 from collections import defaultdict
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip, clips_array
+
 from ..instances.inst_task import TaskManager
 
 

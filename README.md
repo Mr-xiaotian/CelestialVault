@@ -14,3 +14,7 @@
 ## constants
 
 [constants readme](./constants/README.md)
+
+`
+pip install -e .
+`
