@@ -306,7 +306,7 @@ def print_directory_structure(folder_path: str='.', exclude_dirs: list=None, exc
 
     def get_structure_list(folder_path: Path, indent, max_depth):
         if max_depth < 1:
-            return [], 0
+            return [], get_folder_size(folder_path)
         if not any(folder_path.iterdir()):
             return [], 0
 
@@ -317,30 +317,51 @@ def print_directory_structure(folder_path: str='.', exclude_dirs: list=None, exc
         folder_structure_list = []
         file_structure_list = []
         folder_size = 0
+
+        exclude_dirs_size = 0
+        exclude_file_size = 0
+
+        exclude_dirs_num = 0
+        exclude_file_num = 0
         
         for item in folder_path.iterdir():
-            # 排除指定的目录
-            if item.is_dir() and item.name in exclude_dirs:
-                continue
-            
-            # 排除指定的文件类型
-            if item.is_file() and any(item.suffix == ext for ext in exclude_exts):
-                continue
-            
             if item.is_dir():
+                # 排除指定的目录
+                if item.name in exclude_dirs:
+                    subfolder_size = get_folder_size(item)
+                    folder_size += subfolder_size
+                    exclude_dirs_size += subfolder_size
+                    exclude_dirs_num += 1
+                    continue
+
                 subfolder_structure_list, subfolder_size = get_structure_list(item, indent + '    ', max_depth-1)
                 folder_size += subfolder_size
-                reable_subfolder_size = bytes_to_human_readable(subfolder_size)
 
+                reable_subfolder_size = bytes_to_human_readable(subfolder_size)
                 folder_structure_list.append(f"{indent}📁 {item.name}/    ({reable_subfolder_size})")
                 folder_structure_list.extend(subfolder_structure_list)
             else:
-                icon = FILE_ICONS.get(item.suffix, FILE_ICONS['default'])
+                # 排除指定的文件类型
+                if any(item.suffix == ext for ext in exclude_exts):
+                    file_size = item.stat().st_size
+                    folder_size += file_size
+                    exclude_file_size += file_size
+                    exclude_file_num += 1
+                    continue
+
                 file_size = item.stat().st_size
                 folder_size += file_size
+                
+                icon = FILE_ICONS.get(item.suffix, FILE_ICONS['default'])
                 reable_file_size = bytes_to_human_readable(file_size)
-
                 file_structure_list.append(f"{indent}{icon} {item.name:<{max_name_len - (wcswidth(item.name)-len(item.name))}}\t({reable_file_size})")
+
+        if exclude_dirs_num > 0:
+            reable_exclude_dirs_size = bytes_to_human_readable(exclude_dirs_size)
+            folder_structure_list.append(f"{indent}📁 [{exclude_dirs_num}项排除的目录]    ({reable_exclude_dirs_size})")
+        if exclude_file_num > 0:
+            reable_exclude_file_size = bytes_to_human_readable(exclude_file_size)
+            file_structure_list.append(f"{indent}📄 [{exclude_file_num}项排除的文件]    ({reable_exclude_file_size})")
 
         structure_list = folder_structure_list + file_structure_list
         return structure_list, folder_size
