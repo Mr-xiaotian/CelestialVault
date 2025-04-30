@@ -253,13 +253,12 @@ class TaskManager:
         task_logger.task_success(self.func.__name__, self.get_task_info(task), self.execution_mode,
                                  self.get_result_info(result), time() - start_time)
         
-    def handle_task_exception(self, task, exception: Exception):
+    def handle_task_error(self, task, exception: Exception):
         """
         统一处理异常任务
 
         :param task: 发生异常的任务
         :param exception: 捕获的异常
-
         :return 是否需要重试
         """
         retry_time = self.retry_time_dict.setdefault(task, 0)
@@ -275,9 +274,9 @@ class TaskManager:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
             self.fail_queue.put(task)
-            task_logger.task_fail(self.func.__name__, self.get_task_info(task), exception)
+            task_logger.task_error(self.func.__name__, self.get_task_info(task), exception)
     
-    async def handle_task_exception_async(self, task, exception: Exception):
+    async def handle_task_error_async(self, task, exception: Exception):
         """
         统一处理任务异常, 异步版本
 
@@ -298,7 +297,7 @@ class TaskManager:
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
-            task_logger.task_fail(self.func.__name__, self.get_task_info(task), exception)
+            task_logger.task_error(self.func.__name__, self.get_task_info(task), exception)
 
         return will_try
 
@@ -315,7 +314,7 @@ class TaskManager:
             total_tasks = len(task_source)
         except TypeError:
             total_tasks = 'Generator'
-        task_logger.start_task(self.func.__name__, total_tasks, self.execution_mode, self.worker_limit)
+        task_logger.start_manager(self.func.__name__, total_tasks, self.execution_mode, self.worker_limit)
 
         self.put_task_queue(task_source)
 
@@ -330,7 +329,7 @@ class TaskManager:
             self.set_execution_mode('serial')
             self.run_in_serial()
 
-        task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time,
+        task_logger.end_manager(self.func.__name__, self.execution_mode, time() - start_time,
                              len(self.success_dict), len(self.error_dict), self.duplicates_num)
 
     async def start_async(self, task_source):
@@ -347,12 +346,12 @@ class TaskManager:
             total_tasks = len(task_source)
         except TypeError:
             total_tasks = 'Generator'
-        task_logger.start_task(self.func.__name__, total_tasks, 'async(await)', self.worker_limit)
+        task_logger.start_manager(self.func.__name__, total_tasks, 'async(await)', self.worker_limit)
 
         await self.put_task_queue_async(task_source)
         await self.run_in_async()
 
-        task_logger.end_task(self.func.__name__, self.execution_mode, time() - start_time, 
+        task_logger.end_manager(self.func.__name__, self.execution_mode, time() - start_time, 
                              len(self.success_dict), len(self.error_dict), self.duplicates_num)
         
     def start_stage(self, input_queue, output_queues, fail_queue):
@@ -410,7 +409,7 @@ class TaskManager:
                 result = self.func(*self.get_args(task))
                 self.process_task_success(task, result, start_time)
             except Exception as error:
-                self.handle_task_exception(task, error)
+                self.handle_task_error(task, error)
             progress_manager.update(1)
 
         progress_manager.close()
@@ -450,7 +449,7 @@ class TaskManager:
                 start_time = task_start_dict[task]
                 self.process_task_success(task, result, start_time)
             except Exception as error:
-                self.handle_task_exception(task, error)
+                self.handle_task_error(task, error)
             # 任务完成后减少in_flight计数
             with in_flight_lock:
                 nonlocal in_flight
@@ -533,7 +532,7 @@ class TaskManager:
             if not isinstance(result, Exception):
                 self.process_task_success(task, result, start_time)
             else:
-                await self.handle_task_exception_async(task, result)
+                await self.handle_task_error_async(task, result)
             progress_manager.update(1)
 
         progress_manager.close()

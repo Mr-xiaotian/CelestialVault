@@ -4,6 +4,7 @@ from queue import Queue as ThreadQueue
 from threading import Thread
 from time import strftime, localtime
 from typing import List, Union
+from loguru import Logger
 from loguru import logger as loguru_logger
 
 
@@ -21,7 +22,7 @@ class TaskLogger:
     """
     用于记录任务执行日志的类
     """
-    def __init__(self, logger):
+    def __init__(self, logger: Logger):
         self.logger = logger
 
         self.logger.remove()  # remove the default handler
@@ -30,27 +31,27 @@ class TaskLogger:
                         format="{time:YYYY-MM-DD HH:mm:ss} {level} {message}", 
                         level="INFO")
         
-    def start_task(self, func_name, task_num, execution_mode, worker_limit):
+    def start_manager(self, func_name, task_num, execution_mode, worker_limit):
         start_text = f"'{func_name}' start {task_num} tasks by {execution_mode}"
         start_text += f"({worker_limit} workers)." if execution_mode != 'serial' else "."
         self.logger.info(start_text)
+
+    def end_manager(self, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
+        self.logger.info(f"'{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
 
     def start_stage(self, stage_name, func_name, execution_mode, worker_limit):
         start_text = f"The {stage_name} in '{func_name}' start tasks by {execution_mode}"
         start_text += f"({worker_limit} workers)." if execution_mode != 'serial' else "."
         self.logger.info(start_text)
 
+    def end_stage(self, stage_name, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
+        self.logger.info(f"The {stage_name} in '{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
+
     def start_tree(self, stage_structure):
         self.logger.info(f"Starting TaskTree stages. Tree structure:")
         for structure in stage_structure:
             self.logger.info(f"{structure}")
 
-    def end_task(self, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
-        self.logger.info(f"'{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
-
-    def end_stage(self, stage_name, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
-        self.logger.info(f"The {stage_name} in '{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.")
-    
     def end_tree(self, use_time):
         self.logger.info(f"TaskTree end. Use {use_time:.2f} second.")
 
@@ -60,7 +61,7 @@ class TaskLogger:
     def task_retry(self, func_name, task_info, retry_times):
         self.logger.warning(f"In '{func_name}' Task {task_info} failed {retry_times} times and will retry.")
 
-    def task_fail(self, func_name, task_info, exception):
+    def task_error(self, func_name, task_info, exception):
         self.logger.error(f"In '{func_name}', Task {task_info} failed and can't retry: ({type(exception).__name__}){exception}")
 
     def task_duplicate(self, func_name, task_info):
