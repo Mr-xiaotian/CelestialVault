@@ -54,11 +54,11 @@ task_manager.start(tasks)
 TaskManager 将根据设定的执行模式并发或异步地执行任务，并自动处理任务的成功、失败和重试逻辑。
 
 ### 3. 获取任务结果
-任务执行完成后，可以通过 get_result_dict 方法获取执行结果，或通过 get_error_dict 获取失败的任务及其对应的异常。
+任务执行完成后，可以通过 get_success_dict 方法获取执行结果，或通过 get_error_dict 获取失败的任务及其对应的异常。
 
 ```python
 # 获取成功的结果
-results = task_manager.get_result_dict()
+results = task_manager.get_success_dict()
 print("Results:", results)
 
 # 获取失败的任务及其异常
@@ -86,7 +86,7 @@ progress_desc: 进度条的描述文字，用于标识任务类型。
 ### 常用方法
 start(task_list: List): 启动任务执行，task_list 是任务列表，每个任务的格式取决于你在 get_args 中如何定义。
 start_async(task_list: List): 异步地执行任务。
-get_result_dict() -> dict: 返回任务执行的结果字典，键是任务对象，值是任务结果。
+get_success_dict() -> dict: 返回任务执行的结果字典，键是任务对象，值是任务结果。
 get_error_dict() -> dict: 返回任务执行失败的字典，键是任务对象，值是异常信息。
 shutdown_pools(): 关闭线程池和进程池，释放资源。
 

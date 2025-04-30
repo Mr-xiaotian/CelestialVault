@@ -555,13 +555,13 @@ class TaskManager:
             
     def get_success_dict(self) -> dict:
         """
-        获取结果字典
+        获取成功任务的字典
         """
         return self.success_dict
     
     def get_error_dict(self) -> dict:
         """
-        获取错误字典
+        获取出错任务的字典
         """
         return self.error_dict
 

@@ -11,7 +11,7 @@ from ..instances.inst_task import TaskManager
 class GetCodecManager(TaskManager):
     def process_result_dict(self):
         codec_dict = defaultdict(list)
-        for path, codec in self.result_dict.items():
+        for path, codec in self.get_success_dict().items():
             codec_dict[codec].append(path)
 
         return codec_dict

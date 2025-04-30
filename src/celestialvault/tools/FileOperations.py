@@ -48,7 +48,7 @@ class ScanSizeManager(TaskManager):
     def process_result_dict(self):
         size_dict = defaultdict(list)
 
-        for path, size in self.get_result_dict().items():
+        for path, size in self.get_success_dict().items():
             size_dict[size].append(path)
 
         size_dict = {k: v for k, v in size_dict.items() if len(v) > 1}
@@ -63,7 +63,7 @@ class ScanHashManager(TaskManager):
     def process_result_dict(self):
         identical_dict = defaultdict(list)
 
-        for (path, size), hash_value in self.get_result_dict().items():
+        for (path, size), hash_value in self.get_success_dict().items():
             identical_dict[(hash_value, size)].append(path)
 
         identical_dict = {k: v for k, v in identical_dict.items() if len(v) > 1}
@@ -97,7 +97,7 @@ class DeleteReturnSizeManager(TaskManager):
     
     def process_result_dict(self):
         delete_size = 0
-        for size in self.get_result_dict().values():
+        for size in self.get_success_dict().values():
             delete_size += size
         return delete_size
 

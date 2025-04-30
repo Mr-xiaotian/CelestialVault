@@ -4,7 +4,6 @@ from queue import Queue as ThreadQueue
 from threading import Thread
 from time import strftime, localtime
 from typing import List, Union
-from loguru import Logger
 from loguru import logger as loguru_logger
 
 
@@ -22,8 +21,8 @@ class TaskLogger:
     """
     用于记录任务执行日志的类
     """
-    def __init__(self, logger: Logger):
-        self.logger = logger
+    def __init__(self):
+        self.logger = loguru_logger
 
         self.logger.remove()  # remove the default handler
         now_time = strftime("%Y-%m-%d", localtime())
@@ -111,4 +110,4 @@ class BroadcastQueueManager:
 
         
 TERMINATION_SIGNAL = TerminationSignal()
-task_logger = TaskLogger(loguru_logger)
+task_logger = TaskLogger()
