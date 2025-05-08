@@ -1,14 +1,11 @@
-import re
 from typing import List, Tuple
 from bs4 import Tag, NavigableString
-from json import loads, JSONDecodeError
 
 
 class HTMLContentParser:
     """
     一个用于解析HTML内容的类，将文本、图片和视频信息提取为markdown列表、视频列表和图片列表。
     """
-
     def __init__(self):
         pass
 
@@ -54,16 +51,26 @@ class HTMLContentParser:
                 self._traverse(child)
 
     def _handle_text(self, text_node: NavigableString):
+        """
+        处理文本节点，将文本添加到markdown列表中。
+        如果文本为空，则不添加。
+        """
         text = text_node.strip()
         if not text:
             return
         self.md_list.append(text)
 
     def _handle_image(self, img_name: str, img_url: str):
+        """
+        处理图片，将图片信息添加到markdown列表和图片列表中。
+        """
         self.md_list.append(f"![{img_url}]({img_name})")
         self.img_list.append((img_name, img_url))
 
     def _handle_video(self, video_name: str, video_url: str):
+        """
+        处理视频，将视频信息添加到markdown列表和视频列表中。
+        """
         self.md_list.append(f'<video controls src="{video_name}.mp4" width="480" height="320">{video_url}</video>')
         self.video_list.append((video_name, video_url))
 
