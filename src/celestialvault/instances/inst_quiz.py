@@ -59,7 +59,11 @@ class MultiplicationQuiz:
         return random.choice(problem_list)
     
     def generate_nearby(self, near_num):
-        """生成一个接近指定数字的乘法题目"""
+        """
+        生成一个接近指定数字的乘法题目
+        example 100:
+            (100+a)(100+b) = 100(100+a+b) + ab
+        """
         near_0 = random.choice(list(range(-9, 0)) + list(range(1, 10)))
         near_1 = random.choice(list(range(-9, 0)) + list(range(1, 10)))
         return near_num + near_0, near_num + near_1
@@ -93,7 +97,13 @@ class MultiplicationQuiz:
         return num1, num2
 
     def generate_fixed_digit_sum_10(self):
-        """生成十位数相加为10的数的乘积题目"""
+        """
+        生成十位数相加为10的数的乘积题目
+        example:
+            (10a+c)(10b+c) = 100ab + 10(ac + bc) + c^2
+                           = 100ab + 100c + c^2
+                           = 100(ab+ c) + c^2
+        """
         if self.digit_num < 2:
             return self.generate_random_problem()
         
@@ -106,7 +116,6 @@ class MultiplicationQuiz:
     
     def generate_square_difference(self, end_num):
         """生成形如 (a+b)(a-b) 的速算乘法题"""
-        # 生成以 5 或 0 结尾的数
         base = random.randint(10**(self.digit_num-2), 10**(self.digit_num - 1)) * 10  # 生成 xx0
         base += end_num 
 
@@ -125,7 +134,7 @@ class MultiplicationQuiz:
         repeat_count = random.randint(self.digit_num, self.digit_num + 2)  # 重复次数为位数或位数加一
         
         repeat_num = int(str(repeat_digit) * repeat_count)  # 生成重复数，如 2222, 999, 66
-        repeat_9 = int("9" * repeat_count)  # 生成重复数乘以 9，如 22228, 9999, 6666
+        repeat_9 = int("9" * repeat_count)  # 重复次数乘以 9，如 999, 9999, 9
         return random.choice([[repeat_num, 9], [repeat_9, repeat_digit]])
 
     def generate_random_problem(self):
@@ -145,7 +154,7 @@ class MultiplicationQuiz:
         with self.output:
             clear_output(wait=True)
             if answer_correct:
-                print(f"✅ 正确！答案是 {correct_answer}")
+                print(f"✅ 正确！答案是 {correct_answer}。")
                 self.score += 1
                 self.next_button.disabled = False 
             else:
