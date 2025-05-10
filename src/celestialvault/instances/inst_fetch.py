@@ -11,7 +11,8 @@ class Fetcher(object):
     class of Fetcher, must include function working()
     """
     def __init__(self, headers: dict=None, sleep_time: int=0, wait_time: int=5, 
-                 max_repeat: int=3, text_encoding: str = 'utf-8'):
+                 max_repeat: int=3, text_encoding: str = 'utf-8',
+                 verify:bool=True):
         """
         constructor
         :param sleep_time: default 0, sleeping time before fetching
@@ -21,13 +22,14 @@ class Fetcher(object):
         self._wait_time = wait_time
         self._max_repeat = max_repeat
         self._text_encoding = text_encoding
+        self.verify = verify
 
         self.headers = headers
         self.cl = None  # 延迟初始化
 
     def init_client(self):
         if self.cl is None:
-            self.cl = httpx.Client(headers=self.headers, timeout=self._wait_time)
+            self.cl = httpx.Client(headers=self.headers, timeout=self._wait_time, verify=self.verify)
 
     def obtainText(self, func: object, *args, **kwargs) -> Tuple[int, Any, str]:
         response = func(*args, **kwargs)

@@ -5,8 +5,9 @@ from datetime import datetime
 from collections import defaultdict
 from queue import Queue as ThreadQueue
 from multiprocessing import Queue as MPQueue
-from typing import List, Dict, Any
 from time import time
+from typing import List, Dict, Any
+
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
 from .task_support import TERMINATION_SIGNAL, task_logger, TaskError
@@ -251,13 +252,13 @@ class TaskTree:
         """
         返回最终错误字典
         """
-        return self.final_error_dict
+        return dict(self.final_error_dict)
     
     def get_final_fail_dict(self):
         """
         返回最终失败字典
         """
-        return self.final_fail_dict
+        return dict(self.final_fail_dict)
     
     def get_failed_tasks(self):
         """
