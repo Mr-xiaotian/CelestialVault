@@ -100,6 +100,16 @@ class Saver(object):
         with open(path, 'w', encoding=encoding) as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
         return path
+        
+    def download_url(self, file_name, url, suffix_name='.dat'):
+        path = self.get_path(file_name, suffix_name)
+        if not self.can_overwrite(path):
+            return path
+
+        fetcher = Fetcher()
+        content = fetcher.getContent(url)
+        path.write_bytes(content)
+        return path
 
     def download_urls(self, task_list:list[tuple[str,str,str]], chain_mode="serial", show_progress=False):
         """
