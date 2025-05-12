@@ -3,7 +3,13 @@ from tqdm.asyncio import tqdm as tqdm_asy
 
 
 class ProgressManager:
-    def __init__(self, total_tasks: int, desc: str = "Processing", mode: str = "normal", show_progress: bool = False):
+    def __init__(
+        self,
+        total_tasks: int,
+        desc: str = "Processing",
+        mode: str = "normal",
+        show_progress: bool = False,
+    ):
         """
         初始化进度条管理器
 

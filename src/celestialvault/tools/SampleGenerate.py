@@ -5,7 +5,9 @@ import fitz  # PyMuPDF
 from PIL import Image, ImageDraw, ImageFont
 
 
-def generate_test_images(root_dir: str | Path, num_folders: int = 3, images_per_folder: int = 5):
+def generate_test_images(
+    root_dir: str | Path, num_folders: int = 3, images_per_folder: int = 5
+):
     """
     在指定路径下生成多个子文件夹，每个文件夹中包含若干张大小随机、颜色不同的测试图片。
 
@@ -37,7 +39,9 @@ def generate_test_images(root_dir: str | Path, num_folders: int = 3, images_per_
 
             img.save(folder / f"img_{img_idx:02d}.jpg")
 
-    print(f"✅ 成功生成 {num_folders} 个子文件夹，每个包含 {images_per_folder} 张测试图片。")
+    print(
+        f"✅ 成功生成 {num_folders} 个子文件夹，每个包含 {images_per_folder} 张测试图片。"
+    )
 
 
 def create_sample_pdf(file_path: str | Path):
@@ -52,7 +56,9 @@ def create_sample_pdf(file_path: str | Path):
     # 页面 1 - A5 尺寸 (420x595)
     page = doc.new_page(width=420, height=595)
     page.insert_text((72, 100), "页面 1：A5 尺寸 (420x595)", fontsize=14)
-    page.insert_text((72, 130), "这是一个示例 PDF，页面尺寸较小，用于测试页面宽度调整功能。")
+    page.insert_text(
+        (72, 130), "这是一个示例 PDF，页面尺寸较小，用于测试页面宽度调整功能。"
+    )
 
     # 页面 2 - A4 尺寸 (595x842)
     page = doc.new_page(width=595, height=842)
@@ -62,7 +68,9 @@ def create_sample_pdf(file_path: str | Path):
     # 页面 3 - A3 尺寸 (842x1191)
     page = doc.new_page(width=842, height=1191)
     page.insert_text((72, 100), "页面 3：A3 尺寸 (842x1191)", fontsize=14)
-    page.insert_text((72, 130), "这是一个超宽页面，适用于需要展示更大图片或表格的场景。")
+    page.insert_text(
+        (72, 130), "这是一个超宽页面，适用于需要展示更大图片或表格的场景。"
+    )
 
     # 保存 PDF 文件
     doc.save(str(file_path))

@@ -20,9 +20,28 @@ from .Utilities import bytes_to_human_readable
 
 
 class HandleFileManager(TaskManager):
-    def __init__(self, func, folder_path: Path, new_folder_path: Path, rules: Dict[str, Tuple[Callable, Callable]], 
-                 execution_mode='serial', worker_limit=50, max_retries=3, max_info=50, progress_desc="Processing", show_progress=False):
-        super().__init__(func, execution_mode, worker_limit, max_retries, max_info, progress_desc, show_progress)
+    def __init__(
+        self,
+        func,
+        folder_path: Path,
+        new_folder_path: Path,
+        rules: Dict[str, Tuple[Callable, Callable]],
+        execution_mode="serial",
+        worker_limit=50,
+        max_retries=3,
+        max_info=50,
+        progress_desc="Processing",
+        show_progress=False,
+    ):
+        super().__init__(
+            func,
+            execution_mode,
+            worker_limit,
+            max_retries,
+            max_info,
+            progress_desc,
+            show_progress,
+        )
         self.folder_path = folder_path
         self.new_folder_path = new_folder_path
         self.rules = rules
@@ -32,14 +51,16 @@ class HandleFileManager(TaskManager):
         new_file_path = self.new_folder_path / rel_path
 
         file_suffix = file_path.suffix.lower()
-        action_func, rename_func = self.rules.get(file_suffix, (shutil.copy, lambda x: x))
+        action_func, rename_func = self.rules.get(
+            file_suffix, (shutil.copy, lambda x: x)
+        )
 
         final_path = rename_func(new_file_path)
         return (file_path, final_path, action_func)
-    
+
     def process_result(self, file_path: Path, result):
         return
-    
+
     def handle_error_dict(self):
         error_path_dict = defaultdict(list)
 
@@ -49,7 +70,7 @@ class HandleFileManager(TaskManager):
             shutil.copy(file_path, new_file_path)
             error_path_dict[(type(error).__name__, str(error))].append(new_file_path)
         return dict(error_path_dict)
-    
+
 
 class ScanSizeManager(TaskManager):
     def process_result_dict(self):
@@ -59,14 +80,18 @@ class ScanSizeManager(TaskManager):
             size_dict[size].append(path)
 
         size_dict = {k: v for k, v in size_dict.items() if len(v) > 1}
-        file_size_iter = ((file_path, size) for size, files in size_dict.items() for file_path in files)
+        file_size_iter = (
+            (file_path, size)
+            for size, files in size_dict.items()
+            for file_path in files
+        )
         return file_size_iter
-    
+
 
 class ScanHashManager(TaskManager):
     def get_args(self, task):
-        return (task[0], )
-    
+        return (task[0],)
+
     def process_result_dict(self):
         identical_dict = defaultdict(list)
 
@@ -84,11 +109,14 @@ class DeleteManager(TaskManager):
 
     def get_args(self, rel_path):
         target = self.parent_dir / rel_path
-        return (target, )
+        return (target,)
+
 
 class CopyManager(TaskManager):
     def __init__(self, func, main_dir: Path, minor_dir: Path, copy_mode: str):
-        super().__init__(func, progress_desc=f"Copy files/folders[{copy_mode}]", show_progress=True)
+        super().__init__(
+            func, progress_desc=f"Copy files/folders[{copy_mode}]", show_progress=True
+        )
         self.main_dir = main_dir
         self.minor_dir = minor_dir
 
@@ -97,16 +125,18 @@ class CopyManager(TaskManager):
         target = self.minor_dir / rel_path
         target.parent.mkdir(parents=True, exist_ok=True)
         return (source, target)
-    
+
+
 class DeleteReturnSizeManager(TaskManager):
     def get_args(self, task):
-        return (*task, )
-    
+        return (*task,)
+
     def process_result_dict(self):
         delete_size = 0
         for size in self.get_success_dict().values():
             delete_size += size
         return delete_size
+
 
 def create_folder(path: str | Path) -> Path:
     """
@@ -129,10 +159,11 @@ def create_folder(path: str | Path) -> Path:
 
     return path
 
+
 def handle_file(source: Path, destination: Path, action: Callable[[Path, Path], Any]):
     """
     处理文件，如果目标文件不存在则执行指定的操作。
-    
+
     :param source: 源文件路径。
     :param destination: 目标文件路径。
     :param action: 处理文件的函数或方法。
@@ -140,7 +171,7 @@ def handle_file(source: Path, destination: Path, action: Callable[[Path, Path], 
     """
     if destination.exists():
         return f"{destination} already exists."
-    
+
     # 判断 destination 是文件还是文件夹
     if destination.suffix:
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -149,8 +180,14 @@ def handle_file(source: Path, destination: Path, action: Callable[[Path, Path], 
     action_result = action(source, destination)
     return action_result
 
-def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path, Path], None], Callable[[Path], Path]]], 
-                  execution_mode: str = 'serial', progress_desc: str = "Processing files", folder_name_siffix: str = "_re") -> Dict[Exception, List[Path]]:
+
+def handle_folder(
+    folder_path: str | Path,
+    rules: Dict[str, Tuple[Callable[[Path, Path], None], Callable[[Path], Path]]],
+    execution_mode: str = "serial",
+    progress_desc: str = "Processing files",
+    folder_name_siffix: str = "_re",
+) -> Dict[Exception, List[Path]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行处理，并将处理后的文件存储到新的目录中。
     不属于指定后缀的文件将被直接复制到新目录中。处理后的文件会保持原始的目录结构。
@@ -165,16 +202,30 @@ def handle_folder(folder_path: str | Path, rules: Dict[str, Tuple[Callable[[Path
     folder_path = Path(folder_path)
     new_folder_path = folder_path.parent / (folder_path.name + folder_name_siffix)
 
-    handlefile_manager = HandleFileManager(handle_file, folder_path, new_folder_path, rules, execution_mode=execution_mode, 
-                                           worker_limit=6, max_info=100, progress_desc=progress_desc, show_progress=True)
+    handlefile_manager = HandleFileManager(
+        handle_file,
+        folder_path,
+        new_folder_path,
+        rules,
+        execution_mode=execution_mode,
+        worker_limit=6,
+        max_info=100,
+        progress_desc=progress_desc,
+        show_progress=True,
+    )
 
-    file_path_iter = (file_path for file_path in folder_path.glob('**/*') if file_path.is_file())
+    file_path_iter = (
+        file_path for file_path in folder_path.glob("**/*") if file_path.is_file()
+    )
     handlefile_manager.start(file_path_iter)
 
     error_path_dict = handlefile_manager.handle_error_dict()
     return error_path_dict
 
-def compress_folder(folder_path: str | Path, execution_mode: str = 'thread') -> List[Tuple[Path, Exception]]:
+
+def compress_folder(
+    folder_path: str | Path, execution_mode: str = "thread"
+) -> List[Tuple[Path, Exception]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行压缩处理，并将处理后的文件存储到新的目录中。
     支持的文件类型包括图片、视频和PDF。不属于这三种类型的文件将被直接复制到新目录中。
@@ -184,12 +235,13 @@ def compress_folder(folder_path: str | Path, execution_mode: str = 'thread') -> 
     :param execution_mode: 执行模式，可以是 'serial' 或 'thread' 'process'。默认为 'thread'。
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
+
     def rename_mp4(file_path: Path) -> Path:
         name = file_path.stem.replace("_compressed", "")
-        suffix = file_path.suffix.lstrip('.')
+        suffix = file_path.suffix.lstrip(".")
         new_name = f"{name}({suffix})_compressed.mp4"
         return file_path.with_name(new_name)
-    
+
     def rename_pdf(file_path: Path) -> Path:
         name = file_path.stem.replace("_compressed", "")
         new_name = f"{name}_compressed.pdf"
@@ -204,12 +256,15 @@ def compress_folder(folder_path: str | Path, execution_mode: str = 'thread') -> 
     rules.update({suffix: (compress_video, rename_mp4) for suffix in VIDEO_SUFFIXES})
     # rules.update({'.pdf': (compress_pdf,rename_pdf)})
 
-    return handle_folder(folder_path, rules, execution_mode, progress_desc='Compressing Folder')
+    return handle_folder(
+        folder_path, rules, execution_mode, progress_desc="Compressing Folder"
+    )
+
 
 def unzip_zip_file(zip_file: Path, destination: Path):
     """
     解压缩指定的 zip 文件。
-    
+
     :param zip_file: 要解压缩的 zip 文件路径。
     :raises ValueError: 如果文件不是有效的 zip 文件或发生其他错误。
     """
@@ -223,10 +278,11 @@ def unzip_zip_file(zip_file: Path, destination: Path):
     except RuntimeError:
         raise ValueError("{zip_file} 受密码保护，无法解压缩")
 
+
 def unzip_rar_file(rar_file: Path, destination: Path):
     """
     解压缩指定的 rar 文件。
-    
+
     :param rar_file: 要解压缩的 rar 文件路径。
     """
     try:
@@ -239,10 +295,11 @@ def unzip_rar_file(rar_file: Path, destination: Path):
     except rarfile.PasswordRequired:
         raise ValueError(f"{rar_file} 受密码保护，无法解压缩")
 
+
 def unzip_tar_file(tar_file: Path, destination: Path):
     """
     解压缩指定的 tar 文件。
-    
+
     :param tar_file: 要解压缩的 tar 文件路径。
     :param destination: 解压缩的目标路径。
     :raises ValueError: 如果文件不是有效的 tar 文件或发生其他错误。
@@ -260,15 +317,16 @@ def unzip_tar_file(tar_file: Path, destination: Path):
     except Exception as e:
         raise ValueError(f"解压 {tar_file} 时发生错误: {e}")
 
+
 def unzip_7z_file(seven_zip_file: Path, destination: Path):
     """
     解压缩指定的 7z 文件。
-    
+
     :param seven_zip_file: 要解压缩的 7z 文件路径。
     :raises ValueError: 如果文件不是有效的 7z 文件或发生其他错误。
     """
     try:
-        with py7zr.SevenZipFile(seven_zip_file, mode='r') as seven_zip_file:
+        with py7zr.SevenZipFile(seven_zip_file, mode="r") as seven_zip_file:
             seven_zip_file.extractall(destination)
     except py7zr.Bad7zFile:
         raise ValueError(f"{seven_zip_file} 不是一个有效的 7z 文件")
@@ -277,29 +335,37 @@ def unzip_7z_file(seven_zip_file: Path, destination: Path):
     except py7zr.PasswordRequired:
         raise ValueError(f"{seven_zip_file} 受密码保护，无法解压缩")
 
+
 def unzip_folder(folder_path: str | Path):
     """
     遍历指定文件夹，解压缩所有支持的压缩文件。支持的文件类型包括 zip 和 rar。
-    
+
     :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
     """
+
     def rename_unzip(file_path: Path) -> Path:
         name = file_path.stem
-        suffix = file_path.suffix.lstrip('.')
+        suffix = file_path.suffix.lstrip(".")
         new_name = f"{name}({suffix})_unzip"
         return file_path.with_name(new_name)
-    
-    rules = {'.zip': (unzip_zip_file, rename_unzip)}
-    rules.update({'.rar': (unzip_rar_file, rename_unzip)})
-    rules.update({'.tar': (unzip_tar_file, rename_unzip)})
-    rules.update({'.7z': (unzip_7z_file, rename_unzip)})
+
+    rules = {".zip": (unzip_zip_file, rename_unzip)}
+    rules.update({".rar": (unzip_rar_file, rename_unzip)})
+    rules.update({".tar": (unzip_tar_file, rename_unzip)})
+    rules.update({".7z": (unzip_7z_file, rename_unzip)})
 
     return handle_folder(folder_path, rules, progress_desc="Unziping folder")
 
-def print_directory_structure(folder_path: str='.', exclude_dirs: list=None, exclude_exts: list=None, max_depth: int=3):
+
+def print_directory_structure(
+    folder_path: str = ".",
+    exclude_dirs: list = None,
+    exclude_exts: list = None,
+    max_depth: int = 3,
+):
     """
     打印指定文件夹的目录结构。
-    
+
     :param folder_path: 起始文件夹的路径，默认为当前目录。
     :param exclude_dirs: 要排除的目录列表，例如["log"], 默认为空列表。
     :param exclude_exts: 要排除的文件扩展名列表，例如[".db"], 默认为空列表。
@@ -331,7 +397,7 @@ def print_directory_structure(folder_path: str='.', exclude_dirs: list=None, exc
 
         exclude_dirs_num = 0
         exclude_file_num = 0
-        
+
         for item in folder_path.iterdir():
             if item.is_dir():
                 # 排除指定的目录
@@ -342,11 +408,15 @@ def print_directory_structure(folder_path: str='.', exclude_dirs: list=None, exc
                     exclude_dirs_num += 1
                     continue
 
-                subfolder_structure_list, subfolder_size = get_structure_list(item, indent + '    ', max_depth-1)
+                subfolder_structure_list, subfolder_size = get_structure_list(
+                    item, indent + "    ", max_depth - 1
+                )
                 folder_size += subfolder_size
 
                 reable_subfolder_size = bytes_to_human_readable(subfolder_size)
-                folder_structure_list.append(f"{indent}📁 {item.name}/    ({reable_subfolder_size})")
+                folder_structure_list.append(
+                    f"{indent}📁 {item.name}/    ({reable_subfolder_size})"
+                )
                 folder_structure_list.extend(subfolder_structure_list)
             else:
                 # 排除指定的文件类型
@@ -359,31 +429,46 @@ def print_directory_structure(folder_path: str='.', exclude_dirs: list=None, exc
 
                 file_size = item.stat().st_size
                 folder_size += file_size
-                
-                icon = FILE_ICONS.get(item.suffix, FILE_ICONS['default'])
+
+                icon = FILE_ICONS.get(item.suffix, FILE_ICONS["default"])
                 reable_file_size = bytes_to_human_readable(file_size)
-                file_structure_list.append(f"{indent}{icon} {item.name:<{max_name_len - (wcswidth(item.name)-len(item.name))}}\t({reable_file_size})")
+                file_structure_list.append(
+                    f"{indent}{icon} {item.name:<{max_name_len - (wcswidth(item.name)-len(item.name))}}\t({reable_file_size})"
+                )
 
         if exclude_dirs_num > 0:
             reable_exclude_dirs_size = bytes_to_human_readable(exclude_dirs_size)
-            folder_structure_list.append(f"{indent}📁 [{exclude_dirs_num}项排除的目录]    ({reable_exclude_dirs_size})")
+            folder_structure_list.append(
+                f"{indent}📁 [{exclude_dirs_num}项排除的目录]    ({reable_exclude_dirs_size})"
+            )
         if exclude_file_num > 0:
             reable_exclude_file_size = bytes_to_human_readable(exclude_file_size)
-            file_structure_list.append(f"{indent}📄 [{exclude_file_num}项排除的文件]    ({reable_exclude_file_size})")
+            file_structure_list.append(
+                f"{indent}📄 [{exclude_file_num}项排除的文件]    ({reable_exclude_file_size})"
+            )
 
         structure_list = folder_structure_list + file_structure_list
         return structure_list, folder_size
 
-    structure_list, folder_size = get_structure_list(folder_path, '    ', max_depth)
+    structure_list, folder_size = get_structure_list(folder_path, "    ", max_depth)
     reable_folder_size = bytes_to_human_readable(folder_size)
 
-    structure_list = [f"📁 {folder_path.name}/    ({reable_folder_size})"] + structure_list
-    print('\n'.join(structure_list))
+    structure_list = [
+        f"📁 {folder_path.name}/    ({reable_folder_size})"
+    ] + structure_list
+    print("\n".join(structure_list))
 
-def compare_structure(dir1, dir2, exclude_dirs: list=None, exclude_exts: list=None, compare_common_file=False):
+
+def compare_structure(
+    dir1,
+    dir2,
+    exclude_dirs: list = None,
+    exclude_exts: list = None,
+    compare_common_file=False,
+):
     """
     比较两个文件夹的结构，并打印出仅在一个文件夹中存在的文件或文件夹。
-    
+
     :param dir1: 第一个文件夹路径
     :param dir2: 第二个文件夹路径
     :param exclude_dirs: 要排除的目录列表，默认为空列表
@@ -400,12 +485,8 @@ def compare_structure(dir1, dir2, exclude_dirs: list=None, exclude_exts: list=No
     if not dir1.is_dir() or not dir2.is_dir():
         raise ValueError(f"输入路径必须是有效的文件夹: {dir1} 或 {dir2}")
 
-    diff_size = {'dir1': 0, 'dir2': 0}
-    diff_dir = {
-        'only_in_dir1': [],
-        'only_in_dir2': [],
-        'different_files': []
-    }
+    diff_size = {"dir1": 0, "dir2": 0}
+    diff_dir = {"only_in_dir1": [], "only_in_dir2": [], "different_files": []}
 
     def get_structure_list(d1: Path, d2: Path, indent):
         # 获取文件和文件夹
@@ -413,10 +494,10 @@ def compare_structure(dir1, dir2, exclude_dirs: list=None, exclude_exts: list=No
             d1_files = set(os.listdir(d1))
             d2_files = set(os.listdir(d2))
         except FileNotFoundError:
-            return [f'{indent}📁 [{d1}] 或 [{d2}] 不存在']
+            return [f"{indent}📁 [{d1}] 或 [{d2}] 不存在"]
         except PermissionError:
-            return [f'{indent}📁 [{d1}] 或 [{d2}] 没有权限访问']
-        
+            return [f"{indent}📁 [{d1}] 或 [{d2}] 没有权限访问"]
+
         only_in_d1 = sorted(d1_files - d2_files)
         only_in_d2 = sorted(d2_files - d1_files)
         common_files = sorted(d1_files & d2_files)
@@ -439,20 +520,24 @@ def compare_structure(dir1, dir2, exclude_dirs: list=None, exclude_exts: list=No
                 if item in exclude_dirs:
                     continue
                 item_size = get_folder_size(item_path)
-                print_folder_list.append(f"{indent}📁 [{location}] {item} ({bytes_to_human_readable(item_size)})")
+                print_folder_list.append(
+                    f"{indent}📁 [{location}] {item} ({bytes_to_human_readable(item_size)})"
+                )
             elif item_path.is_file():
                 if item_path.suffix in exclude_exts:
                     continue
                 item_size = get_file_size(item_path)
-                icon = FILE_ICONS.get(item_path.suffix, FILE_ICONS['default'])
-                print_file_list.append(f"{indent}{icon} [{location}] {item} ({bytes_to_human_readable(item_size)})")
+                icon = FILE_ICONS.get(item_path.suffix, FILE_ICONS["default"])
+                print_file_list.append(
+                    f"{indent}{icon} [{location}] {item} ({bytes_to_human_readable(item_size)})"
+                )
 
             if item in only_in_d1:
-                diff_size['dir1'] += item_size
-                diff_dir['only_in_dir1'].append(item_path.relative_to(dir1))
+                diff_size["dir1"] += item_size
+                diff_dir["only_in_dir1"].append(item_path.relative_to(dir1))
             else:
-                diff_size['dir2'] += item_size
-                diff_dir['only_in_dir2'].append(item_path.relative_to(dir2))
+                diff_size["dir2"] += item_size
+                diff_dir["only_in_dir2"].append(item_path.relative_to(dir2))
 
         # 打印共同项目
         for item in common_files:
@@ -462,43 +547,59 @@ def compare_structure(dir1, dir2, exclude_dirs: list=None, exclude_exts: list=No
             if item_path1.is_dir() and item_path2.is_dir():
                 if item in exclude_dirs:
                     continue
-                subfolder_print_list = get_structure_list(item_path1, item_path2, indent + '    ')
+                subfolder_print_list = get_structure_list(
+                    item_path1, item_path2, indent + "    "
+                )
                 if subfolder_print_list:
                     print_folder_list.append(f"{indent}📁 {item}/")
                     print_folder_list.extend(subfolder_print_list)
 
             # 打印文件夹与文件的混合情况
-            elif (item_path1.is_file() and item_path2.is_dir()) or (item_path1.is_dir() and item_path2.is_file()):
-                print_file_list.append(f"{indent}{item} (one is a file, the other is a folder)")
-                diff_dir['different_files'].append(item_path1.relative_to(dir1))
+            elif (item_path1.is_file() and item_path2.is_dir()) or (
+                item_path1.is_dir() and item_path2.is_file()
+            ):
+                print_file_list.append(
+                    f"{indent}{item} (one is a file, the other is a folder)"
+                )
+                diff_dir["different_files"].append(item_path1.relative_to(dir1))
 
             # 打印文件与文件的比较结果
             elif compare_common_file and item_path1.is_file() and item_path2.is_file():
-                if item_path1.suffix in exclude_exts or item_path2.suffix in exclude_exts:
+                if (
+                    item_path1.suffix in exclude_exts
+                    or item_path2.suffix in exclude_exts
+                ):
                     continue
                 item_path1_size = get_file_size(item_path1)
                 item_path2_size = get_file_size(item_path2)
                 if item_path1_size != item_path2_size:
-                    icon = FILE_ICONS.get(item_path1.suffix, FILE_ICONS['default'])
-                    print_file_list.append(f"{indent}{icon} [{dir1}] {item} ({bytes_to_human_readable(item_path1_size)})")
-                    print_file_list.append(f"{indent}{icon} [{dir2}] {item} ({bytes_to_human_readable(item_path2_size)})")
-                    
-                    diff_size['dir1'] += item_size
-                    diff_size['dir2'] += item_size
-                    diff_dir['different_files'].append(item_path1.relative_to(dir1))
+                    icon = FILE_ICONS.get(item_path1.suffix, FILE_ICONS["default"])
+                    print_file_list.append(
+                        f"{indent}{icon} [{dir1}] {item} ({bytes_to_human_readable(item_path1_size)})"
+                    )
+                    print_file_list.append(
+                        f"{indent}{icon} [{dir2}] {item} ({bytes_to_human_readable(item_path2_size)})"
+                    )
+
+                    diff_size["dir1"] += item_size
+                    diff_size["dir2"] += item_size
+                    diff_dir["different_files"].append(item_path1.relative_to(dir1))
 
         return print_folder_list + print_file_list
-    
-    structure_list = get_structure_list(dir1, dir2, '')
-    dir1_data = [dir1, bytes_to_human_readable(diff_size['dir1'])]
-    dir2_data = [dir2, bytes_to_human_readable(diff_size['dir2'])]
-    table_text = format_table([dir1_data, dir2_data], column_names = ["Directory", "Diff Size"])
 
-    print('\n'.join(structure_list))
-    print('\n' + table_text)
+    structure_list = get_structure_list(dir1, dir2, "")
+    dir1_data = [dir1, bytes_to_human_readable(diff_size["dir1"])]
+    dir2_data = [dir2, bytes_to_human_readable(diff_size["dir2"])]
+    table_text = format_table(
+        [dir1_data, dir2_data], column_names=["Directory", "Diff Size"]
+    )
+
+    print("\n".join(structure_list))
+    print("\n" + table_text)
     return diff_dir
 
-def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str='->'):
+
+def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str = "->"):
     """
     根据差异字典同步两个文件夹。
 
@@ -509,6 +610,7 @@ def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str='-
                  '<-' 表示以第二个文件夹为主，
                  '<->' 表示双向同步
     """
+
     def append_hash_to_filename(file_path: Path):
         """在文件名中添加哈希值标识"""
         hash_value = get_file_hash(file_path)
@@ -516,36 +618,42 @@ def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str='-
         new_file_path = file_path.with_name(f"{name}({hash_value}){ext}")
         file_path.rename(new_file_path)
         return new_file_path.name
-    
+
     dir1 = Path(dir1)
     dir2 = Path(dir2)
 
-    if mode in ['->', '<-']:
+    if mode in ["->", "<-"]:
         # 确定主目录和次目录
-        is_mode_a = (mode == '->')
+        is_mode_a = mode == "->"
         main_dir, minor_dir = (dir1, dir2) if is_mode_a else (dir2, dir1)
 
         # 预计算 diff 访问键
-        main_dir_key = 'only_in_' + ('dir1' if is_mode_a else 'dir2')
-        minor_dir_key = 'only_in_' + ('dir2' if is_mode_a else 'dir1')
+        main_dir_key = "only_in_" + ("dir1" if is_mode_a else "dir2")
+        minor_dir_key = "only_in_" + ("dir2" if is_mode_a else "dir1")
 
         # 差异分配
-        main_dir_diff = diff[main_dir_key] + diff['different_files']
+        main_dir_diff = diff[main_dir_key] + diff["different_files"]
         minor_dir_diff = diff[minor_dir_key]
-        
+
         delete_manager = DeleteManager(delete_file_or_folder, minor_dir)
-        copy_manager = CopyManager(copy_file_or_folder, main_dir, minor_dir, copy_mode=mode)
+        copy_manager = CopyManager(
+            copy_file_or_folder, main_dir, minor_dir, copy_mode=mode
+        )
 
         delete_manager.start(minor_dir_diff)
         copy_manager.start(main_dir_diff)
 
-    elif mode == '<->':
-        copy_a_to_b_manager = CopyManager(copy_file_or_folder, dir1, dir2, copy_mode='->')
-        copy_b_to_a_manager = CopyManager(copy_file_or_folder, dir2, dir1, copy_mode='<-')
+    elif mode == "<->":
+        copy_a_to_b_manager = CopyManager(
+            copy_file_or_folder, dir1, dir2, copy_mode="->"
+        )
+        copy_b_to_a_manager = CopyManager(
+            copy_file_or_folder, dir2, dir1, copy_mode="<-"
+        )
 
         diff_file_in_dir1 = []
         diff_file_in_dir2 = []
-        for rel_path in diff['different_files']:
+        for rel_path in diff["different_files"]:
             file1 = dir1 / rel_path
             file2 = dir2 / rel_path
 
@@ -555,12 +663,13 @@ def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str='-
             diff_file_in_dir1.append(new_file1_name)
             diff_file_in_dir2.append(new_file2_name)
 
-        copy_a_to_b_manager.start(diff['only_in_dir1'] + diff_file_in_dir1)
-        copy_b_to_a_manager.start(diff['only_in_dir2'] + diff_file_in_dir2)
+        copy_a_to_b_manager.start(diff["only_in_dir1"] + diff_file_in_dir1)
+        copy_b_to_a_manager.start(diff["only_in_dir2"] + diff_file_in_dir2)
 
     else:
         raise ValueError("无效的模式，必须为 '->', '<-' 或 '<->'")
-    
+
+
 def delete_file_or_folder(path: Path) -> None:
     """
     删除文件或文件夹。
@@ -571,6 +680,7 @@ def delete_file_or_folder(path: Path) -> None:
         path.unlink()
     elif path.is_dir():
         shutil.rmtree(path)
+
 
 def copy_file_or_folder(source: Path, target: Path) -> None:
     """
@@ -584,6 +694,7 @@ def copy_file_or_folder(source: Path, target: Path) -> None:
     elif source.is_dir():
         shutil.copytree(source, target, dirs_exist_ok=True)
 
+
 def get_file_size(file_path: Path) -> int:
     """
     获取文件大小。
@@ -592,6 +703,7 @@ def get_file_size(file_path: Path) -> int:
     :return: 文件大小（字节）。
     """
     return file_path.stat().st_size
+
 
 def get_folder_size(folder_path: Path | str) -> int:
     """
@@ -603,10 +715,11 @@ def get_folder_size(folder_path: Path | str) -> int:
     """
     total_size = 0
     folder = Path(folder_path)
-    for file in folder.rglob('*'):  # rglob('*') 遍历所有文件和子目录
+    for file in folder.rglob("*"):  # rglob('*') 遍历所有文件和子目录
         if file.is_file():
             total_size += file.stat().st_size  # 获取文件大小
     return total_size
+
 
 def get_file_hash(file_path: Path, chunk_size: int = 65536) -> str:
     """
@@ -617,35 +730,50 @@ def get_file_hash(file_path: Path, chunk_size: int = 65536) -> str:
     :return: 文件的哈希值。
     """
     hash_algo = hashlib.sha256()
-    with open(file_path, 'rb') as f:
+    with open(file_path, "rb") as f:
         for chunk in iter(lambda: f.read(chunk_size), b""):
             hash_algo.update(chunk)
     return hash_algo.hexdigest()
 
-def detect_identical_files(folder_list: List[Path], execution_mode: str ='thread') -> Dict[Tuple[str, int], List[Path]]:
+
+def detect_identical_files(
+    folder_list: List[Path], execution_mode: str = "thread"
+) -> Dict[Tuple[str, int], List[Path]]:
     """
     检测文件夹中是否存在相同内容的文件，并在文件名后添加文件大小。
 
     :param folder_list: 文件夹路径列表。
     :return: 相同文件的字典，键为文件大小和哈希值，值为文件路径列表。
     """
-    scan_size_manager = ScanSizeManager(get_file_size, execution_mode, 
-                                        progress_desc='Scanning file size', show_progress=True)
-    scan_hash_manager = ScanHashManager(get_file_hash, execution_mode, 
-                                        progress_desc='Calculating file hashes', show_progress=True)
+    scan_size_manager = ScanSizeManager(
+        get_file_size,
+        execution_mode,
+        progress_desc="Scanning file size",
+        show_progress=True,
+    )
+    scan_hash_manager = ScanHashManager(
+        get_file_hash,
+        execution_mode,
+        progress_desc="Calculating file hashes",
+        show_progress=True,
+    )
 
     # 根据文件大小进行初步筛选
     file_path_iter = (
-        path for folder_path in folder_list for path in Path(folder_path).rglob('*') if path.is_file()
+        path
+        for folder_path in folder_list
+        for path in Path(folder_path).rglob("*")
+        if path.is_file()
     )
     scan_size_manager.start(file_path_iter)
     file_size_iter = scan_size_manager.process_result_dict()
-    
+
     # 对于相同大小的文件，进一步计算哈希值, 找出哈希值相同的文件
     scan_hash_manager.start(file_size_iter)
     identical_dict = scan_hash_manager.process_result_dict()
-    
+
     return identical_dict
+
 
 def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
     """
@@ -655,14 +783,20 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
     """
     if not identical_dict:
         print("\nNo identical files found.")
-        return 
+        return
 
     report = []
     total_size = 0
     total_file_num = 0
     max_file_num = 0
     index = 0
-    sort_identical_dict = dict(sorted(identical_dict.items(), key=lambda item: item[0][1] * len(item[1]), reverse=True))
+    sort_identical_dict = dict(
+        sorted(
+            identical_dict.items(),
+            key=lambda item: item[0][1] * len(item[1]),
+            reverse=True,
+        )
+    )
 
     report.append("\nIdentical files found:\n")
     for (hash_value, file_size), file_list in sort_identical_dict.items():
@@ -684,11 +818,16 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
         index += 1
 
     hash_value, file_size = max_file_key
-    report.append(f"Total size of duplicate files: {bytes_to_human_readable(total_size)}")
+    report.append(
+        f"Total size of duplicate files: {bytes_to_human_readable(total_size)}"
+    )
     report.append(f"Total number of duplicate files: {total_file_num}")
-    report.append(f"File with the most duplicates: {hash_value}(hash) {bytes_to_human_readable(file_size)}(size) {max_file_num}(number)")
-        
+    report.append(
+        f"File with the most duplicates: {hash_value}(hash) {bytes_to_human_readable(file_size)}(size) {max_file_num}(number)"
+    )
+
     print("\n".join(report))
+
 
 def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
     """
@@ -697,12 +836,13 @@ def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
     :param identical_dict: 相同文件的字典，由 detect_identical_files 函数返回。
     :return: 删除的文件列表。
     """
+
     def delete_and_return_size(path: Path, size: int):
         path.unlink()
         return size
-        
+
     delete_list = []
-    for (hash_value,file_size), file_list in identical_dict.items():
+    for (hash_value, file_size), file_list in identical_dict.items():
         delete_list.extend([(file_path, file_size) for file_path in file_list])
 
     delete_return_size_manager = DeleteReturnSizeManager(delete_and_return_size)
@@ -711,7 +851,12 @@ def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
 
     print(f"\nTotal size of deleted files: {bytes_to_human_readable(delete_size)}")
 
-def move_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]], target_folder: str | Path, size_threshold: int = None):
+
+def move_identical_files(
+    identical_dict: Dict[Tuple[str, int], List[Path]],
+    target_folder: str | Path,
+    size_threshold: int = None,
+):
     """
     将相同内容的文件移动到指定的目标文件夹。
 
@@ -737,7 +882,7 @@ def move_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]], targ
             if file.resolve() == target_path.resolve():
                 report.append(f"File {file} is already in the target path.")
                 continue
-            
+
             # 仅保留一个相同名称的文件
             if target_path.exists():
                 report.append(f"File {target_path} already exists. Skipping {file}.")
@@ -750,12 +895,15 @@ def move_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]], targ
                 report.append(f"Moved: {file} -> {target_path}")
             except Exception as e:
                 report.append(f"Error moving {file} to {target_path}: {e}")
-    
+
     print("\n".join(report))
 
     return moved_files
 
-def folder_to_file_path(folder_path: Path, file_extension: str, parent_dir: Path = None) -> Path:
+
+def folder_to_file_path(
+    folder_path: Path, file_extension: str, parent_dir: Path = None
+) -> Path:
     """
     将文件夹路径转换为与文件夹同名的文件路径。
     例如，给定文件夹路径 '/home/user/folder1' 和文件扩展名 'txt'，函数会返回文件路径 '/home/user/folder1.txt'。
@@ -773,12 +921,13 @@ def folder_to_file_path(folder_path: Path, file_extension: str, parent_dir: Path
     folder_path = Path(folder_path)
     folder_name = folder_path.name  # 获取文件夹名称，不带路径
     parent_dir = parent_dir or folder_path.parent  # 获取文件夹的父目录路径
-    
+
     # 生成与文件夹同名的文件路径
     file_name = f"{folder_name}.{file_extension}"
     file_path = parent_dir / file_name
-    
+
     return file_path
+
 
 def replace_filenames(folder_path: Path | str, pattern: str, replacement: str):
     """
@@ -790,18 +939,21 @@ def replace_filenames(folder_path: Path | str, pattern: str, replacement: str):
     :param replacement: 替换后的新内容。
     """
     folder_path = Path(folder_path)  # 将传入的路径转换为Path对象
-    file_path_list = [file_path for file_path in folder_path.glob('**/*') if file_path.is_file()] # 使用glob('**/*')遍历目录中的文件和子目录
+    file_path_list = [
+        file_path for file_path in folder_path.glob("**/*") if file_path.is_file()
+    ]  # 使用glob('**/*')遍历目录中的文件和子目录
 
-    for file in tqdm(file_path_list, desc='Replacing filenames'): 
+    for file in tqdm(file_path_list, desc="Replacing filenames"):
         new_filename = re.sub(pattern, replacement, file.name)
         if new_filename == file.name:
             continue
-        
+
         new_file_path = file.with_name(new_filename)  # 使用with_name方法生成新文件路径
         if new_file_path.exists():
             continue
 
         file.rename(new_file_path)  # 重命名文件
+
 
 def sort_by_number(file_path: Path, special_keywords: dict) -> tuple:
     """
@@ -812,14 +964,23 @@ def sort_by_number(file_path: Path, special_keywords: dict) -> tuple:
     file_name = file_path.name
 
     # 关键字优先级控制
-    folder_priority = min((special_keywords[keyword]
-                            for keyword in special_keywords if keyword in file_name), default=0)
+    folder_priority = min(
+        (
+            special_keywords[keyword]
+            for keyword in special_keywords
+            if keyword in file_name
+        ),
+        default=0,
+    )
 
-    matches = re.findall(r'\d+', file_path.name)
-    number = [int(num) for num in matches] if matches else [float('inf')]
+    matches = re.findall(r"\d+", file_path.name)
+    number = [int(num) for num in matches] if matches else [float("inf")]
     return (folder_priority, *number)
 
-def move_files_with_keyword(source_folder: Path | str, keyword: str, target_folder: Path | str):
+
+def move_files_with_keyword(
+    source_folder: Path | str, keyword: str, target_folder: Path | str
+):
     """
     将 source_folder 中所有文件名包含 keyword 的文件移动到 target_folder。
 
@@ -836,7 +997,7 @@ def move_files_with_keyword(source_folder: Path | str, keyword: str, target_fold
     target.mkdir(parents=True, exist_ok=True)
 
     moved_count = 0
-    for file in source.glob('**/*'):
+    for file in source.glob("**/*"):
         if file.is_file() and keyword in file.name:
             shutil.move(str(file), str(target / file.name))
             moved_count += 1

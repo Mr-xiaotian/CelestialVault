@@ -1,4 +1,3 @@
-
 import json
 import multiprocessing
 from collections import defaultdict
@@ -39,12 +38,13 @@ class TaskTree:
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
         self.final_error_dict = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
         self.final_fail_dict = defaultdict(list)  # 用于保存节点到节点失败任务的映射
-    
+
     def init_queues(self, tasks: list):
         """
         初始化任务队列
         :param tasks: 待处理的任务列表
         """
+
         def collect_queue(stage: TaskManager):
             # 为每个节点创建队列
             self.stage_queues_dict[stage.get_stage_tag()] = MPQueue()
@@ -71,13 +71,14 @@ class TaskTree:
         设定根节点
         """
         self.root_stage = root_stage
-    
+
     def set_tree_mode(self, stage_mode: str, execution_mode: str):
         """
         设置任务链的执行模式
         :param stage_mode: 节点执行模式, 可选值为 'serial' 或 'process'
         :param execution_mode: 节点内部执行模式, 可选值为 'serial' 或 'thread''
         """
+
         def set_subsequent_satge_mode(stage: TaskManager):
             stage.set_stage_mode(stage_mode)
             stage.set_execution_mode(execution_mode)
@@ -90,7 +91,7 @@ class TaskTree:
 
         visited_stages = set()
         set_subsequent_satge_mode(self.root_stage)
-    
+
     def start_tree(self, init_tasks):
         start_time = time()
         structure_list = self.format_structure_list()
@@ -119,13 +120,17 @@ class TaskTree:
         if not stage.next_stages:
             output_queues = [MPQueue()]
         else:
-            output_queues = [self.stage_queues_dict[next_stage.get_stage_tag()]
-                             for next_stage in stage.next_stages]
+            output_queues = [
+                self.stage_queues_dict[next_stage.get_stage_tag()]
+                for next_stage in stage.next_stages
+            ]
         fail_queue = MPQueue()
 
-        if stage.stage_mode == 'process':
+        if stage.stage_mode == "process":
             stage.init_dict(self.manager.dict(), self.manager.dict())
-            p = multiprocessing.Process(target=stage.start_stage, args=(input_queue, output_queues, fail_queue))
+            p = multiprocessing.Process(
+                target=stage.start_stage, args=(input_queue, output_queues, fail_queue)
+            )
             p.start()
             self.processes.append(p)
         else:
@@ -141,6 +146,7 @@ class TaskTree:
         """
         释放资源
         """
+
         def clean_stage(stage: TaskManager):
             stage.clean_env()
             visited_stages.add(stage)
@@ -154,7 +160,7 @@ class TaskTree:
             if isinstance(queue, ThreadQueue):
                 continue
             queue.close()
-            queue.join_thread() # 确保队列的后台线程正确终止
+            queue.join_thread()  # 确保队列的后台线程正确终止
 
         # 关闭 multiprocessing.Manager
         if self.manager is not None:
@@ -176,6 +182,7 @@ class TaskTree:
 
         :param initial_tasks: 一个包含初始任务的列表
         """
+
         def update_final_result_dict(stage_task, stage: TaskManager):
             stage_success_dict = stage.get_success_dict()
             stage_error_dict = stage.get_error_dict()
@@ -192,21 +199,25 @@ class TaskTree:
                 dispear_exception = TaskError(f"({stage_task}) not found.")
                 task_execution_status[initial_task] = False
                 return [(dispear_exception, stage.get_stage_tag())]
-            
+
             if not stage.next_stages:
                 return [(stage_task, stage.get_stage_tag())]
-            
+
             for next_stage in stage.next_stages:
                 if next_stage in visited_stages:
                     continue
                 elif not isinstance(stage, TaskSplitter):
-                    next_stage_final_list = update_final_result_dict(stage_task, next_stage)
+                    next_stage_final_list = update_final_result_dict(
+                        stage_task, next_stage
+                    )
                     final_list.extend(next_stage_final_list)
                     continue
-                
+
                 # 如果是 TaskSplitter，则递归处理每个子任务
                 for split_task in stage_task:
-                    next_stage_final_list = update_final_result_dict(split_task, next_stage)
+                    next_stage_final_list = update_final_result_dict(
+                        split_task, next_stage
+                    )
                     final_list.extend(next_stage_final_list)
 
             return final_list
@@ -215,18 +226,23 @@ class TaskTree:
         for initial_task in initial_tasks:
             visited_stages = set()
             task_execution_status[initial_task] = True
-            self.final_result_dict[initial_task] = update_final_result_dict(initial_task, self.root_stage)
-        self.failed_tasks = [task for task, pass_flag in task_execution_status.items() if not pass_flag]
+            self.final_result_dict[initial_task] = update_final_result_dict(
+                initial_task, self.root_stage
+            )
+        self.failed_tasks = [
+            task for task, pass_flag in task_execution_status.items() if not pass_flag
+        ]
 
     def handle_final_error_dict(self):
         """
         处理最终错误字典
         """
+
         def update_error_dict(stage: TaskManager):
             stage_error_dict = stage.get_error_dict()
             visited_stages.add(stage)
             for task, error in stage_error_dict.items():
-                error_key = (f'{type(error).__name__}({error})', stage.get_stage_tag())
+                error_key = (f"{type(error).__name__}({error})", stage.get_stage_tag())
                 self.final_error_dict[error_key].append(task)
                 self.final_fail_dict[stage.get_stage_tag()].append(task)
             for next_stage in stage.next_stages:
@@ -242,32 +258,34 @@ class TaskTree:
         返回节点字典
         """
         return self.stage_dict
-    
+
     def get_final_result_dict(self):
         """
         返回最终结果字典
         """
         return self.final_result_dict
-    
+
     def get_final_error_dict(self):
         """
         返回最终错误字典
         """
         return dict(self.final_error_dict)
-    
+
     def get_final_fail_dict(self):
         """
         返回最终失败字典
         """
         return dict(self.final_fail_dict)
-    
+
     def get_failed_tasks(self):
         """
         返回失败的任务列表
         """
         return self.failed_tasks
-    
-    def get_structure_list(self, task_manager: TaskManager, indent=0, visited_stages=None):
+
+    def get_structure_list(
+        self, task_manager: TaskManager, indent=0, visited_stages=None
+    ):
         """
         递归生成任务链的打印列表
         :param task_manager: 当前处理的 TaskManager
@@ -291,13 +309,15 @@ class TaskTree:
 
         # 遍历后续节点
         for next_stage in task_manager.next_stages:
-            sub_scructure_list = self.get_structure_list(next_stage, indent + 2, visited_stages)
+            sub_scructure_list = self.get_structure_list(
+                next_stage, indent + 2, visited_stages
+            )
             scructure_list.append("  " * indent + "╘-->")
             scructure_list[-1] += sub_scructure_list[0]
             scructure_list.extend(sub_scructure_list[1:])
 
         return scructure_list
-    
+
     def format_structure_list(self, task_manager=None):
         """
         格式化任务链的打印列表
@@ -318,9 +338,9 @@ class TaskTree:
         # 添加顶部和底部边框
         border = "+" + "-" * (max_length + 2) + "+"
         formatted_list = [border] + formatted_list + [border]
-        
+
         return formatted_list
-    
+
     def save_failures(self, path="./fallback", name=None):
         """
         保存失败信息到 JSON 文件
@@ -348,11 +368,11 @@ class TaskTree:
 
         with file_path.open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-        
+
     def test_methods(self, task_list: List[Any]) -> Dict[str, Any]:
         """
         测试 TaskTree 在 'serial' 和 'process' 模式下的执行时间。
-        
+
         :param task_list: 任务列表
         :return: 包含两种执行模式下的执行时间的字典
         """
@@ -363,8 +383,8 @@ class TaskTree:
         final_fail_dict = {}
         failed_tasks = []
 
-        stage_modes = ['serial', 'process']
-        execution_modes = ['serial', 'thread']
+        stage_modes = ["serial", "process"]
+        execution_modes = ["serial", "thread"]
         for stage_mode in stage_modes:
             time_list = []
             for execution_mode in execution_modes:
@@ -376,20 +396,27 @@ class TaskTree:
                 final_result_dict.update(self.get_final_result_dict())
                 final_error_dict.update(self.get_final_error_dict())
                 final_fail_dict.update(self.get_final_fail_dict())
-                failed_tasks += [task for task in self.get_failed_tasks() if task not in failed_tasks]
-                
+                failed_tasks += [
+                    task for task in self.get_failed_tasks() if task not in failed_tasks
+                ]
+
             test_table_list.append(time_list)
 
-        results['Time table'] = (test_table_list, execution_modes, stage_modes, r"stage\execution")
-        results['Final result dict'] = final_result_dict
-        results['Final error dict'] = final_error_dict
-        results['Final fail dict'] = final_fail_dict
-        results['Failed tasks'] = failed_tasks
+        results["Time table"] = (
+            test_table_list,
+            execution_modes,
+            stage_modes,
+            r"stage\execution",
+        )
+        results["Final result dict"] = final_result_dict
+        results["Final error dict"] = final_error_dict
+        results["Final fail dict"] = final_fail_dict
+        results["Failed tasks"] = failed_tasks
         return results
-    
+
 
 class TaskChain(TaskTree):
-    def __init__(self, stages: List[TaskManager], chain_mode: str = 'serial'):
+    def __init__(self, stages: List[TaskManager], chain_mode: str = "serial"):
         """
         初始化 TaskChain
         :param stages: TaskManager 列表

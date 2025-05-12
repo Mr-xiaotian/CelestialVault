@@ -23,9 +23,15 @@ def md_to_pdf(md_file_path: Union[str, Path], pdf_file_path: Union[str, Path]):
     # --pdf-engine=xelatex 用于支持Unicode字符
     # --toc 生成目录
     # --template 指定latex模板
-    subprocess.run(["pandoc", str(md_file_path), "-o", str(pdf_file_path), "--pdf-engine=xelatex"], check=True)
+    subprocess.run(
+        ["pandoc", str(md_file_path), "-o", str(pdf_file_path), "--pdf-engine=xelatex"],
+        check=True,
+    )
 
-def transfer_pdf_to_img(pdf_path: str | Path, img_path: str | Path, dpi: int = 150, quality: int = 85):
+
+def transfer_pdf_to_img(
+    pdf_path: str | Path, img_path: str | Path, dpi: int = 150, quality: int = 85
+):
     """
     将PDF文件转换为图片文件
 
@@ -45,29 +51,33 @@ def transfer_pdf_to_img(pdf_path: str | Path, img_path: str | Path, dpi: int = 1
     doc = fitz.open(pdf_path)
     for page_num, page in enumerate(doc, start=1):
         pix = page.get_pixmap(matrix)  # 将页面渲染为图片
-        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)  # 将 Pixmap 转换为 PIL Image
+        img = Image.frombytes(
+            "RGB", [pix.width, pix.height], pix.samples
+        )  # 将 Pixmap 转换为 PIL Image
         img_file = img_path / f"{page_num}.jpg"
         img.save(str(img_file), quality=quality)  # 使用 PIL 保存图像
 
     doc.close()
 
+
 def compress_pdf(old_pdf_path: str | Path, new_pdf_path: str | Path):
-    '''
+    """
     压缩PDF，即将PDF转换为jpg图片，再将图片合并为PDF
 
     :param old_pdf_path: 原PDF路径
     :param new_pdf_path: 新PDF路径
     :return: None
-    '''
+    """
     from .ImageProcessing import combine_imgs_to_pdf
 
     old_pdf_path = Path(old_pdf_path)
     new_pdf_path = Path(new_pdf_path)
-    temp_img_path = old_pdf_path.parent.joinpath('temp')
-    
+    temp_img_path = old_pdf_path.parent.joinpath("temp")
+
     transfer_pdf_to_img(old_pdf_path, temp_img_path)
     combine_imgs_to_pdf(temp_img_path, new_pdf_path)
     shutil.rmtree(temp_img_path)
+
 
 def merge_pdfs_in_order(folder_path: str | Path, special_keywords: dict = None) -> list:
     """
@@ -82,7 +92,7 @@ def merge_pdfs_in_order(folder_path: str | Path, special_keywords: dict = None) 
 
     resize_pdfs(folder_path)
 
-    temp_folder_path = Path(folder_path + '_resized')
+    temp_folder_path = Path(folder_path + "_resized")
     pdf_path = folder_to_file_path(folder_path, "pdf")
     special_keywords = special_keywords or {}
 
@@ -90,7 +100,10 @@ def merge_pdfs_in_order(folder_path: str | Path, special_keywords: dict = None) 
     output_pdf = PyPDF2.PdfWriter()
 
     # 按自定义规则排序 PDF 文件，这里用 sort_by_number
-    pdf_files = sorted(temp_folder_path.glob("*.pdf"), key=lambda path: sort_by_number(path, special_keywords))
+    pdf_files = sorted(
+        temp_folder_path.glob("*.pdf"),
+        key=lambda path: sort_by_number(path, special_keywords),
+    )
 
     # 用来记录当前合并后 PDF 的已有页数，下一个文件的起始页就是它
     current_page_count = 0
@@ -107,11 +120,11 @@ def merge_pdfs_in_order(folder_path: str | Path, special_keywords: dict = None) 
             # 指向它在合并 PDF 中的第一页位置
             # 注：如果要让阅读器显示的“第 1 页”与书签一致，可能需要 +1
             output_pdf.add_outline_item(
-                title=pdf_file.stem,        # 例如 "MyDocument"
-                page_number=start_page,     # 0-based index
-                parent=None                 # 为空表示加在顶级目录
+                title=pdf_file.stem,  # 例如 "MyDocument"
+                page_number=start_page,  # 0-based index
+                parent=None,  # 为空表示加在顶级目录
             )
-            
+
             # 更新总页数
             current_page_count += len(pdf_reader.pages)
 
@@ -123,7 +136,10 @@ def merge_pdfs_in_order(folder_path: str | Path, special_keywords: dict = None) 
 
     return pdf_files
 
-def resize_pdf_to_max_width(pdf_path: str | Path, output_path: str | Path, max_width: int = None):
+
+def resize_pdf_to_max_width(
+    pdf_path: str | Path, output_path: str | Path, max_width: int = None
+):
     """
     将 PDF 文件中的每一页的宽度调整为最大宽度，保持纵横比不变。
 
@@ -131,19 +147,20 @@ def resize_pdf_to_max_width(pdf_path: str | Path, output_path: str | Path, max_w
     :param output_path: 输出 PDF 文件路径
     :return: None
     """
+
     def get_max_width(doc):
         """
         获取 PDF 文件中所有页面的最大宽度。
         """
         return max(page.rect.width for page in doc)
-    
+
     pdf_path = Path(pdf_path)
     output_path = Path(output_path)
 
     # 检查输出文件是否已存在，避免意外覆盖
     if output_path.exists():
         raise FileExistsError(f"错误：文件 '{output_path}' 已存在。")
-    
+
     # 确保输出目录存在
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -159,16 +176,14 @@ def resize_pdf_to_max_width(pdf_path: str | Path, output_path: str | Path, max_w
             # 创建新页面并渲染
             new_page = output_pdf.new_page(width=max_width, height=new_height)
             new_page.show_pdf_page(
-                new_page.rect,
-                doc,
-                page.number,
-                fitz.Matrix(scale_ratio, scale_ratio)
+                new_page.rect, doc, page.number, fitz.Matrix(scale_ratio, scale_ratio)
             )
 
         # 保存调整后的 PDF
         output_pdf.save(output_path)
 
     return max_width
+
 
 def get_max_pdf_width(folder_path: str | Path) -> float:
     """
@@ -194,16 +209,24 @@ def get_max_pdf_width(folder_path: str | Path) -> float:
 
     return max_width
 
-def resize_pdfs(folder_path: Path, execution_mode: str = 'serial'): 
+
+def resize_pdfs(folder_path: Path, execution_mode: str = "serial"):
     def resize_pdf(pdf_path: Path, output_path: Path) -> Path:
         return resize_pdf_to_max_width(pdf_path, output_path, max_pdf_width)
+
     def rename_pdf(file_path: Path) -> Path:
         name = file_path.stem.replace("_resized", "")
         new_name = f"{name}_resized.pdf"
         return file_path.with_name(new_name)
-    
+
     from .FileOperations import handle_folder
 
     max_pdf_width = get_max_pdf_width(folder_path)
-    rules = {'.pdf': (resize_pdf, lambda x: x)}
-    return handle_folder(folder_path, rules, execution_mode, progress_desc='Resize PDFs', folder_name_siffix='_resized')
+    rules = {".pdf": (resize_pdf, lambda x: x)}
+    return handle_folder(
+        folder_path,
+        rules,
+        execution_mode,
+        progress_desc="Resize PDFs",
+        folder_name_siffix="_resized",
+    )

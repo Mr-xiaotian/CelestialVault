@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-#版本 2.10
-#作者：晓天
+# 版本 2.10
+# 作者：晓天
 
 from typing import List
 
@@ -9,12 +9,14 @@ from ..tools.TextTools import calculate_similarity, get_lcs, string_split
 
 
 class Findiffer:
-    def __init__(self, norm_end: str = '[', diff_end: str = ']', split_part_str: str = '[]') -> None:
-        '''
+    def __init__(
+        self, norm_end: str = "[", diff_end: str = "]", split_part_str: str = "[]"
+    ) -> None:
+        """
         :param norm_end: can use '\033[0m' '_' '[' or others.
         :param diff_end: can use '\033[1m' '_' ']' or others.
         :param split_part_str: can use '-' '_' '[]'or others.
-        '''
+        """
         self.norm_end = norm_end
         self.diff_end = diff_end
         self.split_part_str = split_part_str
@@ -37,37 +39,35 @@ class Findiffer:
             # print(f"(LCS: {self.split_part_str.join(lcs_part)})")
             similarity = calculate_similarity(list_a[i], list_b[i], lcs_part)
             if part_len > 1:
-                print(f'(第{i+1}行, 相似度：{similarity})\n')
+                print(f"(第{i+1}行, 相似度：{similarity})\n")
             else:
-                print(f'(相似度：{similarity})\n')
+                print(f"(相似度：{similarity})\n")
 
     def fd_dict(self, dict_a: dict, dict_b: dict):
-        _, key_min, dif_key_a, dif_key_b = dictkey_mix(
-            dict_a, dict_b
-            )
+        _, key_min, dif_key_a, dif_key_b = dictkey_mix(dict_a, dict_b)
 
-        print('a b的共有标签值为:')
+        print("a b的共有标签值为:")
         for key in key_min:
             if dict_a[key] == dict_b[key]:
                 continue
 
-            print(f'{key}:')
+            print(f"{key}:")
             lcs_part = get_lcs(dict_a[key], dict_b[key])
             self.compare_strings(dict_a[key], dict_b[key], lcs_part)
             similarity = calculate_similarity(dict_a[key], dict_b[key], lcs_part)
             # print(f"(LCS: {self.split_part_str.join(lcs_part)})")
-            print(f'(相似度：{similarity})\n')
-                
+            print(f"(相似度：{similarity})\n")
+
         if dif_key_a:
-            print('a中的特有标签值为:')
+            print("a中的特有标签值为:")
             for key in dif_key_a:
-                print(f'{key}:{dict_a[key]}')
+                print(f"{key}:{dict_a[key]}")
             print()
-                
+
         if dif_key_b:
-            print('b中的特有标签值为:')
+            print("b中的特有标签值为:")
             for key in dif_key_b:
-                print(f'{key}:{dict_b[key]}')
+                print(f"{key}:{dict_b[key]}")
 
     def compare_strings(self, str1: str, str2: str, lcs_part: List[str] = None) -> None:
         lcs_part = get_lcs(str1, str2, lcs_part) if lcs_part is None else lcs_part
@@ -86,9 +86,9 @@ class Findiffer:
         :param lcs_part: 相似部分列表
         :return: 不同区域的位置列表
         """
-        if len(lcs_part) == 1 and lcs_part[0] == '':
+        if len(lcs_part) == 1 and lcs_part[0] == "":
             return [[0, len(origin_str)]]
-        
+
         diff_ranges_reverse = []
         start_index = -1
         end_index = 0
@@ -106,29 +106,33 @@ class Findiffer:
                     end_index = str_len
                     diff_ranges_reverse.append([start_index, end_index])
                 continue
-            
+
             if start_index != -1:
-                end_index = str_reverse[start_index:].find(similar_str_reverse) + start_index
+                end_index = (
+                    str_reverse[start_index:].find(similar_str_reverse) + start_index
+                )
                 diff_ranges_reverse.append([start_index, end_index])
 
             start_index = end_index + len(similar_str_reverse)
 
         # 将位置转换回正序
-        diff_ranges = [[str_len - dr[1], str_len - dr[0]] for dr in diff_ranges_reverse[::-1]]
+        diff_ranges = [
+            [str_len - dr[1], str_len - dr[0]] for dr in diff_ranges_reverse[::-1]
+        ]
 
         return diff_ranges
 
     def print_diffs(self, input_str: str, diff_ranges: list) -> None:
         """
         Print differences to stderr.
-        
+
         :param input_str: The input string to print.
         :param diff_ranges: The ranges of differences to print.
         """
         prev_end_index = 0
         for start_index, end_index in diff_ranges:
             end_index = min(end_index, len(input_str))
-            print(input_str[prev_end_index:start_index], end = self.norm_end)
-            print(input_str[start_index:end_index], end = self.diff_end)
+            print(input_str[prev_end_index:start_index], end=self.norm_end)
+            print(input_str[start_index:end_index], end=self.diff_end)
             prev_end_index = end_index
         print(input_str[prev_end_index:])
