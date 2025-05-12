@@ -80,7 +80,7 @@ def merge_pdfs_in_order(folder_path: str | Path, special_keywords: dict = None) 
 
     resize_pdfs(folder_path)
 
-    temp_folder_path = Path(folder_path + '_resized')
+    temp_folder_path = Path(str(folder_path) + '_resized')
     pdf_path = folder_to_file_path(folder_path, "pdf")
     special_keywords = special_keywords or {}
 

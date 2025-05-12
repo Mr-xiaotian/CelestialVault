@@ -58,7 +58,7 @@ class TaskLogger:
         self.logger.success(f"In '{func_name}', Task {task_info} completed by {execution_mode}. Result is {result_info}. Used {use_time:.2f} seconds.")
 
     def task_retry(self, func_name, task_info, retry_times):
-        self.logger.warning(f"In '{func_name}' Task {task_info} failed {retry_times} times and will retry.")
+        self.logger.warning(f"In '{func_name}', Task {task_info} failed {retry_times} times and will retry.")
 
     def task_error(self, func_name, task_info, exception):
         self.logger.error(f"In '{func_name}', Task {task_info} failed and can't retry: ({type(exception).__name__}){exception}")
