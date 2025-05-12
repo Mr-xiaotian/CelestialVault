@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 import random
+
 import numpy as np
 import numpy.random as nr
 import scipy.special as sp
 from tqdm import tqdm
+
 
 class NeuralNetwork:
     def __init__(self, inputnodes, hiddennodes, outputnodes, learningrate):

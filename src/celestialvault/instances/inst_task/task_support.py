@@ -1,9 +1,9 @@
-from threading import Thread
 from multiprocessing import Queue as MPQueue
 from queue import Queue as ThreadQueue
 from threading import Thread
-from time import strftime, localtime
+from time import localtime, strftime
 from typing import List, Union
+
 from loguru import logger as loguru_logger
 
 

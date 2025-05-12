@@ -1,9 +1,11 @@
-import fitz, shutil
-import PyPDF2
+import shutil
 import subprocess
-from PIL import Image
 from pathlib import Path
 from typing import Union
+
+import fitz
+import PyPDF2
+from PIL import Image
 from tqdm import tqdm
 
 

@@ -1,14 +1,17 @@
-import io, base64, math
+import base64
+import io
+import math
+from colorsys import hsv_to_rgb
+from itertools import product
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from PIL import Image
-from tqdm import tqdm
-from pathlib import Path
-from itertools import product
-from colorsys import hsv_to_rgb
 from pillow_heif import register_heif_opener
 from skimage.metrics import structural_similarity as compare_ssim
+from tqdm import tqdm
 
 
 def compress_img(old_img_path: str | Path, new_img_path: str | Path):
@@ -30,6 +33,7 @@ def combine_imgs_to_pdf(root_path: str | Path, pdf_path: str | Path = None, spec
     """
     from ..constants import IMG_SUFFIXES
     from .FileOperations import folder_to_file_path, sort_by_number
+
     # 转换路径为 Path 对象
     root_path = Path(root_path)
     pdf_path = folder_to_file_path(root_path, 'pdf') if pdf_path is None else Path(pdf_path)

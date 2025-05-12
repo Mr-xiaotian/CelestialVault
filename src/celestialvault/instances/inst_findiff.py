@@ -4,8 +4,9 @@
 
 from typing import List
 
-from ..tools.TextTools import string_split, get_lcs, calculate_similarity
 from ..tools.ListDictTools import dictkey_mix
+from ..tools.TextTools import calculate_similarity, get_lcs, string_split
+
 
 class Findiffer:
     def __init__(self, norm_end: str = '[', diff_end: str = ']', split_part_str: str = '[]') -> None:
@@ -18,7 +19,7 @@ class Findiffer:
         self.diff_end = diff_end
         self.split_part_str = split_part_str
 
-    def fd_str(self, string_a, string_b, split_str = None):
+    def fd_str(self, string_a: str, string_b: str, split_str: str = None):
         # 以split_str为分割符将a和b分割
         list_a = string_split(string_a, split_str=split_str)
         list_b = string_split(string_b, split_str=split_str)
@@ -40,7 +41,7 @@ class Findiffer:
             else:
                 print(f'(相似度：{similarity})\n')
 
-    def fd_dict(self, dict_a, dict_b):
+    def fd_dict(self, dict_a: dict, dict_b: dict):
         _, key_min, dif_key_a, dif_key_b = dictkey_mix(
             dict_a, dict_b
             )

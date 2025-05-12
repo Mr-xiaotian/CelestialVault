@@ -1,10 +1,10 @@
 import re
-from pathlib import Path
 from html import unescape
+from pathlib import Path
 from urllib.parse import unquote
 
-from ..tools.TextTools import safe_open_txt, pro_slash
 from ..tools.FileOperations import handle_folder
+from ..tools.TextTools import pro_slash, safe_open_txt
 
 
 class Suber:

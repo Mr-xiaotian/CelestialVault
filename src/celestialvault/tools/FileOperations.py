@@ -1,9 +1,16 @@
-import shutil, re, os, hashlib
-import zipfile, rarfile, tarfile, py7zr
-from tqdm import tqdm
-from pathlib import Path
-from typing import Callable, Tuple, Dict, List, Any
+import hashlib
+import os
+import re
+import shutil
+import tarfile
+import zipfile
 from collections import defaultdict
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Tuple
+
+import py7zr
+import rarfile
+from tqdm import tqdm
 from wcwidth import wcswidth
 
 from ..constants import FILE_ICONS, IMG_SUFFIXES, VIDEO_SUFFIXES
@@ -190,6 +197,7 @@ def compress_folder(folder_path: str | Path, execution_mode: str = 'thread') -> 
 
     from .ImageProcessing import compress_img
     from .VideoProcessing import compress_video
+
     # from .DocumentConversion import compress_pdf
 
     rules = {suffix: (compress_img, lambda x: x) for suffix in IMG_SUFFIXES}

@@ -1,10 +1,16 @@
-import jieba, re, string, zlib, base64, charset_normalizer
-from tqdm import tqdm
-from pathlib import Path
-from jieba import analyse
+import base64
+import re
+import string
+import zlib
 from itertools import zip_longest
-from typing import List, Dict, Union, Tuple
+from pathlib import Path
 from pprint import pprint
+from typing import Dict, List, Tuple, Union
+
+import charset_normalizer
+import jieba
+from jieba import analyse
+from tqdm import tqdm
 from wcwidth import wcswidth
 
 

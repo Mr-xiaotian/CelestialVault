@@ -1,7 +1,8 @@
-import httpx
-from typing import Tuple, Any
 from html import unescape
+from typing import Any, Tuple
 from urllib.parse import unquote
+
+import httpx
 from aiohttp import ClientSession
 from aiohttp.client import ClientTimeout
 

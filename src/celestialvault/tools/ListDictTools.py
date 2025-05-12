@@ -1,6 +1,6 @@
-from typing import List, Any, Tuple, Callable, Type, Iterable
-from itertools import islice
 from functools import reduce
+from itertools import islice
+from typing import Any, Callable, Iterable, List, Tuple, Type
 
 
 def list_removes(lists: list, _remove) -> list:

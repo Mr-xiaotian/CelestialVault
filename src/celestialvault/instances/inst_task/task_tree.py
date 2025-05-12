@@ -1,16 +1,17 @@
 
-import multiprocessing, json
-from pathlib import Path
-from datetime import datetime
+import json
+import multiprocessing
 from collections import defaultdict
-from queue import Queue as ThreadQueue
+from datetime import datetime
 from multiprocessing import Queue as MPQueue
+from pathlib import Path
+from queue import Queue as ThreadQueue
 from time import time
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
-from .task_support import TERMINATION_SIGNAL, task_logger, TaskError
+from .task_support import TERMINATION_SIGNAL, TaskError, task_logger
 
 
 class TaskTree:

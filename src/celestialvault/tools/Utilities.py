@@ -1,9 +1,12 @@
-import sys, re, time
+import re
+import sys
+import time
+from collections.abc import Container, Mapping
+from functools import wraps
+from time import localtime, strftime
 from types import FunctionType
 from typing import Callable
-from collections.abc import Mapping, Container
-from functools import wraps
-from time import strftime, localtime
+
 
 def get_format_time(now_time=None):
     """

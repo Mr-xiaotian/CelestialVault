@@ -1,7 +1,10 @@
-import random, re
+import random
+import re
+from typing import Callable, Dict, List, Tuple
+
 import ipywidgets as widgets
-from typing import Callable, Tuple, Dict, List
-from IPython.display import display, clear_output
+from IPython.display import clear_output, display
+
 
 class MultiplicationQuiz:
     def __init__(self, digit_num, modes: list = ["random"]):

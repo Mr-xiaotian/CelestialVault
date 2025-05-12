@@ -1,12 +1,15 @@
 # _*_ coding: utf-8 _*_
 
-import subprocess, json, pickle
-import pandas as pd
+import json
+import pickle
+import subprocess
 from pathlib import Path
 
-from .inst_task import TaskManager, TaskChain
-from .inst_fetch import Fetcher
+import pandas as pd
+
 from .inst_error import FFmpegError
+from .inst_fetch import Fetcher
+from .inst_task import TaskChain, TaskManager
 
 
 class FetchManager(TaskManager):

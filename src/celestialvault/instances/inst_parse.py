@@ -1,5 +1,6 @@
 from typing import List, Tuple
-from bs4 import Tag, NavigableString
+
+from bs4 import NavigableString, Tag
 
 
 class HTMLContentParser:

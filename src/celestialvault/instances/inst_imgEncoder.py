@@ -1,11 +1,15 @@
 import math
-from tqdm import tqdm
 from itertools import product
-from PIL import Image, PngImagePlugin
 
-from ..tools.TextTools import safe_open_txt, encode_crc, decode_crc, compress_text_to_bytes, decompress_text_from_bytes
+from PIL import Image, PngImagePlugin
+from tqdm import tqdm
+
+from ..constants import image_mode_params, style_params
 from ..tools.ImageProcessing import generate_palette
-from ..constants import style_params, image_mode_params
+from ..tools.TextTools import (compress_text_to_bytes, decode_crc,
+                               decompress_text_from_bytes, encode_crc,
+                               safe_open_txt)
+
 
 class ImgEncoder:
     def encode_text_file(self, file_path: str, mode: str='morandi') -> Image.Image:

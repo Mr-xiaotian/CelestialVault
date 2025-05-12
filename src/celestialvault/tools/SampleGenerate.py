@@ -1,7 +1,9 @@
 import random
-import fitz  # PyMuPDF
 from pathlib import Path
+
+import fitz  # PyMuPDF
 from PIL import Image, ImageDraw, ImageFont
+
 
 def generate_test_images(root_dir: str | Path, num_folders: int = 3, images_per_folder: int = 5):
     """

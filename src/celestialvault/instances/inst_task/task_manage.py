@@ -1,14 +1,17 @@
 from __future__ import annotations
+
 import asyncio
 from asyncio import Queue as AsyncQueue
-from queue import Queue as ThreadQueue
-from multiprocessing import Queue as MPQueue
-from threading import Event, Lock
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from collections import defaultdict
-from httpx import ConnectTimeout, ProtocolError, ReadError, ConnectError, RequestError, PoolTimeout, ReadTimeout
-from typing import List
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from multiprocessing import Queue as MPQueue
+from queue import Queue as ThreadQueue
+from threading import Event, Lock
 from time import time
+from typing import List
+
+from httpx import (ConnectError, ConnectTimeout, PoolTimeout, ProtocolError,
+                   ReadError, ReadTimeout, RequestError)
 
 from .task_progress import ProgressManager
 from .task_support import TERMINATION_SIGNAL, TerminationSignal, task_logger

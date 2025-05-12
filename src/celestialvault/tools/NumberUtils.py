@@ -1,9 +1,10 @@
-import random
-import mpmath
 import math
-from tqdm import tqdm
+import random
 from itertools import permutations
-from typing import List, Dict, Union, Tuple
+from typing import Dict, List, Tuple, Union
+
+import mpmath
+from tqdm import tqdm
 
 from ..constants.pi_digit import PI_STR_1E6
 from .ListDictTools import list_to_square_matrix

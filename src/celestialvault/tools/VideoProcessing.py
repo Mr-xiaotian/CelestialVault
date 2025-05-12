@@ -1,9 +1,12 @@
-import subprocess, re
-import ffmpeg
-from pathlib import Path
-from typing import Tuple, List
+import re
+import subprocess
 from collections import defaultdict
-from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip, clips_array
+from pathlib import Path
+from typing import List, Tuple
+
+import ffmpeg
+from moviepy.editor import (CompositeVideoClip, TextClip, VideoFileClip,
+                            clips_array)
 
 from ..instances.inst_task import TaskManager
 
