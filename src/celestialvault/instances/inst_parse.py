@@ -1,11 +1,13 @@
 from typing import List, Tuple
-from bs4 import Tag, NavigableString
+
+from bs4 import NavigableString, Tag
 
 
 class HTMLContentParser:
     """
     一个用于解析HTML内容的类，将文本、图片和视频信息提取为markdown列表、视频列表和图片列表。
     """
+
     def __init__(self):
         pass
 
@@ -34,14 +36,14 @@ class HTMLContentParser:
             self._handle_text(element)
         elif isinstance(element, Tag):
             # 处理图片
-            if element.name == 'img':
+            if element.name == "img":
                 img_name, img_url = self.get_image_info(element)
                 if img_name and img_url:
                     self._handle_image(img_name, img_url)
 
             # 处理视频
-            classes = element.get('class', [])
-            if 'dplayer' in classes:
+            classes = element.get("class", [])
+            if "dplayer" in classes:
                 video_name, video_url = self.get_video_info(element)
                 if video_name and video_url:
                     self._handle_video(video_name, video_url)
@@ -71,7 +73,9 @@ class HTMLContentParser:
         """
         处理视频，将视频信息添加到markdown列表和视频列表中。
         """
-        self.md_list.append(f'<video controls src="{video_name}.mp4" width="480" height="320">{video_url}</video>')
+        self.md_list.append(
+            f'<video controls src="{video_name}.mp4" width="480" height="320">{video_url}</video>'
+        )
         self.video_list.append((video_name, video_url))
 
     def get_image_info(self, img_tag: Tag) -> Tuple[str, str]:

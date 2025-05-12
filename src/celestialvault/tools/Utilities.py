@@ -1,9 +1,12 @@
-import sys, re, time
+import re
+import sys
+import time
+from collections.abc import Container, Mapping
+from functools import wraps
+from time import localtime, strftime
 from types import FunctionType
 from typing import Callable
-from collections.abc import Mapping, Container
-from functools import wraps
-from time import strftime, localtime
+
 
 def get_format_time(now_time=None):
     """
@@ -12,6 +15,7 @@ def get_format_time(now_time=None):
     """
     now_time = localtime(now_time) or localtime()
     return strftime("%Y-%m-%d %H:%M:%S", now_time)
+
 
 def functions_are_equal(func1: Callable, func2: Callable) -> bool:
     """
@@ -23,12 +27,15 @@ def functions_are_equal(func1: Callable, func2: Callable) -> bool:
     """
     if not (isinstance(func1, FunctionType) and isinstance(func2, FunctionType)):
         return False
-    return (func1.__code__.co_code == func2.__code__.co_code and
-            func1.__code__.co_consts == func2.__code__.co_consts and
-            func1.__code__.co_varnames == func2.__code__.co_varnames and
-            func1.__code__.co_argcount == func2.__code__.co_argcount and
-            func1.__defaults__ == func2.__defaults__ and
-            func1.__closure__ == func2.__closure__)
+    return (
+        func1.__code__.co_code == func2.__code__.co_code
+        and func1.__code__.co_consts == func2.__code__.co_consts
+        and func1.__code__.co_varnames == func2.__code__.co_varnames
+        and func1.__code__.co_argcount == func2.__code__.co_argcount
+        and func1.__defaults__ == func2.__defaults__
+        and func1.__closure__ == func2.__closure__
+    )
+
 
 def bytes_to_human_readable(size_in_bytes: int) -> str:
     """
@@ -38,18 +45,19 @@ def bytes_to_human_readable(size_in_bytes: int) -> str:
     """
     if size_in_bytes <= 0:
         return "0B"
-    
-    units = ['B', 'KB', 'MB', 'GB', 'TB']
+
+    units = ["B", "KB", "MB", "GB", "TB"]
     result = []
-    
+
     for unit in reversed(units):
         unit_size = 1024 ** units.index(unit)
         if size_in_bytes >= unit_size:
             value = size_in_bytes // unit_size
             size_in_bytes %= unit_size
             result.append(f"{value}{unit}")
-    
-    return ' '.join(result)
+
+    return " ".join(result)
+
 
 def human_readable_to_bytes(human_readable: str) -> int:
     """
@@ -57,10 +65,10 @@ def human_readable_to_bytes(human_readable: str) -> int:
     :param human_readable: 人类可读格式的大小 (str)，如 "1GB 512MB"
     :return: 字节大小 (int)
     """
-    units = {'B': 1, 'KB': 1024, 'MB': 1024**2, 'GB': 1024**3, 'TB': 1024**4}
+    units = {"B": 1, "KB": 1024, "MB": 1024**2, "GB": 1024**3, "TB": 1024**4}
     size_in_bytes = 0
 
-    matches = re.findall(r'(\d+(?:\.\d+)?)([A-Za-z]+)', human_readable)
+    matches = re.findall(r"(\d+(?:\.\d+)?)([A-Za-z]+)", human_readable)
     if not matches:
         raise ValueError(f"无法解析输入: {human_readable}")
 
@@ -71,6 +79,7 @@ def human_readable_to_bytes(human_readable: str) -> int:
         size_in_bytes += float(value) * units[unit]
 
     return int(size_in_bytes)
+
 
 def get_total_size(obj, seen=None):
     """
@@ -94,7 +103,9 @@ def get_total_size(obj, seen=None):
 
     # 如果对象是映射类型（如 dict）
     if isinstance(obj, Mapping):
-        size += sum(get_total_size(k, seen) + get_total_size(v, seen) for k, v in obj.items())
+        size += sum(
+            get_total_size(k, seen) + get_total_size(v, seen) for k, v in obj.items()
+        )
 
     # 如果对象是容器类型（如 list、tuple、set 等），但不包括字符串和字节类型
     elif isinstance(obj, Container) and not isinstance(obj, (str, bytes, bytearray)):
@@ -102,12 +113,14 @@ def get_total_size(obj, seen=None):
 
     return size
 
+
 def log_time(func: Callable) -> Callable:
     """
     记录函数执行时间的装饰器
     :param func: 要装饰的函数
     :return:
     """
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.time()
@@ -119,4 +132,5 @@ def log_time(func: Callable) -> Callable:
         print(f"[{func.__name__}] 结束执行: {get_format_time(end_time)}")
         print(f"[{func.__name__}] 总耗时: {end_time - start_time:.4f} 秒")
         return result
+
     return wrapper

@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 import random
+
 import numpy as np
 import numpy.random as nr
 import scipy.special as sp
 from tqdm import tqdm
+
 
 class NeuralNetwork:
     def __init__(self, inputnodes, hiddennodes, outputnodes, learningrate):
@@ -22,7 +25,7 @@ class NeuralNetwork:
         # 定义激活函数为sigmoid函数
         self.activation_function = lambda x: sp.expit(x)
         pass
-    
+
     def train(self, input_list, targets_list):
         # 将输入列表和目标列表转换为二维数组并转置为列向量
         target = np.array(targets_list, ndmin=2).T
@@ -31,7 +34,7 @@ class NeuralNetwork:
         # 计算隐藏层的输入和输出
         hidden_inputs = np.dot(self.wih, inputs)
         hidden_outputs = self.activation_function(hidden_inputs)
-        
+
         # 计算最终输出层的输入和输出
         final_inputs = np.dot(self.who, hidden_outputs)
         final_outputs = self.activation_function(final_inputs)
@@ -42,17 +45,23 @@ class NeuralNetwork:
         hidden_errors = np.dot(self.who.T, output_errors)
 
         # 根据误差更新隐藏层到输出层的权重矩阵
-        self.who += self.lr * np.dot((output_errors * final_outputs * (1 - final_outputs)),
-                                     np.transpose(hidden_outputs))
+        self.who += self.lr * np.dot(
+            (output_errors * final_outputs * (1 - final_outputs)),
+            np.transpose(hidden_outputs),
+        )
         # 根据误差更新输入层到隐藏层的权重矩阵
-        self.wih += self.lr * np.dot((hidden_errors * hidden_outputs * (1 - hidden_outputs)),
-                                     np.transpose(inputs))
-        
+        self.wih += self.lr * np.dot(
+            (hidden_errors * hidden_outputs * (1 - hidden_outputs)),
+            np.transpose(inputs),
+        )
+
         # 计算误差更新矩阵 e 用于输出
-        e = self.lr * np.dot((output_errors * final_outputs * (1 - final_outputs)),
-                                     np.transpose(hidden_outputs))
+        e = self.lr * np.dot(
+            (output_errors * final_outputs * (1 - final_outputs)),
+            np.transpose(hidden_outputs),
+        )
         return final_outputs, output_errors, e
-    
+
     def query(self, input_list):
         # 将输入列表转换为二维数组并转置为列向量
         inputs = np.array(input_list, ndmin=2).T
@@ -60,13 +69,14 @@ class NeuralNetwork:
         # 计算隐藏层的输入和输出
         hidden_inputs = np.dot(self.wih, inputs)
         hidden_outputs = self.activation_function(hidden_inputs)
-        
+
         # 计算最终输出层的输入和输出
         final_inputs = np.dot(self.who, hidden_outputs)
         final_outputs = self.activation_function(final_inputs)
-        
+
         # 返回输出层中值最大的索引，即预测的类别
         return np.argmax(final_outputs)
+
 
 class Layer:
     def __init__(self):
@@ -87,22 +97,22 @@ class Layer:
 
     def forward(self):
         raise NotImplementedError
-    
+
     def get_forward_input(self):
         if self.previous is not None:
             return self.previous.output_data
         else:
             return self.input_data
-        
+
     def backward(self):
         raise NotImplementedError
-    
+
     def get_backward_input(self):
         if self.next is not None:
             return self.next.output_delta
         else:
             return self.input_delta
-        
+
     def clear_deltas(self):
         pass
 
@@ -111,18 +121,23 @@ class Layer:
 
     def describe(self):
         raise NotImplementedError
-    
+
+
 def sigmoid_double(x):
     return 1.0 / (1.0 + np.exp(-x))
+
 
 def sigmoid(x):
     return np.vectorize(sigmoid_double)(x)
 
+
 def sigmoid_prime_double(x):
     return sigmoid_double(x) * (1 - sigmoid_double(x))
 
+
 def sigmoid_prime(z):
     return np.vectorize(sigmoid_prime_double)(z)
+
 
 class ActivationLayer(Layer):
     def __init__(self, input_dim):
@@ -152,14 +167,14 @@ class ActivationLayer(Layer):
 class DenseLayer(Layer):
     def __init__(self, input_dim, output_dim):
         super(DenseLayer, self).__init__()
-        
+
         self.input_dim = input_dim
         self.output_dim = output_dim
-        
+
         self.weight = np.random.randn(output_dim, input_dim)
         self.bias = np.random.randn(output_dim, 1)
         self.params = [self.weight, self.bias]
-        
+
         self.delta_w = np.zeros(self.weight.shape)
         self.delta_b = np.zeros(self.bias.shape)
 
@@ -172,7 +187,7 @@ class DenseLayer(Layer):
     def backward(self):
         data = self.get_forward_input()
         delta = self.get_backward_input()
-        
+
         self.delta_b += delta
         self.delta_w += np.dot(delta, data.T)
         self.output_delta = np.dot(self.weight.T, delta)
@@ -191,7 +206,7 @@ class DenseLayer(Layer):
 
 
 class SequentialNetwork:
-    def __init__(self, loss = None):
+    def __init__(self, loss=None):
         print("Initialize Network...")
         self.layers = []
         if loss is None:
@@ -209,13 +224,13 @@ class SequentialNetwork:
             random.shuffle(train_data)
 
             mini_batches = [
-                train_data[k:k+mini_batch_size] 
+                train_data[k : k + mini_batch_size]
                 for k in range(0, n, mini_batch_size)
-                ]
-            
+            ]
+
             for mini_batch in tqdm(mini_batches):
                 self.train_batch(mini_batch, learning_rate)
-            
+
             # if test_data:
             #     n_test = len(test_data)
             #     print(f"Epoch {epoch+1}: {self.evaluate(test_data)} / {n_test}")
@@ -240,9 +255,10 @@ class SequentialNetwork:
             self.layers[0].input_data = x.reshape(-1, 1)
             for layer in self.layers:
                 layer.forward()
-            self.layers[-1].input_delta = \
-                self.loss.loss_derivative(self.layers[-1].output_data, y.reshape(-1, 1))
-            for index,layer in enumerate(reversed(self.layers)):
+            self.layers[-1].input_delta = self.loss.loss_derivative(
+                self.layers[-1].output_data, y.reshape(-1, 1)
+            )
+            for index, layer in enumerate(reversed(self.layers)):
                 layer.backward()
 
     def single_forward(self, x):
@@ -250,7 +266,7 @@ class SequentialNetwork:
         for layer in self.layers:
             layer.forward()
         return self.layers[-1].output_data
-    
+
     def evaluate(self, test_data):
         win = 0
         for x, y in tqdm(test_data):
@@ -258,7 +274,8 @@ class SequentialNetwork:
             r_1 = np.argmax(y)
             win += 1 if r_0 == r_1 else 0
         return win
-    
+
+
 class MSE:
     def loss(self, predicted, actual):
         return np.mean((predicted - actual) ** 2)

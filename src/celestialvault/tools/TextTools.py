@@ -1,10 +1,16 @@
-import jieba, re, string, zlib, base64, charset_normalizer
-from tqdm import tqdm
-from pathlib import Path
-from jieba import analyse
+import base64
+import re
+import string
+import zlib
 from itertools import zip_longest
-from typing import List, Dict, Union, Tuple
+from pathlib import Path
 from pprint import pprint
+from typing import Dict, List, Tuple, Union
+
+import charset_normalizer
+import jieba
+from jieba import analyse
+from tqdm import tqdm
 from wcwidth import wcswidth
 
 
@@ -32,16 +38,19 @@ def pro_slash(input_str: str) -> str:
     """
     if not input_str:
         return input_str
-    
+
     # 替换多余的转义符
-    result_str = input_str.replace('\\\\', '\\')
-    
+    result_str = input_str.replace("\\\\", "\\")
+
     # 替换其他转义符
-    result_str = result_str.replace(r'\/', '/')
-    
+    result_str = result_str.replace(r"\/", "/")
+
     return result_str
 
-def str_to_dict(string: str, line_delimiter: str = "\n", key_value_delimiter: str = ":") -> Dict[str, str]:
+
+def str_to_dict(
+    string: str, line_delimiter: str = "\n", key_value_delimiter: str = ":"
+) -> Dict[str, str]:
     """
     将字符串转化为字典，每行格式为 `key:value`，以指定的分隔符分隔行。
 
@@ -66,15 +75,17 @@ def str_to_dict(string: str, line_delimiter: str = "\n", key_value_delimiter: st
 
     return parsed_dict
 
+
 def str_removes(strs: str, _remove: str) -> str:
     """
     从字符串中移除指定的子串。
-    
+
     :param strs (str): 原始字符串。
     :param _remove (str): 需要从原始字符串中移除的子串。
     :return str: 移除指定子串后的新字符串。
     """
-    return strs.replace(_remove, '')
+    return strs.replace(_remove, "")
+
 
 def str_replaces(strs: str, replace_list: list[Tuple[str, str]]) -> str:
     """
@@ -88,28 +99,31 @@ def str_replaces(strs: str, replace_list: list[Tuple[str, str]]) -> str:
         strs = strs.replace(r[0], r[1])
     return strs
 
-def iprint(obj: Union[List, Dict], start='', end=''):
+
+def iprint(obj: Union[List, Dict], start="", end=""):
     """
     根据对象的大小选择打印方式。
     如果对象的长度小于16，那么就打印整个对象，否则只打印前10个和后5个元素。
 
     :param obj (Union[List, Dict]): 需要打印的对象，可以是列表或字典。
     """
-    print(start, end='')
+    print(start, end="")
     length = len(obj)
     if length < 16:
         pprint(obj)
     else:
         pprint(obj[:10])
-        print(f'(此处省略{length-15}项)')
+        print(f"(此处省略{length-15}项)")
         pprint(obj[-5:])
-    print(end, end='')
+    print(end, end="")
 
-def string_split(string: str, split_str: str='\n') -> list[str]:
+
+def string_split(string: str, split_str: str = "\n") -> list[str]:
     """
     将字符串按指定分隔符分割，返回一个列表，每个元素是分割后非空的子字符串。
     """
     return [s for s in string.split(split_str) if s]
+
 
 def language_fingerprint(text: str) -> dict:
     """
@@ -117,132 +131,143 @@ def language_fingerprint(text: str) -> dict:
     """
     # 将文本分词
     words = list(jieba.cut(text))
-    
+
     # 计算单词和字符的数量
     num_words = len(words)
     num_chars = len(text)
-    
+
     # 计算单词长度分布
     word_lengths = [len(w) for w in words]
     avg_word_length = sum(word_lengths) / num_words
     max_word_length = max(word_lengths)
-    
+
     # 计算停用词比例
-    stopwords = set(['的', '了', '是', '在', '我', '有', '和', '就', '不'])
+    stopwords = set(["的", "了", "是", "在", "我", "有", "和", "就", "不"])
     num_stopwords = len([w for w in words if w in stopwords])
     stopwords_ratio = num_stopwords / num_words
-    
+
     # 计算词频分布
     freq_dist = dict(analyse.extract_tags(text, topK=10, withWeight=True))
     top_10_words = {word: freq_dist[word] for word in list(freq_dist.keys())}
-    
+
     # 构建语言指纹字典
     fingerprint = {
-        'num_words': num_words,
-        'num_chars': num_chars,
-        'avg_word_length': avg_word_length,
-        'max_word_length': max_word_length,
-        'stopwords_ratio': stopwords_ratio,
-        'top_10_words': top_10_words
+        "num_words": num_words,
+        "num_chars": num_chars,
+        "avg_word_length": avg_word_length,
+        "max_word_length": max_word_length,
+        "stopwords_ratio": stopwords_ratio,
+        "top_10_words": top_10_words,
     }
-    
+
     return fingerprint
+
 
 def calculate_valid_chinese_text(text: str):
     """
     计算文本中中文字符的比例。
     """
     # 定义一个正则表达式来匹配中文字符
-    chinese_char_pattern = re.compile(r'[\u4e00-\u9fff'
-                                      r'。，、？！《》“”‘’：（）【】'
-                                      r'0-9a-zA-Z]')
-    
+    chinese_char_pattern = re.compile(
+        r"[\u4e00-\u9fff" r"。，、？！《》“”‘’：（）【】" r"0-9a-zA-Z]"
+    )
+
     # 计算中文字符的数量
     chinese_char_count = len(chinese_char_pattern.findall(text))
-    
+
     # 计算文本中中文字符的比例
     return chinese_char_count / len(text)
+
 
 def calculate_valid_text(text: str):
     """
     计算文本中有效字符的比例。
     """
     # 定义一个正则表达式来匹配所有常见语言字符和标点符号
-    valid_char_pattern = re.compile(r'[\u4e00-\u9fff'
-                                    r'。，、？！《》“”‘’：（）【】'
-                                    f'{string.printable}]')
-    
+    valid_char_pattern = re.compile(
+        r"[\u4e00-\u9fff" r"。，、？！《》“”‘’：（）【】" f"{string.printable}]"
+    )
+
     # 计算有效字符的数量
     valid_char_count = len(valid_char_pattern.findall(text))
-    
+
     # 计算文本中有效字符的比例
     return valid_char_count / len(text)
 
-def is_valid_chinese_text(text: str, threshold: int=0.8):
+
+def is_valid_chinese_text(text: str, threshold: int = 0.8):
     """
     判断文本是否为有效文本，即文本中有效字符的比例是否大于阈值。
     """
     return calculate_valid_chinese_text(text) > threshold
 
-def is_valid_text(text: str, threshold: int=0.8):
+
+def is_valid_text(text: str, threshold: int = 0.8):
     """
     判断文本是否为有效文本，即文本中有效字符的比例是否大于阈值。
     """
     return calculate_valid_text(text) > threshold
+
 
 def encode_crc(text: str) -> str:
     """
     在文本开头添加CRC32校验和。
     """
     # 计算CRC32校验和
-    crc = zlib.crc32(text.encode('utf-8'))
-    crc_bytes = crc.to_bytes(4, 'big')  # 4字节的CRC32
+    crc = zlib.crc32(text.encode("utf-8"))
+    crc_bytes = crc.to_bytes(4, "big")  # 4字节的CRC32
 
     # 将校验和附加到文本开头
-    text = crc_bytes.decode('latin1') + text
+    text = crc_bytes.decode("latin1") + text
 
     return text
-    
+
+
 def decode_crc(decoded_text: str) -> str:
     """
     从文本中提取CRC32校验和并验证。
     """
     # 提取校验和和实际文本
-    crc_received = int.from_bytes(decoded_text[:4].encode('latin1'), 'big')
+    crc_received = int.from_bytes(decoded_text[:4].encode("latin1"), "big")
     actual_text = decoded_text[4:]
 
     # 计算校验和并验证
-    crc_calculated = zlib.crc32(actual_text.encode('utf-8'))
+    crc_calculated = zlib.crc32(actual_text.encode("utf-8"))
     if crc_received != crc_calculated:
         print("校验和验证失败！")
-    
+
     return actual_text
+
 
 def compress_text_to_bytes(text: str, padding_length: int = 1) -> bytes:
     """
     压缩文本并返回字节流，确保字节流长度是指定的 padding_length 的倍数。
-    
+
     :param text: 要压缩的文本
     :param padding_length: 填充长度，使压缩结果的字节长度为此参数的倍数
     :return: 压缩后的字节流
     """
     # 使用 zlib 压缩文本，先将文本编码为 UTF-8
-    compressed_data = zlib.compress(text.encode('utf-8'))
-    
+    compressed_data = zlib.compress(text.encode("utf-8"))
+
     # 计算需要填充的字节数，以使字节流长度为 padding_length 的倍数
-    padding_length = (padding_length - len(compressed_data) % padding_length) % padding_length
-    compressed_data += b'\0' * padding_length  # 添加零字节作为填充
+    padding_length = (
+        padding_length - len(compressed_data) % padding_length
+    ) % padding_length
+    compressed_data += b"\0" * padding_length  # 添加零字节作为填充
 
     return compressed_data
+
 
 def decompress_text_from_bytes(compressed_data: bytes) -> str:
     """
     从字节流中解压缩文本。
     """
-    original_text = zlib.decompress(compressed_data.rstrip(b'\0')).decode('utf-8')
+    original_text = zlib.decompress(compressed_data.rstrip(b"\0")).decode("utf-8")
 
     return original_text
-    
+
+
 def compress_to_base64(text: str) -> str:
     """
     压缩文本并转换为Base64编码, 长度为4的倍数。
@@ -252,23 +277,25 @@ def compress_to_base64(text: str) -> str:
     """
     # 每三字节(3×8-bit)映射到四位Base64字符(4×6-bit)进制字符，所以需要填充以避免出现 "="
     compressed_data = compress_text_to_bytes(text, 3)
-    
+
     # 转为Base64码时由于以字节码存储, 体积会变为bytes的4/3
-    base64_text = base64.b64encode(compressed_data).decode('utf-8')
-    
+    base64_text = base64.b64encode(compressed_data).decode("utf-8")
+
     return base64_text
+
 
 def decode_from_base64(base64_text: str) -> str:
     """
     从Base64编码中解码并解压缩文本。
     """
     # Decode the Base64 text to get the compressed data
-    compressed_data = base64.b64decode(base64_text.encode('utf-8'))
-    
+    compressed_data = base64.b64decode(base64_text.encode("utf-8"))
+
     # Decompress the data to get the original text
     original_text = decompress_text_from_bytes(compressed_data)
 
     return original_text
+
 
 def safe_open_txt(file_path: str | Path) -> str:
     """
@@ -281,19 +308,19 @@ def safe_open_txt(file_path: str | Path) -> str:
     # 读取整个文件以进行编码检测
     file_path = Path(file_path)
     raw = file_path.read_bytes()
-    
+
     # 使用 charset-normalizer 检测文件的最佳编码
     results = charset_normalizer.from_bytes(raw)
     encoding_list = [results.best().encoding] if results else []
-    
+
     # 添加其他常见编码供尝试：GB18030, Big5, UTF-8, UTF-16 和 Latin-1
-    encoding_list += ['gb18030', 'big5', 'utf-8', 'utf-16', 'latin-1']
+    encoding_list += ["gb18030", "big5", "utf-8", "utf-16", "latin-1"]
 
     book_text = None
     for encoding in encoding_list:
         try:
             # 尝试使用当前编码解码文本, 并验证解码后的文本是否合理
-            decoded_text = file_path.read_text(encoding, errors='replace')
+            decoded_text = file_path.read_text(encoding, errors="replace")
 
             if is_valid_text(decoded_text):
                 book_text = decoded_text
@@ -303,8 +330,9 @@ def safe_open_txt(file_path: str | Path) -> str:
 
     if book_text is None:
         raise ValueError("无法使用检测到的编码解码文件")
-    
+
     return book_text
+
 
 def combine_txt_files(folder_path: str | Path):
     """
@@ -314,12 +342,13 @@ def combine_txt_files(folder_path: str | Path):
     :param folder_path: 包含txt文件的文件夹路径。
     :return: None
     """
+
     def extract_number(file_name: Path) -> int:
         """
         从文件名中提取数字，用于排序。
         """
-        matches = re.findall(r'\d+', file_name.name)
-        return int(''.join(matches)) if matches else float('inf')
+        matches = re.findall(r"\d+", file_name.name)
+        return int("".join(matches)) if matches else float("inf")
 
     # 转换路径为 Path 对象
     folder_path = Path(folder_path)
@@ -332,21 +361,22 @@ def combine_txt_files(folder_path: str | Path):
     output_file_path = folder_path / output_file_name
 
     # 获取所有txt文件路径，并按文件名中的数字排序
-    txt_files = sorted(folder_path.glob('*.txt'), key=extract_number)
+    txt_files = sorted(folder_path.glob("*.txt"), key=extract_number)
 
     if not txt_files:
         raise ValueError(f"No txt files found in {folder_path}.")
 
     # 合并文件
-    with open(output_file_path, 'w', encoding='utf-8') as outfile:
+    with open(output_file_path, "w", encoding="utf-8") as outfile:
         for txt_file in tqdm(txt_files):
-            with open(txt_file, 'r', encoding='utf-8') as infile:
+            with open(txt_file, "r", encoding="utf-8") as infile:
                 content = infile.read()
                 # 写入文件名和内容
                 outfile.write(f"== {txt_file.name} ==\n\n")
                 outfile.write(content + "\n\n")
 
     print(f"All files have been combined into {output_file_path}")
+
 
 def character_ratio(target_str: str) -> Dict[str, float]:
     """
@@ -363,22 +393,24 @@ def character_ratio(target_str: str) -> Dict[str, float]:
 
     # 将频率转换为比率
     ratio = {char: count / total_length for char, count in frequency.items()}
-    
+
     return ratio
+
 
 def get_lcs(str1: str, str2: str) -> List[str]:
     """
     找出两个字符串的最大相似部分。
     返回一个包含最大相似部分的字符串，如 "1-234-6"。
     """
+
     def update_common(common_parts: list, current_part):
         if current_part:
-            common_parts.append(''.join(reversed(current_part)))
+            common_parts.append("".join(reversed(current_part)))
         return common_parts, []  # 重置 current_part 为一个空列表
 
     # 获取两个字符串的长度
     len1, len2 = len(str1), len(str2)
-    
+
     # 创建一个二维数组 dp，用于存储最长公共子序列的长度
     dp = [[0] * (len2 + 1) for _ in range(len1 + 1)]
 
@@ -400,23 +432,25 @@ def get_lcs(str1: str, str2: str) -> List[str]:
         if str1[i - 1] == str2[j - 1]:  # 如果当前字符相同
             current_part.append(str1[i - 1])  # 将字符加入当前部分
 
-            if (i == 1 or j == 1):
+            if i == 1 or j == 1:
                 common_parts, current_part = update_common(common_parts, current_part)
-                common_parts.append('') if i != j else None
-            
+                common_parts.append("") if i != j else None
+
             i -= 1  # 移动到左上格子
             j -= 1
-        elif dp[i - 1][j] > dp[i][j - 1] or (dp[i - 1][j] == dp[i][j - 1] and str1[i - 1] != str1[0]):  # 如果上方格子值较大
+        elif dp[i - 1][j] > dp[i][j - 1] or (
+            dp[i - 1][j] == dp[i][j - 1] and str1[i - 1] != str1[0]
+        ):  # 如果上方格子值较大
             common_parts, current_part = update_common(common_parts, current_part)
-            if (i == len1 or j == len2 or i == 1):
-                if not (common_parts and common_parts[-1] == ''): 
-                    common_parts.append('')
+            if i == len1 or j == len2 or i == 1:
+                if not (common_parts and common_parts[-1] == ""):
+                    common_parts.append("")
             i -= 1  # 移动到上方格子
         else:  # 左方格子值较大
             common_parts, current_part = update_common(common_parts, current_part)
-            if (i == len1 or j == len2 or j == 1):
-                if not (common_parts and common_parts[-1] == ''): 
-                    common_parts.append('')
+            if i == len1 or j == len2 or j == 1:
+                if not (common_parts and common_parts[-1] == ""):
+                    common_parts.append("")
             j -= 1  # 移动到左方格子
 
     # 反转整个 common_parts 列表，因为回溯是从字符串的末尾开始
@@ -424,27 +458,29 @@ def get_lcs(str1: str, str2: str) -> List[str]:
 
     return common_parts
 
+
 def calculate_similarity(str1: str, str2: str, lcs_parts: list = None) -> float:
     """
     计算两个字符串的相似度。
-    
+
     :param str1: 第一个字符串
     :param str2: 第二个字符串
     :param lcs_parts: 最长公共子序列的字符部分列表
     :return: 相似度，范围在 0 到 1 之间
     """
     lcs_parts = get_lcs(str1, str2) if not lcs_parts else lcs_parts
-    lcs_length = len(''.join(lcs_parts))
-    
+    lcs_length = len("".join(lcs_parts))
+
     max_length = max(len(str1), len(str2))
     similarity = lcs_length / max_length if max_length > 0 else 0
-    
+
     return similarity
+
 
 def find_nth_occurrence(target_str: str, similar_str: str, occurrence: int) -> tuple:
     """
     查找目标字符串中指定第n次出现的子字符串位置，并返回其起始和结束索引。
-    
+
     :param target_str: 目标字符串
     :param similar_str: 待查找的子字符串
     :param occurrence: 查找的第几次出现（从 1 开始计数）
@@ -458,19 +494,20 @@ def find_nth_occurrence(target_str: str, similar_str: str, occurrence: int) -> t
         start_index = target_str.find(similar_str, start_index + 1)
         if start_index == -1:  # 如果没有找到
             return (-1, -1)
-        
+
         count += 1  # 增加找到的次数
         if count == occurrence:  # 如果找到了指定次数的匹配
             return (start_index, start_index + len(similar_str))  # 返回坐标
 
+
 def format_table(
-        data: list, 
-        column_names: list = None, 
-        row_names: list = None, 
-        index_header: str = "#", 
-        fill_value: str = 'N/A', 
-        align: str = "left",
-    ) -> str:
+    data: list,
+    column_names: list = None,
+    row_names: list = None,
+    index_header: str = "#",
+    fill_value: str = "N/A",
+    align: str = "left",
+) -> str:
     """
     格式化并打印表格。
 
@@ -482,9 +519,9 @@ def format_table(
     :param align: 对齐方式，默认为 "left"
     :return: 格式化后的表格字符串
     """
-    if not data:  
+    if not data:
         return "表格数据为空！"
-    
+
     # 计算列数
     max_cols = max(map(len, data))
 
@@ -492,14 +529,16 @@ def format_table(
     if column_names is None:
         column_names = [f"Column {i+1}" for i in range(max_cols)]
     elif len(column_names) < max_cols:
-        column_names.extend([f"Column {i+1}" for i in range(len(column_names), max_cols)])
+        column_names.extend(
+            [f"Column {i+1}" for i in range(len(column_names), max_cols)]
+        )
 
     # 生成行名
     if row_names is None:
         row_names = range(len(data))
     elif len(row_names) < len(data):
         row_names.extend([f"Row {i+1}" for i in range(len(row_names), len(data))])
-    
+
     # 添加行号列
     column_names = [index_header] + column_names
     num_columns = len(column_names)
@@ -515,24 +554,45 @@ def format_table(
     formatted_data = list(zip(*formatted_data))  # 转置回来
 
     # 计算每列的最大宽度
-    col_widths = [max(wcswidth(str(item)) for item in col) for col in zip(column_names, *formatted_data)]
+    col_widths = [
+        max(wcswidth(str(item)) for item in col)
+        for col in zip(column_names, *formatted_data)
+    ]
 
     # 选择对齐方式
     align_funcs = {
         "left": lambda text, width: f"{text:<{width - (wcswidth(text) - len(text))}}",
         "right": lambda text, width: f"{text:>{width - (wcswidth(text) - len(text))}}",
-        "center": lambda text, width: f"{text:^{width - (wcswidth(text) - len(text))}}"
+        "center": lambda text, width: f"{text:^{width - (wcswidth(text) - len(text))}}",
     }
     align_func = align_funcs.get(align, align_funcs["left"])  # 默认左对齐
 
     # 生成表格
     separator = "+" + "+".join(["-" * (width + 2) for width in col_widths]) + "+"
-    header = "| " + " | ".join([f"{align_func(name, col_widths[i])}" for i, name in enumerate(column_names)]) + " |"
-    
+    header = (
+        "| "
+        + " | ".join(
+            [
+                f"{align_func(name, col_widths[i])}"
+                for i, name in enumerate(column_names)
+            ]
+        )
+        + " |"
+    )
+
     # 生成行
     rows_list = []
     for row in formatted_data:
-        rows_list.append("| " + " | ".join([f"{align_func(str(row[i]), col_widths[i])}" for i in range(num_columns)]) + " |")
+        rows_list.append(
+            "| "
+            + " | ".join(
+                [
+                    f"{align_func(str(row[i]), col_widths[i])}"
+                    for i in range(num_columns)
+                ]
+            )
+            + " |"
+        )
     rows = "\n".join(rows_list)
 
     # 拼接表格
