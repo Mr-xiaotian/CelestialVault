@@ -1,7 +1,7 @@
 from multiprocessing import Queue as MPQueue
 from queue import Queue as ThreadQueue
 from threading import Thread
-from time import localtime, strftime
+from time import localtime, strftime, sleep
 from typing import List, Union
 
 from loguru import logger as loguru_logger
@@ -24,7 +24,7 @@ class TaskLogger:
     用于记录任务执行日志的类
     """
 
-    def __init__(self):
+    def __init__(self, level="INFO"):
         self.logger = loguru_logger
 
         self.logger.remove()  # remove the default handler
@@ -32,7 +32,8 @@ class TaskLogger:
         self.logger.add(
             f"logs/task_logger({now_time}).log",
             format="{time:YYYY-MM-DD HH:mm:ss} {level} {message}",
-            level="INFO",
+            level=level,
+            enqueue=True,
         )
 
     def start_manager(self, func_name, task_num, execution_mode, worker_limit):
@@ -158,5 +159,23 @@ class BroadcastQueueManager:
             queue.put(item)
 
 
+def monitor_processes(processes, poll_interval=3):
+    while True:
+        all_done = True
+        for p in processes:
+            p.join(timeout=0.1)  # 👈 强制同步状态
+            if p.exitcode is None:
+                task_logger.logger.debug(f"[MONITOR] {p.name} still running")
+                all_done = False
+            elif p.exitcode == 0:
+                task_logger.logger.debug(f"[MONITOR] {p.name} completed successfully")
+            else:
+                task_logger.logger.debug(f"[MONITOR] ❌ {p.name} crashed with exitcode {p.exitcode}")
+        if all_done:
+            task_logger.logger.debug("[MONITOR] ✅ All processes done.")
+            break
+        sleep(poll_interval)
+
+
 TERMINATION_SIGNAL = TerminationSignal()
-task_logger = TaskLogger()
+task_logger = TaskLogger("DEBUG")
