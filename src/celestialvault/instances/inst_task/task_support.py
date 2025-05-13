@@ -94,7 +94,7 @@ class TaskLogger:
 
     def task_retry(self, func_name, task_info, retry_times):
         self.logger.warning(
-            f"In '{func_name}' Task {task_info} failed {retry_times} times and will retry."
+            f"In '{func_name}', Task {task_info} failed {retry_times} times and will retry."
         )
 
     def task_error(self, func_name, task_info, exception):
