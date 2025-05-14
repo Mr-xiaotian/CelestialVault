@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from asyncio import Queue as AsyncQueue
 from collections import defaultdict
+from collections.abc import Iterable  
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from multiprocessing import Queue as MPQueue
 from queue import Queue as ThreadQueue
@@ -358,7 +359,7 @@ class TaskManager:
 
         return will_try
 
-    def start(self, task_source):
+    def start(self, task_source: Iterable):
         """
         根据 start_type 的值，选择串行、并行、异步或多进程执行任务
 
@@ -382,6 +383,7 @@ class TaskManager:
             self.run_with_executor(self.thread_pool)
         elif self.execution_mode == "process":
             self.run_with_executor(self.process_pool)
+            self.cleanup_mpqueue(self.task_queue)
         elif self.execution_mode == "async":
             asyncio.run(self.run_in_async())
         else:
@@ -397,7 +399,7 @@ class TaskManager:
             self.duplicates_num,
         )
 
-    async def start_async(self, task_source):
+    async def start_async(self, task_source: Iterable):
         """
         异步地执行任务
 
@@ -427,7 +429,7 @@ class TaskManager:
             self.duplicates_num,
         )
 
-    def start_stage(self, input_queue, output_queues, fail_queue):
+    def start_stage(self, input_queue: MPQueue, output_queues: List[MPQueue], fail_queue: MPQueue):
         """
         根据 start_type 的值，选择串行、并行执行任务
 
@@ -451,6 +453,7 @@ class TaskManager:
         else:
             self.run_in_serial()
 
+        self.cleanup_mpqueue(input_queue)
         self.put_result_queues(TERMINATION_SIGNAL)
         self.fail_queue.put(TERMINATION_SIGNAL)
         task_logger.end_stage(
@@ -661,22 +664,28 @@ class TaskManager:
         """
         清理环境
         """
-        self.release_resources()
+        self.release_pool()
 
         self.task_queue = None
         self.result_queues = None
         self.fail_queue = None
 
-        self.thread_pool = None
-        self.process_pool = None
-
-    def release_resources(self):
+    def release_pool(self):
         """
         关闭线程池和进程池，释放资源
         """
         for pool in [self.thread_pool, self.process_pool]:
             if pool:
                 pool.shutdown(wait=True)
+        self.thread_pool = None
+        self.process_pool = None
+
+    def cleanup_mpqueue(self, queue: MPQueue):
+        """
+        清理队列
+        """
+        queue.close()
+        queue.join_thread()  # 确保队列的后台线程正确终止
 
     def test_method(self, execution_mode: str, task_list: list) -> float:
         """

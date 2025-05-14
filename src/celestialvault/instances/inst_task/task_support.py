@@ -99,11 +99,13 @@ class TaskLogger:
 
     def task_error(self, func_name, task_info, exception):
         self.logger.error(
-            f"In '{func_name}', Task {task_info} failed and can't retry: ({type(exception).__name__}){exception}"
+            f"In '{func_name}', Task {task_info} failed and can't retry: ({type(exception).__name__}){exception}."
         )
 
     def task_duplicate(self, func_name, task_info):
-        self.logger.success(f"In '{func_name}', Task {task_info} has been duplicated.")
+        self.logger.success(
+            f"In '{func_name}', Task {task_info} has been duplicated."
+        )
 
     def splitter_success(self, func_name, task_info, split_count, use_time):
         self.logger.success(

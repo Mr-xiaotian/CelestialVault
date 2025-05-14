@@ -103,6 +103,7 @@ class TaskTree:
         # 等待所有进程结束
         for p in self.processes:
             p.join()
+            task_logger.logger.debug(f"{p.name} exitcode: {p.exitcode}")
 
         self.process_final_result_dict(init_tasks)
         self.handle_final_error_dict()
@@ -129,7 +130,7 @@ class TaskTree:
         if stage.stage_mode == "process":
             stage.init_dict(self.manager.dict(), self.manager.dict())
             p = multiprocessing.Process(
-                target=stage.start_stage, args=(input_queue, output_queues, fail_queue)
+                target=stage.start_stage, args=(input_queue, output_queues, fail_queue), name=stage.get_stage_tag()
             )
             p.start()
             self.processes.append(p)
@@ -154,13 +155,6 @@ class TaskTree:
                 if next_stage in visited_stages:
                     continue
                 clean_stage(next_stage)
-
-        # 关闭所有队列并确保它们的后台线程被终止
-        for queue in self.stage_queues_dict.values():
-            if isinstance(queue, ThreadQueue):
-                continue
-            queue.close()
-            queue.join_thread()  # 确保队列的后台线程正确终止
 
         # 关闭 multiprocessing.Manager
         if self.manager is not None:
