@@ -4,7 +4,6 @@ from collections import defaultdict
 from datetime import datetime
 from multiprocessing import Queue as MPQueue
 from pathlib import Path
-from queue import Queue as ThreadQueue
 from time import time
 from typing import Any, Dict, List
 
@@ -119,13 +118,13 @@ class TaskTree:
         stage_visited.add(stage)
         input_queue = self.stage_queues_dict[stage.get_stage_tag()]
         if not stage.next_stages:
-            output_queues = [MPQueue()]
+            output_queues = []
         else:
             output_queues = [
                 self.stage_queues_dict[next_stage.get_stage_tag()]
                 for next_stage in stage.next_stages
             ]
-        fail_queue = MPQueue()
+        fail_queue = None # 先在stage内部自建ThreadQueue, 以避免fail_queue不消费导致缓冲区填满
 
         if stage.stage_mode == "process":
             stage.init_dict(self.manager.dict(), self.manager.dict())
