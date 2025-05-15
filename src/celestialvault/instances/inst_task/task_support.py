@@ -180,4 +180,4 @@ def monitor_processes(processes, poll_interval=3):
 
 
 TERMINATION_SIGNAL = TerminationSignal()
-task_logger = TaskLogger("DEBUG")
+task_logger = TaskLogger("INFO")

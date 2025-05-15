@@ -97,9 +97,7 @@ class TaskManager:
             "serial": ThreadQueue,
         }
         self.task_queue = task_queue or queue_map[self.execution_mode]()
-        self.result_queues = result_queues or [
-            ThreadQueue(),
-        ]
+        self.result_queues = result_queues or [ThreadQueue()]
         self.fail_queue = fail_queue or ThreadQueue()
 
     def init_pool(self):
@@ -193,6 +191,12 @@ class TaskManager:
         """
         for result_queue in self.result_queues:
             result_queue.put(result)
+
+    def put_fail_queue(self, task):
+        """
+        将失败的任务放入失败队列
+        """
+        self.fail_queue.put(task)
 
     def is_duplicate(self, task):
         """
@@ -322,7 +326,7 @@ class TaskManager:
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
-            self.fail_queue.put(task)
+            self.put_fail_queue(task)
             task_logger.task_error(
                 self.func.__name__, self.get_task_info(task), exception
             )
@@ -455,7 +459,7 @@ class TaskManager:
 
         self.cleanup_mpqueue(input_queue)
         self.put_result_queues(TERMINATION_SIGNAL)
-        self.fail_queue.put(TERMINATION_SIGNAL)
+        self.put_fail_queue(TERMINATION_SIGNAL)
         task_logger.end_stage(
             self.stage_name,
             self.func.__name__,
