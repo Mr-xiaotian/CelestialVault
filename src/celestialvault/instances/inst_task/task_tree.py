@@ -24,6 +24,7 @@ class TaskTree:
 
         self.web_server = None
         if start_web_server:
+            self.web_active = True
             self.web_server = TaskWebServer(self)
             self.web_server.start_server()
 
