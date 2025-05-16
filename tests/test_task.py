@@ -226,6 +226,26 @@ def test_task_web_0():
     tree = TaskTree(A, start_web_server=True)
     
     tree.start_tree(range(10))
+
+def test_task_web_1():
+    # 定义任务节点
+    generate_stage = TaskManager(func=generate_urls, execution_mode='thread', worker_limit=4)
+    logr_stage = TaskManager(func=log_urls, execution_mode='thread', worker_limit=4)
+    splitter = TaskSplitter()
+    download_stage = TaskManager(func=download, execution_mode='thread', worker_limit=4)
+    parse_stage = TaskManager(func=parse, execution_mode='thread', worker_limit=4)
+
+    # 设置链关系
+    generate_stage.set_tree_context([logr_stage, splitter], stage_mode='process', stage_name='GenURLs')
+    logr_stage.set_tree_context([], stage_mode='process', stage_name='Loger')
+    splitter.set_tree_context([download_stage, parse_stage], stage_mode='serial', stage_name='Splitter')
+    download_stage.set_tree_context([], stage_mode='process', stage_name='Downloader')
+    parse_stage.set_tree_context([], stage_mode='process', stage_name='Parser')
+
+    # 初始化 TaskTree
+    tree = TaskTree(generate_stage, True)
+
+    tree.start_tree(range(10))
     
 def profile_task_tree():
     target_func = 'test_task_tree_1'
@@ -238,5 +258,5 @@ def profile_task_tree():
 # 在主函数或脚本中调用此函数，而不是在测试中
 if __name__ == "__main__":
     # test_task_tree_2()
-    test_task_web_0()
+    test_task_web_1()
     pass

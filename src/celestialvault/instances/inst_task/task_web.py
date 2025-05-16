@@ -1,6 +1,6 @@
 # inst_task/task_web.py
 
-import threading, os
+import threading, os, logging
 from flask import Flask, jsonify, render_template, request
 
 class TaskWebServer:
@@ -53,5 +53,7 @@ class TaskWebServer:
     def start_server(self):
         def run():
             self.app.run(host=self.host, port=self.port, debug=False, use_reloader=False)
+        
+        logging.getLogger('werkzeug').setLevel(logging.ERROR)
         self.thread = threading.Thread(target=run)
         self.thread.start()

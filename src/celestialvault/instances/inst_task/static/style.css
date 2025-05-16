@@ -387,7 +387,7 @@ h1 {
 .tree li {
     margin: 10px 0;
     list-style-type: none;
-    position: relative;
+    /* position: relative; */
     padding-left: 25px;
 }
 

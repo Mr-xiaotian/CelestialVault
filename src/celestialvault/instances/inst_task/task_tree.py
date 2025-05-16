@@ -34,7 +34,6 @@ class TaskTree:
         """
         self.processes: List[multiprocessing.Process] = []
         self.manager = multiprocessing.Manager()
-        self.status_manager = multiprocessing.Manager()
 
         self.init_dict()
         self.init_queues(tasks)
@@ -44,7 +43,9 @@ class TaskTree:
         初始化字典
         """
         self.stage_dict: Dict[str, TaskManager] = {}
+        self.stage_active_dict: Dict[str, bool] = {}
         self.stage_queues_dict: Dict[str, MPQueue] = {}
+        self.stage_start_time_dict: Dict[str, float] = {}
         
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
         self.final_error_dict = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
@@ -106,6 +107,8 @@ class TaskTree:
         return {
             stage.stage_name: {
                 **stage.get_status_snapshot(),
+                "active": self.stage_active_dict[stage_tag] if stage_tag in self.stage_active_dict else False,
+                "start_time": self.stage_start_time_dict[stage_tag] if stage_tag in self.stage_start_time_dict else None,
                 "tasks_pending": self.stage_queues_dict[stage_tag].qsize() if stage_tag in self.stage_queues_dict else 0,
             }
             for stage_tag, stage in self.get_stage_dict().items()
@@ -122,6 +125,7 @@ class TaskTree:
         # 等待所有进程结束
         for p in self.processes:
             p.join()
+            self.stage_active_dict[p.name] = False
             task_logger.logger.debug(f"{p.name} exitcode: {p.exitcode}")
 
         self.process_final_result_dict(init_tasks)
@@ -147,7 +151,9 @@ class TaskTree:
         fail_queue = None # 先在stage内部自建ThreadQueue, 以避免fail_queue不消费导致缓冲区填满
 
         if stage.stage_mode == "process":
-            stage.init_shared_status(self.status_manager.Namespace())
+            self.stage_active_dict[stage.get_stage_tag()] = True
+            self.stage_start_time_dict[stage.get_stage_tag()] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
             stage.init_dict(self.manager.dict(), self.manager.dict())
             p = multiprocessing.Process(
                 target=stage.start_stage, args=(input_queue, output_queues, fail_queue), name=stage.get_stage_tag()
@@ -155,8 +161,13 @@ class TaskTree:
             p.start()
             self.processes.append(p)
         else:
+            self.stage_active_dict[stage.get_stage_tag()] = True
+            self.stage_start_time_dict[stage.get_stage_tag()] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
             stage.init_dict({}, {})
             stage.start_stage(input_queue, output_queues, fail_queue)
+
+            self.stage_active_dict[stage.get_stage_tag()] = False
 
         for next_stage in stage.next_stages:
             if next_stage in stage_visited:
@@ -170,15 +181,14 @@ class TaskTree:
 
         def clean_stage(stage: TaskManager):
             stage.clean_env()
+            stage.success_dict = stage.get_success_dict()
+            stage.error_dict = stage.get_error_dict()
+
             visited_stages.add(stage)
             for next_stage in stage.next_stages:
                 if next_stage in visited_stages:
                     continue
                 clean_stage(next_stage)
-
-        # 关闭 multiprocessing.Manager
-        if self.manager is not None:
-            self.manager.shutdown()
 
         # 确保所有进程已被正确终止
         for p in self.processes:
@@ -189,6 +199,10 @@ class TaskTree:
         # 关闭所有stage的线程池
         visited_stages = set()
         clean_stage(self.root_stage)
+
+        # 关闭 multiprocessing.Manager
+        if self.manager is not None:
+            self.manager.shutdown()
 
     def process_final_result_dict(self, initial_tasks):
         """

@@ -57,8 +57,6 @@ class TaskManager:
         self.thread_pool = None
         self.process_pool = None
 
-        self.shared_status = None
-
         self.retry_exceptions = (
             ConnectTimeout,
             ProtocolError,
@@ -110,16 +108,6 @@ class TaskManager:
             self.thread_pool = ThreadPoolExecutor(max_workers=self.worker_limit)
         elif self.execution_mode == "process" and self.process_pool is None:
             self.process_pool = ProcessPoolExecutor(max_workers=self.worker_limit)
-
-    def init_shared_status(self, shared_status):
-        """
-        初始化任务数量
-        """
-        self.shared_status = shared_status
-        self.shared_status.active = True
-        self.shared_status.start_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-        self.shared_status.success_num = 0
-        self.shared_status.error_num = 0
 
     def set_execution_mode(self, execution_mode):
         """
@@ -173,34 +161,13 @@ class TaskManager:
         return f"{self.stage_name}[{self.func.__name__}]"
     
     def get_status_snapshot(self) -> dict:
-        if self.shared_status:
-            return {
-                "active": self.shared_status.active,
-                "tasks_processed": self.shared_status.success_num,
-                "tasks_error": self.shared_status.error_num,
-                "start_time": self.shared_status.start_time,
-                "execution_mode": self.execution_mode,
-                "stage_mode": self.stage_mode,
-                "func_name": self.func.__name__,
-            }
-        else:
-            return {
-                "active": False,
-                "tasks_processed": 0,
-                "tasks_error": 0,
-                "start_time": None,
-                "execution_mode": self.execution_mode,
-                "stage_mode": self.stage_mode,
-                "func_name": self.func.__name__,
-            }
-        
-    def update_success_num(self):
-        if self.shared_status:
-            self.shared_status.success_num += 1
-
-    def update_error_num(self):
-        if self.shared_status:
-            self.shared_status.error_num += 1
+        return {
+            "tasks_processed": len(self.success_dict),
+            "tasks_error": len(self.error_dict),
+            "execution_mode": self.execution_mode,
+            "stage_mode": self.stage_mode,
+            "func_name": self.func.__name__,
+        }
 
     def add_retry_exceptions(self, *exceptions):
         """
@@ -334,7 +301,6 @@ class TaskManager:
         processed_result = self.process_result(task, result)
         self.success_dict[task] = processed_result
         self.put_result_queues(processed_result)
-        self.update_success_num()
         task_logger.task_success(
             self.func.__name__,
             self.get_task_info(task),
@@ -369,7 +335,6 @@ class TaskManager:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
             self.put_fail_queue(task)
-            self.update_error_num()
             task_logger.task_error(
                 self.func.__name__, self.get_task_info(task), exception
             )
@@ -486,7 +451,7 @@ class TaskManager:
         :param output_queue: 输出队列
         :param fail_queue: 失败队列
         """
-        self.start_time = time.time()
+        start_time = time.time()
         self.active = True
         self.init_env(input_queue, output_queues, fail_queue)
         task_logger.start_stage(
@@ -507,12 +472,11 @@ class TaskManager:
         self.put_result_queues(TERMINATION_SIGNAL)
         self.put_fail_queue(TERMINATION_SIGNAL)
 
-        self.shared_status.active = False
         task_logger.end_stage(
             self.stage_name,
             self.func.__name__,
             self.execution_mode,
-            time.time() - self.start_time,
+            time.time() - start_time,
             len(self.success_dict),
             len(self.error_dict),
             self.duplicates_num,
@@ -704,13 +668,13 @@ class TaskManager:
         """
         获取成功任务的字典
         """
-        return self.success_dict
+        return dict(self.success_dict)
 
     def get_error_dict(self) -> dict:
         """
         获取出错任务的字典
         """
-        return self.error_dict
+        return dict(self.error_dict)
 
     def clean_env(self):
         """
