@@ -57,10 +57,7 @@ class TaskManager:
         self.thread_pool = None
         self.process_pool = None
 
-        self.task_queue = None
-
-        self.start_time = None
-        self.active = False
+        self.shared_status = None
 
         self.retry_exceptions = (
             ConnectTimeout,
@@ -114,6 +111,16 @@ class TaskManager:
         elif self.execution_mode == "process" and self.process_pool is None:
             self.process_pool = ProcessPoolExecutor(max_workers=self.worker_limit)
 
+    def init_shared_status(self, shared_status):
+        """
+        初始化任务数量
+        """
+        self.shared_status = shared_status
+        self.shared_status.active = True
+        self.shared_status.start_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+        self.shared_status.success_num = 0
+        self.shared_status.error_num = 0
+
     def set_execution_mode(self, execution_mode):
         """
         设置执行模式
@@ -166,16 +173,34 @@ class TaskManager:
         return f"{self.stage_name}[{self.func.__name__}]"
     
     def get_status_snapshot(self) -> dict:
-        return {
-            "active": self.active,  # 或加入运行标志控制
-            "tasks_processed": len(self.success_dict),
-            "tasks_pending": self.task_queue.qsize() if self.task_queue else 0,
-            "tasks_error": len(self.error_dict),
-            "start_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.start_time)) if self.start_time else None,
-            "execution_mode": self.execution_mode,
-            "stage_mode": self.stage_mode,
-            "func_name": self.func.__name__,
-        }
+        if self.shared_status:
+            return {
+                "active": self.shared_status.active,
+                "tasks_processed": self.shared_status.success_num,
+                "tasks_error": self.shared_status.error_num,
+                "start_time": self.shared_status.start_time,
+                "execution_mode": self.execution_mode,
+                "stage_mode": self.stage_mode,
+                "func_name": self.func.__name__,
+            }
+        else:
+            return {
+                "active": False,
+                "tasks_processed": 0,
+                "tasks_error": 0,
+                "start_time": None,
+                "execution_mode": self.execution_mode,
+                "stage_mode": self.stage_mode,
+                "func_name": self.func.__name__,
+            }
+        
+    def update_success_num(self):
+        if self.shared_status:
+            self.shared_status.success_num += 1
+
+    def update_error_num(self):
+        if self.shared_status:
+            self.shared_status.error_num += 1
 
     def add_retry_exceptions(self, *exceptions):
         """
@@ -309,6 +334,7 @@ class TaskManager:
         processed_result = self.process_result(task, result)
         self.success_dict[task] = processed_result
         self.put_result_queues(processed_result)
+        self.update_success_num()
         task_logger.task_success(
             self.func.__name__,
             self.get_task_info(task),
@@ -343,6 +369,7 @@ class TaskManager:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
             self.put_fail_queue(task)
+            self.update_error_num()
             task_logger.task_error(
                 self.func.__name__, self.get_task_info(task), exception
             )
@@ -373,6 +400,8 @@ class TaskManager:
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
+            self.put_fail_queue(task)
+            self.update_error_num()
             task_logger.task_error(
                 self.func.__name__, self.get_task_info(task), exception
             )
@@ -478,7 +507,7 @@ class TaskManager:
         self.put_result_queues(TERMINATION_SIGNAL)
         self.put_fail_queue(TERMINATION_SIGNAL)
 
-        self.active = False
+        self.shared_status.active = False
         task_logger.end_stage(
             self.stage_name,
             self.func.__name__,

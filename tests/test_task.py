@@ -8,22 +8,26 @@ def sleep_1(n):
     sleep(1)
     return n
 
-def sleep_random(n):
+def sleep_random_01(n):
     sleep(random.randint(0, 1))
     return n
 
+def sleep_random_48(n):
+    sleep(random.randint(4, 8))
+    return n
+
 def sleep_random_A(n):
-    return sleep_random(n)
+    return sleep_random_01(n)
 def sleep_random_B(n):
-    return sleep_random(n)
+    return sleep_random_01(n)
 def sleep_random_C(n):
-    return sleep_random(n)
+    return sleep_random_01(n)
 def sleep_random_D(n):
-    return sleep_random(n)
+    return sleep_random_01(n)
 def sleep_random_E(n):
-    return sleep_random(n)
+    return sleep_random_01(n)
 def sleep_random_F(n):
-    return sleep_random(n)
+    return sleep_random_01(n)
 
 def fibonacci(n):
     if n <= 0:
@@ -203,12 +207,12 @@ def test_task_tree_2():
 
 def test_task_web_0():
     # 定义任务节点
-    A = TaskManager(func=sleep_random_A, execution_mode='thread')
-    B = TaskManager(func=sleep_random_B, execution_mode='serial')
-    C = TaskManager(func=sleep_random_C, execution_mode='serial')
-    D = TaskManager(func=sleep_random_D, execution_mode='thread')
-    E = TaskManager(func=sleep_random_E, execution_mode='thread')
-    F = TaskManager(func=sleep_random_F, execution_mode='serial')
+    A = TaskManager(func=sleep_random_48, execution_mode='serial')
+    B = TaskManager(func=sleep_random_48, execution_mode='serial')
+    C = TaskManager(func=sleep_random_48, execution_mode='serial')
+    D = TaskManager(func=sleep_random_48, execution_mode='serial')
+    E = TaskManager(func=sleep_random_48, execution_mode='serial')
+    F = TaskManager(func=sleep_random_48, execution_mode='serial')
 
     # 设置链式上下文
     A.set_tree_context(next_stages=[B, C], stage_mode='process', stage_name="Stage_A")
@@ -219,9 +223,9 @@ def test_task_web_0():
     F.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_F")
 
     # 初始化 TaskTree, 并设置根节点
-    tree = TaskTree(A)
+    tree = TaskTree(A, start_web_server=True)
     
-    pass
+    tree.start_tree(range(10))
     
 def profile_task_tree():
     target_func = 'test_task_tree_1'
@@ -234,4 +238,5 @@ def profile_task_tree():
 # 在主函数或脚本中调用此函数，而不是在测试中
 if __name__ == "__main__":
     # test_task_tree_2()
+    test_task_web_0()
     pass

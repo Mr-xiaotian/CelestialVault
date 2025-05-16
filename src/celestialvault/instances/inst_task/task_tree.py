@@ -20,6 +20,8 @@ class TaskTree:
         :param start_web_server: 是否启动 web 服务
         """
         self.set_root_stage(root_stage)
+        self.init_dict()
+
         self.web_server = None
         if start_web_server:
             self.web_server = TaskWebServer(self)
@@ -31,6 +33,7 @@ class TaskTree:
         """
         self.processes: List[multiprocessing.Process] = []
         self.manager = multiprocessing.Manager()
+        self.status_manager = multiprocessing.Manager()
 
         self.init_dict()
         self.init_queues(tasks)
@@ -40,6 +43,8 @@ class TaskTree:
         初始化字典
         """
         self.stage_dict: Dict[str, TaskManager] = {}
+        self.stage_queues_dict: Dict[str, MPQueue] = {}
+        
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
         self.final_error_dict = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
         self.final_fail_dict = defaultdict(list)  # 用于保存节点到节点失败任务的映射
@@ -63,7 +68,6 @@ class TaskTree:
 
         # 初始化每个节点的队列
         visited_stages = set()
-        self.stage_queues_dict = {}
         self.stage_dict[self.root_stage.get_stage_tag()] = self.root_stage
         collect_queue(self.root_stage)
 
@@ -99,8 +103,11 @@ class TaskTree:
 
     def get_status_dict(self) -> dict:
         return {
-            stage_tag: stage.get_status_snapshot()
-            for stage_tag, stage in self.stage_dict.items()
+            stage.stage_name: {
+                **stage.get_status_snapshot(),
+                "tasks_pending": self.stage_queues_dict[stage_tag].qsize() if stage_tag in self.stage_queues_dict else 0,
+            }
+            for stage_tag, stage in self.get_stage_dict().items()
         }
 
     def start_tree(self, init_tasks):
@@ -139,6 +146,7 @@ class TaskTree:
         fail_queue = None # 先在stage内部自建ThreadQueue, 以避免fail_queue不消费导致缓冲区填满
 
         if stage.stage_mode == "process":
+            stage.init_shared_status(self.status_manager.Namespace())
             stage.init_dict(self.manager.dict(), self.manager.dict())
             p = multiprocessing.Process(
                 target=stage.start_stage, args=(input_queue, output_queues, fail_queue), name=stage.get_stage_tag()

@@ -44,6 +44,7 @@ class TaskWebServer:
         @app.route("/shutdown", methods=["POST"])
         def shutdown():
             func = request.environ.get("werkzeug.server.shutdown")
+            self.task_tree.status_manager.shutdown()
             if func:
                 func()
                 return "Server shutting down..."
