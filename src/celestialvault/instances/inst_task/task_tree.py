@@ -33,7 +33,7 @@ class TaskTree:
         """
         初始化字典
         """
-        self.stage_dict = {}
+        self.stage_dict: Dict[str, TaskManager] = {}
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
         self.final_error_dict = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
         self.final_fail_dict = defaultdict(list)  # 用于保存节点到节点失败任务的映射
@@ -90,6 +90,12 @@ class TaskTree:
 
         visited_stages = set()
         set_subsequent_satge_mode(self.root_stage)
+
+    def get_status_dict(self) -> dict:
+        return {
+            stage_tag: stage.get_status_snapshot()
+            for stage_tag, stage in self.stage_dict.items()
+        }
 
     def start_tree(self, init_tasks):
         start_time = time()

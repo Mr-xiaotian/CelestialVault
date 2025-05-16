@@ -2,7 +2,7 @@ import pytest, logging, asyncio, pprint
 import cProfile, subprocess, random
 from time import time, strftime, localtime, sleep
 from celestialvault.tools.TextTools import format_table
-from celestialvault.instances.inst_task import TaskManager, TaskTree, TaskSplitter
+from celestialvault.instances.inst_task import TaskManager, TaskTree, TaskSplitter, TaskWebServer
 
 def sleep_1(n):
     sleep(1)
@@ -200,6 +200,28 @@ def test_task_tree_2():
         if isinstance(value, dict):
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
+
+def test_task_web_0():
+    # 定义任务节点
+    A = TaskManager(func=sleep_random_A, execution_mode='thread')
+    B = TaskManager(func=sleep_random_B, execution_mode='serial')
+    C = TaskManager(func=sleep_random_C, execution_mode='serial')
+    D = TaskManager(func=sleep_random_D, execution_mode='thread')
+    E = TaskManager(func=sleep_random_E, execution_mode='thread')
+    F = TaskManager(func=sleep_random_F, execution_mode='serial')
+
+    # 设置链式上下文
+    A.set_tree_context(next_stages=[B, C], stage_mode='process', stage_name="Stage_A")
+    B.set_tree_context(next_stages=[D, F], stage_mode='process', stage_name="Stage_B")
+    C.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_C")
+    D.set_tree_context(next_stages=[E], stage_mode='process', stage_name="Stage_D")
+    E.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_E")
+    F.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_F")
+
+    # 初始化 TaskTree, 并设置根节点
+    tree = TaskTree(A)
+    
+    pass
     
 def profile_task_tree():
     target_func = 'test_task_tree_1'

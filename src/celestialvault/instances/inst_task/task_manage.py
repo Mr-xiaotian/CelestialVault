@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import asyncio
+import asyncio, time
 from asyncio import Queue as AsyncQueue
 from collections import defaultdict
 from collections.abc import Iterable  
@@ -8,7 +8,6 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from multiprocessing import Queue as MPQueue
 from queue import Queue as ThreadQueue
 from threading import Event, Lock
-from time import time
 from typing import List
 
 from httpx import (
@@ -96,7 +95,7 @@ class TaskManager:
             "thread": ThreadQueue,
             "serial": ThreadQueue,
         }
-        self.task_queue = task_queue or queue_map[self.execution_mode]()
+        self.task_queue: ThreadQueue|MPQueue = task_queue or queue_map[self.execution_mode]()
         self.result_queues = result_queues or [ThreadQueue()]
         self.fail_queue = fail_queue or ThreadQueue()
 
@@ -160,6 +159,18 @@ class TaskManager:
         获取当前节点在tree中的标签
         """
         return f"{self.stage_name}[{self.func.__name__}]"
+    
+    def get_status_snapshot(self) -> dict:
+        return {
+            "active": self.active,  # 或加入运行标志控制
+            "tasks_processed": len(self.success_dict),
+            "tasks_pending": self.task_queue.qsize() if self.task_queue else 0,
+            "tasks_error": len(self.error_dict),
+            "start_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.start_time)),
+            "execution_mode": self.execution_mode,
+            "stage_mode": self.stage_mode,
+            "func_name": self.func.__name__,
+        }
 
     def add_retry_exceptions(self, *exceptions):
         """
@@ -298,7 +309,7 @@ class TaskManager:
             self.get_task_info(task),
             self.execution_mode,
             self.get_result_info(result),
-            time() - start_time,
+            time.time() - start_time,
         )
 
     def handle_task_error(self, task, exception: Exception):
@@ -369,7 +380,7 @@ class TaskManager:
 
         :param task_source: 任务迭代器或者生成器
         """
-        start_time = time()
+        start_time = time.time()
         self.init_env()
 
         try:
@@ -397,7 +408,7 @@ class TaskManager:
         task_logger.end_manager(
             self.func.__name__,
             self.execution_mode,
-            time() - start_time,
+            time.time() - start_time,
             len(self.success_dict),
             len(self.error_dict),
             self.duplicates_num,
@@ -409,7 +420,7 @@ class TaskManager:
 
         :param task_source: 任务迭代器或者生成器
         """
-        start_time = time()
+        start_time = time.time()
         self.set_execution_mode("async")
         self.init_env()
 
@@ -427,7 +438,7 @@ class TaskManager:
         task_logger.end_manager(
             self.func.__name__,
             self.execution_mode,
-            time() - start_time,
+            time.time() - start_time,
             len(self.success_dict),
             len(self.error_dict),
             self.duplicates_num,
@@ -441,7 +452,8 @@ class TaskManager:
         :param output_queue: 输出队列
         :param fail_queue: 失败队列
         """
-        start_time = time()
+        self.start_time = time.time()
+        self.active = True
         self.init_env(input_queue, output_queues, fail_queue)
         task_logger.start_stage(
             self.stage_name, self.func.__name__, self.execution_mode, self.worker_limit
@@ -460,11 +472,13 @@ class TaskManager:
         self.cleanup_mpqueue(input_queue)
         self.put_result_queues(TERMINATION_SIGNAL)
         self.put_fail_queue(TERMINATION_SIGNAL)
+
+        self.active = False
         task_logger.end_stage(
             self.stage_name,
             self.func.__name__,
             self.execution_mode,
-            time() - start_time,
+            time.time() - self.start_time,
             len(self.success_dict),
             len(self.error_dict),
             self.duplicates_num,
@@ -496,7 +510,7 @@ class TaskManager:
                 task_logger.task_duplicate(self.func.__name__, self.get_task_info(task))
                 continue
             try:
-                start_time = time()
+                start_time = time.time()
                 result = self.func(*self.get_args(task))
                 self.process_task_success(task, result, start_time)
             except Exception as error:
@@ -570,7 +584,7 @@ class TaskManager:
                 in_flight += 1
                 all_done_event.clear()
 
-            task_start_dict[task] = time()
+            task_start_dict[task] = time.time()
             future = executor.submit(self.func, *self.get_args(task))
             future.add_done_callback(
                 lambda f, t=task: on_task_done(f, t, progress_manager)
@@ -595,7 +609,7 @@ class TaskManager:
         semaphore = asyncio.Semaphore(self.worker_limit)  # 限制并发数量
 
         async def sem_task(task):
-            start_time = time()  # 记录任务开始时间
+            start_time = time.time()  # 记录任务开始时间
             async with semaphore:  # 使用信号量限制并发
                 result = await self._run_single_task(task)
                 return task, result, start_time  # 返回 task, result 和 start_time
@@ -695,11 +709,11 @@ class TaskManager:
         """
         测试方法
         """
-        start = time()
+        start = time.time()
         self.set_execution_mode(execution_mode)
         self.init_dict()
         self.start(task_list)
-        return time() - start
+        return time.time() - start
 
     def test_methods(self, task_source: list | tuple | set) -> dict:
         """

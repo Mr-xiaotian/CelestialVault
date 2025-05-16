@@ -8,6 +8,7 @@ from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
 from .task_support import BroadcastQueueManager, TerminationSignal
 from .task_tree import TaskChain, TaskTree
+from .task_web import TaskWebServer
 
 __all__ = [
     "TaskTree",
@@ -16,4 +17,5 @@ __all__ = [
     "TaskSplitter",
     "BroadcastQueueManager",
     "TerminationSignal",
+    "TaskWebServer"
 ]
