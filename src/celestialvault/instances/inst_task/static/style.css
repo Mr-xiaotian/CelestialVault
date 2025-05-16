@@ -359,3 +359,202 @@ th {
     color: var(--gray-dark);
     margin-top: 0.25rem;
 }
+
+h1 {
+    color: #333;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.tree-container {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow: auto;
+}
+
+.tree {
+    margin: 0;
+    padding: 0;
+}
+
+.tree ul {
+    padding-left: 20px;
+    margin: 0;
+}
+
+.tree li {
+    margin: 10px 0;
+    list-style-type: none;
+    position: relative;
+    padding-left: 25px;
+}
+
+.tree li::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    left: 0;
+    width: 20px;
+    height: 2px;
+    background-color: #4c84ff;
+}
+
+.tree li::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background-color: #4c84ff;
+}
+
+.tree li:last-child::after {
+    height: 12px;
+}
+
+.tree li:first-child::after {
+    top: 12px;
+    height: calc(100% - 12px);
+}
+
+.tree li:only-child::after {
+    display: none;
+}
+
+.tree-node {
+    display: inline-block;
+    border-radius: 5px;
+    padding: 8px 12px;
+    background-color: #e8f0fe;
+    border-left: 4px solid #4c84ff;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.tree-node:hover {
+    background-color: #d0e1fd;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.stage-name {
+    font-weight: bold;
+    color: #2c5cdd;
+}
+
+.stage-mode {
+    color: #666;
+    margin-left: 5px;
+}
+
+.stage-func {
+    font-family: monospace;
+    background-color: #f0f0f0;
+    padding: 2px 4px;
+    border-radius: 3px;
+    color: #e91e63;
+    margin-left: 5px;
+}
+
+.visited-mark {
+    background-color: #ffebee;
+    color: #d32f2f;
+    padding: 2px 5px;
+    border-radius: 3px;
+    margin-left: 5px;
+    font-size: 12px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .tree-node {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+}
+
+/* 展开/折叠功能 */
+.collapsible {
+    cursor: pointer;
+}
+
+.collapse-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    text-align: center;
+    line-height: 14px;
+    font-size: 12px;
+    background-color: #4c84ff;
+    color: white;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.hidden {
+    display: none;
+}
+
+/* 切换主题 */
+.theme-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background-color: #4c84ff;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 5px 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+    background-color: #3b6fd9;
+}
+
+/* 暗黑主题 */
+.dark-theme {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+}
+
+.dark-theme .tree-container {
+    background-color: #2d2d2d;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme h1 {
+    color: #e0e0e0;
+}
+
+.dark-theme .tree-node {
+    background-color: #3a3a3a;
+    border-left: 4px solid #5e91ff;
+}
+
+.dark-theme .tree-node:hover {
+    background-color: #454545;
+}
+
+.dark-theme .stage-name {
+    color: #7eaeff;
+}
+
+.dark-theme .stage-mode {
+    color: #b0b0b0;
+}
+
+.dark-theme .stage-func {
+    background-color: #333;
+    color: #ff6090;
+}
+
+.dark-theme .visited-mark {
+    background-color: #4a2424;
+    color: #ff6b6b;
+}
