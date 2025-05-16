@@ -10,14 +10,20 @@ from typing import Any, Dict, List
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
 from .task_support import TERMINATION_SIGNAL, TaskError, task_logger
+from .task_web import TaskWebServer
 
 
 class TaskTree:
-    def __init__(self, root_stage: TaskManager):
+    def __init__(self, root_stage: TaskManager, start_web_server=False):
         """
         :param root_stage: 任务链的根 TaskManager 节点
+        :param start_web_server: 是否启动 web 服务
         """
         self.set_root_stage(root_stage)
+        self.web_server = None
+        if start_web_server:
+            self.web_server = TaskWebServer(self)
+            self.web_server.start_server()
 
     def init_env(self, tasks: list):
         """
@@ -415,7 +421,7 @@ class TaskTree:
 
 
 class TaskChain(TaskTree):
-    def __init__(self, stages: List[TaskManager], chain_mode: str = "serial"):
+    def __init__(self, stages: List[TaskManager], chain_mode: str = "serial", start_web_server=False):
         """
         初始化 TaskChain
         :param stages: TaskManager 列表
@@ -427,4 +433,4 @@ class TaskChain(TaskTree):
             stage.set_tree_context(next_stage, chain_mode, stage_name)
 
         root_stage = stages[0]
-        super().__init__(root_stage)
+        super().__init__(root_stage, start_web_server)

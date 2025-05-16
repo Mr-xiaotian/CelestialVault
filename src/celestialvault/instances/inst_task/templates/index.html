@@ -1,491 +1,105 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>任务树监控系统</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
     <header>
-        <div class="container header-content">
-            <h1>任务树监控系统</h1>
-            <div class="control-panel">
-                <div class="refresh-container">
-                    <span>刷新间隔:</span>
-                    <select id="refresh-interval">
-                        <option value="1000">1秒</option>
-                        <option value="5000" selected>5秒</option>
-                        <option value="10000">10秒</option>
-                        <option value="30000">30秒</option>
-                    </select>
-                </div>
-                <span id="status-indicator" class="status-indicator">未运行</span>
-                <button id="start-btn" class="btn-start">启动</button>
-                <button id="stop-btn" class="btn-stop">停止</button>
-                <button id="reset-btn" class="btn-reset">重置</button>
-            </div>
+      <div class="container header-content">
+        <h1>任务树监控系统</h1>
+        <div class="control-panel">
+          <div class="refresh-container">
+            <span>刷新间隔:</span>
+            <select id="refresh-interval">
+              <option value="1000">1秒</option>
+              <option value="5000" selected>5秒</option>
+              <option value="10000">10秒</option>
+              <option value="30000">30秒</option>
+            </select>
+          </div>
+          <span id="status-indicator" class="status-indicator">运行中</span>
+          <button id="shutdown-btn" class="btn-stop">关闭服务</button>
         </div>
+      </div>
     </header>
-    
+
     <main class="container">
-        <div class="tabs">
-            <button class="tab-btn active" data-tab="dashboard">仪表盘</button>
-            <button class="tab-btn" data-tab="structure">任务树结构</button>
-            <button class="tab-btn" data-tab="errors">错误日志</button>
-        </div>
-        
-        <div id="dashboard" class="tab-content active">
-            <div class="grid grid-cols-1 grid-cols-2">
-                <!-- 节点状态卡片将在这里动态生成 -->
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="dashboard">仪表盘</button>
+        <button class="tab-btn" data-tab="structure">任务树结构</button>
+        <button class="tab-btn" data-tab="errors">错误日志</button>
+      </div>
+
+      <div id="dashboard" class="tab-content active">
+        <div class="grid grid-cols-1 grid-cols-2" id="dashboard-grid"></div>
+
+        <div class="card summary-card">
+          <h2 class="card-title" style="margin-bottom: 1rem">总体状态摘要</h2>
+          <div class="summary-grid">
+            <div class="summary-item blue">
+              <div id="total-processed" class="summary-value blue">0</div>
+              <div class="summary-label">总处理任务</div>
             </div>
-            
-            <div class="card summary-card">
-                <h2 class="card-title" style="margin-bottom: 1rem;">总体状态摘要</h2>
-                <div class="summary-grid">
-                    <div class="summary-item blue">
-                        <div id="total-processed" class="summary-value blue">0</div>
-                        <div class="summary-label">总处理任务</div>
-                    </div>
-                    <div class="summary-item yellow">
-                        <div id="total-pending" class="summary-value yellow">0</div>
-                        <div class="summary-label">总等待任务</div>
-                    </div>
-                    <div class="summary-item red">
-                        <div id="total-errors" class="summary-value red">0</div>
-                        <div class="summary-label">总错误任务</div>
-                    </div>
-                    <div class="summary-item green">
-                        <div id="total-nodes" class="summary-value green">0</div>
-                        <div class="summary-label">活动节点</div>
-                    </div>
-                </div>
+            <div class="summary-item yellow">
+              <div id="total-pending" class="summary-value yellow">0</div>
+              <div class="summary-label">总等待任务</div>
             </div>
-        </div>
-        
-        <div id="structure" class="tab-content">
-            <div class="card">
-                <h2 class="card-title" style="margin-bottom: 1rem;">任务树结构</h2>
-                <div id="structure-view" class="structure-container">
-                    <!-- 任务树结构将在这里动态生成 -->
-                </div>
+            <div class="summary-item red">
+              <div id="total-errors" class="summary-value red">0</div>
+              <div class="summary-label">总错误任务</div>
             </div>
-        </div>
-        
-        <div id="errors" class="tab-content">
-            <div class="card">
-                <div class="filter-container">
-                    <h2 class="card-title">错误日志</h2>
-                    <div>
-                        <span class="filter-label">按节点筛选:</span>
-                        <select id="node-filter">
-                            <option value="">全部节点</option>
-                            <!-- 节点选项将在这里动态生成 -->
-                        </select>
-                    </div>
-                </div>
-                
-                <div id="errors-table-container">
-                    <table id="errors-table">
-                        <thead>
-                            <tr>
-                                <th>错误信息</th>
-                                <th>节点</th>
-                                <th>任务ID</th>
-                                <th>时间</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- 错误记录将在这里动态生成 -->
-                        </tbody>
-                    </table>
-                </div>
+            <div class="summary-item green">
+              <div id="total-nodes" class="summary-value green">0</div>
+              <div class="summary-label">活动节点</div>
             </div>
+          </div>
         </div>
+      </div>
+
+      <div id="structure" class="tab-content">
+        <div class="card">
+          <h2 class="card-title" style="margin-bottom: 1rem">任务树结构</h2>
+          <pre id="structure-view" class="structure-container">
+            加载中...
+          </pre>
+        </div>
+      </div>
+
+      <div id="errors" class="tab-content">
+        <div class="card">
+          <div class="filter-container">
+            <h2 class="card-title">错误日志</h2>
+            <div>
+              <span class="filter-label">按节点筛选:</span>
+              <select id="node-filter">
+                <option value="">全部节点</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="errors-table-container">
+            <table id="errors-table">
+              <thead>
+                <tr>
+                  <th>错误信息</th>
+                  <th>节点</th>
+                  <th>任务ID</th>
+                  <th>时间</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </main>
 
-    <script>
-        // 模拟数据
-        const mockTreeStructure = [
-            "+-----------------------------------------------------+",
-            "| RootStage (stage_mode: process, func: process_task) |",
-            "| ╘--> Splitter (stage_mode: process, func: split_task) |",
-            "|   ╘--> Processor (stage_mode: process, func: process_item) |",
-            "|     ╘--> Validator (stage_mode: process, func: validate_item) |",
-            "+-----------------------------------------------------+"
-        ];
-
-        let nodeStatuses = {
-            "RootStage": { 
-                active: true, 
-                tasks_processed: 0, 
-                tasks_pending: 100, 
-                tasks_error: 0,
-                start_time: new Date().toISOString(),
-                execution_mode: "thread",
-                stage_mode: "process",
-                func_name: "process_task"
-            },
-            "Splitter": { 
-                active: true, 
-                tasks_processed: 0, 
-                tasks_pending: 0, 
-                tasks_error: 0,
-                start_time: new Date().toISOString(),
-                execution_mode: "thread",
-                stage_mode: "process",
-                func_name: "split_task"
-            },
-            "Processor": { 
-                active: true, 
-                tasks_processed: 0, 
-                tasks_pending: 0, 
-                tasks_error: 0,
-                start_time: new Date().toISOString(),
-                execution_mode: "thread",
-                stage_mode: "process",
-                func_name: "process_item"
-            },
-            "Validator": { 
-                active: true, 
-                tasks_processed: 0, 
-                tasks_pending: 0, 
-                tasks_error: 0,
-                start_time: new Date().toISOString(),
-                execution_mode: "thread",
-                stage_mode: "process",
-                func_name: "validate_item"
-            }
-        };
-
-        let errors = [];
-        let isRunning = false;
-        let refreshIntervalId = null;
-        let refreshRate = 5000; // 默认5秒
-
-        // DOM元素
-        const statusIndicator = document.getElementById('status-indicator');
-        const startBtn = document.getElementById('start-btn');
-        const stopBtn = document.getElementById('stop-btn');
-        const resetBtn = document.getElementById('reset-btn');
-        const refreshIntervalSelect = document.getElementById('refresh-interval');
-        const tabButtons = document.querySelectorAll('.tab-btn');
-        const tabContents = document.querySelectorAll('.tab-content');
-        const dashboardGrid = document.querySelector('#dashboard .grid');
-        const structureView = document.getElementById('structure-view');
-        const nodeFilterSelect = document.getElementById('node-filter');
-        const errorsTable = document.getElementById('errors-table');
-        const totalProcessedElement = document.getElementById('total-processed');
-        const totalPendingElement = document.getElementById('total-pending');
-        const totalErrorsElement = document.getElementById('total-errors');
-        const totalNodesElement = document.getElementById('total-nodes');
-
-        // 初始化页面
-        function initializePage() {
-            // 填充结构视图
-            structureView.innerHTML = mockTreeStructure.join('\n');
-            
-            // 填充节点过滤选择器
-            populateNodeFilter();
-            
-            // 渲染初始状态
-            renderDashboard();
-            renderErrors();
-            updateSummary();
-            
-            // 设置选项卡切换事件
-            tabButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const tabId = button.getAttribute('data-tab');
-                    
-                    tabButtons.forEach(btn => btn.classList.remove('active'));
-                    tabContents.forEach(content => content.classList.remove('active'));
-                    
-                    button.classList.add('active');
-                    document.getElementById(tabId).classList.add('active');
-                });
-            });
-            
-            // 设置控制按钮事件
-            startBtn.addEventListener('click', startSimulation);
-            stopBtn.addEventListener('click', stopSimulation);
-            resetBtn.addEventListener('click', resetSimulation);
-            
-            // 设置刷新间隔变更事件
-            refreshIntervalSelect.addEventListener('change', () => {
-                refreshRate = parseInt(refreshIntervalSelect.value);
-                if (isRunning) {
-                    stopSimulation();
-                    startSimulation();
-                }
-            });
-            
-            // 设置节点过滤事件
-            nodeFilterSelect.addEventListener('change', renderErrors);
-        }
-
-        // 填充节点过滤器
-        function populateNodeFilter() {
-            nodeFilterSelect.innerHTML = '<option value="">全部节点</option>';
-            
-            for (const nodeName in nodeStatuses) {
-                const option = document.createElement('option');
-                option.value = nodeName;
-                option.textContent = nodeName;
-                nodeFilterSelect.appendChild(option);
-            }
-        }
-
-        // 渲染仪表盘
-        function renderDashboard() {
-            dashboardGrid.innerHTML = '';
-            
-            for (const [nodeName, status] of Object.entries(nodeStatuses)) {
-                const progressPercentage = status.tasks_pending + status.tasks_processed === 0 ? 
-                    0 : Math.round((status.tasks_processed / (status.tasks_processed + status.tasks_pending)) * 100);
-                
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                    <div class="card-header">
-                        <h3 class="card-title">${nodeName}</h3>
-                        <span class="badge ${status.active ? 'badge-success' : 'badge-inactive'}">
-                            ${status.active ? '运行中' : '已停止'}
-                        </span>
-                    </div>
-                    
-                    <div class="stats-grid">
-                        <div>
-                            <div class="stat-label">已处理任务</div>
-                            <div class="stat-value">${status.tasks_processed}</div>
-                        </div>
-                        <div>
-                            <div class="stat-label">等待任务</div>
-                            <div class="stat-value">${status.tasks_pending}</div>
-                        </div>
-                        <div>
-                            <div class="stat-label">错误任务</div>
-                            <div class="stat-value text-red">${status.tasks_error}</div>
-                        </div>
-                        <div>
-                            <div class="stat-label">执行模式</div>
-                            <div class="stat-value">${status.execution_mode}</div>
-                        </div>
-                    </div>
-                    
-                    <div class="text-sm text-gray">
-                        开始时间: ${new Date(status.start_time).toLocaleString()}
-                    </div>
-                    
-                    <div class="progress-container">
-                        <div class="progress-header">
-                            <span>任务完成率</span>
-                            <span>${progressPercentage}%</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-value" style="width: ${progressPercentage}%"></div>
-                        </div>
-                    </div>
-                `;
-                
-                dashboardGrid.appendChild(card);
-            }
-        }
-
-        // 渲染错误日志
-        function renderErrors() {
-            const tableBody = errorsTable.querySelector('tbody');
-            tableBody.innerHTML = '';
-            
-            const selectedNode = nodeFilterSelect.value;
-            const filteredErrors = selectedNode ? 
-                errors.filter(error => error.node === selectedNode) : 
-                errors;
-            
-            if (filteredErrors.length === 0) {
-                const noErrorsRow = document.createElement('tr');
-                noErrorsRow.innerHTML = `
-                    <td colspan="4" class="no-errors">没有找到错误记录</td>
-                `;
-                tableBody.appendChild(noErrorsRow);
-                return;
-            }
-            
-            for (const error of filteredErrors) {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="error-message">${error.error}</td>
-                    <td>${error.node}</td>
-                    <td>${error.task_id}</td>
-                    <td>${new Date(error.timestamp).toLocaleString()}</td>
-                `;
-                tableBody.appendChild(row);
-            }
-        }
-
-        // 更新摘要信息
-        function updateSummary() {
-            let totalProcessed = 0;
-            let totalPending = 0;
-            let totalErrors = 0;
-            let activeNodes = 0;
-            
-            for (const status of Object.values(nodeStatuses)) {
-                totalProcessed += status.tasks_processed;
-                totalPending += status.tasks_pending;
-                totalErrors += status.tasks_error;
-                if (status.active) activeNodes++;
-            }
-            
-            totalProcessedElement.textContent = totalProcessed;
-            totalPendingElement.textContent = totalPending;
-            totalErrorsElement.textContent = totalErrors;
-            totalNodesElement.textContent = activeNodes;
-        }
-
-        // 模拟任务处理
-        function processTask() {
-            // 处理 RootStage 的任务
-            if (nodeStatuses.RootStage.tasks_pending > 0) {
-                const processed = Math.min(Math.floor(Math.random() * 5) + 1, nodeStatuses.RootStage.tasks_pending);
-                nodeStatuses.RootStage.tasks_processed += processed;
-                nodeStatuses.RootStage.tasks_pending -= processed;
-                
-                // 随机产生错误
-                if (Math.random() < 0.1) {
-                    nodeStatuses.RootStage.tasks_error += 1;
-                    addError("RootStage");
-                }
-                
-                // 向 Splitter 传递任务
-                nodeStatuses.Splitter.tasks_pending += processed * 2; // 每个任务拆分为2个
-            }
-            
-            // 处理 Splitter 的任务
-            if (nodeStatuses.Splitter.tasks_pending > 0) {
-                const processed = Math.min(Math.floor(Math.random() * 8) + 1, nodeStatuses.Splitter.tasks_pending);
-                nodeStatuses.Splitter.tasks_processed += processed;
-                nodeStatuses.Splitter.tasks_pending -= processed;
-                
-                // 随机产生错误
-                if (Math.random() < 0.05) {
-                    nodeStatuses.Splitter.tasks_error += 1;
-                    addError("Splitter");
-                }
-                
-                // 向 Processor 传递任务
-                nodeStatuses.Processor.tasks_pending += processed;
-            }
-            
-            // 处理 Processor 的任务
-            if (nodeStatuses.Processor.tasks_pending > 0) {
-                const processed = Math.min(Math.floor(Math.random() * 10) + 1, nodeStatuses.Processor.tasks_pending);
-                nodeStatuses.Processor.tasks_processed += processed;
-                nodeStatuses.Processor.tasks_pending -= processed;
-                
-                // 随机产生错误
-                if (Math.random() < 0.08) {
-                    nodeStatuses.Processor.tasks_error += 1;
-                    addError("Processor");
-                }
-                
-                // 向 Validator 传递任务
-                nodeStatuses.Validator.tasks_pending += processed;
-            }
-            
-            // 处理 Validator 的任务
-            if (nodeStatuses.Validator.tasks_pending > 0) {
-                const processed = Math.min(Math.floor(Math.random() * 7) + 1, nodeStatuses.Validator.tasks_pending);
-                nodeStatuses.Validator.tasks_processed += processed;
-                nodeStatuses.Validator.tasks_pending -= processed;
-                
-                // 随机产生错误
-                if (Math.random() < 0.03) {
-                    nodeStatuses.Validator.tasks_error += 1;
-                    addError("Validator");
-                }
-            }
-            
-            // 更新UI
-            renderDashboard();
-            renderErrors();
-            updateSummary();
-        }
-
-        // 添加错误
-        function addError(nodeName) {
-            const errorTypes = [
-                "TaskError(处理失败)",
-                "TaskError(输入格式无效)",
-                "TaskError(处理超时)",
-                "TaskError(资源不足)",
-                "TaskError(依赖项丢失)"
-            ];
-            
-            errors.push({
-                error: errorTypes[Math.floor(Math.random() * errorTypes.length)],
-                node: nodeName,
-                task_id: `task_${Math.floor(Math.random() * 10000)}`,
-                timestamp: new Date().toISOString()
-            });
-        }
-
-        // 开始模拟
-        function startSimulation() {
-            if (isRunning) return;
-            
-            isRunning = true;
-            statusIndicator.textContent = "运行中";
-            statusIndicator.classList.add('running');
-            
-            refreshIntervalId = setInterval(processTask, refreshRate);
-        }
-
-        // 停止模拟
-        function stopSimulation() {
-            if (!isRunning) return;
-            
-            isRunning = false;
-            statusIndicator.textContent = "已停止";
-            statusIndicator.classList.remove('running');
-            
-            if (refreshIntervalId) {
-                clearInterval(refreshIntervalId);
-                refreshIntervalId = null;
-            }
-        }
-
-        // 重置模拟
-        function resetSimulation() {
-            stopSimulation();
-            
-            // 重置节点状态
-            for (const node in nodeStatuses) {
-                nodeStatuses[node] = {
-                    active: true,
-                    tasks_processed: 0,
-                    tasks_pending: node === "RootStage" ? 100 : 0,
-                    tasks_error: 0,
-                    start_time: new Date().toISOString(),
-                    execution_mode: "thread",
-                    stage_mode: "process",
-                    func_name: nodeStatuses[node].func_name
-                };
-            }
-            
-            // 清空错误
-            errors = [];
-            
-            // 更新UI
-            renderDashboard();
-            renderErrors();
-            updateSummary();
-            
-            statusIndicator.textContent = "未运行";
-        }
-
-        // 页面加载时初始化
-        document.addEventListener('DOMContentLoaded', initializePage);
-    </script>
-</body>
+    <script src="{{ url_for('static', filename='task_web.js') }}"></script>
+  </body>
 </html>

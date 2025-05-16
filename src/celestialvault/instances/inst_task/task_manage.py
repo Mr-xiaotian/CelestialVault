@@ -57,6 +57,11 @@ class TaskManager:
         self.thread_pool = None
         self.process_pool = None
 
+        self.task_queue = None
+
+        self.start_time = None
+        self.active = False
+
         self.retry_exceptions = (
             ConnectTimeout,
             ProtocolError,
@@ -166,7 +171,7 @@ class TaskManager:
             "tasks_processed": len(self.success_dict),
             "tasks_pending": self.task_queue.qsize() if self.task_queue else 0,
             "tasks_error": len(self.error_dict),
-            "start_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.start_time)),
+            "start_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.start_time)) if self.start_time else None,
             "execution_mode": self.execution_mode,
             "stage_mode": self.stage_mode,
             "func_name": self.func.__name__,

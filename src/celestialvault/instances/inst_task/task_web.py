@@ -1,11 +1,11 @@
 # inst_task/task_web.py
 
-import threading
-from flask import Flask, jsonify, render_template
+import threading, os
+from flask import Flask, jsonify, render_template, request
 
 class TaskWebServer:
-    from .task_tree import TaskTree
-    def __init__(self, task_tree: TaskTree, host='127.0.0.1', port=5000):
+    # from .task_tree import TaskTree
+    def __init__(self, task_tree, host='127.0.0.1', port=5000):
         self.task_tree = task_tree
         self.app = Flask(__name__, static_folder="static", template_folder="templates")
         self.host = host
@@ -40,9 +40,18 @@ class TaskWebServer:
                         "timestamp": "2024-01-01T00:00:00Z"
                     })
             return jsonify(errors_list)
+        
+        @app.route("/shutdown", methods=["POST"])
+        def shutdown():
+            func = request.environ.get("werkzeug.server.shutdown")
+            if func:
+                func()
+                return "Server shutting down..."
+            else:
+                os._exit(0)  # 强制关闭整个进程
 
-    def start(self):
+    def start_server(self):
         def run():
             self.app.run(host=self.host, port=self.port, debug=False, use_reloader=False)
-        self.thread = threading.Thread(target=run, daemon=True)
+        self.thread = threading.Thread(target=run)
         self.thread.start()
