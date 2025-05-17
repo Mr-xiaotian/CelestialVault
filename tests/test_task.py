@@ -74,19 +74,23 @@ def square_root(x):
 
 # 模拟返回列表的 stage
 def generate_urls(x):
+    sleep_random_48(2)
     return tuple([f"url_{x}_{i}" for i in range(random.randint(1, 4))])
 
 def log_urls(data):
+    sleep_random_48(2)
     if data == ('url_1_0', 'url_1_1'):
         raise ValueError("Test error in ('url_1_0', 'url_1_1')")
     return f"Logged({data})"
 
 def download(url):
+    sleep_random_48(2)
     if url == "url_3_0":
         raise ValueError("Test error in url_3_0")
     return f"Downloaded({url})"
 
 def parse(url):
+    sleep_random_48(2)
     return f"Parsed({url})"
 
 # 测试 TaskManager 的同步任务
@@ -238,7 +242,7 @@ def test_task_web_1():
     # 设置链关系
     generate_stage.set_tree_context([logr_stage, splitter], stage_mode='process', stage_name='GenURLs')
     logr_stage.set_tree_context([], stage_mode='process', stage_name='Loger')
-    splitter.set_tree_context([download_stage, parse_stage], stage_mode='serial', stage_name='Splitter')
+    splitter.set_tree_context([download_stage, parse_stage], stage_mode='process', stage_name='Splitter')
     download_stage.set_tree_context([], stage_mode='process', stage_name='Downloader')
     parse_stage.set_tree_context([], stage_mode='process', stage_name='Parser')
 

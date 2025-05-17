@@ -17,7 +17,7 @@ const totalErrors = document.getElementById("total-errors");
 const totalNodes = document.getElementById("total-nodes");
 const shutdownBtn = document.getElementById("shutdown-btn");
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   refreshSelect.addEventListener("change", () => {
     refreshRate = parseInt(refreshSelect.value);
     clearInterval(refreshIntervalId);
@@ -42,12 +42,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // ✅ 只在页面加载时调用一次
+  await loadStructure(); 
+
   refreshAll();
   refreshIntervalId = setInterval(refreshAll, refreshRate);
 });
 
 async function refreshAll() {
-  await Promise.all([loadStatuses(), loadStructure(), loadErrors()]);
+  await Promise.all([loadStatuses(), loadErrors()]);
   renderDashboard();
   updateSummary();
   renderErrors();
@@ -184,7 +187,7 @@ function renderTree(data) {
     treeContainer.innerHTML = rootHTML;
     
     // 打印树的HTML结构到控制台，用于调试
-    console.log("树的HTML结构:", treeContainer.innerHTML);
+    // console.log("树的HTML结构:", treeContainer.innerHTML);
 }
 
 // 切换节点展开/折叠

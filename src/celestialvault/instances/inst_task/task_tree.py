@@ -73,8 +73,10 @@ class TaskTree:
         self.stage_dict[self.root_stage.get_stage_tag()] = self.root_stage
         collect_queue(self.root_stage)
 
+        self.init_tasks_num = 0
         for task in tasks:
             self.stage_queues_dict[self.root_stage.get_stage_tag()].put(task)
+            self.init_tasks_num += 1
         self.stage_queues_dict[self.root_stage.get_stage_tag()].put(TERMINATION_SIGNAL)
 
     def set_root_stage(self, root_stage: TaskManager):
@@ -104,15 +106,32 @@ class TaskTree:
         set_subsequent_satge_mode(self.root_stage)
 
     def get_status_dict(self) -> dict:
-        return {
-            stage.stage_name: {
-                **stage.get_status_snapshot(),
-                "active": self.stage_active_dict[stage_tag] if stage_tag in self.stage_active_dict else False,
-                "start_time": self.stage_start_time_dict[stage_tag] if stage_tag in self.stage_start_time_dict else None,
-                "tasks_pending": self.stage_queues_dict[stage_tag].qsize() if stage_tag in self.stage_queues_dict else 0,
+        status_dict = {}
+        for stage_tag, stage in self.get_stage_dict().items():
+            snapshot = stage.get_status_snapshot()
+            prev_stage = stage.prev_stage
+
+            # 判断是否有上游节点
+            if prev_stage:
+                if isinstance(prev_stage, TaskSplitter):
+                    total_input = sum(len(v) for v in prev_stage.success_dict.values())
+                else:
+                    total_input = len(prev_stage.success_dict)
+            else:
+                total_input = self.init_tasks_num
+
+            processed = len(stage.success_dict)
+            failed = len(stage.error_dict)
+            pending = max(0, total_input - processed - failed)
+
+            status_dict[stage_tag] = {
+                **snapshot,
+                "active": self.stage_active_dict.get(stage_tag, False),
+                "start_time": self.stage_start_time_dict.get(stage_tag, None),
+                "tasks_pending": pending,
             }
-            for stage_tag, stage in self.get_stage_dict().items()
-        }
+
+        return status_dict
 
     def start_tree(self, init_tasks):
         start_time = time()

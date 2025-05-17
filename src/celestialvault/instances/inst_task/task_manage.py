@@ -57,6 +57,8 @@ class TaskManager:
         self.thread_pool = None
         self.process_pool = None
 
+        self.prev_stage = None
+
         self.retry_exceptions = (
             ConnectTimeout,
             ProtocolError,
@@ -141,6 +143,8 @@ class TaskManager:
         设置后续节点列表
         """
         self.next_stages = next_stages or []  # 默认为空列表
+        for next_stage in self.next_stages:
+            next_stage.set_prev_stage(self)
 
     def set_stage_mode(self, stage_mode: str):
         """
@@ -153,6 +157,12 @@ class TaskManager:
         设置当前节点名称
         """
         self.stage_name = name or id(self)
+
+    def set_prev_stage(self, prev_stage: TaskManager):
+        """
+        设置当前节点为最后一个节点
+        """
+        self.prev_stage = prev_stage
 
     def get_stage_tag(self):
         """
@@ -210,7 +220,7 @@ class TaskManager:
         """
         判断任务是否重复
         """
-        return task in self.get_success_dict() or task in self.get_error_dict()
+        return task in self.success_dict or task in self.error_dict
 
     def get_args(self, task):
         """
