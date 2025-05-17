@@ -289,8 +289,8 @@ class TaskTree:
             stage_error_dict = stage.get_error_dict()
             for task, error in stage_error_dict.items():
                 error_key = (f"{type(error).__name__}({error})", stage_tag)
-                self.final_error_dict[error_key].append(task) if error_key not in self.final_error_dict else None
-                self.final_fail_dict[stage_tag].append(task) if stage_tag not in self.final_fail_dict else None
+                self.final_error_dict[error_key].append(task) if task not in self.final_error_dict[error_key] else None
+                self.final_fail_dict[stage_tag].append(task) if task not in self.final_fail_dict[stage_tag] else None
 
     def get_stage_dict(self):
         """
