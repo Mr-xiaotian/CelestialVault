@@ -285,20 +285,12 @@ class TaskTree:
         处理最终错误字典
         """
 
-        def update_error_dict(stage: TaskManager):
+        for stage_tag, stage in self.stage_dict.items():
             stage_error_dict = stage.get_error_dict()
-            visited_stages.add(stage)
             for task, error in stage_error_dict.items():
-                error_key = (f"{type(error).__name__}({error})", stage.get_stage_tag())
-                self.final_error_dict[error_key].append(task)
-                self.final_fail_dict[stage.get_stage_tag()].append(task)
-            for next_stage in stage.next_stages:
-                if next_stage in visited_stages:
-                    continue
-                update_error_dict(next_stage)
-
-        visited_stages = set()
-        update_error_dict(self.root_stage)
+                error_key = (f"{type(error).__name__}({error})", stage_tag)
+                self.final_error_dict[error_key].append(task) if error_key not in self.final_error_dict else None
+                self.final_fail_dict[stage_tag].append(task) if stage_tag not in self.final_fail_dict else None
 
     def get_stage_dict(self):
         """

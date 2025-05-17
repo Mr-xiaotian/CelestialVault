@@ -6,7 +6,8 @@ from flask import Flask, jsonify, render_template, request
 class TaskWebServer:
     # from .task_tree import TaskTree
     def __init__(self, task_tree, host='127.0.0.1', port=5000):
-        self.task_tree = task_tree
+        from .task_tree import TaskTree
+        self.task_tree: TaskTree = task_tree
         self.app = Flask(__name__, static_folder="static", template_folder="templates")
         self.host = host
         self.port = port
@@ -31,13 +32,14 @@ class TaskWebServer:
         @app.route("/api/errors")
         def errors():
             errors_list = []
+            self.task_tree.handle_final_error_dict()
             for (err, tag), task_list in self.task_tree.get_final_error_dict().items():
                 for task in task_list:
                     errors_list.append({
                         "error": err,
                         "node": tag,
                         "task_id": str(task),
-                        "timestamp": "2024-01-01T00:00:00Z"
+                        "timestamp": "2024/1/1 08:00:00"
                     })
             return jsonify(errors_list)
         

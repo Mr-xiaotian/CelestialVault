@@ -304,7 +304,7 @@ function renderErrors() {
           <td class="error-message">${e.error}</td>
           <td>${e.node}</td>
           <td>${e.task_id}</td>
-          <td>${new Date(e.timestamp).toLocaleString()}</td>
+          <td>${e.timestamp}</td>
         `;
     errorsTableBody.appendChild(row);
   }
