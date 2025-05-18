@@ -48,8 +48,8 @@ class TaskTree:
         self.stage_elapsed_time_dict: Dict[str, float] = {}
         
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
-        self.final_error_dict = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
-        self.final_fail_dict = defaultdict(list)  # 用于保存节点到节点失败任务的映射
+        self.fail_by_error_dict = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
+        self.fail_by_stage_dict = defaultdict(list)  # 用于保存节点到节点失败任务的映射
 
     def init_queues(self, tasks: list):
         """
@@ -330,8 +330,8 @@ class TaskTree:
             stage_error_dict = stage.get_error_dict()
             for task, error in stage_error_dict.items():
                 error_key = (f"{type(error).__name__}({error})", stage_tag)
-                self.final_error_dict[error_key].append(task) if task not in self.final_error_dict[error_key] else None
-                self.final_fail_dict[stage_tag].append(task) if task not in self.final_fail_dict[stage_tag] else None
+                self.fail_by_error_dict[error_key].append(task) if task not in self.fail_by_error_dict[error_key] else None
+                self.fail_by_stage_dict[stage_tag].append(task) if task not in self.fail_by_stage_dict[stage_tag] else None
 
     def get_stage_dict(self):
         """
@@ -345,17 +345,17 @@ class TaskTree:
         """
         return self.final_result_dict
 
-    def get_final_error_dict(self):
+    def get_fail_by_error_dict(self):
         """
         返回最终错误字典
         """
-        return dict(self.final_error_dict)
+        return dict(self.fail_by_error_dict)
 
-    def get_final_fail_dict(self):
+    def get_fail_by_stage_dict(self):
         """
         返回最终失败字典
         """
-        return dict(self.final_fail_dict)
+        return dict(self.fail_by_stage_dict)
 
     def get_failed_tasks(self):
         """
@@ -432,16 +432,16 @@ class TaskTree:
 
         structure = self.format_structure_list()
         timestamp = datetime.now().strftime("%H-%M-%S-%f")[:-3]
-        chain_name = self.root_stage.stage_name  # 🧠 添加 task_chain_name
+        chain_name = self.root_stage.stage_name
 
         data = {
             "metadata": {
                 "timestamp": datetime.now().isoformat(),
                 "structure": structure,
             },
-            "fail tasks": self.get_final_fail_dict(),
-            # "fail errors": self.get_final_error_dict(),
-            "fail init tasks": self.get_failed_tasks(),
+            "fail stages": self.get_fail_by_stage_dict(),
+            "fail errors": {str(key): value for key, value in self.get_fail_by_error_dict().items()},
+            "fail tasks": self.get_failed_tasks(),
         }
 
         file_name = name or f"{timestamp}__{chain_name}.json"
@@ -461,7 +461,7 @@ class TaskTree:
         test_table_list = []
         final_result_dict = {}
         final_error_dict = {}
-        final_fail_dict = {}
+        fail_by_stage_dict = {}
         failed_tasks = []
 
         stage_modes = ["serial", "process"]
@@ -476,7 +476,7 @@ class TaskTree:
                 time_list.append(time.time() - start_time)
                 final_result_dict.update(self.get_final_result_dict())
                 final_error_dict.update(self.get_final_error_dict())
-                final_fail_dict.update(self.get_final_fail_dict())
+                fail_by_stage_dict.update(self.get_fail_by_stage_dict())
                 failed_tasks += [
                     task for task in self.get_failed_tasks() if task not in failed_tasks
                 ]
@@ -491,7 +491,7 @@ class TaskTree:
         )
         results["Final result dict"] = final_result_dict
         results["Final error dict"] = final_error_dict
-        results["Final fail dict"] = final_fail_dict
+        results["Final fail dict"] = fail_by_stage_dict
         results["Failed tasks"] = failed_tasks
         return results
 

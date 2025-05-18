@@ -33,7 +33,7 @@ class TaskWebServer:
         def errors():
             errors_list = []
             self.task_tree.handle_final_error_dict()
-            for (err, tag), task_list in self.task_tree.get_final_error_dict().items():
+            for (err, tag), task_list in self.task_tree.get_fail_by_error_dict().items():
                 for task in task_list:
                     errors_list.append({
                         "error": err,
