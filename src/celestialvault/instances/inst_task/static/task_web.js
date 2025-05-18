@@ -254,13 +254,16 @@ function renderDashboard() {
               data.execution_mode
             }</div></div>
           </div>
-          <div class="text-sm text-gray">开始时间: ${new Date(
-            data.start_time
-          ).toLocaleString()}</div>
+          <div class="text-sm text-gray">开始时间: ${data.start_time}</div>
           <div class="progress-container">
             <div class="progress-header">
               <span>任务完成率</span>
-              <span>${progress}%</span>
+              <span class="time-estimate">
+                <span class="elapsed">${data.elapsed_time}</span>
+                &lt; 
+                <span class="remaining">${data.remaining_time}</span>, 
+                <span>${progress}%</span>
+              </span>
             </div>
             <div class="progress-bar">
               <div class="progress-value" style="width: ${progress}%"></div>

@@ -174,7 +174,7 @@ class TaskManager:
         return {
             "tasks_processed": len(self.success_dict),
             "tasks_error": len(self.error_dict),
-            "execution_mode": self.execution_mode,
+            "execution_mode": self.execution_mode if self.execution_mode == "serial" else self.execution_mode + f"-{self.worker_limit}",
             "stage_mode": self.stage_mode,
             "func_name": self.func.__name__,
         }

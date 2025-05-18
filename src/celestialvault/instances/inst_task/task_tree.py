@@ -1,10 +1,9 @@
-import json
+import json, time
 import multiprocessing
 from collections import defaultdict
 from datetime import datetime
 from multiprocessing import Queue as MPQueue
 from pathlib import Path
-from time import time
 from typing import Any, Dict, List
 
 from .task_manage import TaskManager
@@ -46,6 +45,7 @@ class TaskTree:
         self.stage_active_dict: Dict[str, bool] = {}
         self.stage_queues_dict: Dict[str, MPQueue] = {}
         self.stage_start_time_dict: Dict[str, float] = {}
+        self.stage_elapsed_time_dict: Dict[str, float] = {}
         
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
         self.final_error_dict = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
@@ -105,7 +105,25 @@ class TaskTree:
         visited_stages = set()
         set_subsequent_satge_mode(self.root_stage)
 
+    def format_duration(self, seconds):
+        """将秒数格式化为 HH:MM:SS 或 MM:SS（自动省略前导零）"""
+        seconds = int(seconds)
+        hours, remainder = divmod(seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        
+        if hours > 0:
+            return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        else:
+            return f"{minutes:02d}:{seconds:02d}"
+
+    def format_timestamp(self, timestamp) -> str:
+        """将时间戳格式化为 YYYY-MM-DD HH:MM:SS"""
+        return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
     def get_status_dict(self) -> dict:
+        """
+        获取任务链的状态字典
+        """
         status_dict = {}
         for stage_tag, stage in self.get_stage_dict().items():
             snapshot = stage.get_status_snapshot()
@@ -124,17 +142,40 @@ class TaskTree:
             failed = len(stage.error_dict)
             pending = max(0, total_input - processed - failed)
 
+            is_active = self.stage_active_dict.get(stage_tag, False)
+            start_time = self.stage_start_time_dict.get(stage_tag, 0)
+
+            # 计算 elapsed_time（如果 inactive，则取上次 active 时的值）
+            if start_time:
+                if is_active:
+                    elapsed_time = time.time() - start_time
+                    self.stage_elapsed_time_dict[stage_tag] = elapsed_time
+                else:
+                    # 如果 inactive，elapsed_time 不再增加（取上次 active 时的值）
+                    elapsed_time = self.stage_elapsed_time_dict.get(stage_tag, 0)
+            else:
+                elapsed_time = 0
+
+            # 计算剩余时间（基于平均速度）
+            if processed > 0 and pending > 0:
+                avg_time_per_task = elapsed_time / processed
+                remaining_time = avg_time_per_task * pending
+            else:
+                remaining_time = 0
+
             status_dict[stage_tag] = {
                 **snapshot,
-                "active": self.stage_active_dict.get(stage_tag, False),
-                "start_time": self.stage_start_time_dict.get(stage_tag, None),
+                "active": is_active,
+                "start_time": self.format_timestamp(start_time),
+                "elapsed_time": self.format_duration(elapsed_time),
+                "remaining_time": self.format_duration(remaining_time),
                 "tasks_pending": pending,
             }
 
         return status_dict
 
     def start_tree(self, init_tasks):
-        start_time = time()
+        start_time = time.time()
         structure_list = self.format_structure_list()
         task_logger.start_tree(structure_list)
 
@@ -152,7 +193,7 @@ class TaskTree:
         self.save_failures()
         self.release_resources()
 
-        task_logger.end_tree(time() - start_time)
+        task_logger.end_tree(time.time() - start_time)
 
     def _execute_stage(self, stage: TaskManager, stage_visited: set):
         """
@@ -171,7 +212,7 @@ class TaskTree:
 
         if stage.stage_mode == "process":
             self.stage_active_dict[stage.get_stage_tag()] = True
-            self.stage_start_time_dict[stage.get_stage_tag()] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            self.stage_start_time_dict[stage.get_stage_tag()] = time.time()
 
             stage.init_dict(self.manager.dict(), self.manager.dict())
             p = multiprocessing.Process(
@@ -181,7 +222,7 @@ class TaskTree:
             self.processes.append(p)
         else:
             self.stage_active_dict[stage.get_stage_tag()] = True
-            self.stage_start_time_dict[stage.get_stage_tag()] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            self.stage_start_time_dict[stage.get_stage_tag()] = time.time()
 
             stage.init_dict({}, {})
             stage.start_stage(input_queue, output_queues, fail_queue)
@@ -399,6 +440,7 @@ class TaskTree:
                 "structure": structure,
             },
             "fail tasks": self.get_final_fail_dict(),
+            # "fail errors": self.get_final_error_dict(),
             "fail init tasks": self.get_failed_tasks(),
         }
 
@@ -427,11 +469,11 @@ class TaskTree:
         for stage_mode in stage_modes:
             time_list = []
             for execution_mode in execution_modes:
-                start_time = time()
+                start_time = time.time()
                 self.set_tree_mode(stage_mode, execution_mode)
                 self.start_tree(task_list)
 
-                time_list.append(time() - start_time)
+                time_list.append(time.time() - start_time)
                 final_result_dict.update(self.get_final_result_dict())
                 final_error_dict.update(self.get_final_error_dict())
                 final_fail_dict.update(self.get_final_fail_dict())
@@ -463,8 +505,8 @@ class TaskChain(TaskTree):
         """
         for num, stage in enumerate(stages):
             stage_name = f"Stage {num + 1}"
-            next_stage = [stages[num + 1]] if num < len(stages) - 1 else []
-            stage.set_tree_context(next_stage, chain_mode, stage_name)
+            next_stages = [stages[num + 1]] if num < len(stages) - 1 else []
+            stage.set_tree_context(next_stages, chain_mode, stage_name)
 
         root_stage = stages[0]
         super().__init__(root_stage, start_web_server)

@@ -247,6 +247,19 @@ button {
     border-radius: 0.25rem;
 }
 
+.time-estimate {
+  font-family: monospace;
+  /* font-size: 0.9em; */
+}
+
+.time-estimate .elapsed {
+  color: var(--success-color);
+}
+
+.time-estimate .remaining {
+  color: var(--warning-color);
+}
+
 /* 结构视图样式 */
 .structure-container {
     background-color: #f3f4f6;
