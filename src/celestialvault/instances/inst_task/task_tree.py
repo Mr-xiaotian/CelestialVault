@@ -46,6 +46,7 @@ class TaskTree:
         self.stage_queues_dict: Dict[str, MPQueue] = {}
         self.stage_start_time_dict: Dict[str, float] = {}
         self.stage_elapsed_time_dict: Dict[str, float] = {}
+        self.stage_update_time_dict: Dict[str, float] = {}
         
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
         self.fail_by_error_dict = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
@@ -142,10 +143,15 @@ class TaskTree:
 
             start_time = self.stage_start_time_dict.get(tag, 0)
             is_active = self.stage_active_dict.get(tag, False)
+            last_update_time = self.stage_update_time_dict.get(tag, start_time) if start_time else 0   
 
             # 更新时间消耗（仅在 pending 非 0 时刷新）
             if start_time:
-                elapsed = now - start_time if pending else self.stage_elapsed_time_dict.get(tag, 0)
+                if pending > 0:
+                    # 有pending任务时，累计从上一次更新时间到现在的时间
+                    elapsed += now - last_update_time
+                    # 更新最后更新时间
+                    self.stage_update_time_dict[tag] = now
             else:
                 elapsed = 0
 
