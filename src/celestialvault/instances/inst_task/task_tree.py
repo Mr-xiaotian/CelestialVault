@@ -125,50 +125,41 @@ class TaskTree:
         获取任务链的状态字典
         """
         status_dict = {}
-        for stage_tag, stage in self.get_stage_dict().items():
-            snapshot = stage.get_status_snapshot()
-            prev_stage = stage.prev_stage
+        now = time.time()
 
-            # 判断是否有上游节点
-            if prev_stage:
-                if isinstance(prev_stage, TaskSplitter):
-                    total_input = sum(len(v) for v in prev_stage.success_dict.values())
-                else:
-                    total_input = len(prev_stage.success_dict)
-            else:
-                total_input = self.init_tasks_num
+        for tag, stage in self.get_stage_dict().items():
+            prev = stage.prev_stage
+
+            total_input = (
+                sum(len(v) for v in prev.success_dict.values()) if isinstance(prev, TaskSplitter)
+                else len(prev.success_dict) if prev
+                else self.init_tasks_num
+            )
 
             processed = len(stage.success_dict)
             failed = len(stage.error_dict)
             pending = max(0, total_input - processed - failed)
 
-            is_active = self.stage_active_dict.get(stage_tag, False)
-            start_time = self.stage_start_time_dict.get(stage_tag, 0)
+            start_time = self.stage_start_time_dict.get(tag, 0)
+            is_active = self.stage_active_dict.get(tag, False)
 
-            # 计算 elapsed_time（如果 inactive，则取上次 active 时的值）
+            # 更新时间消耗（仅在 pending 非 0 时刷新）
             if start_time:
-                if is_active:
-                    elapsed_time = time.time() - start_time
-                    self.stage_elapsed_time_dict[stage_tag] = elapsed_time
-                else:
-                    # 如果 inactive，elapsed_time 不再增加（取上次 active 时的值）
-                    elapsed_time = self.stage_elapsed_time_dict.get(stage_tag, 0)
+                elapsed = now - start_time if pending else self.stage_elapsed_time_dict.get(tag, 0)
             else:
-                elapsed_time = 0
+                elapsed = 0
 
-            # 计算剩余时间（基于平均速度）
-            if processed > 0 and pending > 0:
-                avg_time_per_task = elapsed_time / processed
-                remaining_time = avg_time_per_task * pending
-            else:
-                remaining_time = 0
+            self.stage_elapsed_time_dict[tag] = elapsed
 
-            status_dict[stage_tag] = {
-                **snapshot,
+            # 估算剩余时间
+            remaining = (elapsed / processed * pending) if processed and pending else 0
+
+            status_dict[tag] = {
+                **stage.get_status_snapshot(),
                 "active": is_active,
                 "start_time": self.format_timestamp(start_time),
-                "elapsed_time": self.format_duration(elapsed_time),
-                "remaining_time": self.format_duration(remaining_time),
+                "elapsed_time": self.format_duration(elapsed),
+                "remaining_time": self.format_duration(remaining),
                 "tasks_pending": pending,
             }
 
