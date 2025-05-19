@@ -190,7 +190,7 @@ def test_task_tree_2():
     # 设置链关系
     generate_stage.set_tree_context([logr_stage, splitter], stage_mode='process', stage_name='GenURLs')
     logr_stage.set_tree_context([], stage_mode='process', stage_name='Loger')
-    splitter.set_tree_context([download_stage, parse_stage], stage_mode='serial', stage_name='Splitter')
+    splitter.set_tree_context([download_stage, parse_stage], stage_mode='process', stage_name='Splitter')
     download_stage.set_tree_context([], stage_mode='process', stage_name='Downloader')
     parse_stage.set_tree_context([], stage_mode='process', stage_name='Parser')
 
@@ -200,16 +200,17 @@ def test_task_tree_2():
     # 测试输入：生成不同 URL 的任务
     input_tasks = range(5)
 
-    result = tree.test_methods(input_tasks)
-    test_table_list, execution_modes, stage_modes, index_header = result["Time table"]
-    result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
+    tree.start_tree(input_tasks)
+    # result = tree.test_methods(input_tasks)
+    # test_table_list, execution_modes, stage_modes, index_header = result["Time table"]
+    # result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
 
-    for key, value in result.items():
-        if isinstance(value, dict):
-            value = pprint.pformat(value)
-        logging.info(f"{key}: \n{value}")
+    # for key, value in result.items():
+    #     if isinstance(value, dict):
+    #         value = pprint.pformat(value)
+    #     logging.info(f"{key}: \n{value}")
 
-def test_task_web_0():
+def _test_task_web_0():
     # 定义任务节点
     A = TaskManager(func=sleep_random_48, execution_mode='serial')
     B = TaskManager(func=sleep_random_48, execution_mode='serial')
@@ -231,7 +232,7 @@ def test_task_web_0():
     
     tree.start_tree(range(10))
 
-def test_task_web_1():
+def _test_task_web_1():
     # 定义任务节点
     generate_stage = TaskManager(func=generate_urls, execution_mode='thread', worker_limit=4)
     logr_stage = TaskManager(func=log_urls, execution_mode='thread', worker_limit=4)
@@ -262,5 +263,5 @@ def profile_task_tree():
 # 在主函数或脚本中调用此函数，而不是在测试中
 if __name__ == "__main__":
     # test_task_tree_2()
-    test_task_web_1()
+    # test_task_web_1()
     pass

@@ -143,10 +143,11 @@ class TaskTree:
 
             start_time = self.stage_start_time_dict.get(tag, 0)
             is_active = self.stage_active_dict.get(tag, False)
-            last_update_time = self.stage_update_time_dict.get(tag, start_time) if start_time else 0   
+            last_update_time = self.stage_update_time_dict.get(tag, now)
 
             # 更新时间消耗（仅在 pending 非 0 时刷新）
             if start_time:
+                elapsed = self.stage_elapsed_time_dict.get(tag, 0)
                 if pending > 0:
                     # 有pending任务时，累计从上一次更新时间到现在的时间
                     elapsed += now - last_update_time
@@ -163,10 +164,10 @@ class TaskTree:
             status_dict[tag] = {
                 **stage.get_status_snapshot(),
                 "active": is_active,
+                "tasks_pending": pending,
                 "start_time": self.format_timestamp(start_time),
                 "elapsed_time": self.format_duration(elapsed),
                 "remaining_time": self.format_duration(remaining),
-                "tasks_pending": pending,
             }
 
         return status_dict
@@ -457,7 +458,7 @@ class TaskTree:
         results = {}
         test_table_list = []
         final_result_dict = {}
-        final_error_dict = {}
+        fail_by_error_dict = {}
         fail_by_stage_dict = {}
         failed_tasks = []
 
@@ -472,7 +473,7 @@ class TaskTree:
 
                 time_list.append(time.time() - start_time)
                 final_result_dict.update(self.get_final_result_dict())
-                final_error_dict.update(self.get_final_error_dict())
+                fail_by_error_dict.update(self.get_fail_by_error_dict())
                 fail_by_stage_dict.update(self.get_fail_by_stage_dict())
                 failed_tasks += [
                     task for task in self.get_failed_tasks() if task not in failed_tasks
@@ -487,9 +488,9 @@ class TaskTree:
             r"stage\execution",
         )
         results["Final result dict"] = final_result_dict
-        results["Final error dict"] = final_error_dict
-        results["Final fail dict"] = fail_by_stage_dict
-        results["Failed tasks"] = failed_tasks
+        results["Fail error dict"] = fail_by_error_dict
+        results["Fail stage dict"] = fail_by_stage_dict
+        results["Fail tasks"] = failed_tasks
         return results
 
 
@@ -507,3 +508,10 @@ class TaskChain(TaskTree):
 
         root_stage = stages[0]
         super().__init__(root_stage, start_web_server)
+
+    def start_chain(self, task_list: List[Any]):
+        """
+        启动任务链
+        :param task_list: 任务列表
+        """
+        self.start_tree(task_list)
