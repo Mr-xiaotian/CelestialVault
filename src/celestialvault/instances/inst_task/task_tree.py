@@ -47,8 +47,10 @@ class TaskTree:
         self.stage_start_time_dict: Dict[str, float] = {}
         self.stage_elapsed_time_dict: Dict[str, float] = {}
         self.stage_update_time_dict: Dict[str, float] = {}
+        self.stage_is_pending_dict: Dict[str, bool] = {}
         
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
+        self.fail_task_time_dict = {}  # 用于保存失败任务到失败时间的映射(不精确)
         self.fail_by_error_dict = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
         self.fail_by_stage_dict = defaultdict(list)  # 用于保存节点到节点失败任务的映射
 
@@ -144,11 +146,14 @@ class TaskTree:
             start_time = self.stage_start_time_dict.get(tag, 0)
             is_active = self.stage_active_dict.get(tag, False)
             last_update_time = self.stage_update_time_dict.get(tag, now)
+            stage_is_pending_last_time = self.stage_is_pending_dict.get(tag, False)
+
+            self.stage_is_pending_dict[tag] = True if pending else False
 
             # 更新时间消耗（仅在 pending 非 0 时刷新）
             if start_time:
                 elapsed = self.stage_elapsed_time_dict.get(tag, 0)
-                if pending > 0:
+                if pending and stage_is_pending_last_time:
                     # 有pending任务时，累计从上一次更新时间到现在的时间
                     elapsed += now - last_update_time
                     # 更新最后更新时间
@@ -330,6 +335,9 @@ class TaskTree:
                 error_key = (f"{type(error).__name__}({error})", stage_tag)
                 self.fail_by_error_dict[error_key].append(task) if task not in self.fail_by_error_dict[error_key] else None
                 self.fail_by_stage_dict[stage_tag].append(task) if task not in self.fail_by_stage_dict[stage_tag] else None
+
+                if task not in self.fail_task_time_dict:
+                    self.fail_task_time_dict[task] = time.time()
 
     def get_stage_dict(self):
         """

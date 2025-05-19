@@ -39,7 +39,7 @@ class TaskWebServer:
                         "error": err,
                         "node": tag,
                         "task_id": str(task),
-                        "timestamp": "2024/1/1 08:00:00"
+                        "timestamp": self.task_tree.fail_task_time_dict[task]
                     })
             return jsonify(errors_list)
         

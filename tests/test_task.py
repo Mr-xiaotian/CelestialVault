@@ -232,7 +232,7 @@ def _test_task_web_0():
     
     tree.start_tree(range(10))
 
-def _test_task_web_1():
+def test_task_web_1():
     # 定义任务节点
     generate_stage = TaskManager(func=generate_urls, execution_mode='thread', worker_limit=4)
     logr_stage = TaskManager(func=log_urls, execution_mode='thread', worker_limit=4)
@@ -263,5 +263,5 @@ def profile_task_tree():
 # 在主函数或脚本中调用此函数，而不是在测试中
 if __name__ == "__main__":
     # test_task_tree_2()
-    # test_task_web_1()
+    test_task_web_1()
     pass

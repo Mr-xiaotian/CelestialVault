@@ -301,16 +301,25 @@ function renderErrors() {
     return;
   }
 
-  for (const e of filtered) {
+  // 按时间戳降序排序（最新的错误排在最前面）
+  const sortedByTime = [...filtered].sort((a, b) => b.timestamp - a.timestamp);
+
+  for (const e of sortedByTime) {
     const row = document.createElement("tr");
     row.innerHTML = `
           <td class="error-message">${e.error}</td>
           <td>${e.node}</td>
           <td>${e.task_id}</td>
-          <td>${e.timestamp}</td>
+          <td>${formatTimestamp(e.timestamp)}</td>
         `;
     errorsTableBody.appendChild(row);
   }
+}
+
+function formatTimestamp(timestamp) {
+  return new Date(timestamp * 1000).toLocaleString();
+  // 或自定义格式，如：
+  // return new Date(timestamp).toISOString().replace("T", " ").slice(0, 19);
 }
 
 function populateNodeFilter() {
