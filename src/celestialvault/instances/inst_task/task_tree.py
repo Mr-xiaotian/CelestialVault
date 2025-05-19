@@ -13,7 +13,7 @@ from .task_web import TaskWebServer
 
 
 class TaskTree:
-    def __init__(self, root_stage: TaskManager, start_web_server=False):
+    def __init__(self, root_stage: TaskManager, start_web_server=False, web_host="0.0.0.0", web_port=5000):
         """
         :param root_stage: 任务链的根 TaskManager 节点
         :param start_web_server: 是否启动 web 服务
@@ -24,7 +24,7 @@ class TaskTree:
         self.web_server = None
         if start_web_server:
             self.web_active = True
-            self.web_server = TaskWebServer(self)
+            self.web_server = TaskWebServer(self, web_host, web_port)
             self.web_server.start_server()
 
     def init_env(self, tasks: list):

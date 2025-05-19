@@ -1,11 +1,11 @@
 # inst_task/task_web.py
 
-import threading, os, logging
+import threading, os, logging, requests
 from flask import Flask, jsonify, render_template, request
 
 class TaskWebServer:
     # from .task_tree import TaskTree
-    def __init__(self, task_tree, host='127.0.0.1', port=5000):
+    def __init__(self, task_tree, host='0.0.0.0', port=5000):
         from .task_tree import TaskTree
         self.task_tree: TaskTree = task_tree
         self.app = Flask(__name__, static_folder="static", template_folder="templates")
@@ -54,8 +54,19 @@ class TaskWebServer:
 
     def start_server(self):
         def run():
+            logging.getLogger('werkzeug').setLevel(logging.ERROR)
             self.app.run(host=self.host, port=self.port, debug=False, use_reloader=False)
         
-        logging.getLogger('werkzeug').setLevel(logging.ERROR)
         self.thread = threading.Thread(target=run)
         self.thread.start()
+
+    def stop_server(self):
+        try:
+            url = f"http://{self.host}:{self.port}/shutdown"
+            requests.post(url, timeout=2)
+        except Exception as e:
+            print(f"[stop_server] 停止 Web 服务时发生异常: {e}")
+        finally:
+            if self.thread:
+                self.thread.join(timeout=5)
+                self.thread = None
