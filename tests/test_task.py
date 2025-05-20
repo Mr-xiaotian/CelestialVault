@@ -2,7 +2,7 @@ import pytest, logging, asyncio, pprint
 import cProfile, subprocess, random
 from time import time, strftime, localtime, sleep
 from celestialvault.tools.TextTools import format_table
-from celestialvault.instances.inst_task import TaskManager, TaskTree, TaskSplitter, TaskWebServer
+from celestialvault.instances.inst_task import TaskManager, TaskTree, TaskSplitter
 
 def sleep_1(n):
     sleep(1)
@@ -72,7 +72,6 @@ def square(x):
 def square_root(x):
     return x ** 0.5
 
-# 模拟返回列表的 stage
 def generate_urls(x):
     sleep_random_48(2)
     return tuple([f"url_{x}_{i}" for i in range(random.randint(1, 4))])

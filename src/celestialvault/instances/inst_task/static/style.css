@@ -214,6 +214,14 @@ button {
     color: var(--danger-color);
 }
 
+.text-blue {
+    color: var(--primary-color);
+}
+
+.text-yellow {
+    color: var(--warning-color);
+}
+
 .text-sm {
     font-size: 0.875rem;
 }

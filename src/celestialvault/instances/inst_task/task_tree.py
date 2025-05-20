@@ -10,7 +10,6 @@ from typing import Any, Dict, List
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
 from .task_support import TERMINATION_SIGNAL, TaskError, task_logger
-from .task_web import TaskWebServer
 
 
 class TaskTree:
@@ -85,6 +84,7 @@ class TaskTree:
         设定根节点
         """
         self.root_stage = root_stage
+        self.root_stage.set_prev_stage(None)
 
     def set_tree_mode(self, stage_mode: str, execution_mode: str):
         """
@@ -567,7 +567,6 @@ class TaskChain(TaskTree):
             stage.set_tree_context(next_stages, chain_mode, stage_name)
 
         root_stage = stages[0]
-        root_stage.set_prev_stage(None)
         super().__init__(root_stage)
 
     def start_chain(self, task_list: List[Any]):
