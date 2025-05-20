@@ -567,6 +567,7 @@ class TaskChain(TaskTree):
             stage.set_tree_context(next_stages, chain_mode, stage_name)
 
         root_stage = stages[0]
+        root_stage.set_prev_stage(None)
         super().__init__(root_stage)
 
     def start_chain(self, task_list: List[Any]):
