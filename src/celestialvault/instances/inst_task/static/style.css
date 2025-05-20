@@ -40,6 +40,10 @@ header {
     align-items: center;
 }
 
+select {
+  cursor: pointer;
+}
+
 h1 {
     font-size: 1.5rem;
     font-weight: 700;
@@ -164,6 +168,12 @@ button {
     border-radius: 0.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     padding: 1rem;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
 }
 
 .card-header {
@@ -382,7 +392,7 @@ th {
 }
 
 h1 {
-    color: #333;
+    color: #fff;
     text-align: center;
     margin-bottom: 30px;
 }
@@ -401,6 +411,7 @@ h1 {
 }
 
 .tree ul {
+    border-left: 2px solid #e0e0e0; /* 清晰的父子线 */
     padding-left: 20px;
     margin: 0;
 }
@@ -410,26 +421,6 @@ h1 {
     list-style-type: none;
     /* position: relative; */
     padding-left: 25px;
-}
-
-.tree li::before {
-    content: "";
-    position: absolute;
-    top: 12px;
-    left: 0;
-    width: 20px;
-    height: 2px;
-    background-color: #4c84ff;
-}
-
-.tree li::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 2px;
-    height: 100%;
-    background-color: #4c84ff;
 }
 
 .tree li:last-child::after {
@@ -521,9 +512,8 @@ h1 {
 }
 
 /* 切换主题 */
-.theme-toggle {
+#theme-toggle {
     position: absolute;
-    top: 20px;
     right: 20px;
     background-color: #4c84ff;
     color: white;
@@ -534,16 +524,224 @@ h1 {
     transition: all 0.3s ease;
 }
 
-.theme-toggle:hover {
+#theme-toggle:hover {
     background-color: #3b6fd9;
 }
 
 /* 暗黑主题 */
 .dark-theme {
-    background-color: #1a1a1a;
-    color: #e0e0e0;
+  background-color: #1a1a1a;
+  color: #e0e0e0;
 }
 
+/* 容器背景 */
+.dark-theme body,
+.dark-theme .container {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+}
+
+/* === 顶部 header === */
+.dark-theme header {
+  background-color: #111827; /* 深蓝灰 */
+  color: #f3f4f6;
+}
+
+.dark-theme .control-panel select,
+.dark-theme .control-panel button {
+  background-color: #374151;
+  color: #f3f4f6;
+  border: 1px solid #4b5563;
+}
+
+.dark-theme select {
+  background-color: #2c2c2c;
+  color: #e0e0e0;
+  border: 1px solid #555;
+}
+
+/* theme-toggle 暗黑模式适配 */
+.dark-theme #theme-toggle {
+    background-color: #374151;  /* 深灰背景 */
+    color: #f3f4f6;              /* 浅文字 */
+    border: 1px solid #4b5563;   /* 灰色边框（可选） */
+}
+
+/* hover 效果优化 */
+.dark-theme #theme-toggle:hover {
+    background-color: #4b5563;
+}
+
+/* === 选项卡 === */
+.dark-theme .tabs {
+    border-bottom: 2px solid #374151;
+}
+
+.dark-theme .tab-btn {
+  color: #cbd5e1;
+}
+
+.dark-theme .tab-btn.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+}
+
+.dark-theme .tab-btn:hover {
+  background-color: #2a2a2a;
+}
+
+/* === 卡片 === */
+.dark-theme .card {
+  background-color: #2a2a2a;
+  color: #e0e0e0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .card-title {
+  color: #f3f4f6;
+}
+
+/* === 仪表盘卡片统计文字 === */
+.dark-theme .stat-label {
+  color: #a1a1aa;
+}
+
+.dark-theme .text-gray {
+  color: #9ca3af;
+}
+
+/* === 徽章与按钮 === */
+.dark-theme .badge-success {
+  background-color: #16a34a;
+}
+
+.dark-theme .badge-inactive {
+  background-color: #6b7280;
+}
+
+.dark-theme button {
+  background-color: #374151;
+  color: #f3f4f6;
+}
+
+.dark-theme .btn-stop {
+  background-color: #b91c1c;
+}
+
+.dark-theme .btn-stop:hover {
+  background-color: #991b1b;
+}
+
+.dark-theme .btn-start {
+  background-color: #15803d;
+}
+
+.dark-theme .btn-start:hover {
+  background-color: #166534;
+}
+
+.dark-theme .btn-reset {
+  background-color: #b45309;
+}
+
+.dark-theme .btn-reset:hover {
+  background-color: #92400e;
+}
+
+/* === 表格 === */
+.dark-theme table {
+  background-color: #1f2937;
+  color: #e5e7eb;
+}
+
+.dark-theme th {
+  background-color: #374151;
+  color: #d1d5db;
+}
+
+.dark-theme th,
+.dark-theme td {
+  border-bottom: 1px solid #374151;
+}
+
+/* === 错误日志颜色 === */
+.dark-theme .error-message {
+  color: #f87171;
+}
+
+/* === 无错误提示 === */
+.dark-theme .no-errors {
+  color: #9ca3af;
+}
+
+/* === summary 卡片 === */
+.dark-theme .summary-item.blue {
+  background-color: #1e3a8a;
+}
+
+.dark-theme .summary-item.yellow {
+  background-color: #78350f;
+}
+
+.dark-theme .summary-item.red {
+  background-color: #7f1d1d;
+}
+
+.dark-theme .summary-item.green {
+  background-color: #14532d;
+}
+
+.dark-theme .summary-value.blue {
+  color: #60a5fa;
+}
+
+.dark-theme .summary-value.yellow {
+  color: #facc15;
+}
+
+.dark-theme .summary-value.red {
+  color: #f87171;
+}
+
+.dark-theme .summary-value.green {
+  color: #34d399;
+}
+
+.dark-theme .summary-label {
+  color: #9ca3af;
+}
+
+/* === 侧边栏 === */
+.dark-theme .sidebar {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+
+.dark-theme .sidebar-item {
+  color: #cbd5e1;
+}
+
+.dark-theme .sidebar-item.active {
+  color: #3b82f6;
+}
+
+/* === progress bar === */
+.dark-theme .progress-bar {
+  background-color: #374151;
+}
+
+.dark-theme .progress-value {
+  background-color: #3b82f6;
+}
+
+/* === 下拉过滤器 === */
+.dark-theme #node-filter {
+  background-color: #2c2c2c;
+  color: #e0e0e0;
+  border: 1px solid #555;
+}
+
+/* === 树形结构 === */
 .dark-theme .tree-container {
     background-color: #2d2d2d;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);

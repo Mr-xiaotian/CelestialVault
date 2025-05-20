@@ -377,8 +377,10 @@ class TaskTree:
                     print(f"[Reporter] Error during push: {e}")
                 self._report_stop_flag.wait(interval)  # 替代 time.sleep
 
-        self._report_structure_once(web_host, web_port)  # ✅ 只发一次
         if self._report_thread is None or not self._report_thread.is_alive():
+            self._report_structure_once(web_host, web_port)  # ✅ 只发一次
+            
+            self._report_stop_flag = threading.Event()  
             self._report_stop_flag.clear()
             self._report_thread = threading.Thread(target=loop, daemon=True)
             self._report_thread.start()

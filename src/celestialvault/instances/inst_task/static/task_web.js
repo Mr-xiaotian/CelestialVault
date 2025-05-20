@@ -3,7 +3,7 @@ let errors = [];
 let refreshRate = 5000;
 let refreshIntervalId = null;
 
-const statusIndicator = document.getElementById("status-indicator");
+const themeToggleBtn = document.getElementById("theme-toggle");
 const refreshSelect = document.getElementById("refresh-interval");
 const tabButtons = document.querySelectorAll(".tab-btn");
 const tabContents = document.querySelectorAll(".tab-content");
@@ -22,6 +22,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     refreshRate = parseInt(refreshSelect.value);
     clearInterval(refreshIntervalId);
     refreshIntervalId = setInterval(refreshAll, refreshRate);
+  });
+
+  // 初始化时应用之前选择的主题
+  if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark-theme");
+    themeToggleBtn.textContent = "🌞 白天模式";
+  } else {
+    themeToggleBtn.textContent = "🌙 夜间模式";
+  }
+
+  themeToggleBtn.addEventListener("click", () => {
+    const isDark = document.body.classList.toggle("dark-theme");
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+    themeToggleBtn.textContent = isDark ? "🌞 白天模式" : "🌙 夜间模式";
   });
 
   tabButtons.forEach((button) => {
@@ -66,8 +80,8 @@ async function loadStatuses() {
 
 async function loadStructure() {
   try {
-    const res = await fetch('/api/structure');
-    const data = await res.json();  // 结构是结构化 JSON
+    const res = await fetch("/api/structure");
+    const data = await res.json(); // 结构是结构化 JSON
     renderTree(data);
   } catch (e) {
     console.error("结构加载失败", e);
@@ -76,67 +90,67 @@ async function loadStructure() {
 
 // 根据数据渲染树形结构
 function renderTree(data) {
-    const treeContainer = document.getElementById('task-tree');
-    treeContainer.innerHTML = '';
-    
-    function buildTreeHTML(node, isLastChild = true) {
-        let html = '<li>';
-        
-        // 添加节点内容
-        html += `<div class="tree-node collapsible" onclick="toggleNode(this)">`;
-        
-        // 如果有子节点，添加展开/折叠图标
-        if (node.next_stages && node.next_stages.length > 0) {
-            html += `<span class="collapse-icon">-</span>`;
-        }
-        
-        html += `<span class="stage-name">${node.stage_name}</span>`;
-        html += `<span class="stage-mode">(stage_mode: ${node.stage_mode})</span>`;
-        html += `<span class="stage-func">func: ${node.func_name}</span>`;
-        
-        if (node.visited) {
-            html += `<span class="visited-mark">already visited</span>`;
-        }
-        
-        html += '</div>';
-        
-        // 添加子节点
-        if (node.next_stages && node.next_stages.length > 0) {
-            html += '<ul>';
-            node.next_stages.forEach((childNode, index) => {
-                const isLast = index === node.next_stages.length - 1;
-                html += buildTreeHTML(childNode, isLast);
-            });
-            html += '</ul>';
-        }
-        
-        html += '</li>';
-        return html;
+  const treeContainer = document.getElementById("task-tree");
+  treeContainer.innerHTML = "";
+
+  function buildTreeHTML(node, isLastChild = true) {
+    let html = "<li>";
+
+    // 添加节点内容
+    html += `<div class="tree-node collapsible" onclick="toggleNode(this)">`;
+
+    // 如果有子节点，添加展开/折叠图标
+    if (node.next_stages && node.next_stages.length > 0) {
+      html += `<span class="collapse-icon">-</span>`;
     }
-    
-    const rootHTML = `<ul>${buildTreeHTML(data)}</ul>`;
-    treeContainer.innerHTML = rootHTML;
-    
-    // 打印树的HTML结构到控制台，用于调试
-    // console.log("树的HTML结构:", treeContainer.innerHTML);
+
+    html += `<span class="stage-name">${node.stage_name}</span>`;
+    html += `<span class="stage-mode">(stage_mode: ${node.stage_mode})</span>`;
+    html += `<span class="stage-func">func: ${node.func_name}</span>`;
+
+    if (node.visited) {
+      html += `<span class="visited-mark">already visited</span>`;
+    }
+
+    html += "</div>";
+
+    // 添加子节点
+    if (node.next_stages && node.next_stages.length > 0) {
+      html += "<ul>";
+      node.next_stages.forEach((childNode, index) => {
+        const isLast = index === node.next_stages.length - 1;
+        html += buildTreeHTML(childNode, isLast);
+      });
+      html += "</ul>";
+    }
+
+    html += "</li>";
+    return html;
+  }
+
+  const rootHTML = `<ul>${buildTreeHTML(data)}</ul>`;
+  treeContainer.innerHTML = rootHTML;
+
+  // 打印树的HTML结构到控制台，用于调试
+  // console.log("树的HTML结构:", treeContainer.innerHTML);
 }
 
 // 切换节点展开/折叠
 function toggleNode(element) {
-    const childList = element.nextElementSibling;
-    if (childList && childList.tagName === 'UL') {
-        childList.classList.toggle('hidden');
-        
-        const icon = element.querySelector('.collapse-icon');
-        if (icon) {
-            icon.textContent = childList.classList.contains('hidden') ? '+' : '-';
-        }
+  const childList = element.nextElementSibling;
+  if (childList && childList.tagName === "UL") {
+    childList.classList.toggle("hidden");
+
+    const icon = element.querySelector(".collapse-icon");
+    if (icon) {
+      icon.textContent = childList.classList.contains("hidden") ? "+" : "-";
     }
+  }
 }
 
 // 切换主题
 function toggleTheme() {
-    document.body.classList.toggle('dark-theme');
+  document.body.classList.toggle("dark-theme");
 }
 
 async function loadErrors() {
