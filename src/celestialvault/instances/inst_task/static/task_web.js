@@ -17,6 +17,9 @@ const totalErrors = document.getElementById("total-errors");
 const totalNodes = document.getElementById("total-nodes");
 const shutdownBtn = document.getElementById("shutdown-btn");
 
+// 初始化折叠节点记录
+let collapsedNodeIds = new Set(JSON.parse(localStorage.getItem("collapsedNodes") || "[]"));
+
 document.addEventListener("DOMContentLoaded", async () => {
   refreshSelect.addEventListener("change", () => {
     refreshRate = parseInt(refreshSelect.value);
@@ -82,71 +85,82 @@ async function loadStructure() {
   try {
     const res = await fetch("/api/structure");
     const data = await res.json(); // 结构是结构化 JSON
+
+    // 判断是否为空对象或空数组
+    if (Object.keys(data).length === 0) {
+      return;
+    }
+
     renderTree(data);
   } catch (e) {
     console.error("结构加载失败", e);
   }
 }
 
-// 根据数据渲染树形结构
 function renderTree(data) {
-  const treeContainer = document.getElementById("task-tree");
-  treeContainer.innerHTML = "";
+    const treeContainer = document.getElementById('task-tree');
+    treeContainer.innerHTML = '';
 
-  function buildTreeHTML(node, isLastChild = true) {
-    let html = "<li>";
+    function buildTreeHTML(node, path = "") {
+        const nodeId = path ? `${path}/${node.stage_name}` : node.stage_name;
+        let html = '<li>';
 
-    // 添加节点内容
-    html += `<div class="tree-node collapsible" onclick="toggleNode(this)">`;
+        // 节点展示内容
+        html += `<div class="tree-node collapsible" data-id="${nodeId}" onclick="toggleNode(this)">`;
 
-    // 如果有子节点，添加展开/折叠图标
-    if (node.next_stages && node.next_stages.length > 0) {
-      html += `<span class="collapse-icon">-</span>`;
+        if (node.next_stages && node.next_stages.length > 0) {
+            html += `<span class="collapse-icon">${collapsedNodeIds.has(nodeId) ? '+' : '-'}</span>`;
+        }
+
+        html += `<span class="stage-name">${node.stage_name}</span>`;
+        html += `<span class="stage-mode">(stage_mode: ${node.stage_mode})</span>`;
+        html += `<span class="stage-func">func: ${node.func_name}</span>`;
+
+        if (node.visited) {
+            html += `<span class="visited-mark">already visited</span>`;
+        }
+
+        html += '</div>';
+
+        // 子节点递归渲染
+        if (node.next_stages && node.next_stages.length > 0) {
+            const isCollapsed = collapsedNodeIds.has(nodeId);
+            html += `<ul ${isCollapsed ? 'class="hidden"' : ''}>`;
+            node.next_stages.forEach((childNode) => {
+                html += buildTreeHTML(childNode, nodeId);
+            });
+            html += '</ul>';
+        }
+
+        html += '</li>';
+        return html;
     }
 
-    html += `<span class="stage-name">${node.stage_name}</span>`;
-    html += `<span class="stage-mode">(stage_mode: ${node.stage_mode})</span>`;
-    html += `<span class="stage-func">func: ${node.func_name}</span>`;
-
-    if (node.visited) {
-      html += `<span class="visited-mark">already visited</span>`;
-    }
-
-    html += "</div>";
-
-    // 添加子节点
-    if (node.next_stages && node.next_stages.length > 0) {
-      html += "<ul>";
-      node.next_stages.forEach((childNode, index) => {
-        const isLast = index === node.next_stages.length - 1;
-        html += buildTreeHTML(childNode, isLast);
-      });
-      html += "</ul>";
-    }
-
-    html += "</li>";
-    return html;
-  }
-
-  const rootHTML = `<ul>${buildTreeHTML(data)}</ul>`;
-  treeContainer.innerHTML = rootHTML;
-
-  // 打印树的HTML结构到控制台，用于调试
-  // console.log("树的HTML结构:", treeContainer.innerHTML);
+    const rootHTML = `<ul>${buildTreeHTML(data)}</ul>`;
+    treeContainer.innerHTML = rootHTML;
 }
 
-// 切换节点展开/折叠
+// 节点折叠/展开，并保存到 localStorage
 function toggleNode(element) {
-  const childList = element.nextElementSibling;
-  if (childList && childList.tagName === "UL") {
-    childList.classList.toggle("hidden");
+    const childList = element.nextElementSibling;
+    const nodeId = element.dataset.id;
+    if (!nodeId || !childList || childList.tagName !== 'UL') return;
 
-    const icon = element.querySelector(".collapse-icon");
+    const isNowHidden = childList.classList.toggle('hidden');
+    const icon = element.querySelector('.collapse-icon');
     if (icon) {
-      icon.textContent = childList.classList.contains("hidden") ? "+" : "-";
+        icon.textContent = isNowHidden ? '+' : '-';
     }
-  }
+
+    // 更新本地存储
+    if (isNowHidden) {
+        collapsedNodeIds.add(nodeId);
+    } else {
+        collapsedNodeIds.delete(nodeId);
+    }
+    localStorage.setItem("collapsedNodes", JSON.stringify([...collapsedNodeIds]));
 }
+
 
 // 切换主题
 function toggleTheme() {

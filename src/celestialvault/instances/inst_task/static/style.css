@@ -515,7 +515,7 @@ h1 {
 #theme-toggle {
     position: absolute;
     right: 20px;
-    background-color: #4c84ff;
+    background-color: #374151;
     color: white;
     border: none;
     border-radius: 20px;
@@ -562,7 +562,7 @@ h1 {
 
 /* theme-toggle 暗黑模式适配 */
 .dark-theme #theme-toggle {
-    background-color: #374151;  /* 深灰背景 */
+    background-color: #3b6fd9;   /* 深蓝背景 */
     color: #f3f4f6;              /* 浅文字 */
     border: 1px solid #4b5563;   /* 灰色边框（可选） */
 }
