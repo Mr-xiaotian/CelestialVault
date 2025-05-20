@@ -67,78 +67,11 @@ async function loadStatuses() {
 async function loadStructure() {
   try {
     const res = await fetch('/api/structure');
-    const structureText = await res.json();  // 结构是一个字符串数组
-    const joined = structureText.join('\n');
-    const data = parseStructureText(joined);
+    const data = await res.json();  // 结构是结构化 JSON
     renderTree(data);
   } catch (e) {
     console.error("结构加载失败", e);
   }
-}
-
-// 解析文本格式的任务结构并转换为树形数据结构
-function parseStructureText(text) {
-    // 移除顶部和底部边框
-    const lines = text.trim().split('\n');
-    const contentLines = lines.slice(1, lines.length - 1);
-    
-    // 解析行内容的正则表达式
-    const stagePattern = /\| (\s*╘-->)?([^(]+) \(stage_mode: ([^,]+), func: ([^)]+)\)(.*?)\|$/;
-    
-    // 查找根节点
-    const rootMatch = contentLines[0].match(stagePattern);
-    if (!rootMatch) return null;
-    
-    const root = {
-        stage_name: rootMatch[2].trim(),
-        stage_mode: rootMatch[3].trim(),
-        func_name: rootMatch[4].trim(),
-        visited: rootMatch[5] && rootMatch[5].includes("already visited"),
-        next_stages: []
-    };
-    
-    // 记录当前的节点栈和层级
-    const nodeStack = [{ node: root, level: 0 }];
-    
-    // 遍历剩余行
-    for (let i = 1; i < contentLines.length; i++) {
-        const line = contentLines[i];
-        const match = line.match(stagePattern);
-        
-        if (match) {
-            // 判断是否有前导箭头和缩进
-            const hasArrow = match[1] !== undefined;
-            if (!hasArrow) continue; // 跳过没有箭头的行
-            
-            // 计算缩进级别（计算前导空格数量 / 4）
-            const indentText = match[1]; // 包含 ╘--> 的部分
-            const indentLevel = (indentText.match(/\s/g) || []).length / 4 + 1;
-            
-            // 创建新节点
-            const newNode = {
-                stage_name: match[2].trim(),
-                stage_mode: match[3].trim(),
-                func_name: match[4].trim(),
-                visited: match[5] && match[5].includes("already visited"),
-                next_stages: []
-            };
-            
-            // 找到正确的父节点
-            // 当栈顶节点层级大于等于当前节点层级时，弹出栈顶
-            while (nodeStack.length > 1 && nodeStack[nodeStack.length - 1].level >= indentLevel) {
-                nodeStack.pop();
-            }
-            
-            // 将新节点添加到父节点的子节点列表
-            const parentNode = nodeStack[nodeStack.length - 1].node;
-            parentNode.next_stages.push(newNode);
-            
-            // 将新节点压入栈
-            nodeStack.push({ node: newNode, level: indentLevel });
-        }
-    }
-    
-    return root;
 }
 
 // 根据数据渲染树形结构

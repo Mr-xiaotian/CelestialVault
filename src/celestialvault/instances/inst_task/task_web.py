@@ -3,10 +3,6 @@
 import logging, os
 from flask import Flask, jsonify, render_template, request
 
-# 用于存储状态、结构、错误信息
-status_store = {}
-structure_store = []
-error_store = []
 
 class TaskWebServer:
     def __init__(self, host="0.0.0.0", port=5000):
@@ -14,7 +10,11 @@ class TaskWebServer:
         self.host = host
         self.port = port
         self._setup_routes()
-        self.thread = None
+
+        # 用于存储状态、结构、错误信息
+        self.status_store = {}
+        self.structure_store = []
+        self.error_store = []
 
     def _setup_routes(self):
         app = self.app
@@ -26,33 +26,30 @@ class TaskWebServer:
         # ---- 展示接口 ----
         @app.route("/api/structure")
         def get_structure():
-            return jsonify(structure_store)
+            return jsonify(self.structure_store)
 
         @app.route("/api/status")
         def get_status():
-            return jsonify(status_store)
+            return jsonify(self.status_store)
 
         @app.route("/api/errors")
         def get_errors():
-            return jsonify(error_store)
+            return jsonify(self.error_store)
 
         # ---- 接收接口 ----
         @app.route("/api/push_structure", methods=["POST"])
         def push_structure():
-            global structure_store
-            structure_store = request.json
+            self.structure_store = request.json
             return jsonify({"ok": True})
 
         @app.route("/api/push_status", methods=["POST"])
         def push_status():
-            global status_store
-            status_store = request.json
+            self.status_store = request.json
             return jsonify({"ok": True})
 
         @app.route("/api/push_errors", methods=["POST"])
         def push_errors():
-            global error_store
-            error_store = request.json
+            self.error_store = request.json
             return jsonify({"ok": True})
 
         @app.route("/shutdown", methods=["POST"])

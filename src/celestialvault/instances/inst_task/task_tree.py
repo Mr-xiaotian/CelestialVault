@@ -177,7 +177,7 @@ class TaskTree:
 
     def start_tree(self, init_tasks):
         start_time = time.time()
-        structure_list = self.format_structure_list()
+        structure_list = self.format_structure_list_from_tree()
         task_logger.start_tree(structure_list)
 
         self.init_env(init_tasks)
@@ -391,7 +391,7 @@ class TaskTree:
             self._report_thread = None
 
     def _report_structure_once(self, host="127.0.0.1", port=5000):
-        structure = self.format_structure_list()
+        structure = self.get_structure_tree(self.root_stage)
         try:
             requests.post(f"http://{host}:{port}/api/push_structure", json=structure, timeout=1)
         except Exception as e:
@@ -399,10 +399,6 @@ class TaskTree:
 
     def _report_once(self, host="127.0.0.1", port=5000):
         base_url = f"http://{host}:{port}"
-        
-        # 上报结构（一般只需一次）
-        structure = self.format_structure_list()
-        requests.post(f"{base_url}/api/push_structure", json=structure, timeout=1)
 
         # 上报状态
         status_data = self.get_status_dict()
@@ -421,63 +417,71 @@ class TaskTree:
                 })
         requests.post(f"{base_url}/api/push_errors", json=error_data, timeout=1)
 
-    def get_structure_list(
-        self, task_manager: TaskManager, indent=0, visited_stages=None
-    ):
+    def get_structure_tree(self, task_manager: TaskManager, visited_stages=None):
         """
-        递归生成任务链的打印列表
+        构建任务链的 JSON 树结构
         :param task_manager: 当前处理的 TaskManager
-        :param indent: 当前缩进级别
         :param visited_stages: 已访问的 TaskManager 集合，避免重复访问
-        :return: 打印内容列表
+        :return: JSON 结构的任务树
         """
         visited_stages = visited_stages or set()
-        scructure_list = []
 
-        stage_info = f"{task_manager.stage_name} (stage_mode: {task_manager.stage_mode}, func: {task_manager.func.__name__})"
+        node = {
+            "stage_name": task_manager.stage_name,
+            "stage_mode": task_manager.stage_mode,
+            "func_name": task_manager.func.__name__,
+            "visited": False,
+            "next_stages": []
+        }
 
-        # 防止重复访问
         if task_manager in visited_stages:
-            scructure_list.append(f"{stage_info} (already visited)")
-            return scructure_list
+            node["visited"] = True
+            return node
 
-        # 打印当前 TaskManager
         visited_stages.add(task_manager)
-        scructure_list.append(stage_info)
 
-        # 遍历后续节点
         for next_stage in task_manager.next_stages:
-            sub_scructure_list = self.get_structure_list(
-                next_stage, indent + 2, visited_stages
-            )
-            scructure_list.append("  " * indent + "╘-->")
-            scructure_list[-1] += sub_scructure_list[0]
-            scructure_list.extend(sub_scructure_list[1:])
+            child_node = self.get_structure_tree(next_stage, visited_stages)
+            node["next_stages"].append(child_node)
 
-        return scructure_list
-
-    def format_structure_list(self, task_manager=None):
+        return node
+    
+    def format_structure_list_from_tree(self, tree_root: dict = None, indent=0):
         """
-        格式化任务链的打印列表
-        :param task_manager: 起始 TaskManager
+        从 JSON 树结构直接生成带边框的格式化任务结构文本列表
+        :param tree_root: JSON 格式任务树根节点
+        :param indent: 当前缩进级别
+        :return: 带边框的格式化字符串列表
         """
-        task_manager = task_manager or self.root_stage
-        structure_list = self.get_structure_list(task_manager, 0, set())
 
-        # 找到最长行的宽度
-        max_length = max(len(line) for line in structure_list)
+        def build_lines(node, current_indent):
+            lines = []
 
-        # 对每一行进行补齐
-        formatted_list = [
-            f"| {line.ljust(max_length)} |"  # 左对齐，首尾加 '|'
-            for line in structure_list
-        ]
+            # 构建当前节点的行文本
+            visited_note = " (already visited)" if node.get("visited") else ""
+            line = f"{node['stage_name']} (stage_mode: {node['stage_mode']}, func: {node['func_name']}){visited_note}"
+            lines.append(line)
 
-        # 添加顶部和底部边框
+            # 递归处理子节点
+            for child in node.get("next_stages", []):
+                sub_lines = build_lines(child, current_indent + 2)
+                arrow_prefix = "  " * current_indent + "╘-->"
+                sub_lines[0] = f"{arrow_prefix}{sub_lines[0]}"
+                lines.extend(sub_lines)
+
+            return lines
+
+        # 构建原始行列表
+        tree_root = tree_root or self.get_structure_tree(self.root_stage)
+        raw_lines = build_lines(tree_root, indent)
+
+        # 计算最大行宽
+        max_length = max(len(line) for line in raw_lines)
+
+        # 包装为表格形式
+        content_lines = [f"| {line.ljust(max_length)} |" for line in raw_lines]
         border = "+" + "-" * (max_length + 2) + "+"
-        formatted_list = [border] + formatted_list + [border]
-
-        return formatted_list
+        return [border] + content_lines + [border]
 
     def save_failures(self, path="./fallback", name=None):
         """
@@ -488,7 +492,7 @@ class TaskTree:
         path = Path(path) / datetime.now().strftime("%Y-%m-%d")
         path.mkdir(parents=True, exist_ok=True)
 
-        structure = self.format_structure_list()
+        structure = self.format_structure_list_from_tree()
         timestamp = datetime.now().strftime("%H-%M-%S-%f")[:-3]
         chain_name = self.root_stage.stage_name
 
