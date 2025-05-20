@@ -189,7 +189,7 @@ class TaskTree:
             self.stage_active_dict[p.name] = False
             task_logger.logger.debug(f"{p.name} exitcode: {p.exitcode}")
 
-        self._report_once() if self._report_thread else None
+        self.stop_reporter()
         self.process_final_result_dict(init_tasks)
         self.handle_final_error_dict()
         self.save_failures()
@@ -385,6 +385,7 @@ class TaskTree:
 
     def stop_reporter(self):
         if self._report_thread:
+            self._report_once() # 发送最后一次
             self._report_stop_flag.set()
             self._report_thread.join(timeout=2)
             self._report_thread = None
@@ -554,7 +555,7 @@ class TaskTree:
 
 
 class TaskChain(TaskTree):
-    def __init__(self, stages: List[TaskManager], chain_mode: str = "serial", start_web_server=False):
+    def __init__(self, stages: List[TaskManager], chain_mode: str = "serial"):
         """
         初始化 TaskChain
         :param stages: TaskManager 列表
@@ -566,7 +567,7 @@ class TaskChain(TaskTree):
             stage.set_tree_context(next_stages, chain_mode, stage_name)
 
         root_stage = stages[0]
-        super().__init__(root_stage, start_web_server)
+        super().__init__(root_stage)
 
     def start_chain(self, task_list: List[Any]):
         """
