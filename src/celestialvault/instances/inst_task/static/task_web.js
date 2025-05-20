@@ -42,15 +42,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // ✅ 只在页面加载时调用一次
-  await loadStructure(); 
-
+  // 启动轮询
   refreshAll();
   refreshIntervalId = setInterval(refreshAll, refreshRate);
 });
 
 async function refreshAll() {
-  await Promise.all([loadStatuses(), loadErrors()]);
+  await Promise.all([loadStatuses(), loadStructure(), loadErrors()]);
   renderDashboard();
   updateSummary();
   renderErrors();
@@ -223,7 +221,7 @@ function renderDashboard() {
     const progress =
       data.tasks_processed + data.tasks_pending === 0
         ? 0
-        : Math.round(
+        : Math.floor(
             (data.tasks_processed /
               (data.tasks_processed + data.tasks_pending)) *
               100

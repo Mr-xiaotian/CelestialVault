@@ -1,5 +1,6 @@
-import json, time
+import json, time, requests
 import multiprocessing
+import threading
 from collections import defaultdict
 from datetime import datetime
 from multiprocessing import Queue as MPQueue
@@ -13,7 +14,7 @@ from .task_web import TaskWebServer
 
 
 class TaskTree:
-    def __init__(self, root_stage: TaskManager, start_web_server=False, web_host="0.0.0.0", web_port=5000):
+    def __init__(self, root_stage: TaskManager):
         """
         :param root_stage: 任务链的根 TaskManager 节点
         :param start_web_server: 是否启动 web 服务
@@ -21,11 +22,8 @@ class TaskTree:
         self.set_root_stage(root_stage)
         self.init_dict()
 
-        self.web_server = None
-        if start_web_server:
-            self.web_active = True
-            self.web_server = TaskWebServer(self, web_host, web_port)
-            self.web_server.start_server()
+        self._report_thread = None
+        self._report_stop_flag = threading.Event()
 
     def init_env(self, tasks: list):
         """
@@ -191,6 +189,7 @@ class TaskTree:
             self.stage_active_dict[p.name] = False
             task_logger.logger.debug(f"{p.name} exitcode: {p.exitcode}")
 
+        self._report_once() if self._report_thread else None
         self.process_final_result_dict(init_tasks)
         self.handle_final_error_dict()
         self.save_failures()
@@ -368,6 +367,58 @@ class TaskTree:
         返回失败的任务列表
         """
         return self.failed_tasks
+    
+    def start_reporter(self, interval=5, web_host="127.0.0.1", web_port=5000):
+        def loop():
+            while not self._report_stop_flag.is_set():
+                try:
+                    self._report_once(web_host, web_port)
+                except Exception as e:
+                    print(f"[Reporter] Error during push: {e}")
+                self._report_stop_flag.wait(interval)  # 替代 time.sleep
+
+        self._report_structure_once(web_host, web_port)  # ✅ 只发一次
+        if self._report_thread is None or not self._report_thread.is_alive():
+            self._report_stop_flag.clear()
+            self._report_thread = threading.Thread(target=loop, daemon=True)
+            self._report_thread.start()
+
+    def stop_reporter(self):
+        if self._report_thread:
+            self._report_stop_flag.set()
+            self._report_thread.join(timeout=2)
+            self._report_thread = None
+
+    def _report_structure_once(self, host="127.0.0.1", port=5000):
+        structure = self.format_structure_list()
+        try:
+            requests.post(f"http://{host}:{port}/api/push_structure", json=structure, timeout=1)
+        except Exception as e:
+            print(f"[Reporter] Failed to push structure: {e}")
+
+    def _report_once(self, host="127.0.0.1", port=5000):
+        base_url = f"http://{host}:{port}"
+        
+        # 上报结构（一般只需一次）
+        structure = self.format_structure_list()
+        requests.post(f"{base_url}/api/push_structure", json=structure, timeout=1)
+
+        # 上报状态
+        status_data = self.get_status_dict()
+        requests.post(f"{base_url}/api/push_status", json=status_data, timeout=1)
+
+        # 上报错误
+        error_data = []
+        self.handle_final_error_dict()
+        for (err, tag), task_list in self.get_fail_by_error_dict().items():
+            for task in task_list:
+                error_data.append({
+                    "error": err,
+                    "node": tag,
+                    "task_id": str(task),
+                    "timestamp": self.fail_task_time_dict.get(task),
+                })
+        requests.post(f"{base_url}/api/push_errors", json=error_data, timeout=1)
 
     def get_structure_list(
         self, task_manager: TaskManager, indent=0, visited_stages=None
