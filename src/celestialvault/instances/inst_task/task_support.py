@@ -1,9 +1,11 @@
+import threading
 from multiprocessing import Queue as MPQueue
 from queue import Queue as ThreadQueue
 from threading import Thread
 from time import localtime, strftime, sleep
 from typing import List, Union
 
+import requests
 from loguru import logger as loguru_logger
 
 
@@ -161,22 +163,83 @@ class BroadcastQueueManager:
             queue.put(item)
 
 
-def monitor_processes(processes, poll_interval=3):
-    while True:
-        all_done = True
-        for p in processes:
-            p.join(timeout=0.1)  # 👈 强制同步状态
-            if p.exitcode is None:
-                task_logger.logger.debug(f"[MONITOR] {p.name} still running")
-                all_done = False
-            elif p.exitcode == 0:
-                task_logger.logger.debug(f"[MONITOR] {p.name} completed successfully")
-            else:
-                task_logger.logger.debug(f"[MONITOR] ❌ {p.name} crashed with exitcode {p.exitcode}")
-        if all_done:
-            task_logger.logger.debug("[MONITOR] ✅ All processes done.")
-            break
-        sleep(poll_interval)
+class TaskReporter:
+    def __init__(self, task_tree, host="127.0.0.1", port=5000):
+        from .task_tree import TaskTree
+
+        self.logger = task_logger
+        self.task_tree: TaskTree = task_tree
+        self.base_url = f"http://{host}:{port}"
+        self._stop_flag = threading.Event()
+        self._thread = None
+        self.interval = 5
+
+    def start(self):
+        if self._thread is None or not self._thread.is_alive():
+            self._stop_flag.clear()
+            self._thread = threading.Thread(target=self._loop, daemon=True)
+            self._thread.start()
+            self.push_structure_once()
+
+    def stop(self):
+        if self._thread:
+            self.push_once()  # 最后一次
+            self._stop_flag.set()
+            self._thread.join(timeout=2)
+            self._thread = None
+
+    def _loop(self):
+        while not self._stop_flag.is_set():
+            try:
+                self.push_once()
+            except Exception as e:
+                task_logger.logger.error(f"[Reporter] Push error: {e}")
+            self._stop_flag.wait(self.interval)
+
+    def push_once(self):
+        self._sync_interval()
+        self._push_status()
+        self._push_errors()
+
+    def _sync_interval(self):
+        try:
+            res = requests.get(f"{self.base_url}/api/interval", timeout=1)
+            if res.ok:
+                interval = res.json().get("interval", 5)
+                self.interval = max(1.0, min(interval, 60.0))
+        except Exception as e:
+            task_logger.logger.warning(f"[Reporter] Interval fetch failed: {e}")
+
+    def _push_status(self):
+        try:
+            status_data = self.task_tree.get_status_dict()
+            requests.post(f"{self.base_url}/api/push_status", json=status_data, timeout=1)
+        except Exception as e:
+            task_logger.logger.warning(f"[Reporter] Status push failed: {e}")
+
+    def _push_errors(self):
+        try:
+            self.task_tree.handle_fail_queue()
+            error_data = []
+            for (err, tag), task_list in self.task_tree.get_error_timeline_dict().items():
+                for task, ts in task_list:
+                    error_data.append({
+                        "error": err,
+                        "node": tag,
+                        "task_id": task,
+                        "timestamp": ts,
+                    })
+            requests.post(f"{self.base_url}/api/push_errors", json=error_data, timeout=1)
+        except Exception as e:
+            task_logger.logger.warning(f"[Reporter] Error push failed: {e}")
+
+    def push_structure_once(self):
+        try:
+            structure = self.task_tree.get_structure_tree(self.task_tree.root_stage)
+            requests.post(f"{self.base_url}/api/push_structure", json=structure, timeout=1)
+        except Exception as e:
+            task_logger.logger.warning(f"[Reporter] Structure push failed: {e}")
+
 
 
 TERMINATION_SIGNAL = TerminationSignal()

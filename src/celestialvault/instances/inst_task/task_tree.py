@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
-from .task_support import TERMINATION_SIGNAL, TaskError, task_logger
+from .task_support import TERMINATION_SIGNAL, TaskError, TaskReporter, task_logger
 
 
 class TaskTree:
@@ -18,11 +18,10 @@ class TaskTree:
         :param root_stage: 任务链的根 TaskManager 节点
         :param start_web_server: 是否启动 web 服务
         """
-        self.set_root_stage(root_stage)
         self.init_dict()
-
-        self._report_thread = None
-        self._report_stop_flag = threading.Event()
+        self.init_fail_queue()
+        self.set_reporter()
+        self.set_root_stage(root_stage)
 
     def init_env(self, tasks: list):
         """
@@ -32,7 +31,8 @@ class TaskTree:
         self.manager = multiprocessing.Manager()
 
         self.init_dict()
-        self.init_queues(tasks)
+        self.init_task_queues(tasks)
+        self.init_fail_queue()
 
     def init_dict(self):
         """
@@ -50,7 +50,7 @@ class TaskTree:
         self.error_timeline_dict = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
         self.all_stage_error_dict = defaultdict(dict)  # 用于保存节点到节点失败任务的映射
 
-    def init_queues(self, tasks: list):
+    def init_task_queues(self, tasks: list):
         """
         初始化任务队列
         :param tasks: 待处理的任务列表
@@ -79,12 +79,22 @@ class TaskTree:
             self.init_tasks_num += 1
         self.stage_queues_dict[self.root_stage.get_stage_tag()].put(TERMINATION_SIGNAL)
 
+    def init_fail_queue(self):
+        """
+        初始化失败队列
+        """
+        self.fail_queue = MPQueue()
+
     def set_root_stage(self, root_stage: TaskManager):
         """
         设定根节点
         """
         self.root_stage = root_stage
         self.root_stage.set_prev_stage(None)
+
+    def set_reporter(self, is_report=False, host="127.0.0.1", port=5000):
+        self.is_report = is_report
+        self.reporter = TaskReporter(self, host, port)
 
     def set_tree_mode(self, stage_mode: str, execution_mode: str):
         """
@@ -125,6 +135,7 @@ class TaskTree:
         start_time = time.time()
         structure_list = self.format_structure_list_from_tree()
         task_logger.start_tree(structure_list)
+        self.reporter.start() if self.is_report else None
 
         self.init_env(init_tasks)
         self._execute_stage(self.root_stage, set())
@@ -135,7 +146,7 @@ class TaskTree:
             self.stage_active_dict[p.name] = False
             task_logger.logger.debug(f"{p.name} exitcode: {p.exitcode}")
 
-        self.stop_reporter()
+        self.reporter.stop()
         self.handle_fail_queue()
         self.process_final_result_dict(init_tasks)
         self.save_failures()
@@ -330,73 +341,6 @@ class TaskTree:
         """
         return self.failed_tasks
     
-    def start_reporter(self, web_host="127.0.0.1", web_port=5000):
-        def loop():
-            while not self._report_stop_flag.is_set():
-                try:
-                    self._report_once(web_host, web_port)
-                except Exception as e:
-                    task_logger.logger.error(f"[Reporter] Error during push: {e}")
-                self._report_stop_flag.wait(self.report_interval)  # 替代 time.sleep
-
-        self.report_interval = 5
-        if self._report_thread is None or not self._report_thread.is_alive():
-            self._report_structure_once(web_host, web_port)  # ✅ 只发一次
-            
-            self._report_stop_flag = threading.Event()  
-            self._report_stop_flag.clear()
-            self._report_thread = threading.Thread(target=loop, daemon=True)
-            self._report_thread.start()
-
-    def stop_reporter(self):
-        if self._report_thread:
-            self._report_once() # 发送最后一次
-            self._report_stop_flag.set()
-            self._report_thread.join(timeout=2)
-            self._report_thread = None
-
-    def _report_structure_once(self, host="127.0.0.1", port=5000):
-        structure = self.get_structure_tree(self.root_stage)
-        try:
-            requests.post(f"http://{host}:{port}/api/push_structure", json=structure, timeout=1)
-        except Exception as e:
-            task_logger.logger.error(f"[Reporter] Failed to push structure: {e}")
-
-    def _report_once(self, host="127.0.0.1", port=5000):
-        base_url = f"http://{host}:{port}"
-
-        # 1. 拉取 interval 设置（单位秒）
-        try:
-            res = requests.get(f"{base_url}/api/interval", timeout=1)
-            if res.ok:
-                interval_ms = res.json().get("interval", 5)
-                self.report_interval = max(1.0, min(interval_ms, 60.0))  # 限定范围
-        except Exception as e:
-            task_logger.logger.error(f"[report_once] 获取刷新间隔失败: {e}")
-
-        # 2. 上报错误
-        try:
-            error_data = []
-            self.handle_fail_queue()
-            for (err, tag), task_list in self.get_error_timeline_dict().items():
-                for task, timestamp in task_list:
-                    error_data.append({
-                        "error": err,
-                        "node": tag,
-                        "task_id": task,
-                        "timestamp": timestamp,
-                    })
-            requests.post(f"{base_url}/api/push_errors", json=error_data, timeout=1)
-        except Exception as e:
-            task_logger.logger.error(f"[report_once] 错误上报失败: {e}")
-
-        # 3. 上报状态
-        try:
-            status_data = self.get_status_dict()
-            requests.post(f"{base_url}/api/push_status", json=status_data, timeout=1)
-        except Exception as e:
-            task_logger.logger.error(f"[report_once] 状态上报失败: {e}")
-
     def get_status_dict(self) -> dict:
         """
         获取任务链的状态字典
@@ -539,8 +483,7 @@ class TaskTree:
                 "structure": structure,
             },
             "stage error": self.get_fail_by_stage_dict(),
-            "fail errors": {str(key): value for key, value in self.get_error_timeline_dict().items()},
-            "fail tasks": self.get_failed_tasks(),
+            "fail errors": {str(key): value for key, value in self.get_fail_by_error_dict().items()}
         }
 
         file_name = name or f"{timestamp}__{chain_name}.json"

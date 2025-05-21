@@ -264,8 +264,8 @@ def _test_task_web_1():
 
     # 初始化 TaskTree
     tree = TaskTree(generate_stage)
+    tree.set_reporter(True, host="127.0.0.1", port=5000)
 
-    tree.start_reporter(web_host="127.0.0.1", web_port=5000)
     tree.start_tree(range(10))
     
 def profile_task_tree():
