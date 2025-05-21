@@ -121,60 +121,6 @@ class TaskTree:
         """将时间戳格式化为 YYYY-MM-DD HH:MM:SS"""
         return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
-    def get_status_dict(self) -> dict:
-        """
-        获取任务链的状态字典
-        """
-        status_dict = {}
-        now = time.time()
-
-        for tag, stage in self.get_stage_dict().items():
-            prev = stage.prev_stage
-
-            total_input = (
-                sum(len(v) for v in prev.success_dict.values()) if isinstance(prev, TaskSplitter)
-                else len(prev.success_dict) if prev
-                else self.init_tasks_num
-            )
-
-            processed = len(stage.success_dict)
-            failed = len(stage.error_dict)
-            pending = max(0, total_input - processed - failed)
-
-            start_time = self.stage_start_time_dict.get(tag, 0)
-            is_active = self.stage_active_dict.get(tag, False)
-            last_update_time = self.stage_update_time_dict.get(tag, now)
-            stage_is_pending_last_time = self.stage_is_pending_dict.get(tag, False)
-
-            self.stage_is_pending_dict[tag] = True if pending else False
-
-            # 更新时间消耗（仅在 pending 非 0 时刷新）
-            if start_time:
-                elapsed = self.stage_elapsed_time_dict.get(tag, 0)
-                if pending and stage_is_pending_last_time:
-                    # 有pending任务时，累计从上一次更新时间到现在的时间
-                    elapsed += now - last_update_time
-                    # 更新最后更新时间
-                    self.stage_update_time_dict[tag] = now
-            else:
-                elapsed = 0
-
-            self.stage_elapsed_time_dict[tag] = elapsed
-
-            # 估算剩余时间
-            remaining = (elapsed / processed * pending) if processed and pending else 0
-
-            status_dict[tag] = {
-                **stage.get_status_snapshot(),
-                "active": is_active,
-                "tasks_pending": pending,
-                "start_time": self.format_timestamp(start_time),
-                "elapsed_time": self.format_duration(elapsed),
-                "remaining_time": self.format_duration(remaining),
-            }
-
-        return status_dict
-
     def start_tree(self, init_tasks):
         start_time = time.time()
         structure_list = self.format_structure_list_from_tree()
@@ -190,8 +136,8 @@ class TaskTree:
             task_logger.logger.debug(f"{p.name} exitcode: {p.exitcode}")
 
         self.stop_reporter()
-        self.process_final_result_dict(init_tasks)
         self.handle_fail_queue()
+        self.process_final_result_dict(init_tasks)
         self.save_failures()
         self.release_resources()
 
@@ -215,7 +161,7 @@ class TaskTree:
             self.stage_active_dict[stage.get_stage_tag()] = True
             self.stage_start_time_dict[stage.get_stage_tag()] = time.time()
 
-            stage.init_dict(self.manager.dict(), self.manager.dict())
+            stage.init_dict(self.manager.dict(), {})
             p = multiprocessing.Process(
                 target=stage.start_stage, args=(input_queue, output_queues, self.fail_queue), name=stage.get_stage_tag()
             )
@@ -274,7 +220,7 @@ class TaskTree:
 
         def update_final_result_dict(stage_task, stage: TaskManager):
             stage_success_dict = stage.get_success_dict()
-            stage_error_dict = stage.get_error_dict()
+            stage_error_dict = all_stage_error_dict.get(stage.get_stage_tag(), {})
             visited_stages.add(stage)
 
             final_list = []
@@ -312,6 +258,7 @@ class TaskTree:
             return final_list
 
         task_execution_status = {}
+        all_stage_error_dict = self.get_all_stage_error_dict()
         for initial_task in initial_tasks:
             visited_stages = set()
             task_execution_status[initial_task] = True
@@ -427,14 +374,7 @@ class TaskTree:
         except Exception as e:
             task_logger.logger.error(f"[report_once] 获取刷新间隔失败: {e}")
 
-        # 2. 上报状态
-        try:
-            status_data = self.get_status_dict()
-            requests.post(f"{base_url}/api/push_status", json=status_data, timeout=1)
-        except Exception as e:
-            task_logger.logger.error(f"[report_once] 状态上报失败: {e}")
-
-        # 3. 上报错误
+        # 2. 上报错误
         try:
             error_data = []
             self.handle_fail_queue()
@@ -449,6 +389,70 @@ class TaskTree:
             requests.post(f"{base_url}/api/push_errors", json=error_data, timeout=1)
         except Exception as e:
             task_logger.logger.error(f"[report_once] 错误上报失败: {e}")
+
+        # 3. 上报状态
+        try:
+            status_data = self.get_status_dict()
+            requests.post(f"{base_url}/api/push_status", json=status_data, timeout=1)
+        except Exception as e:
+            task_logger.logger.error(f"[report_once] 状态上报失败: {e}")
+
+    def get_status_dict(self) -> dict:
+        """
+        获取任务链的状态字典
+        """
+        status_dict = {}
+        now = time.time()
+        all_stage_error_dict = self.get_all_stage_error_dict()
+
+        for tag, stage in self.get_stage_dict().items():
+            prev = stage.prev_stage
+
+            total_input = (
+                sum(len(v) for v in prev.success_dict.values()) if isinstance(prev, TaskSplitter)
+                else len(prev.success_dict) if prev
+                else self.init_tasks_num
+            )
+
+            processed = len(stage.success_dict)
+            failed = len(all_stage_error_dict.get(tag, {}))
+            pending = max(0, total_input - processed - failed)
+
+            start_time = self.stage_start_time_dict.get(tag, 0)
+            is_active = self.stage_active_dict.get(tag, False)
+            last_update_time = self.stage_update_time_dict.get(tag, now)
+            stage_is_pending_last_time = self.stage_is_pending_dict.get(tag, False)
+
+            self.stage_is_pending_dict[tag] = True if pending else False
+
+            # 更新时间消耗（仅在 pending 非 0 时刷新）
+            if start_time:
+                elapsed = self.stage_elapsed_time_dict.get(tag, 0)
+                if pending and stage_is_pending_last_time:
+                    # 有pending任务时，累计从上一次更新时间到现在的时间
+                    elapsed += now - last_update_time
+                    # 更新最后更新时间
+                    self.stage_update_time_dict[tag] = now
+            else:
+                elapsed = 0
+
+            self.stage_elapsed_time_dict[tag] = elapsed
+
+            # 估算剩余时间
+            remaining = (elapsed / processed * pending) if processed and pending else 0
+
+            status_dict[tag] = {
+                **stage.get_status_snapshot(),
+                "active": is_active,
+                "tasks_processed": processed,
+                "tasks_error": failed,
+                "tasks_pending": pending,
+                "start_time": self.format_timestamp(start_time),
+                "elapsed_time": self.format_duration(elapsed),
+                "remaining_time": self.format_duration(remaining),
+            }
+
+        return status_dict
 
     def get_structure_tree(self, task_manager: TaskManager, visited_stages=None):
         """
