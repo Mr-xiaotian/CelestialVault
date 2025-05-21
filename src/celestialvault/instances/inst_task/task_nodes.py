@@ -59,17 +59,3 @@ class TaskSplitter(TaskManager):
             time() - start_time,
         )
 
-
-class TaskFailHandler(TaskManager):
-    def __init__(self, func, execution_mode="serial", **kwargs):
-        super().__init__(func, execution_mode=execution_mode, **kwargs)
-        self.fail_only = True  # 表示这个节点只消费失败队列
-
-    def get_args(self, task):
-        return (task,)  # 默认单参数，可扩展
-
-    def process_result(self, task, result):
-        return f"Handled failure: {task} → {result}"
-
-    def handle_error_dict(self):
-        return self.get_error_dict()

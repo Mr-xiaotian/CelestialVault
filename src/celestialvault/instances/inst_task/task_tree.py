@@ -135,6 +135,7 @@ class TaskTree:
         start_time = time.time()
         structure_list = self.format_structure_list_from_tree()
         task_logger.start_tree(structure_list)
+        self._persist_structure_metadata()
         self.reporter.start() if self.is_report else None
 
         self.init_env(init_tasks)
@@ -148,7 +149,9 @@ class TaskTree:
 
         self.reporter.stop()
         self.handle_fail_queue()
-        self.process_final_result_dict(init_tasks)
+        task_logger.logger.trace(f"Fail queue handled.")
+        # self.process_final_result_dict(init_tasks)
+        task_logger.logger.trace(f"Final result dict processed.")
         self.save_failures()
         self.release_resources()
 
@@ -288,16 +291,85 @@ class TaskTree:
             item: dict = self.fail_queue.get_nowait()
             stage_tag = item["stage_tag"]
             task_str = item["task"]
-            error_str = item["error"]
-            error_type = item["error_type"]
+            error_info = item["error_info"]
             timestamp = item["timestamp"]
-            error_key = (f"[{error_type}]{error_str}", stage_tag)
+            error_key = (error_info, stage_tag)
 
             if task_str not in self.error_timeline_dict[error_key]:
                 self.error_timeline_dict[error_key].append((task_str, timestamp))
 
             if task_str not in self.all_stage_error_dict[stage_tag]:
                 self.all_stage_error_dict[stage_tag][task_str] = error_key
+
+            self._persist_single_failure(task_str, error_info, stage_tag, timestamp)
+
+    def _persist_single_failure(self, task_str, error_info, stage_tag, timestamp, path="./fallback"):
+        """
+        增量写入单条错误日志到每日文件中
+        """
+        try:
+            date_str = datetime.now().strftime("%Y-%m-%d")
+            file_path = Path(path) / f"realtime_errors({date_str}).jsonl"
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+
+            log_item = {
+                "timestamp": datetime.fromtimestamp(timestamp).isoformat(),
+                "task": task_str,
+                "error": error_info,
+                "stage": stage_tag,
+            }
+
+            with open(file_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(log_item, ensure_ascii=False) + "\n")
+        except Exception as e:
+            task_logger.logger.warning(f"[Persist] 写入实时错误日志失败: {e}")
+
+    def _persist_structure_metadata(self, path="./fallback"):
+        """
+        在运行开始时写入任务结构元信息到 jsonl 文件
+        """
+        try:
+            date_str = datetime.now().strftime("%Y-%m-%d")
+            file_path = Path(path) / f"realtime_errors({date_str}).jsonl"
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+
+            log_item = {
+                "timestamp": datetime.now().isoformat(),
+                "structure": self.get_structure_tree(self.root_stage),
+            }
+
+            with open(file_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(log_item, ensure_ascii=False) + "\n")
+        except Exception as e:
+            task_logger.logger.warning(f"[Persist] 写入结构失败: {e}")
+
+    def save_failures(self, path="./fallback", name=None):
+        """
+        保存失败信息到 JSON 文件
+        :param path: 保存路径
+        :param name: 文件名
+        """
+        path = Path(path) / datetime.now().strftime("%Y-%m-%d")
+        path.mkdir(parents=True, exist_ok=True)
+
+        structure = self.format_structure_list_from_tree()
+        timestamp = datetime.now().strftime("%H-%M-%S-%f")[:-3]
+        chain_name = self.root_stage.stage_name
+
+        data = {
+            "metadata": {
+                "timestamp": datetime.now().isoformat(),
+                "structure": structure,
+            },
+            "stage error": self.get_fail_by_stage_dict(),
+            "fail errors": {str(key): value for key, value in self.get_fail_by_error_dict().items()}
+        }
+
+        file_name = name or f"{timestamp}__{chain_name}.json"
+        file_path = path / file_name
+
+        with file_path.open("w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
 
     def get_stage_dict(self):
         """
@@ -463,34 +535,6 @@ class TaskTree:
         content_lines = [f"| {line.ljust(max_length)} |" for line in raw_lines]
         border = "+" + "-" * (max_length + 2) + "+"
         return [border] + content_lines + [border]
-
-    def save_failures(self, path="./fallback", name=None):
-        """
-        保存失败信息到 JSON 文件
-        :param path: 保存路径
-        :param name: 文件名
-        """
-        path = Path(path) / datetime.now().strftime("%Y-%m-%d")
-        path.mkdir(parents=True, exist_ok=True)
-
-        structure = self.format_structure_list_from_tree()
-        timestamp = datetime.now().strftime("%H-%M-%S-%f")[:-3]
-        chain_name = self.root_stage.stage_name
-
-        data = {
-            "metadata": {
-                "timestamp": datetime.now().isoformat(),
-                "structure": structure,
-            },
-            "stage error": self.get_fail_by_stage_dict(),
-            "fail errors": {str(key): value for key, value in self.get_fail_by_error_dict().items()}
-        }
-
-        file_name = name or f"{timestamp}__{chain_name}.json"
-        file_path = path / file_name
-
-        with file_path.open("w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
 
     def test_methods(self, task_list: List[Any]) -> Dict[str, Any]:
         """
