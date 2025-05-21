@@ -47,9 +47,8 @@ class TaskTree:
         self.stage_is_pending_dict: Dict[str, bool] = {}
         
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
-        self.fail_task_time_dict = {}  # 用于保存失败任务到失败时间的映射(不精确)
-        self.fail_by_error_dict = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
-        self.fail_by_stage_dict = defaultdict(list)  # 用于保存节点到节点失败任务的映射
+        self.error_timeline_dict = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
+        self.all_stage_error_dict = defaultdict(dict)  # 用于保存节点到节点失败任务的映射
 
     def init_queues(self, tasks: list):
         """
@@ -330,19 +329,17 @@ class TaskTree:
         while not self.fail_queue.empty():
             item: dict = self.fail_queue.get_nowait()
             stage_tag = item["stage_tag"]
-            task = item["task"]
+            task_str = item["task"]
             error_str = item["error"]
             error_type = item["error_type"]
-            error_key = (f"{error_str}({error_type})", stage_tag)
+            timestamp = item["timestamp"]
+            error_key = (f"[{error_type}]{error_str}", stage_tag)
 
-            if task not in self.fail_by_error_dict[error_key]:
-                self.fail_by_error_dict[error_key].append(task)
+            if task_str not in self.error_timeline_dict[error_key]:
+                self.error_timeline_dict[error_key].append((task_str, timestamp))
 
-            if task not in self.fail_by_stage_dict[stage_tag]:
-                self.fail_by_stage_dict[stage_tag].append(task)
-
-            if task not in self.fail_task_time_dict:
-                self.fail_task_time_dict[task] = item.get("timestamp", time.time())
+            if task_str not in self.all_stage_error_dict[stage_tag]:
+                self.all_stage_error_dict[stage_tag][task_str] = error_key
 
     def get_stage_dict(self):
         """
@@ -356,17 +353,29 @@ class TaskTree:
         """
         return self.final_result_dict
 
-    def get_fail_by_error_dict(self):
+    def get_error_timeline_dict(self):
         """
         返回最终错误字典
         """
-        return dict(self.fail_by_error_dict)
+        return dict(self.error_timeline_dict)
 
-    def get_fail_by_stage_dict(self):
+    def get_all_stage_error_dict(self):
         """
         返回最终失败字典
         """
-        return dict(self.fail_by_stage_dict)
+        return dict(self.all_stage_error_dict)
+    
+    def get_fail_by_error_dict(self):
+        return {
+            key: [a for a, _ in tuple_list]
+            for key, tuple_list in self.get_error_timeline_dict().items()
+        }
+
+    def get_fail_by_stage_dict(self):
+        return {
+            stage: list(inner_dict.keys())
+            for stage, inner_dict in self.get_all_stage_error_dict().items()
+        }
 
     def get_failed_tasks(self):
         """
@@ -429,13 +438,13 @@ class TaskTree:
         try:
             error_data = []
             self.handle_fail_queue()
-            for (err, tag), task_list in self.get_fail_by_error_dict().items():
-                for task in task_list:
+            for (err, tag), task_list in self.get_error_timeline_dict().items():
+                for task, timestamp in task_list:
                     error_data.append({
                         "error": err,
                         "node": tag,
-                        "task_id": str(task),
-                        "timestamp": self.fail_task_time_dict.get(task),
+                        "task_id": task,
+                        "timestamp": timestamp,
                     })
             requests.post(f"{base_url}/api/push_errors", json=error_data, timeout=1)
         except Exception as e:
@@ -525,8 +534,8 @@ class TaskTree:
                 "timestamp": datetime.now().isoformat(),
                 "structure": structure,
             },
-            "fail stages": self.get_fail_by_stage_dict(),
-            "fail errors": {str(key): value for key, value in self.get_fail_by_error_dict().items()},
+            "stage error": self.get_fail_by_stage_dict(),
+            "fail errors": {str(key): value for key, value in self.get_error_timeline_dict().items()},
             "fail tasks": self.get_failed_tasks(),
         }
 
