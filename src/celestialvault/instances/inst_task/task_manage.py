@@ -210,11 +210,17 @@ class TaskManager:
         for result_queue in self.result_queues:
             result_queue.put(result)
 
-    def put_fail_queue(self, task):
+    def put_fail_queue(self, task, error):
         """
         将失败的任务放入失败队列
         """
-        self.fail_queue.put(task)
+        self.fail_queue.put({
+            "stage_tag": self.get_stage_tag(),
+            "task": str(task),
+            "error": str(error),
+            "error_type": type(error).__name__,
+            "timestamp": time.time()
+        })
 
     def is_duplicate(self, task):
         """
@@ -344,7 +350,7 @@ class TaskManager:
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
-            self.put_fail_queue(task)
+            self.put_fail_queue(task, exception)
             task_logger.task_error(
                 self.func.__name__, self.get_task_info(task), exception
             )
@@ -375,8 +381,7 @@ class TaskManager:
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.error_dict[task] = exception
-            self.put_fail_queue(task)
-            self.update_error_num()
+            self.put_fail_queue(task, exception)
             task_logger.task_error(
                 self.func.__name__, self.get_task_info(task), exception
             )
@@ -480,7 +485,6 @@ class TaskManager:
 
         self.cleanup_mpqueue(input_queue)
         self.put_result_queues(TERMINATION_SIGNAL)
-        self.put_fail_queue(TERMINATION_SIGNAL)
 
         task_logger.end_stage(
             self.stage_name,

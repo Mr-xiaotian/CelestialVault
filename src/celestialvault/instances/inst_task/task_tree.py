@@ -72,6 +72,7 @@ class TaskTree:
         visited_stages = set()
         self.stage_dict[self.root_stage.get_stage_tag()] = self.root_stage
         collect_queue(self.root_stage)
+        self.fail_queue = MPQueue()
 
         self.init_tasks_num = 0
         for task in tasks:
@@ -191,7 +192,7 @@ class TaskTree:
 
         self.stop_reporter()
         self.process_final_result_dict(init_tasks)
-        self.handle_final_error_dict()
+        self.handle_fail_queue()
         self.save_failures()
         self.release_resources()
 
@@ -210,7 +211,6 @@ class TaskTree:
                 self.stage_queues_dict[next_stage.get_stage_tag()]
                 for next_stage in stage.next_stages
             ]
-        fail_queue = None # 先在stage内部自建ThreadQueue, 以避免fail_queue不消费导致缓冲区填满
 
         if stage.stage_mode == "process":
             self.stage_active_dict[stage.get_stage_tag()] = True
@@ -218,7 +218,7 @@ class TaskTree:
 
             stage.init_dict(self.manager.dict(), self.manager.dict())
             p = multiprocessing.Process(
-                target=stage.start_stage, args=(input_queue, output_queues, fail_queue), name=stage.get_stage_tag()
+                target=stage.start_stage, args=(input_queue, output_queues, self.fail_queue), name=stage.get_stage_tag()
             )
             p.start()
             self.processes.append(p)
@@ -227,7 +227,7 @@ class TaskTree:
             self.stage_start_time_dict[stage.get_stage_tag()] = time.time()
 
             stage.init_dict({}, {})
-            stage.start_stage(input_queue, output_queues, fail_queue)
+            stage.start_stage(input_queue, output_queues, self.fail_queue)
 
             self.stage_active_dict[stage.get_stage_tag()] = False
 
@@ -323,20 +323,26 @@ class TaskTree:
             task for task, pass_flag in task_execution_status.items() if not pass_flag
         ]
 
-    def handle_final_error_dict(self):
+    def handle_fail_queue(self):
         """
-        处理最终错误字典
+        消费 fail_queue, 构建失败字典
         """
+        while not self.fail_queue.empty():
+            item: dict = self.fail_queue.get_nowait()
+            stage_tag = item["stage_tag"]
+            task = item["task"]
+            error_str = item["error"]
+            error_type = item["error_type"]
+            error_key = (f"{error_str}({error_type})", stage_tag)
 
-        for stage_tag, stage in self.stage_dict.items():
-            stage_error_dict = stage.get_error_dict()
-            for task, error in stage_error_dict.items():
-                error_key = (f"{type(error).__name__}({error})", stage_tag)
-                self.fail_by_error_dict[error_key].append(task) if task not in self.fail_by_error_dict[error_key] else None
-                self.fail_by_stage_dict[stage_tag].append(task) if task not in self.fail_by_stage_dict[stage_tag] else None
+            if task not in self.fail_by_error_dict[error_key]:
+                self.fail_by_error_dict[error_key].append(task)
 
-                if task not in self.fail_task_time_dict:
-                    self.fail_task_time_dict[task] = time.time()
+            if task not in self.fail_by_stage_dict[stage_tag]:
+                self.fail_by_stage_dict[stage_tag].append(task)
+
+            if task not in self.fail_task_time_dict:
+                self.fail_task_time_dict[task] = item.get("timestamp", time.time())
 
     def get_stage_dict(self):
         """
@@ -374,7 +380,7 @@ class TaskTree:
                 try:
                     self._report_once(web_host, web_port)
                 except Exception as e:
-                    print(f"[Reporter] Error during push: {e}")
+                    task_logger.logger.error(f"[Reporter] Error during push: {e}")
                 self._report_stop_flag.wait(self.report_interval)  # 替代 time.sleep
 
         self.report_interval = 5
@@ -398,7 +404,7 @@ class TaskTree:
         try:
             requests.post(f"http://{host}:{port}/api/push_structure", json=structure, timeout=1)
         except Exception as e:
-            print(f"[Reporter] Failed to push structure: {e}")
+            task_logger.logger.error(f"[Reporter] Failed to push structure: {e}")
 
     def _report_once(self, host="127.0.0.1", port=5000):
         base_url = f"http://{host}:{port}"
@@ -410,19 +416,19 @@ class TaskTree:
                 interval_ms = res.json().get("interval", 5)
                 self.report_interval = max(1.0, min(interval_ms, 60.0))  # 限定范围
         except Exception as e:
-            print(f"[report_once] 获取刷新间隔失败: {e}")
+            task_logger.logger.error(f"[report_once] 获取刷新间隔失败: {e}")
 
         # 2. 上报状态
         try:
             status_data = self.get_status_dict()
             requests.post(f"{base_url}/api/push_status", json=status_data, timeout=1)
         except Exception as e:
-            print(f"[report_once] 状态上报失败: {e}")
+            task_logger.logger.error(f"[report_once] 状态上报失败: {e}")
 
         # 3. 上报错误
         try:
             error_data = []
-            self.handle_final_error_dict()
+            self.handle_fail_queue()
             for (err, tag), task_list in self.get_fail_by_error_dict().items():
                 for task in task_list:
                     error_data.append({
@@ -433,7 +439,7 @@ class TaskTree:
                     })
             requests.post(f"{base_url}/api/push_errors", json=error_data, timeout=1)
         except Exception as e:
-            print(f"[report_once] 错误上报失败: {e}")
+            task_logger.logger.error(f"[report_once] 错误上报失败: {e}")
 
     def get_structure_tree(self, task_manager: TaskManager, visited_stages=None):
         """

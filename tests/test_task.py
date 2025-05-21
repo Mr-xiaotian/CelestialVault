@@ -73,22 +73,38 @@ def square_root(x):
     return x ** 0.5
 
 def generate_urls(x):
-    sleep(5)
     return tuple([f"url_{x}_{i}" for i in range(random.randint(1, 4))])
 
 def log_urls(data):
-    sleep(5)
     if data == ('url_1_0', 'url_1_1'):
         raise ValueError("Test error in ('url_1_0', 'url_1_1')")
     return f"Logged({data})"
 
 def download(url):
-    sleep(5)
     if url == "url_3_0":
         raise ValueError("Test error in url_3_0")
     return f"Downloaded({url})"
 
 def parse(url):
+    return f"Parsed({url})"
+
+def generate_urls_sleep(x):
+    sleep(5)
+    return tuple([f"url_{x}_{i}" for i in range(random.randint(1, 4))])
+
+def log_urls_sleep(data):
+    sleep(5)
+    if data == ('url_1_0', 'url_1_1'):
+        raise ValueError("Test error in ('url_1_0', 'url_1_1')")
+    return f"Logged({data})"
+
+def download_sleep(url):
+    sleep(5)
+    if url == "url_3_0":
+        raise ValueError("Test error in url_3_0")
+    return f"Downloaded({url})"
+
+def parse_sleep(url):
     sleep(5)
     return f"Parsed({url})"
 
@@ -199,15 +215,15 @@ def test_task_tree_2():
     # 测试输入：生成不同 URL 的任务
     input_tasks = range(5)
 
-    tree.start_tree(input_tasks)
-    # result = tree.test_methods(input_tasks)
-    # test_table_list, execution_modes, stage_modes, index_header = result["Time table"]
-    # result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
+    # tree.start_tree(input_tasks)
+    result = tree.test_methods(input_tasks)
+    test_table_list, execution_modes, stage_modes, index_header = result["Time table"]
+    result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
 
-    # for key, value in result.items():
-    #     if isinstance(value, dict):
-    #         value = pprint.pformat(value)
-    #     logging.info(f"{key}: \n{value}")
+    for key, value in result.items():
+        if isinstance(value, dict):
+            value = pprint.pformat(value)
+        logging.info(f"{key}: \n{value}")
 
 def _test_task_web_0():
     # 定义任务节点
@@ -231,13 +247,13 @@ def _test_task_web_0():
     
     tree.start_tree(range(10))
 
-def test_task_web_1():
+def _test_task_web_1():
     # 定义任务节点
-    generate_stage = TaskManager(func=generate_urls, execution_mode='thread', worker_limit=4)
-    logr_stage = TaskManager(func=log_urls, execution_mode='thread', worker_limit=4)
+    generate_stage = TaskManager(func=generate_urls_sleep, execution_mode='thread', worker_limit=4)
+    logr_stage = TaskManager(func=log_urls_sleep, execution_mode='thread', worker_limit=4)
     splitter = TaskSplitter()
-    download_stage = TaskManager(func=download, execution_mode='thread', worker_limit=4)
-    parse_stage = TaskManager(func=parse, execution_mode='thread', worker_limit=4)
+    download_stage = TaskManager(func=download_sleep, execution_mode='thread', worker_limit=4)
+    parse_stage = TaskManager(func=parse_sleep, execution_mode='thread', worker_limit=4)
 
     # 设置链关系
     generate_stage.set_tree_context([logr_stage, splitter], stage_mode='process', stage_name='GenURLs')
@@ -263,5 +279,5 @@ def profile_task_tree():
 # 在主函数或脚本中调用此函数，而不是在测试中
 if __name__ == "__main__":
     # test_task_tree_2()
-    test_task_web_1()
+    # test_task_web_1()
     pass
