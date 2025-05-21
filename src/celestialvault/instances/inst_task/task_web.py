@@ -16,6 +16,8 @@ class TaskWebServer:
         self.structure_store = []
         self.error_store = []
 
+        self.report_interval = 5
+
     def _setup_routes(self):
         app = self.app
 
@@ -35,6 +37,10 @@ class TaskWebServer:
         @app.route("/api/errors")
         def get_errors():
             return jsonify(self.error_store)
+        
+        @app.route("/api/interval", methods=["GET"])
+        def get_interval():
+            return jsonify({"interval": self.report_interval})
 
         # ---- 接收接口 ----
         @app.route("/api/push_structure", methods=["POST"])
@@ -51,6 +57,16 @@ class TaskWebServer:
         def push_errors():
             self.error_store = request.json
             return jsonify({"ok": True})
+        
+        @app.route("/api/push_interval", methods=["POST"])
+        def push_interval():
+            try:
+                data = request.get_json(force=True)
+                interval = float(data.get("interval", 5.0))
+                self.report_interval = max(1.0, min(interval / 1000.0, 60.0))  # 限制 1~60s
+                return "Interval updated", 200
+            except Exception as e:
+                return f"Invalid interval: {e}", 400
 
         @app.route("/shutdown", methods=["POST"])
         def shutdown():

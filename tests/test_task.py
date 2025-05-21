@@ -73,23 +73,23 @@ def square_root(x):
     return x ** 0.5
 
 def generate_urls(x):
-    sleep_random_48(2)
+    sleep(5)
     return tuple([f"url_{x}_{i}" for i in range(random.randint(1, 4))])
 
 def log_urls(data):
-    sleep_random_48(2)
+    sleep(5)
     if data == ('url_1_0', 'url_1_1'):
         raise ValueError("Test error in ('url_1_0', 'url_1_1')")
     return f"Logged({data})"
 
 def download(url):
-    sleep_random_48(2)
+    sleep(5)
     if url == "url_3_0":
         raise ValueError("Test error in url_3_0")
     return f"Downloaded({url})"
 
 def parse(url):
-    sleep_random_48(2)
+    sleep(5)
     return f"Parsed({url})"
 
 # 测试 TaskManager 的同步任务
@@ -249,7 +249,7 @@ def test_task_web_1():
     # 初始化 TaskTree
     tree = TaskTree(generate_stage)
 
-    tree.start_reporter(interval=1, web_host="127.0.0.1", web_port=5000)
+    tree.start_reporter(web_host="127.0.0.1", web_port=5000)
     tree.start_tree(range(10))
     
 def profile_task_tree():

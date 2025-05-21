@@ -18,22 +18,17 @@ const totalNodes = document.getElementById("total-nodes");
 const shutdownBtn = document.getElementById("shutdown-btn");
 
 // 初始化折叠节点记录
-let collapsedNodeIds = new Set(JSON.parse(localStorage.getItem("collapsedNodes") || "[]"));
+let collapsedNodeIds = new Set(
+  JSON.parse(localStorage.getItem("collapsedNodes") || "[]")
+);
 
 document.addEventListener("DOMContentLoaded", async () => {
   refreshSelect.addEventListener("change", () => {
     refreshRate = parseInt(refreshSelect.value);
     clearInterval(refreshIntervalId);
     refreshIntervalId = setInterval(refreshAll, refreshRate);
+    pushRefreshRate(); // ✅ 立即同步到后端
   });
-
-  // 初始化时应用之前选择的主题
-  if (localStorage.getItem("theme") === "dark") {
-    document.body.classList.add("dark-theme");
-    themeToggleBtn.textContent = "🌞 白天模式";
-  } else {
-    themeToggleBtn.textContent = "🌙 夜间模式";
-  }
 
   themeToggleBtn.addEventListener("click", () => {
     const isDark = document.body.classList.toggle("dark-theme");
@@ -59,10 +54,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  // 初始化时应用之前选择的主题
+  if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark-theme");
+    themeToggleBtn.textContent = "🌞 白天模式";
+  } else {
+    themeToggleBtn.textContent = "🌙 夜间模式";
+  }
+
   // 启动轮询
   refreshAll();
+  pushRefreshRate(); // ✅ 初次加载也推送一次
   refreshIntervalId = setInterval(refreshAll, refreshRate);
 });
+
+async function pushRefreshRate() {
+  try {
+    await fetch("/api/push_interval", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ interval: refreshRate }),
+    });
+  } catch (e) {
+    console.warn("刷新频率推送失败", e);
+  }
+}
 
 async function refreshAll() {
   await Promise.all([loadStatuses(), loadStructure(), loadErrors()]);
@@ -98,69 +116,70 @@ async function loadStructure() {
 }
 
 function renderTree(data) {
-    const treeContainer = document.getElementById('task-tree');
-    treeContainer.innerHTML = '';
+  const treeContainer = document.getElementById("task-tree");
+  treeContainer.innerHTML = "";
 
-    function buildTreeHTML(node, path = "") {
-        const nodeId = path ? `${path}/${node.stage_name}` : node.stage_name;
-        let html = '<li>';
+  function buildTreeHTML(node, path = "") {
+    const nodeId = path ? `${path}/${node.stage_name}` : node.stage_name;
+    let html = "<li>";
 
-        // 节点展示内容
-        html += `<div class="tree-node collapsible" data-id="${nodeId}" onclick="toggleNode(this)">`;
+    // 节点展示内容
+    html += `<div class="tree-node collapsible" data-id="${nodeId}" onclick="toggleNode(this)">`;
 
-        if (node.next_stages && node.next_stages.length > 0) {
-            html += `<span class="collapse-icon">${collapsedNodeIds.has(nodeId) ? '+' : '-'}</span>`;
-        }
-
-        html += `<span class="stage-name">${node.stage_name}</span>`;
-        html += `<span class="stage-mode">(stage_mode: ${node.stage_mode})</span>`;
-        html += `<span class="stage-func">func: ${node.func_name}</span>`;
-
-        if (node.visited) {
-            html += `<span class="visited-mark">already visited</span>`;
-        }
-
-        html += '</div>';
-
-        // 子节点递归渲染
-        if (node.next_stages && node.next_stages.length > 0) {
-            const isCollapsed = collapsedNodeIds.has(nodeId);
-            html += `<ul ${isCollapsed ? 'class="hidden"' : ''}>`;
-            node.next_stages.forEach((childNode) => {
-                html += buildTreeHTML(childNode, nodeId);
-            });
-            html += '</ul>';
-        }
-
-        html += '</li>';
-        return html;
+    if (node.next_stages && node.next_stages.length > 0) {
+      html += `<span class="collapse-icon">${
+        collapsedNodeIds.has(nodeId) ? "+" : "-"
+      }</span>`;
     }
 
-    const rootHTML = `<ul>${buildTreeHTML(data)}</ul>`;
-    treeContainer.innerHTML = rootHTML;
+    html += `<span class="stage-name">${node.stage_name}</span>`;
+    html += `<span class="stage-mode">(stage_mode: ${node.stage_mode})</span>`;
+    html += `<span class="stage-func">func: ${node.func_name}</span>`;
+
+    if (node.visited) {
+      html += `<span class="visited-mark">already visited</span>`;
+    }
+
+    html += "</div>";
+
+    // 子节点递归渲染
+    if (node.next_stages && node.next_stages.length > 0) {
+      const isCollapsed = collapsedNodeIds.has(nodeId);
+      html += `<ul ${isCollapsed ? 'class="hidden"' : ""}>`;
+      node.next_stages.forEach((childNode) => {
+        html += buildTreeHTML(childNode, nodeId);
+      });
+      html += "</ul>";
+    }
+
+    html += "</li>";
+    return html;
+  }
+
+  const rootHTML = `<ul>${buildTreeHTML(data)}</ul>`;
+  treeContainer.innerHTML = rootHTML;
 }
 
 // 节点折叠/展开，并保存到 localStorage
 function toggleNode(element) {
-    const childList = element.nextElementSibling;
-    const nodeId = element.dataset.id;
-    if (!nodeId || !childList || childList.tagName !== 'UL') return;
+  const childList = element.nextElementSibling;
+  const nodeId = element.dataset.id;
+  if (!nodeId || !childList || childList.tagName !== "UL") return;
 
-    const isNowHidden = childList.classList.toggle('hidden');
-    const icon = element.querySelector('.collapse-icon');
-    if (icon) {
-        icon.textContent = isNowHidden ? '+' : '-';
-    }
+  const isNowHidden = childList.classList.toggle("hidden");
+  const icon = element.querySelector(".collapse-icon");
+  if (icon) {
+    icon.textContent = isNowHidden ? "+" : "-";
+  }
 
-    // 更新本地存储
-    if (isNowHidden) {
-        collapsedNodeIds.add(nodeId);
-    } else {
-        collapsedNodeIds.delete(nodeId);
-    }
-    localStorage.setItem("collapsedNodes", JSON.stringify([...collapsedNodeIds]));
+  // 更新本地存储
+  if (isNowHidden) {
+    collapsedNodeIds.add(nodeId);
+  } else {
+    collapsedNodeIds.delete(nodeId);
+  }
+  localStorage.setItem("collapsedNodes", JSON.stringify([...collapsedNodeIds]));
 }
-
 
 // 切换主题
 function toggleTheme() {

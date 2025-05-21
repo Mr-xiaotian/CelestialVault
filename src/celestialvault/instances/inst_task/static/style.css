@@ -583,7 +583,7 @@ h1 {
 
 .dark-theme .tab-btn.active {
   color: #3b82f6;
-  border-bottom-color: #3b82f6;
+  border-bottom: none;
 }
 
 .dark-theme .tab-btn:hover {

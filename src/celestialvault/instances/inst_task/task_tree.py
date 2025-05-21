@@ -368,15 +368,16 @@ class TaskTree:
         """
         return self.failed_tasks
     
-    def start_reporter(self, interval=5, web_host="127.0.0.1", web_port=5000):
+    def start_reporter(self, web_host="127.0.0.1", web_port=5000):
         def loop():
             while not self._report_stop_flag.is_set():
                 try:
                     self._report_once(web_host, web_port)
                 except Exception as e:
                     print(f"[Reporter] Error during push: {e}")
-                self._report_stop_flag.wait(interval)  # 替代 time.sleep
+                self._report_stop_flag.wait(self.report_interval)  # 替代 time.sleep
 
+        self.report_interval = 5
         if self._report_thread is None or not self._report_thread.is_alive():
             self._report_structure_once(web_host, web_port)  # ✅ 只发一次
             
@@ -402,22 +403,37 @@ class TaskTree:
     def _report_once(self, host="127.0.0.1", port=5000):
         base_url = f"http://{host}:{port}"
 
-        # 上报状态
-        status_data = self.get_status_dict()
-        requests.post(f"{base_url}/api/push_status", json=status_data, timeout=1)
+        # 1. 拉取 interval 设置（单位秒）
+        try:
+            res = requests.get(f"{base_url}/api/interval", timeout=1)
+            if res.ok:
+                interval_ms = res.json().get("interval", 5)
+                self.report_interval = max(1.0, min(interval_ms, 60.0))  # 限定范围
+        except Exception as e:
+            print(f"[report_once] 获取刷新间隔失败: {e}")
 
-        # 上报错误
-        error_data = []
-        self.handle_final_error_dict()
-        for (err, tag), task_list in self.get_fail_by_error_dict().items():
-            for task in task_list:
-                error_data.append({
-                    "error": err,
-                    "node": tag,
-                    "task_id": str(task),
-                    "timestamp": self.fail_task_time_dict.get(task),
-                })
-        requests.post(f"{base_url}/api/push_errors", json=error_data, timeout=1)
+        # 2. 上报状态
+        try:
+            status_data = self.get_status_dict()
+            requests.post(f"{base_url}/api/push_status", json=status_data, timeout=1)
+        except Exception as e:
+            print(f"[report_once] 状态上报失败: {e}")
+
+        # 3. 上报错误
+        try:
+            error_data = []
+            self.handle_final_error_dict()
+            for (err, tag), task_list in self.get_fail_by_error_dict().items():
+                for task in task_list:
+                    error_data.append({
+                        "error": err,
+                        "node": tag,
+                        "task_id": str(task),
+                        "timestamp": self.fail_task_time_dict.get(task),
+                    })
+            requests.post(f"{base_url}/api/push_errors", json=error_data, timeout=1)
+        except Exception as e:
+            print(f"[report_once] 错误上报失败: {e}")
 
     def get_structure_tree(self, task_manager: TaskManager, visited_stages=None):
         """
