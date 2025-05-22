@@ -10,6 +10,7 @@ from typing import Any, Dict, List
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
 from .task_support import TERMINATION_SIGNAL, TaskError, TaskReporter, task_logger, counter
+from .task_tools import format_duration, format_timestamp
 
 
 class TaskTree:
@@ -28,7 +29,7 @@ class TaskTree:
         初始化环境
         """
         self.processes: List[multiprocessing.Process] = []
-        self.manager = multiprocessing.Manager()
+        # self.manager = multiprocessing.Manager()
 
         self.init_dict()
         self.init_task_queues(tasks)
@@ -92,6 +93,9 @@ class TaskTree:
         self.root_stage.set_prev_stage(None)
 
     def set_reporter(self, is_report=False, host="127.0.0.1", port=5000):
+        """
+        设定报告器
+        """
         self.is_report = is_report
         self.reporter = TaskReporter(self, host, port)
 
@@ -115,22 +119,10 @@ class TaskTree:
         visited_stages = set()
         set_subsequent_satge_mode(self.root_stage)
 
-    def format_duration(self, seconds):
-        """将秒数格式化为 HH:MM:SS 或 MM:SS（自动省略前导零）"""
-        seconds = int(seconds)
-        hours, remainder = divmod(seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        
-        if hours > 0:
-            return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-        else:
-            return f"{minutes:02d}:{seconds:02d}"
-
-    def format_timestamp(self, timestamp) -> str:
-        """将时间戳格式化为 YYYY-MM-DD HH:MM:SS"""
-        return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
-
     def start_tree(self, init_tasks):
+        """
+        启动任务链
+        """
         start_time = time.time()
         structure_list = self.format_structure_list_from_tree()
         task_logger.start_tree(structure_list)
@@ -240,8 +232,8 @@ class TaskTree:
         clean_stage(self.root_stage)
 
         # 关闭 multiprocessing.Manager
-        if self.manager is not None:
-            self.manager.shutdown()
+        # if self.manager is not None:
+        #     self.manager.shutdown()
 
     def process_final_result_dict(self, initial_tasks):
         """
@@ -474,9 +466,9 @@ class TaskTree:
                 "tasks_processed": processed,
                 "tasks_error": failed,
                 "tasks_pending": pending,
-                "start_time": self.format_timestamp(start_time),
-                "elapsed_time": self.format_duration(elapsed),
-                "remaining_time": self.format_duration(remaining),
+                "start_time": format_timestamp(start_time),
+                "elapsed_time": format_duration(elapsed),
+                "remaining_time": format_duration(remaining),
             }
 
         return status_dict
