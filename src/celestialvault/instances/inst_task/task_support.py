@@ -241,6 +241,19 @@ class TaskReporter:
             task_logger.logger.warning(f"[Reporter] Structure push failed: {e}")
 
 
+class NoOpContext:
+    def __enter__(self):
+        return self
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
 
+
+class ValueWrapper:
+    def __init__(self, value=0):
+        self.value = value
+
+
+null_lock = NoOpContext()
+counter = ValueWrapper()
 TERMINATION_SIGNAL = TerminationSignal()
 task_logger = TaskLogger("INFO")

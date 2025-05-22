@@ -1,15 +1,15 @@
-import json, time, requests
+import json, time
 import multiprocessing
-import threading
 from collections import defaultdict
 from datetime import datetime
+from multiprocessing import Value as MPValue, Lock as MPLock
 from multiprocessing import Queue as MPQueue
 from pathlib import Path
 from typing import Any, Dict, List
 
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
-from .task_support import TERMINATION_SIGNAL, TaskError, TaskReporter, task_logger
+from .task_support import TERMINATION_SIGNAL, TaskError, TaskReporter, task_logger, counter
 
 
 class TaskTree:
@@ -39,6 +39,9 @@ class TaskTree:
         初始化字典
         """
         self.stages_status_dict: Dict[str, dict] = defaultdict(dict)
+        self.stage_locks = {}  # 可选的锁，用于控制每个阶段的并发数
+        self.stage_success_counter = {}  # 用于保存每个阶段成功处理的任务数
+        self.stage_extra_stats = defaultdict(dict) # 用于保存每个阶段的额外统计信息
         
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
         self.error_timeline_dict: Dict[str, list] = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
@@ -145,9 +148,9 @@ class TaskTree:
 
         self.reporter.stop()
         self.handle_fail_queue()
-        task_logger.logger.trace(f"Fail queue handled.")
+        # task_logger.logger.trace(f"Fail queue handled.")
         # self.process_final_result_dict(init_tasks)
-        task_logger.logger.trace(f"Final result dict processed.")
+        # task_logger.logger.trace(f"Final result dict processed.")
         self.save_failures()
         self.release_resources()
 
@@ -172,15 +175,35 @@ class TaskTree:
         self.stages_status_dict[stage_tag]["is_active"] = True
         self.stages_status_dict[stage_tag]["start_time"] = time.time()
 
+        if isinstance(stage, TaskSplitter):
+            self.stage_extra_stats[stage_tag]["split_output_count"] = MPValue("i", 0)
+        else:
+            self.stage_extra_stats[stage_tag] = {}
+
         if stage.stage_mode == "process":
-            stage.init_dict(self.manager.dict(), {})
+            self.stage_success_counter[stage_tag] = MPValue("i", 0)
+            self.stage_locks[stage_tag] = MPLock()
+
+            stage.init_dict(
+                {}, 
+                self.stage_success_counter[stage_tag],
+                self.stage_locks[stage_tag],
+                self.stage_extra_stats[stage_tag]
+                )
             p = multiprocessing.Process(
                 target=stage.start_stage, args=(input_queue, output_queues, self.fail_queue), name=stage_tag
             )
             p.start()
             self.processes.append(p)
         else:
-            stage.init_dict({}, {})
+            self.stage_success_counter[stage_tag] = counter
+
+            stage.init_dict(
+                {}, 
+                self.stage_success_counter[stage_tag], 
+                None, 
+                self.stage_extra_stats[stage_tag]
+                )
             stage.start_stage(input_queue, output_queues, self.fail_queue)
 
             self.stages_status_dict[stage_tag]["is_active"]  = False
@@ -197,8 +220,8 @@ class TaskTree:
 
         def clean_stage(stage: TaskManager):
             stage.clean_env()
-            stage.success_dict = stage.get_success_dict()
-            stage.error_dict = stage.get_error_dict()
+            # stage.success_dict = stage.get_success_dict()
+            # stage.error_dict = stage.get_error_dict()
 
             visited_stages.add(stage)
             for next_stage in stage.next_stages:
@@ -410,15 +433,16 @@ class TaskTree:
         for tag, stage_status_dict in self.stages_status_dict.items():
             stage: TaskManager = stage_status_dict["stage"]
             prev = stage.prev_stage
+            prev_tag = prev.get_stage_tag() if prev else None
 
             total_input = (
-                sum(len(v) for v in prev.success_dict.values()) if isinstance(prev, TaskSplitter)
-                else len(prev.success_dict) if prev
+                self.stage_extra_stats[prev_tag]["split_output_count"].value if isinstance(prev, TaskSplitter)
+                else status_dict[prev_tag]["tasks_processed"] if prev
                 else self.init_tasks_num
             )
 
             is_active = stage_status_dict.get("is_active", False)
-            processed = len(stage.success_dict)
+            processed = self.stage_success_counter[tag].value
             failed = len(all_stage_error_dict.get(tag, {}))
             pending = max(0, total_input - processed - failed)
 

@@ -21,7 +21,7 @@ from httpx import (
 )
 
 from .task_progress import ProgressManager
-from .task_support import TERMINATION_SIGNAL, TerminationSignal, task_logger
+from .task_support import TERMINATION_SIGNAL, TerminationSignal, task_logger, null_lock, counter
 
 
 class TaskManager:
@@ -71,12 +71,17 @@ class TaskManager:
 
         self.init_dict()
 
-    def init_dict(self, success_dict=None, error_dict=None):
+    def init_dict(self, success_dict=None, success_counter=None, success_lock=None, extra_stats=None):
         """
         初始化结果字典
         """
         self.success_dict = success_dict if success_dict is not None else {}
-        self.error_dict = error_dict if error_dict is not None else {}
+        self.error_dict = {}
+
+        self.success_counter = success_counter if success_counter is not None else counter
+        self.success_lock = success_lock if success_lock is not None else null_lock
+
+        self.extra_stats = extra_stats if extra_stats is not None else {}
 
     def init_env(self, task_queue=None, result_queues=None, fail_queue=None):
         """
@@ -176,6 +181,7 @@ class TaskManager:
             "execution_mode": self.execution_mode if self.execution_mode == "serial" else self.execution_mode + f"-{self.worker_limit}",
             "stage_mode": self.stage_mode,
             "func_name": self.func.__name__,
+            "class_name": self.__class__.__name__,
         }
 
     def add_retry_exceptions(self, *exceptions):
@@ -314,6 +320,11 @@ class TaskManager:
         """
         processed_result = self.process_result(task, result)
         self.success_dict[task] = processed_result
+
+        # 加锁方式（保证正确）
+        with self.success_lock:
+            self.success_counter.value += 1
+
         self.put_result_queues(processed_result)
         task_logger.task_success(
             self.func.__name__,
