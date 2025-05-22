@@ -176,10 +176,10 @@ def transfer_gif_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]
         parent = file_path.parent
         return parent / Path(name + "_compressed.mp4")
 
-    from .FileOperations import handle_folder
+    from .FileOperations import handle_folder_files
 
     rules = {".gif": (transfer_gif_to_video, rename_mp4)}
-    return handle_folder(folder_path, rules)
+    return handle_folder_files(folder_path, rules)
 
 
 def rotate_video(video_path: str | Path, output_path, angle: int) -> Path:
@@ -237,7 +237,7 @@ def rotate_video_folder(
         parent = file_path.parent
         return parent / Path(name + f"_rotated({angle}).mp4")
 
-    from .FileOperations import handle_folder
+    from .FileOperations import handle_folder_files
 
     if angle in [90, 180, 270]:
         rules = {
@@ -250,7 +250,7 @@ def rotate_video_folder(
         }
     else:
         raise ValueError(f"不支持的旋转角度: {angle}，仅支持 0, 90, 180, 270")
-    return handle_folder(
+    return handle_folder_files(
         folder_path,
         rules,
         "serial",

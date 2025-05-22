@@ -219,11 +219,11 @@ def resize_pdfs(folder_path: Path, execution_mode: str = "serial"):
         new_name = f"{name}_resized.pdf"
         return file_path.with_name(new_name)
 
-    from .FileOperations import handle_folder
+    from .FileOperations import handle_folder_files
 
     max_pdf_width = get_max_pdf_width(folder_path)
     rules = {".pdf": (resize_pdf, lambda x: x)}
-    return handle_folder(
+    return handle_folder_files(
         folder_path,
         rules,
         execution_mode,

@@ -58,6 +58,7 @@ class TaskManager:
         self.process_pool = None
 
         self.set_prev_stage(None)
+        self.set_stage_name(None)
 
         self.retry_exceptions = (
             ConnectTimeout,
