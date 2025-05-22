@@ -279,9 +279,6 @@ class TaskTree:
             self.final_result_dict[initial_task] = update_final_result_dict(
                 initial_task, self.root_stage
             )
-        self.failed_tasks = [
-            task for task, pass_flag in task_execution_status.items() if not pass_flag
-        ]
 
     def handle_fail_queue(self):
         """
@@ -406,12 +403,6 @@ class TaskTree:
             stage: list(inner_dict.keys())
             for stage, inner_dict in self.get_all_stage_error_dict().items()
         }
-
-    def get_failed_tasks(self):
-        """
-        返回失败的任务列表
-        """
-        return self.failed_tasks
     
     def get_status_dict(self) -> dict:
         """
@@ -548,7 +539,6 @@ class TaskTree:
         final_result_dict = {}
         fail_by_error_dict = {}
         fail_by_stage_dict = {}
-        failed_tasks = []
 
         stage_modes = ["serial", "process"]
         execution_modes = ["serial", "thread"]
@@ -563,9 +553,6 @@ class TaskTree:
                 final_result_dict.update(self.get_final_result_dict())
                 fail_by_error_dict.update(self.get_fail_by_error_dict())
                 fail_by_stage_dict.update(self.get_fail_by_stage_dict())
-                failed_tasks += [
-                    task for task in self.get_failed_tasks() if task not in failed_tasks
-                ]
 
             test_table_list.append(time_list)
 
@@ -578,7 +565,6 @@ class TaskTree:
         results["Final result dict"] = final_result_dict
         results["Fail error dict"] = fail_by_error_dict
         results["Fail stage dict"] = fail_by_stage_dict
-        results["Fail tasks"] = failed_tasks
         return results
 
 

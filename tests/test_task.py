@@ -211,19 +211,20 @@ def test_task_tree_2():
 
     # 初始化 TaskTree
     tree = TaskTree(generate_stage)
+    tree.set_reporter(True, host="127.0.0.1", port=5000)
 
     # 测试输入：生成不同 URL 的任务
-    input_tasks = range(5)
+    input_tasks = range(10)
 
-    # tree.start_tree(input_tasks)
-    result = tree.test_methods(input_tasks)
-    test_table_list, execution_modes, stage_modes, index_header = result["Time table"]
-    result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
+    tree.start_tree(input_tasks)
+    # result = tree.test_methods(input_tasks)
+    # test_table_list, execution_modes, stage_modes, index_header = result["Time table"]
+    # result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
 
-    for key, value in result.items():
-        if isinstance(value, dict):
-            value = pprint.pformat(value)
-        logging.info(f"{key}: \n{value}")
+    # for key, value in result.items():
+    #     if isinstance(value, dict):
+    #         value = pprint.pformat(value)
+    #     logging.info(f"{key}: \n{value}")
 
 def _test_task_web_0():
     # 定义任务节点
