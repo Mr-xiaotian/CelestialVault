@@ -123,7 +123,7 @@ class TaskTree:
         """
         启动任务链
         """
-        start_time = time.time()
+        self.start_time = time.time()
         structure_list = self.format_structure_list_from_tree()
         task_logger.start_tree(structure_list)
         self._persist_structure_metadata()
@@ -143,10 +143,9 @@ class TaskTree:
         # task_logger.logger.trace(f"Fail queue handled.")
         # self.process_final_result_dict(init_tasks)
         # task_logger.logger.trace(f"Final result dict processed.")
-        self.save_failures()
         self.release_resources()
 
-        task_logger.end_tree(time.time() - start_time)
+        task_logger.end_tree(time.time() - self.start_time)
 
     def _execute_stage(self, stage: TaskManager, stage_visited: set):
         """
@@ -296,7 +295,8 @@ class TaskTree:
         """
         try:
             date_str = datetime.now().strftime("%Y-%m-%d")
-            file_path = Path(path) / f"realtime_errors({date_str}).jsonl"
+            time_str = datetime.fromtimestamp(self.start_time).strftime("%H-%M-%S-%f")[:-3]
+            file_path = Path(path) / date_str / f"realtime_errors({time_str}).jsonl"
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
             log_item = {
@@ -317,7 +317,8 @@ class TaskTree:
         """
         try:
             date_str = datetime.now().strftime("%Y-%m-%d")
-            file_path = Path(path) / f"realtime_errors({date_str}).jsonl"
+            time_str = datetime.fromtimestamp(self.start_time).strftime("%H-%M-%S-%f")[:-3]
+            file_path = Path(path) / date_str / f"realtime_errors({time_str}).jsonl"
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
             log_item = {
@@ -329,34 +330,6 @@ class TaskTree:
                 f.write(json.dumps(log_item, ensure_ascii=False) + "\n")
         except Exception as e:
             task_logger.logger.warning(f"[Persist] 写入结构失败: {e}")
-
-    def save_failures(self, path="./fallback", name=None):
-        """
-        保存失败信息到 JSON 文件
-        :param path: 保存路径
-        :param name: 文件名
-        """
-        path = Path(path) / datetime.now().strftime("%Y-%m-%d")
-        path.mkdir(parents=True, exist_ok=True)
-
-        structure = self.format_structure_list_from_tree()
-        timestamp = datetime.now().strftime("%H-%M-%S-%f")[:-3]
-        chain_name = self.root_stage.stage_name
-
-        data = {
-            "metadata": {
-                "timestamp": datetime.now().isoformat(),
-                "structure": structure,
-            },
-            "stage error": self.get_fail_by_stage_dict(),
-            "fail errors": {str(key): value for key, value in self.get_fail_by_error_dict().items()}
-        }
-
-        file_name = name or f"{timestamp}__{chain_name}.json"
-        file_path = path / file_name
-
-        with file_path.open("w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
 
     def get_stages_status_dict(self):
         """

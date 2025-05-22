@@ -1,3 +1,6 @@
+
+import json
+from collections import defaultdict
 from datetime import datetime
 from multiprocessing import Queue as MPQueue
 
@@ -23,3 +26,30 @@ def cleanup_mpqueue(queue: MPQueue):
     """
     queue.close()
     queue.join_thread()  # 确保队列的后台线程正确终止
+
+def load_error_by_stage(jsonl_path):
+    stage_dict = defaultdict(list)
+    with open(jsonl_path, "r") as f:
+        for line in f:
+            item = json.loads(line)
+            if "error" not in item or "stage" not in item:
+                continue  # 跳过结构条或非错误记录
+            
+            stage_dict[item["stage"]].append(item["task"])
+
+    return stage_dict
+
+def load_error_by_type(path):
+    type_dict = defaultdict(list)
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            entry = json.loads(line)
+            if "error" not in entry or "stage" not in entry:
+                continue  # 跳过结构条或非错误记录
+
+            error = entry["error"]
+            stage = entry["stage"]
+            key = f"({error}, {stage})"
+            type_dict[key].append(entry["task"])
+            
+    return type_dict

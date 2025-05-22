@@ -211,7 +211,6 @@ def test_task_tree_2():
 
     # 初始化 TaskTree
     tree = TaskTree(generate_stage)
-    tree.set_reporter(True, host="127.0.0.1", port=5000)
 
     # 测试输入：生成不同 URL 的任务
     input_tasks = range(10)
@@ -279,6 +278,6 @@ def profile_task_tree():
 
 # 在主函数或脚本中调用此函数，而不是在测试中
 if __name__ == "__main__":
-    test_task_tree_2()
-    # _test_task_web_1()
+    # test_task_tree_2()
+    _test_task_web_1()
     pass
