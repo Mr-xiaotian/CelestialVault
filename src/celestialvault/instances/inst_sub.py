@@ -3,7 +3,7 @@ from html import unescape
 from pathlib import Path
 from urllib.parse import unquote
 
-from ..tools.FileOperations import handle_folder
+from ..tools.FileOperations import handle_folder_files
 from ..tools.TextTools import pro_slash, safe_open_txt
 
 
@@ -78,7 +78,7 @@ class Suber:
     ):
         rules = {".txt": (self.clear_book, lambda a: a)}
 
-        return handle_folder(
+        return handle_folder_files(
             folder_path, rules, execution_mode, progress_desc="Clearing book folder"
         )
 
