@@ -1,4 +1,5 @@
 from datetime import datetime
+from multiprocessing import Queue as MPQueue
 
 
 def format_duration(seconds):
@@ -15,3 +16,10 @@ def format_duration(seconds):
 def format_timestamp(timestamp) -> str:
     """将时间戳格式化为 YYYY-MM-DD HH:MM:SS"""
     return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
+def cleanup_mpqueue(queue: MPQueue):
+    """
+    清理队列
+    """
+    queue.close()
+    queue.join_thread()  # 确保队列的后台线程正确终止

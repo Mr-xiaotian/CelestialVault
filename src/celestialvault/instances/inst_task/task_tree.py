@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
 from .task_support import TERMINATION_SIGNAL, TaskError, TaskReporter, task_logger, counter
-from .task_tools import format_duration, format_timestamp
+from .task_tools import format_duration, format_timestamp, cleanup_mpqueue
 
 
 class TaskTree:
@@ -210,31 +210,11 @@ class TaskTree:
         释放资源
         """
 
-        def clean_stage(stage: TaskManager):
-            stage.clean_env()
-            # stage.success_dict = stage.get_success_dict()
-            # stage.error_dict = stage.get_error_dict()
+        for stage_status_dict in self.stages_status_dict.values():
+            stage_status_dict["stage"].release_queue()
 
-            visited_stages.add(stage)
-            for next_stage in stage.next_stages:
-                if next_stage in visited_stages:
-                    continue
-                clean_stage(next_stage)
-
-        # 确保所有进程已被正确终止
-        for p in self.processes:
-            if p.is_alive():
-                p.terminate()  # 如果进程仍在运行，强制终止
-            p.join()  # 确保进程终止
-
-        # 关闭所有stage的线程池
-        visited_stages = set()
-        clean_stage(self.root_stage)
-
-        # 关闭 multiprocessing.Manager
-        # if self.manager is not None:
-        #     self.manager.shutdown()
-
+        cleanup_mpqueue(self.fail_queue)
+        
     def process_final_result_dict(self, initial_tasks):
         """
         查找对应的初始任务并更新 final_result_dict

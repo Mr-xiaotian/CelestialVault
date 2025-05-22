@@ -279,6 +279,6 @@ def profile_task_tree():
 
 # 在主函数或脚本中调用此函数，而不是在测试中
 if __name__ == "__main__":
-    # test_task_tree_2()
-    _test_task_web_1()
+    test_task_tree_2()
+    # _test_task_web_1()
     pass

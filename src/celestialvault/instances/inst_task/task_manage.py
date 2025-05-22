@@ -22,6 +22,7 @@ from httpx import (
 
 from .task_progress import ProgressManager
 from .task_support import TERMINATION_SIGNAL, TerminationSignal, task_logger, null_lock, counter
+from .task_tools import cleanup_mpqueue
 
 
 class TaskManager:
@@ -421,7 +422,7 @@ class TaskManager:
             self.run_with_executor(self.thread_pool)
         elif self.execution_mode == "process":
             self.run_with_executor(self.process_pool)
-            self.cleanup_mpqueue(self.task_queue)
+            cleanup_mpqueue(self.task_queue)
         elif self.execution_mode == "async":
             asyncio.run(self.run_in_async())
         else:
@@ -492,7 +493,8 @@ class TaskManager:
         else:
             self.run_in_serial()
 
-        self.cleanup_mpqueue(input_queue)
+        cleanup_mpqueue(input_queue)
+        self.release_pool()
         self.put_result_queues(TERMINATION_SIGNAL)
 
         task_logger.end_stage(
@@ -699,12 +701,10 @@ class TaskManager:
         """
         return dict(self.error_dict)
 
-    def clean_env(self):
+    def release_queue(self):
         """
         清理环境
         """
-        self.release_pool()
-
         self.task_queue = None
         self.result_queues = None
         self.fail_queue = None
@@ -718,13 +718,6 @@ class TaskManager:
                 pool.shutdown(wait=True)
         self.thread_pool = None
         self.process_pool = None
-
-    def cleanup_mpqueue(self, queue: MPQueue):
-        """
-        清理队列
-        """
-        queue.close()
-        queue.join_thread()  # 确保队列的后台线程正确终止
 
     def test_method(self, execution_mode: str, task_list: list) -> float:
         """
@@ -750,4 +743,4 @@ class TaskManager:
         return results
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.clean_env()
+        self.release_queue()
