@@ -240,6 +240,7 @@ function renderDashboard() {
                 <span class="elapsed">${data.elapsed_time}</span>
                 &lt; 
                 <span class="remaining">${data.remaining_time}</span>, 
+                <span class="task-avg-time">${data.task_avg_time}</span>, 
                 <span>${progress}%</span>
               </span>
             </div>
