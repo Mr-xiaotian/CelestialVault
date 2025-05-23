@@ -1,6 +1,6 @@
 import threading
 from multiprocessing import Queue as MPQueue
-from queue import Queue as ThreadQueue
+from queue import Queue as ThreadQueue, Empty
 from threading import Thread
 from time import localtime, strftime, sleep
 from typing import List, Union
@@ -21,98 +21,104 @@ class TaskError(Exception):
     pass
 
 
-class TaskLogger:
-    """
-    用于记录任务执行日志的类
-    """
+class LogListener:
+    def __init__(self, log_path=None, level="INFO"):
+        now = strftime("%Y-%m-%d", localtime())
+        self.log_path = log_path or f"logs/task_logger({now}).log"
+        self.level = level
+        self.log_queue = MPQueue()
+        self._stop_event = threading.Event()
+        self._thread = threading.Thread(target=self._listen, daemon=True)
 
-    def __init__(self, level="INFO"):
-        self.logger = loguru_logger
-
-        self.logger.remove()  # remove the default handler
-        now_time = strftime("%Y-%m-%d", localtime())
-        self.logger.add(
-            f"logs/task_logger({now_time}).log",
+    def start(self):
+        # 配置 loguru 的两个 handler，stdout + file
+        loguru_logger.remove()
+        loguru_logger.add(
+            self.log_path,
+            level=self.level,
             format="{time:YYYY-MM-DD HH:mm:ss} {level} {message}",
-            level=level,
             enqueue=True,
         )
+        self._thread.start()
+
+    def _listen(self):
+        while not self._stop_event.is_set():
+            try:
+                record = self.log_queue.get(timeout=0.5)
+                if isinstance(record, TerminationSignal):
+                    break
+                loguru_logger.log(record["level"], record["message"])
+            except Empty:
+                continue
+            # except Exception as e:
+            #     loguru_logger.error(f"LogListener thread error: {type(e).__name__}({e})")
+
+    def get_queue(self):
+        return self.log_queue
+
+    def stop(self):
+        self._stop_event.set()
+        self.log_queue.put(TerminationSignal)  # 通知线程退出
+        self._thread.join()
+
+
+class TaskLogger:
+    """
+    多进程安全日志包装类，所有日志通过队列发送到监听进程写入
+    """
+
+    def __init__(self, log_queue=None):
+        self.log_queue = log_queue
+
+    def _log(self, level, message):
+        self.log_queue.put({"level": level.upper(), "message": message})
 
     def start_manager(self, func_name, task_num, execution_mode, worker_limit):
-        start_text = f"'{func_name}' start {task_num} tasks by {execution_mode}"
-        start_text += (
-            f"({worker_limit} workers)." if execution_mode != "serial" else "."
-        )
-        self.logger.info(start_text)
+        text = f"'{func_name}' start {task_num} tasks by {execution_mode}"
+        text += f"({worker_limit} workers)." if execution_mode != "serial" else "."
+        self._log("INFO", text)
 
-    def end_manager(
-        self,
-        func_name,
-        execution_mode,
-        use_time,
-        success_num,
-        failed_num,
-        duplicated_num,
-    ):
-        self.logger.info(
-            f"'{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated."
+    def end_manager(self, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
+        self._log(
+            "INFO",
+            f"'{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. "
+            f"{success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.",
         )
 
     def start_stage(self, stage_name, func_name, execution_mode, worker_limit):
-        start_text = (
-            f"The {stage_name} in '{func_name}' start tasks by {execution_mode}"
-        )
-        start_text += (
-            f"({worker_limit} workers)." if execution_mode != "serial" else "."
-        )
-        self.logger.info(start_text)
+        text = f"The {stage_name} in '{func_name}' start tasks by {execution_mode}"
+        text += f"({worker_limit} workers)." if execution_mode != "serial" else "."
+        self._log("INFO", text)
 
-    def end_stage(
-        self,
-        stage_name,
-        func_name,
-        execution_mode,
-        use_time,
-        success_num,
-        failed_num,
-        duplicated_num,
-    ):
-        self.logger.info(
-            f"The {stage_name} in '{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. {success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated."
+    def end_stage(self, stage_name, func_name, execution_mode, use_time, success_num, failed_num, duplicated_num):
+        self._log(
+            "INFO",
+            f"The {stage_name} in '{func_name}' end tasks by {execution_mode}. Use {use_time:.2f} second. "
+            f"{success_num} tasks successed, {failed_num} tasks failed, {duplicated_num} tasks duplicated.",
         )
 
     def start_tree(self, stage_structure):
-        self.logger.info(f"Starting TaskTree stages. Tree structure:")
-        for structure in stage_structure:
-            self.logger.info(f"{structure}")
+        self._log("INFO", f"Starting TaskTree stages. Tree structure:")
+        for line in stage_structure:
+            self._log("INFO", line)
 
     def end_tree(self, use_time):
-        self.logger.info(f"TaskTree end. Use {use_time:.2f} second.")
+        self._log("INFO", f"TaskTree end. Use {use_time:.2f} second.")
 
     def task_success(self, func_name, task_info, execution_mode, result_info, use_time):
-        self.logger.success(
-            f"In '{func_name}', Task {task_info} completed by {execution_mode}. Result is {result_info}. Used {use_time:.2f} seconds."
-        )
+        self._log("SUCCESS", f"In '{func_name}', Task {task_info} completed by {execution_mode}. Result is {result_info}. Used {use_time:.2f} seconds.")
 
     def task_retry(self, func_name, task_info, retry_times):
-        self.logger.warning(
-            f"In '{func_name}', Task {task_info} failed {retry_times} times and will retry."
-        )
+        self._log("WARNING", f"In '{func_name}', Task {task_info} failed {retry_times} times and will retry.")
 
     def task_error(self, func_name, task_info, exception):
-        self.logger.error(
-            f"In '{func_name}', Task {task_info} failed and can't retry: ({type(exception).__name__}){exception}."
-        )
+        self._log("ERROR", f"In '{func_name}', Task {task_info} failed and can't retry: ({type(exception).__name__}){exception}.")
 
     def task_duplicate(self, func_name, task_info):
-        self.logger.success(
-            f"In '{func_name}', Task {task_info} has been duplicated."
-        )
+        self._log("SUCCESS", f"In '{func_name}', Task {task_info} has been duplicated.")
 
     def splitter_success(self, func_name, task_info, split_count, use_time):
-        self.logger.success(
-            f"In '{func_name}', Task {task_info} has split into {split_count} parts. Used {use_time:.2f} seconds."
-        )
+        self._log("SUCCESS", f"In '{func_name}', Task {task_info} has split into {split_count} parts. Used {use_time:.2f} seconds.")
 
 
 class BroadcastQueueManager:
@@ -121,6 +127,7 @@ class BroadcastQueueManager:
         input_queue: Union[MPQueue, ThreadQueue],
         target_queues: List[Union[MPQueue, ThreadQueue]],
         func_name: str,
+        logger_queue: MPQueue
     ):
         """
         广播队列管理器
@@ -130,6 +137,7 @@ class BroadcastQueueManager:
         self.input_queue = input_queue
         self.target_queues = target_queues
         self.func_name = func_name
+        self.log = TaskLogger(logger_queue)
 
     def start(self):
         """开始广播线程"""
@@ -149,14 +157,14 @@ class BroadcastQueueManager:
                     break
                 self._broadcast_to_all(item)
             except Exception as e:
-                task_logger.logger.error(
-                    f"{self.func_name} broadcast thread error: {e}"
+                self.log._log("ERROR",
+                    f"{self.func_name} broadcast thread error: {type(e).__name__}({e})"
                 )
         self._broadcast_to_all(TERMINATION_SIGNAL)
 
     def _broadcast_to_all(self, item):
         """广播数据到所有目标队列"""
-        task_logger.logger.trace(
+        self.log._log("TRACE",
             f"{self.func_name} broadcasting {item} to all target queues."
         )
         for queue in self.target_queues:
@@ -164,11 +172,11 @@ class BroadcastQueueManager:
 
 
 class TaskReporter:
-    def __init__(self, task_tree, host="127.0.0.1", port=5000):
+    def __init__(self, task_tree, logger_queue, host="127.0.0.1", port=5000):
         from .task_tree import TaskTree
 
-        self.logger = task_logger
         self.task_tree: TaskTree = task_tree
+        self.logger = TaskLogger(logger_queue)
         self.base_url = f"http://{host}:{port}"
         self._stop_flag = threading.Event()
         self._thread = None
@@ -193,7 +201,7 @@ class TaskReporter:
             try:
                 self.push_once()
             except Exception as e:
-                task_logger.logger.error(f"[Reporter] Push error: {e}")
+                self.logger._log("ERROR",f"[Reporter] Push error: {type(e).__name__}({e})")
             self._stop_flag.wait(self.interval)
 
     def push_once(self):
@@ -208,14 +216,14 @@ class TaskReporter:
                 interval = res.json().get("interval", 5)
                 self.interval = max(1.0, min(interval, 60.0))
         except Exception as e:
-            task_logger.logger.warning(f"[Reporter] Interval fetch failed: {e}")
+            self.logger._log("WARNING",f"[Reporter] Interval fetch failed: {type(e).__name__}({e})")
 
     def _push_status(self):
         try:
             status_data = self.task_tree.get_status_dict()
             requests.post(f"{self.base_url}/api/push_status", json=status_data, timeout=1)
         except Exception as e:
-            task_logger.logger.warning(f"[Reporter] Status push failed: {e}")
+            self.logger._log("WARNING",f"[Reporter] Status push failed: {type(e).__name__}({e})")
 
     def _push_errors(self):
         try:
@@ -231,14 +239,14 @@ class TaskReporter:
                     })
             requests.post(f"{self.base_url}/api/push_errors", json=error_data, timeout=1)
         except Exception as e:
-            task_logger.logger.warning(f"[Reporter] Error push failed: {e}")
+            self.logger._log("WARNING",f"[Reporter] Error push failed: {type(e).__name__}({e})")
 
     def push_structure_once(self):
         try:
             structure = self.task_tree.get_structure_tree(self.task_tree.root_stage)
             requests.post(f"{self.base_url}/api/push_structure", json=structure, timeout=1)
         except Exception as e:
-            task_logger.logger.warning(f"[Reporter] Structure push failed: {e}")
+            self.logger._log("WARNING",f"[Reporter] Structure push failed: {type(e).__name__}({e})")
 
 
 class NoOpContext:
@@ -256,4 +264,3 @@ class ValueWrapper:
 null_lock = NoOpContext()
 counter = ValueWrapper()
 TERMINATION_SIGNAL = TerminationSignal()
-task_logger = TaskLogger("INFO")

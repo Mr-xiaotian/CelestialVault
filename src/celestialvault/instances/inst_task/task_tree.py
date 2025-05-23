@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
-from .task_support import TERMINATION_SIGNAL, TaskError, TaskReporter, task_logger, counter
+from .task_support import TERMINATION_SIGNAL, TaskError, TaskReporter, LogListener, TaskLogger, counter
 from .task_tools import format_duration, format_timestamp, cleanup_mpqueue
 
 
@@ -21,10 +21,13 @@ class TaskTree:
         """
         self.init_dict()
         self.init_fail_queue()
-        self.set_reporter()
         self.set_root_stage(root_stage)
 
         self.init_tasks_num = 0
+        self.log_listener = LogListener()
+        self.task_logger = TaskLogger(self.log_listener.get_queue())
+
+        self.set_reporter()
 
     def init_env(self, tasks: list):
         """
@@ -99,7 +102,7 @@ class TaskTree:
         设定报告器
         """
         self.is_report = is_report
-        self.reporter = TaskReporter(self, host, port)
+        self.reporter = TaskReporter(self, self.log_listener.get_queue(), host, port)
 
     def set_tree_mode(self, stage_mode: str, execution_mode: str):
         """
@@ -125,9 +128,10 @@ class TaskTree:
         """
         启动任务链
         """
+        self.log_listener.start()
         self.start_time = time.time()
         structure_list = self.format_structure_list_from_tree()
-        task_logger.start_tree(structure_list)
+        self.task_logger.start_tree(structure_list)
         self._persist_structure_metadata()
         self.reporter.start() if self.is_report else None
 
@@ -138,16 +142,17 @@ class TaskTree:
         for p in self.processes:
             p.join()
             self.stages_status_dict[p.name]["is_active"] = False
-            task_logger.logger.debug(f"{p.name} exitcode: {p.exitcode}")
+            self.task_logger._log("DEBUG", f"{p.name} exitcode: {p.exitcode}")
 
         self.reporter.stop()
         self.handle_fail_queue()
-        # task_logger.logger.trace(f"Fail queue handled.")
+        # self.task_logger._log("TRACE",f"Fail queue handled.")
         # self.process_final_result_dict(init_tasks)
-        # task_logger.logger.trace(f"Final result dict processed.")
+        # self.task_logger._log("TRACE",f"Final result dict processed.")
         self.release_resources()
 
-        task_logger.end_tree(time.time() - self.start_time)
+        self.task_logger.end_tree(time.time() - self.start_time)
+        self.log_listener.stop()
 
     def _execute_stage(self, stage: TaskManager, stage_visited: set):
         """
@@ -164,6 +169,7 @@ class TaskTree:
                 self.stages_status_dict[next_stage.get_stage_tag()]["task_queue"]
                 for next_stage in stage.next_stages
             ]
+        logger_queue = self.log_listener.get_queue()
 
         self.stages_status_dict[stage_tag]["is_active"] = True
         self.stages_status_dict[stage_tag]["start_time"] = time.time()
@@ -184,7 +190,7 @@ class TaskTree:
                 self.stage_extra_stats[stage_tag]
                 )
             p = multiprocessing.Process(
-                target=stage.start_stage, args=(input_queue, output_queues, self.fail_queue), name=stage_tag
+                target=stage.start_stage, args=(input_queue, output_queues, self.fail_queue, logger_queue), name=stage_tag
             )
             p.start()
             self.processes.append(p)
@@ -197,7 +203,7 @@ class TaskTree:
                 None, 
                 self.stage_extra_stats[stage_tag]
                 )
-            stage.start_stage(input_queue, output_queues, self.fail_queue)
+            stage.start_stage(input_queue, output_queues, self.fail_queue, logger_queue)
 
             self.stages_status_dict[stage_tag]["is_active"]  = False
 
@@ -311,7 +317,7 @@ class TaskTree:
             with open(file_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(log_item, ensure_ascii=False) + "\n")
         except Exception as e:
-            task_logger.logger.warning(f"[Persist] 写入实时错误日志失败: {e}")
+            self.task_logger._log("WARNING",f"[Persist] 写入实时错误日志失败: {e}")
 
     def _persist_structure_metadata(self, path="./fallback"):
         """
@@ -331,7 +337,7 @@ class TaskTree:
             with open(file_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(log_item, ensure_ascii=False) + "\n")
         except Exception as e:
-            task_logger.logger.warning(f"[Persist] 写入结构失败: {e}")
+            self.task_logger._log("WARNING",f"[Persist] 写入结构失败: {e}")
 
     def get_stages_status_dict(self):
         """
@@ -389,7 +395,7 @@ class TaskTree:
             )
 
             is_active = stage_status_dict.get("is_active", False)
-            processed = self.stage_success_counter[tag].value
+            processed = self.stage_success_counter.get(tag, counter).value
             failed = len(all_stage_error_dict.get(tag, {}))
             pending = max(0, total_input - processed - failed)
 
@@ -402,6 +408,7 @@ class TaskTree:
             # 更新时间消耗（仅在 pending 非 0 时刷新）
             if start_time:
                 elapsed = stage_status_dict.get("elapsed_time", 0)
+                # 如果上一次是 pending，则累计时间
                 if stage_is_pending_in_last_time:
                     # 如果上一次活跃, 那么无论当前状况，累计从上一次更新时间到现在的时间
                     elapsed += now - last_update_time

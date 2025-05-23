@@ -1,7 +1,6 @@
 from time import time
 
 from .task_manage import TaskManager
-from .task_support import task_logger
 
 
 class TaskSplitter(TaskManager):
@@ -58,7 +57,7 @@ class TaskSplitter(TaskManager):
 
         self.extra_stats["split_output_count"].value += split_count
 
-        task_logger.splitter_success(
+        self.task_logger.splitter_success(
             self.func.__name__,
             self.get_task_info(task),
             split_count,
