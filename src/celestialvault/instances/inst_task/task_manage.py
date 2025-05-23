@@ -21,8 +21,8 @@ from httpx import (
 )
 
 from .task_progress import ProgressManager
-from .task_support import TERMINATION_SIGNAL, TerminationSignal, TaskLogger, null_lock, counter
-from .task_tools import cleanup_mpqueue, is_queue_empty
+from .task_support import TERMINATION_SIGNAL, TerminationSignal, LogListener, TaskLogger, null_lock, counter
+from .task_tools import cleanup_mpqueue, is_queue_empty, is_queue_empty_async
 
 
 class TaskManager:
@@ -126,6 +126,13 @@ class TaskManager:
         """
         self.task_logger = TaskLogger(self.logger_queue)
 
+    def init_linster(self):
+        """
+        初始化监听器
+        """
+        self.log_listener = LogListener("INFO")
+        self.log_listener.start()
+
     def set_execution_mode(self, execution_mode):
         """
         设置执行模式
@@ -186,12 +193,21 @@ class TaskManager:
         return f"{self.stage_name}[{self.func.__name__}]"
     
     def get_status_snapshot(self) -> dict:
+        """
+        获取当前节点的状态快照
+        """
         return {
             "execution_mode": self.execution_mode if self.execution_mode == "serial" else self.execution_mode + f"-{self.worker_limit}",
             "stage_mode": self.stage_mode,
             "func_name": self.func.__name__,
             "class_name": self.__class__.__name__,
         }
+    
+    def is_stage(self):
+        """
+        判断当前节点是否是tree中的节点
+        """
+        return isinstance(self.stage_name, int)
 
     def add_retry_exceptions(self, *exceptions):
         """
@@ -413,7 +429,8 @@ class TaskManager:
         :param task_source: 任务迭代器或者生成器
         """
         start_time = time.time()
-        self.init_env()
+        self.init_linster()
+        self.init_env(logger_queue=self.log_listener.get_queue())
 
         try:
             total_tasks = len(task_source)
@@ -445,6 +462,7 @@ class TaskManager:
             len(self.error_dict),
             self.duplicates_num,
         )
+        self.log_listener.stop()
 
     async def start_async(self, task_source: Iterable):
         """
@@ -454,7 +472,8 @@ class TaskManager:
         """
         start_time = time.time()
         self.set_execution_mode("async")
-        self.init_env()
+        self.init_linster()
+        self.init_env(logger_queue=self.log_listener.get_queue())
 
         try:
             total_tasks = len(task_source)
@@ -475,6 +494,7 @@ class TaskManager:
             len(self.error_dict),
             self.duplicates_num,
         )
+        self.log_listener.stop()
 
     def start_stage(self, input_queue: MPQueue, output_queues: List[MPQueue], fail_queue: MPQueue, logger_queue: MPQueue):
         """
@@ -679,7 +699,7 @@ class TaskManager:
 
         progress_manager.close()
 
-        if not is_queue_empty(self.task_queue):
+        if not await is_queue_empty_async(self.task_queue):
             self.task_logger._log("TRACE",f"Retrying tasks for {self.func.__name__}")
             await self.task_queue.put(TERMINATION_SIGNAL)
             await self.run_in_async()

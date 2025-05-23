@@ -3,7 +3,10 @@ import json
 from collections import defaultdict
 from datetime import datetime
 from multiprocessing import Queue as MPQueue
+from asyncio import Queue as AsyncQueue
+from queue import Queue as ThreadQueue
 from queue import Empty
+from asyncio import QueueEmpty as AsyncQueueEmpty
 
 
 def format_duration(seconds):
@@ -55,10 +58,18 @@ def load_error_by_type(path):
             
     return type_dict
 
-def is_queue_empty(q):
+def is_queue_empty(q: ThreadQueue) -> bool:
     try:
         item = q.get_nowait()
         q.put(item)  # optional: put it back
         return False
     except Empty:
+        return True
+    
+async def is_queue_empty_async(q: AsyncQueue) -> bool:
+    try:
+        item = q.get_nowait()
+        await q.put(item)  # ✅ 修复点
+        return False
+    except AsyncQueueEmpty:
         return True

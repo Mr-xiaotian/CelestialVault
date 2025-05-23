@@ -27,7 +27,6 @@ class LogListener:
         self.log_path = f"logs/task_logger({now}).log"
         self.level = level
         self.log_queue = MPQueue()
-        self._stop_event = threading.Event()
         self._thread = threading.Thread(target=self._listen, daemon=True)
 
     def start(self):
@@ -40,12 +39,13 @@ class LogListener:
             enqueue=True,
         )
         self._thread.start()
+        loguru_logger.debug("LogListener started.")
 
     def _listen(self):
-        while not self._stop_event.is_set():
+        while True:
             try:
                 record = self.log_queue.get(timeout=0.5)
-                if record is None:
+                if isinstance(record, TerminationSignal):
                     break
                 loguru_logger.log(record["level"], record["message"])
             except Empty:
@@ -57,8 +57,7 @@ class LogListener:
         return self.log_queue
 
     def stop(self):
-        self._stop_event.set()
-        self.log_queue.put(None)  # 通知线程退出
+        self.log_queue.put(TERMINATION_SIGNAL)  # 通知线程退出
         self._thread.join()
         loguru_logger.debug("LogListener stopped.")
 
