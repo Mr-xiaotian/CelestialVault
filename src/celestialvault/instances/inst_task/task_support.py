@@ -203,7 +203,7 @@ class TaskReporter:
 
     def _sync_interval(self):
         try:
-            res = requests.get(f"{self.base_url}/api/interval", timeout=1)
+            res = requests.get(f"{self.base_url}/api/get_interval", timeout=1)
             if res.ok:
                 interval = res.json().get("interval", 5)
                 self.interval = max(1.0, min(interval, 60.0))

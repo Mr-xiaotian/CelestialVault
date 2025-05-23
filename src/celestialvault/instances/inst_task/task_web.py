@@ -26,19 +26,19 @@ class TaskWebServer:
             return render_template("index.html")
 
         # ---- 展示接口 ----
-        @app.route("/api/structure")
+        @app.route("/api/get_structure")
         def get_structure():
             return jsonify(self.structure_store)
 
-        @app.route("/api/status")
+        @app.route("/api/get_status")
         def get_status():
             return jsonify(self.status_store)
 
-        @app.route("/api/errors")
+        @app.route("/api/get_errors")
         def get_errors():
             return jsonify(self.error_store)
         
-        @app.route("/api/interval", methods=["GET"])
+        @app.route("/api/get_interval", methods=["GET"])
         def get_interval():
             return jsonify({"interval": self.report_interval})
 

@@ -92,7 +92,7 @@ async function refreshAll() {
 
 async function loadStatuses() {
   try {
-    const res = await fetch("/api/status");
+    const res = await fetch("/api/get_status");
     nodeStatuses = await res.json();
   } catch (e) {
     console.error("状态加载失败", e);
@@ -101,7 +101,7 @@ async function loadStatuses() {
 
 async function loadStructure() {
   try {
-    const res = await fetch("/api/structure");
+    const res = await fetch("/api/get_structure");
     const data = await res.json(); // 结构是结构化 JSON
 
     // 判断是否为空对象或空数组
@@ -188,7 +188,7 @@ function toggleTheme() {
 
 async function loadErrors() {
   try {
-    const res = await fetch("/api/errors");
+    const res = await fetch("/api/get_errors");
     errors = await res.json();
   } catch (e) {
     console.error("错误日志加载失败", e);
