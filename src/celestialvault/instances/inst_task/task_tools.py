@@ -3,6 +3,7 @@ import json
 from collections import defaultdict
 from datetime import datetime
 from multiprocessing import Queue as MPQueue
+from queue import Empty
 
 
 def format_duration(seconds):
@@ -53,3 +54,11 @@ def load_error_by_type(path):
             type_dict[key].append(entry["task"])
             
     return type_dict
+
+def is_queue_empty(q):
+    try:
+        item = q.get_nowait()
+        q.put(item)  # optional: put it back
+        return False
+    except Empty:
+        return True

@@ -22,7 +22,7 @@ from httpx import (
 
 from .task_progress import ProgressManager
 from .task_support import TERMINATION_SIGNAL, TerminationSignal, TaskLogger, null_lock, counter
-from .task_tools import cleanup_mpqueue
+from .task_tools import cleanup_mpqueue, is_queue_empty
 
 
 class TaskManager:
@@ -550,9 +550,8 @@ class TaskManager:
 
         progress_manager.close()
 
-        if self.task_queue.qsize():
+        if not is_queue_empty(self.task_queue):
             self.task_logger._log("TRACE",f"Retrying tasks for {self.func.__name__}")
-            # self.task_queue = self.retry_queue
             self.task_queue.put(TERMINATION_SIGNAL)
             self.run_in_serial()
 
@@ -627,9 +626,8 @@ class TaskManager:
         # 所有任务和回调都完成了，现在可以安全关闭进度条
         progress_manager.close()
 
-        if self.task_queue.qsize():
+        if not is_queue_empty(self.task_queue):
             self.task_logger._log("TRACE",f"Retrying tasks for {self.func.__name__}")
-            # self.task_queue = self.retry_queue
             self.task_queue.put(TERMINATION_SIGNAL)
             self.run_with_executor(executor)
 
@@ -681,9 +679,8 @@ class TaskManager:
 
         progress_manager.close()
 
-        if self.task_queue.qsize():
+        if not is_queue_empty(self.task_queue):
             self.task_logger._log("TRACE",f"Retrying tasks for {self.func.__name__}")
-            # self.task_queue = self.retry_queue
             await self.task_queue.put(TERMINATION_SIGNAL)
             await self.run_in_async()
 

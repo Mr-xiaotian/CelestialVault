@@ -22,9 +22,9 @@ class TaskError(Exception):
 
 
 class LogListener:
-    def __init__(self, log_path=None, level="INFO"):
+    def __init__(self, level="INFO"):
         now = strftime("%Y-%m-%d", localtime())
-        self.log_path = log_path or f"logs/task_logger({now}).log"
+        self.log_path = f"logs/task_logger({now}).log"
         self.level = level
         self.log_queue = MPQueue()
         self._stop_event = threading.Event()
@@ -45,7 +45,7 @@ class LogListener:
         while not self._stop_event.is_set():
             try:
                 record = self.log_queue.get(timeout=0.5)
-                if isinstance(record, TerminationSignal):
+                if record is None:
                     break
                 loguru_logger.log(record["level"], record["message"])
             except Empty:
@@ -58,8 +58,9 @@ class LogListener:
 
     def stop(self):
         self._stop_event.set()
-        self.log_queue.put(TerminationSignal)  # 通知线程退出
+        self.log_queue.put(None)  # 通知线程退出
         self._thread.join()
+        loguru_logger.debug("LogListener stopped.")
 
 
 class TaskLogger:
@@ -195,6 +196,7 @@ class TaskReporter:
             self._stop_flag.set()
             self._thread.join(timeout=2)
             self._thread = None
+            self.logger._log("DEBUG", "[Reporter] Stopped.")
 
     def _loop(self):
         while not self._stop_flag.is_set():

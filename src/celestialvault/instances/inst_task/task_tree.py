@@ -21,12 +21,10 @@ class TaskTree:
         """
         self.init_dict()
         self.init_fail_queue()
+        self.init_log()
         self.set_root_stage(root_stage)
 
         self.init_tasks_num = 0
-        self.log_listener = LogListener()
-        self.task_logger = TaskLogger(self.log_listener.get_queue())
-
         self.set_reporter()
 
     def init_env(self, tasks: list):
@@ -90,6 +88,13 @@ class TaskTree:
         """
         self.fail_queue = MPQueue()
 
+    def init_log(self):
+        """
+        初始化日志
+        """
+        self.log_listener = LogListener(level = "INFO")
+        self.task_logger = TaskLogger(self.log_listener.get_queue())
+
     def set_root_stage(self, root_stage: TaskManager):
         """
         设定根节点
@@ -146,9 +151,6 @@ class TaskTree:
 
         self.reporter.stop()
         self.handle_fail_queue()
-        # self.task_logger._log("TRACE",f"Fail queue handled.")
-        # self.process_final_result_dict(init_tasks)
-        # self.task_logger._log("TRACE",f"Final result dict processed.")
         self.release_resources()
 
         self.task_logger.end_tree(time.time() - self.start_time)
@@ -389,7 +391,7 @@ class TaskTree:
             prev_tag = prev.get_stage_tag() if prev else None
 
             total_input = (
-                self.stage_extra_stats[prev_tag]["split_output_count"].value if isinstance(prev, TaskSplitter)
+                self.stage_extra_stats[prev_tag].get("split_output_count", counter).value if isinstance(prev, TaskSplitter)
                 else status_dict[prev_tag]["tasks_processed"] if prev
                 else self.init_tasks_num
             )
@@ -534,6 +536,7 @@ class TaskTree:
             time_list = []
             for execution_mode in execution_modes:
                 start_time = time.time()
+                self.init_log()
                 self.set_tree_mode(stage_mode, execution_mode)
                 self.start_tree(task_list)
 
