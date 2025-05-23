@@ -24,6 +24,8 @@ class TaskTree:
         self.set_reporter()
         self.set_root_stage(root_stage)
 
+        self.init_tasks_num = 0
+
     def init_env(self, tasks: list):
         """
         初始化环境

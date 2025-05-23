@@ -54,6 +54,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  nodeFilter.addEventListener("change", () => {
+    renderErrors();
+  });
+
   // 初始化时应用之前选择的主题
   if (localStorage.getItem("theme") === "dark") {
     document.body.classList.add("dark-theme");
@@ -297,12 +301,13 @@ function renderErrors() {
 
 function formatTimestamp(timestamp) {
   return new Date(timestamp * 1000).toLocaleString();
-  // 或自定义格式，如：
-  // return new Date(timestamp).toISOString().replace("T", " ").slice(0, 19);
 }
 
 function populateNodeFilter() {
   const nodes = Object.keys(nodeStatuses);
+  const previousValue = nodeFilter.value;  // 记住当前选中值
+
+  // 重新填充选项
   nodeFilter.innerHTML = `<option value="">全部节点</option>`;
   for (const node of nodes) {
     const option = document.createElement("option");
@@ -310,4 +315,12 @@ function populateNodeFilter() {
     option.textContent = node;
     nodeFilter.appendChild(option);
   }
+
+  // 尝试恢复之前的选中项
+  if (nodes.includes(previousValue)) {
+    nodeFilter.value = previousValue;
+  } else {
+    nodeFilter.value = "";  // 默认选“全部节点”
+  }
 }
+
