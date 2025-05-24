@@ -24,10 +24,10 @@ class TaskTree:
         self.init_log()
         self.set_root_stage(root_stage)
 
-        self.init_tasks_num = 0
+        self.init_tasks_num = {}
         self.set_reporter()
 
-    def init_env(self, tasks: list):
+    def init_env(self, init_tasks_dict: dict):
         """
         初始化环境
         """
@@ -35,7 +35,7 @@ class TaskTree:
         # self.manager = multiprocessing.Manager()
 
         self.init_dict()
-        self.init_task_queues(tasks)
+        self.init_task_queues(init_tasks_dict)
         self.init_fail_queue()
 
     def init_dict(self):
@@ -51,7 +51,7 @@ class TaskTree:
         self.error_timeline_dict: Dict[str, list] = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
         self.all_stage_error_dict: Dict[str, dict] = defaultdict(dict)  # 用于保存节点到节点失败任务的映射
 
-    def init_task_queues(self, tasks: list):
+    def init_task_queues(self, init_tasks_dict: dict):
         """
         初始化任务队列
         :param tasks: 待处理的任务列表
@@ -76,10 +76,11 @@ class TaskTree:
         self.fail_queue = MPQueue()
         root_stage_tag = self.root_stage.get_stage_tag()
 
-        self.init_tasks_num = 0
-        for task in tasks:
-            self.stages_status_dict[root_stage_tag]["task_queue"].put(task)
-            self.init_tasks_num += 1
+        self.init_tasks_num = {}
+        for tag, tasks in init_tasks_dict.items():
+            for task in tasks:
+                self.stages_status_dict[tag]["task_queue"].put(task)
+                self.init_tasks_num[tag] = self.init_tasks_num.get(tag, 0) + 1
         self.stages_status_dict[root_stage_tag]["task_queue"].put(TERMINATION_SIGNAL)
 
     def init_fail_queue(self):
@@ -129,7 +130,7 @@ class TaskTree:
         visited_stages = set()
         set_subsequent_satge_mode(self.root_stage)
 
-    def start_tree(self, init_tasks):
+    def start_tree(self, init_tasks_dict: dict):
         """
         启动任务链
         """
@@ -140,7 +141,7 @@ class TaskTree:
         self._persist_structure_metadata()
         self.reporter.start() if self.is_report else None
 
-        self.init_env(init_tasks)
+        self.init_env(init_tasks_dict)
         self._execute_stage(self.root_stage, set())
 
         # 等待所有进程结束
@@ -311,9 +312,9 @@ class TaskTree:
 
             log_item = {
                 "timestamp": datetime.fromtimestamp(timestamp).isoformat(),
-                "task": task_str,
-                "error": error_info,
                 "stage": stage_tag,
+                "error": error_info,
+                "task": task_str,
             }
 
             with open(file_path, "a", encoding="utf-8") as f:
@@ -390,11 +391,12 @@ class TaskTree:
             prev = stage.prev_stage
             prev_tag = prev.get_stage_tag() if prev else None
 
-            total_input = (
-                self.stage_extra_stats[prev_tag].get("split_output_count", counter).value if isinstance(prev, TaskSplitter)
-                else status_dict[prev_tag]["tasks_processed"] if prev
-                else self.init_tasks_num
-            )
+            total_input = self.init_tasks_num.get(tag, 0)
+            if prev:
+                if isinstance(prev, TaskSplitter):
+                    total_input += self.stage_extra_stats[prev_tag].get("split_output_count", counter).value
+                else:
+                    total_input += status_dict[prev_tag]["tasks_processed"] 
 
             is_active = stage_status_dict.get("is_active", False)
             processed = self.stage_success_counter.get(tag, counter).value
