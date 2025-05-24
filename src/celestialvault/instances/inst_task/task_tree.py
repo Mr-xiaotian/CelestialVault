@@ -578,9 +578,9 @@ class TaskChain(TaskTree):
         root_stage = stages[0]
         super().__init__(root_stage)
 
-    def start_chain(self, task_list: List[Any]):
+    def start_chain(self, init_tasks_dict: List[Any]):
         """
         启动任务链
-        :param task_list: 任务列表
+        :param init_tasks_dict: 任务列表
         """
-        self.start_tree(task_list)
+        self.start_tree(init_tasks_dict)

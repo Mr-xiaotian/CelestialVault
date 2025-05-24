@@ -8,8 +8,8 @@ def sleep_1(n):
     sleep(1)
     return n
 
-def sleep_random_01(n):
-    sleep(random.randint(0, 1))
+def sleep_random_02(n):
+    sleep(random.randint(0, 2))
     return n
 
 def sleep_random_48(n):
@@ -17,17 +17,17 @@ def sleep_random_48(n):
     return n
 
 def sleep_random_A(n):
-    return sleep_random_01(n)
+    return sleep_random_02(n)
 def sleep_random_B(n):
-    return sleep_random_01(n)
+    return sleep_random_02(n)
 def sleep_random_C(n):
-    return sleep_random_01(n)
+    return sleep_random_02(n)
 def sleep_random_D(n):
-    return sleep_random_01(n)
+    return sleep_random_02(n)
 def sleep_random_E(n):
-    return sleep_random_01(n)
+    return sleep_random_02(n)
 def sleep_random_F(n):
-    return sleep_random_01(n)
+    return sleep_random_02(n)
 
 def fibonacci(n):
     if n <= 0:

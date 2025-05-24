@@ -152,7 +152,9 @@ class Saver(object):
 
         # 创建 TaskChain 来管理 Fetch 和 Save 两个阶段的任务处理
         chain = TaskChain([fetch_manager, save_manager], chain_mode)
-        chain.start_tree(task_list)  # 开始任务树
+        chain.start_chain({
+            fetch_manager.get_stage_tag(): task_list
+        })  # 开始任务树
 
         final_result_dict = chain.get_final_result_dict()  # 获取任务链的最终结果字典
         return final_result_dict  # 返回结果
