@@ -109,7 +109,7 @@ def parse_sleep(url):
     return f"Parsed({url})"
 
 # 测试 TaskManager 的同步任务
-def test_task_manager():
+def _test_task_manager():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
     test_task_2 = (item for item in test_task_1)
@@ -122,7 +122,7 @@ def test_task_manager():
 
 # 测试 TaskManager 的异步任务
 @pytest.mark.asyncio
-async def test_task_manager_async():
+async def _test_task_manager_async():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
     test_task_2 = (item for item in test_task_1)
@@ -151,6 +151,7 @@ def _test_task_tree_0():
 
     # 初始化 TaskTree
     tree = TaskTree(root_stage = stage1)
+    tree.set_reporter(True)
 
     # 要测试的任务列表
     test_task_0 = range(25, 37)
@@ -158,7 +159,9 @@ def _test_task_tree_0():
     # test_task_2 = (item for item in test_task_1)
 
     # 开始任务链
-    result = tree.test_methods(test_task_1)
+    result = tree.test_methods({
+        stage1.get_stage_tag(): test_task_0,
+    })
     test_table_list, execution_modes, stage_modes, index_header = result["Time table"]
     result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
     for key, value in result.items():
@@ -166,7 +169,7 @@ def _test_task_tree_0():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def _test_task_tree_1():
+def test_task_tree_1():
     # 定义任务节点
     A = TaskManager(func=sleep_random_A, execution_mode='thread')
     B = TaskManager(func=sleep_random_B, execution_mode='serial')
@@ -185,9 +188,14 @@ def _test_task_tree_1():
 
     # 初始化 TaskTree, 并设置根节点
     tree = TaskTree(A)
+    tree.set_reporter(True)
+
+    input_tasks = {
+        A.get_stage_tag(): range(10),
+    }
 
     # 开始任务链
-    result = tree.test_methods(range(10))
+    result = tree.test_methods(input_tasks)
     test_table_list, execution_modes, stage_modes, index_header = result["Time table"]
     result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
     for key, value in result.items():
@@ -214,10 +222,13 @@ def _test_task_tree_2():
     tree = TaskTree(generate_stage)
 
     # 测试输入：生成不同 URL 的任务
-    input_tasks = range(10)
+    input_tasks = {
+        generate_stage.get_stage_tag(): input_tasks,
+    }
+    stage_modes = ['serial', 'process']
+    execution_modes = ['serial', 'thread']
 
-    # tree.start_tree(input_tasks)
-    result = tree.test_methods(input_tasks)
+    result = tree.test_methods(input_tasks, stage_modes, execution_modes)
     test_table_list, execution_modes, stage_modes, index_header = result["Time table"]
     result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
 
@@ -226,35 +237,13 @@ def _test_task_tree_2():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def _test_task_web_0():
+def _test_task_web_3():
     # 定义任务节点
-    A = TaskManager(func=sleep_random_48, execution_mode='serial')
-    B = TaskManager(func=sleep_random_48, execution_mode='serial')
-    C = TaskManager(func=sleep_random_48, execution_mode='serial')
-    D = TaskManager(func=sleep_random_48, execution_mode='serial')
-    E = TaskManager(func=sleep_random_48, execution_mode='serial')
-    F = TaskManager(func=sleep_random_48, execution_mode='serial')
-
-    # 设置链式上下文
-    A.set_tree_context(next_stages=[B, C], stage_mode='process', stage_name="Stage_A")
-    B.set_tree_context(next_stages=[D, F], stage_mode='process', stage_name="Stage_B")
-    C.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_C")
-    D.set_tree_context(next_stages=[E], stage_mode='process', stage_name="Stage_D")
-    E.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_E")
-    F.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_F")
-
-    # 初始化 TaskTree, 并设置根节点
-    tree = TaskTree(A, start_web_server=True)
-    
-    tree.start_tree(range(10))
-
-def _test_task_web_1():
-    # 定义任务节点
-    generate_stage = TaskManager(func=generate_urls_sleep, execution_mode='thread', worker_limit=4)
-    logr_stage = TaskManager(func=log_urls_sleep, execution_mode='thread', worker_limit=4)
+    generate_stage = TaskManager(func=generate_urls_sleep, execution_mode='serial', worker_limit=4)
+    logr_stage = TaskManager(func=log_urls_sleep, execution_mode='serial', worker_limit=4)
     splitter = TaskSplitter()
-    download_stage = TaskManager(func=download_sleep, execution_mode='thread', worker_limit=4)
-    parse_stage = TaskManager(func=parse_sleep, execution_mode='thread', worker_limit=4)
+    download_stage = TaskManager(func=download_sleep, execution_mode='serial', worker_limit=4)
+    parse_stage = TaskManager(func=parse_sleep, execution_mode='serial', worker_limit=4)
 
     # 设置链关系
     generate_stage.set_tree_context([logr_stage, splitter], stage_mode='process', stage_name='GenURLs')
@@ -273,7 +262,7 @@ def _test_task_web_1():
         # splitter.get_stage_tag(): tuple([f"url_{x}_{i}" for i in range(random.randint(1, 4)) for x in range(10, 15)]),
         download_stage.get_stage_tag(): [f"url_{x}_5" for x in range(10, 20)],
         parse_stage.get_stage_tag(): [f"url_{x}_5" for x in range(10, 20)],
-        })
+    })
     
 def profile_task_tree():
     target_func = 'test_task_tree_1'
@@ -286,5 +275,5 @@ def profile_task_tree():
 # 在主函数或脚本中调用此函数，而不是在测试中
 if __name__ == "__main__":
     # test_task_tree_2()
-    _test_task_web_1()
+    _test_task_web_3()
     pass

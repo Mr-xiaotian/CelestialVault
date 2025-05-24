@@ -263,5 +263,4 @@ class ValueWrapper:
 
 
 null_lock = NoOpContext()
-counter = ValueWrapper()
 TERMINATION_SIGNAL = TerminationSignal()

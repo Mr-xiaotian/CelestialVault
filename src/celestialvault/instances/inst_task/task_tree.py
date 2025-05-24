@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
-from .task_support import TERMINATION_SIGNAL, TaskError, TaskReporter, LogListener, TaskLogger, counter
+from .task_support import TERMINATION_SIGNAL, TaskError, TaskReporter, LogListener, TaskLogger, ValueWrapper
 from .task_tools import format_duration, format_timestamp, cleanup_mpqueue
 
 
@@ -46,6 +46,7 @@ class TaskTree:
         self.stage_locks = {}  # 可选的锁，用于控制每个阶段的并发数
         self.stage_success_counter = {}  # 用于保存每个阶段成功处理的任务数
         self.stage_extra_stats = defaultdict(dict) # 用于保存每个阶段的额外统计信息
+        self.init_tasks_num = {} # 用于保存每个阶段的初始任务数
         
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
         self.error_timeline_dict: Dict[str, list] = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
@@ -76,7 +77,6 @@ class TaskTree:
         self.fail_queue = MPQueue()
         root_stage_tag = self.root_stage.get_stage_tag()
 
-        self.init_tasks_num = {}
         for tag, tasks in init_tasks_dict.items():
             for task in tasks:
                 self.stages_status_dict[tag]["task_queue"].put(task)
@@ -93,7 +93,7 @@ class TaskTree:
         """
         初始化日志
         """
-        self.log_listener = LogListener(level = "INFO")
+        self.log_listener = LogListener(level = "DEBUG")
         self.task_logger = TaskLogger(self.log_listener.get_queue())
 
     def set_root_stage(self, root_stage: TaskManager):
@@ -198,7 +198,7 @@ class TaskTree:
             p.start()
             self.processes.append(p)
         else:
-            self.stage_success_counter[stage_tag] = counter
+            self.stage_success_counter[stage_tag] = ValueWrapper()
 
             stage.init_dict(
                 {}, 
@@ -394,12 +394,12 @@ class TaskTree:
             total_input = self.init_tasks_num.get(tag, 0)
             if prev:
                 if isinstance(prev, TaskSplitter):
-                    total_input += self.stage_extra_stats[prev_tag].get("split_output_count", counter).value
+                    total_input += self.stage_extra_stats[prev_tag].get("split_output_count", ValueWrapper()).value
                 else:
                     total_input += status_dict[prev_tag]["tasks_processed"] 
 
             is_active = stage_status_dict.get("is_active", False)
-            processed = self.stage_success_counter.get(tag, counter).value
+            processed = self.stage_success_counter.get(tag, ValueWrapper()).value
             failed = len(all_stage_error_dict.get(tag, {}))
             pending = max(0, total_input - processed - failed)
 
@@ -519,11 +519,13 @@ class TaskTree:
         border = "+" + "-" * (max_length + 2) + "+"
         return [border] + content_lines + [border]
 
-    def test_methods(self, task_list: List[Any]) -> Dict[str, Any]:
+    def test_methods(self, init_tasks_dict: Dict[str, List], stage_modes: list=None, execution_modes: list=None) -> Dict[str, Any]:
         """
         测试 TaskTree 在 'serial' 和 'process' 模式下的执行时间。
 
-        :param task_list: 任务列表
+        :param init_tasks_dict: 初始化任务字典
+        :param stage_modes: 阶段模式列表，默认为 ['serial', 'process']
+        :param execution_modes: 执行模式列表，默认为 ['serial', 'thread']
         :return: 包含两种执行模式下的执行时间的字典
         """
         results = {}
@@ -532,15 +534,15 @@ class TaskTree:
         fail_by_error_dict = {}
         fail_by_stage_dict = {}
 
-        stage_modes = ["serial", "process"]
-        execution_modes = ["serial", "thread"]
+        stage_modes = stage_modes or ["serial", "process"]
+        execution_modes = execution_modes or ["serial", "thread"]
         for stage_mode in stage_modes:
             time_list = []
             for execution_mode in execution_modes:
                 start_time = time.time()
                 self.init_log()
                 self.set_tree_mode(stage_mode, execution_mode)
-                self.start_tree(task_list)
+                self.start_tree(init_tasks_dict)
 
                 time_list.append(time.time() - start_time)
                 final_result_dict.update(self.get_final_result_dict())

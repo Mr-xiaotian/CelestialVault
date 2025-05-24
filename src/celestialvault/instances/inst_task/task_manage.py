@@ -21,7 +21,7 @@ from httpx import (
 )
 
 from .task_progress import ProgressManager
-from .task_support import TERMINATION_SIGNAL, TerminationSignal, LogListener, TaskLogger, null_lock, counter
+from .task_support import TERMINATION_SIGNAL, TerminationSignal, LogListener, TaskLogger, null_lock, ValueWrapper
 from .task_tools import cleanup_mpqueue, is_queue_empty, is_queue_empty_async
 
 
@@ -79,7 +79,7 @@ class TaskManager:
         self.success_dict = success_dict if success_dict is not None else {}
         self.error_dict = {}
 
-        self.success_counter = success_counter if success_counter is not None else counter
+        self.success_counter = success_counter if success_counter is not None else ValueWrapper()
         self.success_lock = success_lock if success_lock is not None else null_lock
 
         self.extra_stats = extra_stats if extra_stats is not None else {}
