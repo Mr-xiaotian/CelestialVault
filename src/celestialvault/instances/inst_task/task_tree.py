@@ -305,7 +305,7 @@ class TaskTree:
         增量写入单条错误日志到每日文件中
         """
         try:
-            date_str = datetime.now().strftime("%Y-%m-%d")
+            date_str = datetime.fromtimestamp(self.start_time).strftime("%Y-%m-%d")
             time_str = datetime.fromtimestamp(self.start_time).strftime("%H-%M-%S-%f")[:-3]
             file_path = Path(path) / date_str / f"realtime_errors({time_str}).jsonl"
             file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -327,7 +327,7 @@ class TaskTree:
         在运行开始时写入任务结构元信息到 jsonl 文件
         """
         try:
-            date_str = datetime.now().strftime("%Y-%m-%d")
+            date_str = datetime.fromtimestamp(self.start_time).strftime("%Y-%m-%d")
             time_str = datetime.fromtimestamp(self.start_time).strftime("%H-%M-%S-%f")[:-3]
             file_path = Path(path) / date_str / f"realtime_errors({time_str}).jsonl"
             file_path.parent.mkdir(parents=True, exist_ok=True)
