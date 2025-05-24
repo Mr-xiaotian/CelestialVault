@@ -424,20 +424,20 @@ class TaskTree:
             stage_status_dict["elapsed_time"] = elapsed
 
             # 计算平均时间（秒/任务）并格式化为字符串
-            if processed > 0:
-                avg_time = elapsed / processed
+            if processed or failed:
+                avg_time = elapsed / (processed + failed)
                 if avg_time >= 1.0:
                     # 显示 "X.XX s/it"
                     avg_time_str = f"{avg_time:.2f}s/it"
                 else:
                     # 显示 "X.XX it/s"（取倒数）
-                    its_per_sec = processed / elapsed if elapsed else 0
+                    its_per_sec = (processed + failed) / elapsed if elapsed else 0
                     avg_time_str = f"{its_per_sec:.2f}it/s"
             else:
                 avg_time_str = "N/A"  # 或 "0.00s/it" 根据需求
 
             # 估算剩余时间
-            remaining = (elapsed / processed * pending) if processed and pending else 0
+            remaining = (elapsed / (processed + failed) * pending) if (processed or failed) and pending else 0
 
             status_dict[tag] = {
                 **stage.get_status_snapshot(),

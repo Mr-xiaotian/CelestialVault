@@ -206,8 +206,8 @@ function renderDashboard() {
       data.tasks_processed + data.tasks_pending === 0
         ? 0
         : Math.floor(
-            (data.tasks_processed /
-              (data.tasks_processed + data.tasks_pending)) *
+            ((data.tasks_processed + data.tasks_error) /
+              (data.tasks_processed + data.tasks_error + data.tasks_pending)) *
               100
           );
 
@@ -219,7 +219,7 @@ function renderDashboard() {
             <span class="badge ${
               data.active ? "badge-success" : "badge-inactive"
             }">
-              ${data.active ? "运行中" : "已停止"}
+              ${data.active ? "运行中" : "未运行"}
             </span>
           </div>
           <div class="stats-grid">

@@ -81,8 +81,8 @@ def log_urls(data):
     return f"Logged({data})"
 
 def download(url):
-    if url == "url_3_0":
-        raise ValueError("Test error in url_3_0")
+    if "url_3" in url:
+        raise ValueError("Test error in url_3_*")
     return f"Downloaded({url})"
 
 def parse(url):
@@ -100,8 +100,8 @@ def log_urls_sleep(url):
 
 def download_sleep(url):
     sleep(5)
-    if url == "url_3_0":
-        raise ValueError("Test error in url_3_0")
+    if "url_3" in url:
+        raise ValueError("Test error in url_3_*")
     return f"Downloaded({url})"
 
 def parse_sleep(url):
