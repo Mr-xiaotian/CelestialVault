@@ -17,6 +17,7 @@ from httpx import (
     ProtocolError,
     ReadError,
     ReadTimeout,
+    ProxyError,
     RequestError,
 )
 
@@ -68,6 +69,7 @@ class TaskManager:
             ConnectError,
             PoolTimeout,
             ReadTimeout,
+            ProxyError,
         )  # 需要重试的异常类型
 
         self.init_dict()
