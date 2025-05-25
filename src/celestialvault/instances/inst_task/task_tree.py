@@ -19,15 +19,12 @@ class TaskTree:
         :param root_stage: 任务链的根 TaskManager 节点
         :param start_web_server: 是否启动 web 服务
         """
-        self.init_dict()
-        self.init_fail_queue()
-        self.init_log()
         self.set_root_stage(root_stage)
 
-        self.init_tasks_num = {}
+        self.init_env()
         self.set_reporter()
 
-    def init_env(self, init_tasks_dict: dict):
+    def init_env(self):
         """
         初始化环境
         """
@@ -35,24 +32,24 @@ class TaskTree:
         # self.manager = multiprocessing.Manager()
 
         self.init_dict()
-        self.init_task_queues(init_tasks_dict)
-        self.init_fail_queue()
+        self.init_task_queues()
+        self.init_log()
 
     def init_dict(self):
         """
         初始化字典
         """
-        self.stages_status_dict: Dict[str, dict] = defaultdict(dict)
+        self.stages_status_dict: Dict[str, dict] = defaultdict(dict) # 用于保存每个节点的状态信息
+        self.stage_extra_stats = defaultdict(dict) # 用于保存每个阶段的额外统计信息
+        
         self.stage_locks = {}  # 可选的锁，用于控制每个阶段的并发数
         self.stage_success_counter = {}  # 用于保存每个阶段成功处理的任务数
-        self.stage_extra_stats = defaultdict(dict) # 用于保存每个阶段的额外统计信息
-        self.init_tasks_num = {} # 用于保存每个阶段的初始任务数
         
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
         self.error_timeline_dict: Dict[str, list] = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
         self.all_stage_error_dict: Dict[str, dict] = defaultdict(dict)  # 用于保存节点到节点失败任务的映射
 
-    def init_task_queues(self, init_tasks_dict: dict):
+    def init_task_queues(self):
         """
         初始化任务队列
         :param tasks: 待处理的任务列表
@@ -75,19 +72,6 @@ class TaskTree:
         visited_stages = set()
         collect_queue(self.root_stage)
         self.fail_queue = MPQueue()
-        root_stage_tag = self.root_stage.get_stage_tag()
-
-        for tag, tasks in init_tasks_dict.items():
-            for task in tasks:
-                self.stages_status_dict[tag]["task_queue"].put(task)
-                self.init_tasks_num[tag] = self.init_tasks_num.get(tag, 0) + 1
-        self.stages_status_dict[root_stage_tag]["task_queue"].put(TERMINATION_SIGNAL)
-
-    def init_fail_queue(self):
-        """
-        初始化失败队列
-        """
-        self.fail_queue = MPQueue()
 
     def init_log(self):
         """
@@ -102,6 +86,19 @@ class TaskTree:
         """
         self.root_stage = root_stage
         self.root_stage.set_prev_stage(None)
+
+    def put_stage_queue(self, tasks_dict: dict, put_termination_signal=True):
+        """
+        将任务放入队列
+        :param tasks_dict: 待处理的任务字典
+        :param put_termination_signal: 是否放入终止信号
+        """
+        for tag, tasks in tasks_dict.items():
+            for task in tasks:
+                self.stages_status_dict[tag]["task_queue"].put(task)
+                self.stages_status_dict[tag]["init_tasks_num"] = self.stages_status_dict[tag].get("init_tasks_num", 0) + 1
+
+        self.stages_status_dict[self.root_stage.get_stage_tag()]["task_queue"].put(TERMINATION_SIGNAL) if put_termination_signal else None
 
     def set_reporter(self, is_report=False, host="127.0.0.1", port=5000):
         """
@@ -141,7 +138,7 @@ class TaskTree:
         self._persist_structure_metadata()
         self.reporter.start() if self.is_report else None
 
-        self.init_env(init_tasks_dict)
+        self.put_stage_queue(init_tasks_dict)
         self._execute_stage(self.root_stage, set())
 
         # 等待所有进程结束
@@ -391,7 +388,7 @@ class TaskTree:
             prev = stage.prev_stage
             prev_tag = prev.get_stage_tag() if prev else None
 
-            total_input = self.init_tasks_num.get(tag, 0)
+            total_input = self.stages_status_dict[tag].get("init_tasks_num", 0)
             if prev:
                 if isinstance(prev, TaskSplitter):
                     total_input += self.stage_extra_stats[prev_tag].get("split_output_count", ValueWrapper()).value
@@ -540,7 +537,8 @@ class TaskTree:
             time_list = []
             for execution_mode in execution_modes:
                 start_time = time.time()
-                self.init_log()
+                self.init_env()
+                # self.init_log()
                 self.set_tree_mode(stage_mode, execution_mode)
                 self.start_tree(init_tasks_dict)
 

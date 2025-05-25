@@ -12,8 +12,8 @@ def sleep_random_02(n):
     sleep(random.randint(0, 2))
     return n
 
-def sleep_random_48(n):
-    sleep(random.randint(4, 8))
+def sleep_random_46(n):
+    sleep(random.randint(4, 6))
     return n
 
 def sleep_random_A(n):
@@ -89,23 +89,23 @@ def parse(url):
     return f"Parsed({url})"
 
 def generate_urls_sleep(x):
-    sleep(5)
+    sleep_random_46(5)
     return tuple([f"url_{x}_{i}" for i in range(random.randint(1, 4))])
 
 def log_urls_sleep(url):
-    sleep(5)
+    sleep_random_46(5)
     if url == ('url_1_0', 'url_1_1'):
         raise ValueError("Test error in ('url_1_0', 'url_1_1')")
     return f"Logged({url})"
 
 def download_sleep(url):
-    sleep(5)
+    sleep_random_46(5)
     if "url_3" in url:
         raise ValueError("Test error in url_3_*")
     return f"Downloaded({url})"
 
 def parse_sleep(url):
-    sleep(5)
+    sleep_random_46(5)
     return f"Parsed({url})"
 
 # 测试 TaskManager 的同步任务
@@ -169,7 +169,7 @@ def _test_task_tree_0():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def test_task_tree_1():
+def _test_task_tree_1():
     # 定义任务节点
     A = TaskManager(func=sleep_random_A, execution_mode='thread')
     B = TaskManager(func=sleep_random_B, execution_mode='serial')
@@ -203,7 +203,7 @@ def test_task_tree_1():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def _test_task_tree_2():    
+def test_task_tree_2():    
     # 定义任务节点
     generate_stage = TaskManager(func=generate_urls, execution_mode='thread', worker_limit=4)
     logr_stage = TaskManager(func=log_urls, execution_mode='thread', worker_limit=4)
@@ -223,7 +223,7 @@ def _test_task_tree_2():
 
     # 测试输入：生成不同 URL 的任务
     input_tasks = {
-        generate_stage.get_stage_tag(): input_tasks,
+        generate_stage.get_stage_tag(): range(10),
     }
     stage_modes = ['serial', 'process']
     execution_modes = ['serial', 'thread']
@@ -239,11 +239,11 @@ def _test_task_tree_2():
 
 def _test_task_web_3():
     # 定义任务节点
-    generate_stage = TaskManager(func=generate_urls_sleep, execution_mode='serial', worker_limit=4)
-    logr_stage = TaskManager(func=log_urls_sleep, execution_mode='serial', worker_limit=4)
+    generate_stage = TaskManager(func=generate_urls_sleep, execution_mode='thread', worker_limit=4)
+    logr_stage = TaskManager(func=log_urls_sleep, execution_mode='thread', worker_limit=4)
     splitter = TaskSplitter()
-    download_stage = TaskManager(func=download_sleep, execution_mode='serial', worker_limit=4)
-    parse_stage = TaskManager(func=parse_sleep, execution_mode='serial', worker_limit=4)
+    download_stage = TaskManager(func=download_sleep, execution_mode='thread', worker_limit=4)
+    parse_stage = TaskManager(func=parse_sleep, execution_mode='thread', worker_limit=4)
 
     # 设置链关系
     generate_stage.set_tree_context([logr_stage, splitter], stage_mode='process', stage_name='GenURLs')
