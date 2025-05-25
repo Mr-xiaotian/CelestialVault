@@ -2,7 +2,7 @@ from html import unescape
 from typing import Any, Tuple
 from urllib.parse import unquote
 
-import time
+import time, random
 import requests
 import httpx
 
@@ -43,19 +43,29 @@ class Fetcher:
         proxies_info = resp.json().get("proxies", {})
         proxy_names = proxies_info.get("GLOBAL", {}).get("all", [])
         exclude = ["DIRECT", "REJECT", "GLOBAL", "Proxy"]
-        return [p for p in proxy_names if p not in exclude]
+        valid_proxies = [p for p in proxy_names if p not in exclude]
+        return valid_proxies[:44]  # 只取前 44 个
 
-    def _switch_proxy(self):
+    def _switch_proxy(self, tried_proxies=None):
         if not self.use_proxy:
-            return  # 🟢 如果没启用代理，直接返回
-        self.proxy_index = (self.proxy_index + 1) % len(self.proxy_list)
-        next_proxy = self.proxy_list[self.proxy_index]
-        print(f"⚡️ 切换到节点: {next_proxy}")
+            return
+
+        if tried_proxies is None:
+            tried_proxies = set()
+
+        available_proxies = [p for p in self.proxy_list if p not in tried_proxies]
+        if not available_proxies:
+            # 所有代理都试过了，重新随机
+            available_proxies = self.proxy_list
+
+        next_proxy = random.choice(available_proxies)
+        self.proxy_index = self.proxy_list.index(next_proxy)
+        print(f"⚡️ 随机切换到节点: {next_proxy}")
         resp = requests.put(f"{self.clash_api}/proxies/GLOBAL", json={"name": next_proxy})
         if resp.status_code == 204:
             print("✅ 切换成功!")
         else:
-            print("❌ 切换失败:", resp.status_code)
+            print("❌ 切换失败:", resp.status_code, resp.text)
         time.sleep(1)
 
     def init_client(self):
@@ -99,6 +109,7 @@ class Fetcher:
             print(f"✅ 直连成功, 状态码: {status}")
             return status, content
 
+        tried_proxies = set()
         for attempt in range(self._max_repeat):
             try:
                 self.init_client()
@@ -106,14 +117,18 @@ class Fetcher:
                     status, content = method(self.cl.post, *method_args, **method_kwargs)
                 else:
                     status, content = method(self.cl.get, *method_args, **method_kwargs)
+
                 if status in [403, 429, 503, 502, 302]:
                     print(f"⚠️ 状态码 {status}, 需要换代理…")
-                    self._switch_proxy()
+                    tried_proxies.add(self.proxy_list[self.proxy_index])
+                    self._switch_proxy(tried_proxies)
                     continue
                 print(f"✅ 成功请求, 状态码: {status}")
                 return status, content
             except (httpx.RequestError, httpx.ProxyError) as e:
                 print(f"❌ 代理请求异常: {e}, 切换代理…")
-                self._switch_proxy()
+                tried_proxies.add(self.proxy_list[self.proxy_index])
+                self._switch_proxy(tried_proxies)
         raise RuntimeError("🚫 所有节点均请求失败！")
+
 
