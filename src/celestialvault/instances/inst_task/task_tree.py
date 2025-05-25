@@ -127,7 +127,7 @@ class TaskTree:
         visited_stages = set()
         set_subsequent_satge_mode(self.root_stage)
 
-    def start_tree(self, init_tasks_dict: dict):
+    def start_tree(self, init_tasks_dict: dict, put_termination_signal: bool=True):
         """
         启动任务链
         """
@@ -138,7 +138,7 @@ class TaskTree:
         self._persist_structure_metadata()
         self.reporter.start() if self.is_report else None
 
-        self.put_stage_queue(init_tasks_dict)
+        self.put_stage_queue(init_tasks_dict, put_termination_signal)
         self._execute_stage(self.root_stage, set())
 
         # 等待所有进程结束
@@ -576,9 +576,9 @@ class TaskChain(TaskTree):
         root_stage = stages[0]
         super().__init__(root_stage)
 
-    def start_chain(self, init_tasks_dict: List[Any]):
+    def start_chain(self, init_tasks_dict: List[Any], put_termination_signal: bool=True):
         """
         启动任务链
         :param init_tasks_dict: 任务列表
         """
-        self.start_tree(init_tasks_dict)
+        self.start_tree(init_tasks_dict, put_termination_signal)

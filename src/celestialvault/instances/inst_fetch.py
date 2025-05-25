@@ -40,8 +40,8 @@ class Fetcher:
 
     def _load_proxy_list(self):
         resp = requests.get(f"{self.clash_api}/proxies")
-        proxies_info = resp.json()["proxies"]
-        proxy_names = proxies_info["GLOBAL"]["all"]
+        proxies_info = resp.json().get("proxies", {})
+        proxy_names = proxies_info.get("GLOBAL", {}).get("all", [])
         exclude = ["DIRECT", "REJECT", "GLOBAL", "Proxy"]
         return [p for p in proxy_names if p not in exclude]
 
@@ -78,25 +78,35 @@ class Fetcher:
         return response.status_code, response.content
 
     def getText(self, url: str, *args, **kwargs) -> str:
-        return self._auto_request(self.obtainText, url, *args, **kwargs)[1]
+        return self._auto_request(self.obtainText, "GET", url, *args, **kwargs)[1]
 
     def getContent(self, url: str, *args, **kwargs) -> bytes:
-        return self._auto_request(self.obtainContent, url, *args, **kwargs)[1]
+        return self._auto_request(self.obtainContent, "GET", url, *args, **kwargs)[1]
+    
+    def postText(self, url: str, data: Any = None, json: Any = None, *args, **kwargs) -> str:
+        return self._auto_request(self.obtainText, "POST", url, data=data, json=json, *args, **kwargs)[1]
 
-    def _auto_request(self, method, url, *args, **kwargs):
+    def postContent(self, url: str, data: Any = None, json: Any = None, *args, **kwargs) -> bytes:
+        return self._auto_request(self.obtainContent, "POST", url, data=data, json=json, *args, **kwargs)[1]
+
+    def _auto_request(self, method, request_mode, *method_args, **method_kwargs):
         if not self.use_proxy:
-            # 🟢 不走代理，直接执行一次
             self.init_client()
-            status, content = method(self.cl.get, url=url, *args, **kwargs)
+            if request_mode == "POST":
+                status, content = method(self.cl.post, *method_args, **method_kwargs)
+            else:
+                status, content = method(self.cl.get, *method_args, **method_kwargs)
             print(f"✅ 直连成功, 状态码: {status}")
             return status, content
 
-        # 🟢 如果走代理，自动切换节点直到成功
         for attempt in range(self._max_repeat):
             try:
                 self.init_client()
-                status, content = method(self.cl.get, url=url, *args, **kwargs)
-                if status in [403, 429, 503, 502]:
+                if request_mode == "POST":
+                    status, content = method(self.cl.post, *method_args, **method_kwargs)
+                else:
+                    status, content = method(self.cl.get, *method_args, **method_kwargs)
+                if status in [403, 429, 503, 502, 302]:
                     print(f"⚠️ 状态码 {status}, 需要换代理…")
                     self._switch_proxy()
                     continue
@@ -105,4 +115,5 @@ class Fetcher:
             except (httpx.RequestError, httpx.ProxyError) as e:
                 print(f"❌ 代理请求异常: {e}, 切换代理…")
                 self._switch_proxy()
-        raise Exception("🚫 所有节点均请求失败！")
+        raise RuntimeError("🚫 所有节点均请求失败！")
+
