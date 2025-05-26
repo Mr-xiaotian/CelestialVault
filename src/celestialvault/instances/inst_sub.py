@@ -1,4 +1,5 @@
 import re
+import platform
 from html import unescape
 from pathlib import Path
 from urllib.parse import unquote
@@ -10,15 +11,15 @@ from ..tools.TextTools import pro_slash, safe_open_txt
 class Suber:
     def __init__(self):
         # Characters that need both lookbehind and lookahead checks
-        self.both_check_chars = "#|◆|\*|＊|=|＝|…|_|～|—|－"
+        self.both_check_chars = "#|◆|\*|＊|=|＝|…|_|～|—|－|\n"
 
         # Characters that need only lookahead checks
         self.lookahead_only_chars = (
-            ']|』|」|】|》|\)|）|\}|\!|！|\?|？|\||”|"|\.|。|章|：|:'
+            '\]|』|」|】|》|\)|）|\}|\!|！|\?|？|\||”|"|\.|。|章|：|:'
         )
 
         # Characters that need only lookbehind checks
-        self.lookbehind_only_chars = "第|（|\(|\{"
+        self.lookbehind_only_chars = "作者|字数|20|第|（|\(|\{|「|\[|【"
 
         self.regex_remove_unwanted_newlines = [
             # 移除不在某些标点符号后的换行符
@@ -30,7 +31,7 @@ class Suber:
 
         self.special_character_removal = [
             (
-                "(?<=\n)(\t|\r|\f|\v|\0|　|| )+",
+                "(?<=\n)(\t|\r|\f|\v|\0|　|| ||\u001e|\x1e)+",
                 "",
             ),  # 移除制表符、回车符、换页符、垂直制表符、空字符、全角空格和特殊符号
             ("\~", "-"),  # 将波浪号替换为连字符
@@ -54,6 +55,7 @@ class Suber:
         ]
 
         self.sub_text_list = self.special_character_removal + self.newline_handling
+        self.regex_newlines = self.regex_remove_unwanted_newlines + self.newline_handling
 
         self.sub_name_list = [
             ("：", "_"),
@@ -101,7 +103,34 @@ class Suber:
 
         return text
 
-    def sub_name(self, name):
+    def sub_name(self, name: str) -> str:
+        # 替换非法字符
         for sub in self.sub_name_list:
             name = re.sub(sub[0], sub[1], name)
+
+        # 平台文件名最大长度限制
+        # 通常 Windows 为 255，Linux/Mac 也类似；更严谨可以写个平台判断
+        max_len = 50 if platform.system() == "Windows" else 50
+
+        # 如果超过最大长度，按 2/4 和 1/4 拼接
+        if len(name) > max_len:
+            front_len = (max_len * 2) // 4
+            back_len = max_len // 4
+            name = f"{name[:front_len]}...{name[-back_len:]}"
+
         return name
+    
+    def remove_unwanted_newlines_and_spaces(self, text: str) -> str:
+        """
+        删除不需要的换行符以及多余空格。
+        """
+        # 移除多余换行（使用 regex_remove_unwanted_newlines 规则）
+        for pattern, repl in self.regex_newlines:
+            text = re.sub(pattern, repl, text, flags=re.S)
+
+        # 删除文本中部分空格（这里举例：删除行首行尾的空格 & 多余空格）
+        text = re.sub(r"[ \t]+", " ", text)  # 多个空格或制表符替换成一个空格
+        text = re.sub(r"^[ \t]+", "", text, flags=re.M)  # 行首空格
+        text = re.sub(r"[ \t]+$", "", text, flags=re.M)  # 行尾空格
+
+        return text
