@@ -202,12 +202,6 @@ class TaskManager:
             "func_name": self.func.__name__,
             "class_name": self.__class__.__name__,
         }
-    
-    def is_stage(self):
-        """
-        判断当前节点是否是tree中的节点
-        """
-        return isinstance(self.stage_name, int)
 
     def add_retry_exceptions(self, *exceptions):
         """
