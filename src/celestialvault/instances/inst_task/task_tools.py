@@ -1,5 +1,5 @@
 
-import json
+import json, ast
 from collections import defaultdict
 from datetime import datetime
 from multiprocessing import Queue as MPQueue
@@ -39,24 +39,26 @@ def load_error_by_stage(jsonl_path):
             if "error" not in item or "stage" not in item:
                 continue  # 跳过结构条或非错误记录
             
-            stage_dict[item["stage"]].append(item["task"])
+            task = ast.literal_eval(item["task"])
+            stage_dict[item["stage"]].append(task)
 
-    return stage_dict
+    return dict(stage_dict)
 
 def load_error_by_type(path):
     type_dict = defaultdict(list)
     with open(path, "r", encoding="utf-8") as f:
         for line in f:
-            entry = json.loads(line)
-            if "error" not in entry or "stage" not in entry:
+            item = json.loads(line)
+            if "error" not in item or "stage" not in item:
                 continue  # 跳过结构条或非错误记录
 
-            error = entry["error"]
-            stage = entry["stage"]
+            error = item["error"]
+            stage = item["stage"]
+            task = ast.literal_eval(item["task"])
             key = f"({error}, {stage})"
-            type_dict[key].append(entry["task"])
+            type_dict[key].append(task)
             
-    return type_dict
+    return dict(type_dict)
 
 def is_queue_empty(q: ThreadQueue) -> bool:
     try:

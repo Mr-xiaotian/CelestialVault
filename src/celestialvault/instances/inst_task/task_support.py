@@ -202,7 +202,7 @@ class TaskReporter:
             try:
                 self.push_once()
             except Exception as e:
-                self.logger._log("ERROR",f"[Reporter] Push error: {type(e).__name__}({e})")
+                self.logger._log("ERROR", f"[Reporter] Push error: {type(e).__name__}({e}).")
             self._stop_flag.wait(self.interval)
 
     def push_once(self):
@@ -217,14 +217,14 @@ class TaskReporter:
                 interval = res.json().get("interval", 5)
                 self.interval = max(1.0, min(interval, 60.0))
         except Exception as e:
-            self.logger._log("WARNING",f"[Reporter] Interval fetch failed: {type(e).__name__}({e})")
+            self.logger._log("WARNING", f"[Reporter] Interval fetch failed: {type(e).__name__}({e}).")
 
     def _push_status(self):
         try:
             status_data = self.task_tree.get_status_dict()
             requests.post(f"{self.base_url}/api/push_status", json=status_data, timeout=1)
         except Exception as e:
-            self.logger._log("WARNING",f"[Reporter] Status push failed: {type(e).__name__}({e})")
+            self.logger._log("WARNING", f"[Reporter] Status push failed: {type(e).__name__}({e}).")
 
     def _push_errors(self):
         try:
@@ -240,14 +240,14 @@ class TaskReporter:
                     })
             requests.post(f"{self.base_url}/api/push_errors", json=error_data, timeout=1)
         except Exception as e:
-            self.logger._log("WARNING",f"[Reporter] Error push failed: {type(e).__name__}({e})")
+            self.logger._log("WARNING", f"[Reporter] Error push failed: {type(e).__name__}({e}).")
 
     def push_structure_once(self):
         try:
             structure = self.task_tree.get_structure_tree(self.task_tree.root_stage)
             requests.post(f"{self.base_url}/api/push_structure", json=structure, timeout=1)
         except Exception as e:
-            self.logger._log("WARNING",f"[Reporter] Structure push failed: {type(e).__name__}({e})")
+            self.logger._log("WARNING", f"[Reporter] Structure push failed: {type(e).__name__}({e})")
 
 
 class NoOpContext:
@@ -263,5 +263,4 @@ class ValueWrapper:
 
 
 null_lock = NoOpContext()
-counter = ValueWrapper()
 TERMINATION_SIGNAL = TerminationSignal()
