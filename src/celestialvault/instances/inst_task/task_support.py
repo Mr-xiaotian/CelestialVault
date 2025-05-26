@@ -207,8 +207,8 @@ class TaskReporter:
 
     def push_once(self):
         self._sync_interval()
-        self._push_status()
         self._push_errors()
+        self._push_status()
 
     def _sync_interval(self):
         try:
@@ -219,13 +219,6 @@ class TaskReporter:
         except Exception as e:
             self.logger._log("WARNING", f"[Reporter] Interval fetch failed: {type(e).__name__}({e}).")
 
-    def _push_status(self):
-        try:
-            status_data = self.task_tree.get_status_dict()
-            requests.post(f"{self.base_url}/api/push_status", json=status_data, timeout=1)
-        except Exception as e:
-            self.logger._log("WARNING", f"[Reporter] Status push failed: {type(e).__name__}({e}).")
-
     def _push_errors(self):
         try:
             self.task_tree.handle_fail_queue()
@@ -233,7 +226,7 @@ class TaskReporter:
             for (err, tag), task_list in self.task_tree.get_error_timeline_dict().items():
                 for task, ts in task_list:
                     error_data.append({
-                        "error": err,
+                        "error": err[:20]+"..." if len(err) > 20 else err,
                         "node": tag,
                         "task_id": task,
                         "timestamp": ts,
@@ -241,6 +234,13 @@ class TaskReporter:
             requests.post(f"{self.base_url}/api/push_errors", json=error_data, timeout=1)
         except Exception as e:
             self.logger._log("WARNING", f"[Reporter] Error push failed: {type(e).__name__}({e}).")
+
+    def _push_status(self):
+        try:
+            status_data = self.task_tree.get_status_dict()
+            requests.post(f"{self.base_url}/api/push_status", json=status_data, timeout=1)
+        except Exception as e:
+            self.logger._log("WARNING", f"[Reporter] Status push failed: {type(e).__name__}({e}).")
 
     def push_structure_once(self):
         try:
