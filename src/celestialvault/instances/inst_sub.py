@@ -105,7 +105,7 @@ class Suber:
 
     def sub_name(self, name: str) -> str:
         # 替换非法字符
-        for sub in self.sub_name_list:
+        for sub in self.sub_name_list + self.special_character_removal:
             name = re.sub(sub[0], sub[1], name)
 
         # 平台文件名最大长度限制
@@ -116,7 +116,7 @@ class Suber:
         if len(name) > max_len:
             front_len = (max_len * 2) // 4
             back_len = max_len // 4
-            name = f"{name[:front_len]}...{name[-back_len:]}"
+            name = f"{name[:front_len]}(省略){name[-back_len:]}"
 
         return name
     
