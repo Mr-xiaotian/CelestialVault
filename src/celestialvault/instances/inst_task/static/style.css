@@ -38,6 +38,8 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap; /* 小屏自动换行 */
+  gap: 0.5rem; /* 可选：元素间距 */
 }
 
 select {
@@ -575,8 +577,29 @@ h1 {
   padding-bottom: 0;
 }
 
+/* 切换主题 */
+#theme-toggle {
+  position: absolute;
+  right: 20px;
+  background-color: #374151;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 5px 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#theme-toggle:hover {
+  background-color: #3b6fd9;
+}
+
 /* 响应式：在小屏下改为上下布局 */
 @media (max-width: 2048px) {
+  h1 {
+    width: 100%;
+    text-align: center; /* 或 center */
+  }
   .three-column-container {
     flex-direction: column;
     width: 100%;
@@ -607,23 +630,11 @@ h1 {
   .card-title {
     flex: 1 1 100%; /* 让标题独占一行（可选） */
   }
-}
 
-/* 切换主题 */
-#theme-toggle {
-  position: absolute;
-  right: 20px;
-  background-color: #374151;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  padding: 5px 15px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-#theme-toggle:hover {
-  background-color: #3b6fd9;
+  #theme-toggle {
+    position: static; /* 不再 absolute */
+    order: 3; /* 小屏下放到最后 */
+  }
 }
 
 /* 暗黑主题 */
