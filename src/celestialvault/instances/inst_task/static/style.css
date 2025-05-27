@@ -560,10 +560,10 @@ h1 {
 }
 
 #dashboard-grid .card {
-  /* margin-bottom: 1rem;  让卡片之间底部有空间 */
-  padding: 1.25rem;     /* 之前 1rem，可再多一些 */
-  box-shadow: 0 1px 5px rgba(0,0,0,0.1); /* 轻微阴影，立体感 */
+  /* padding: 1rem;     之前 1rem，可再多一些 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* 轻微阴影，立体感 */
   transition: transform 0.2s ease;
+  margin: 0.5rem;
 }
 
 #dashboard-grid .card:hover {

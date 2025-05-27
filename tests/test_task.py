@@ -203,7 +203,7 @@ def _test_task_tree_1():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def test_task_tree_2():    
+def _test_task_tree_2():    
     # 定义任务节点
     generate_stage = TaskManager(func=generate_urls, execution_mode='thread', worker_limit=4)
     logr_stage = TaskManager(func=log_urls, execution_mode='thread', worker_limit=4)
@@ -237,7 +237,7 @@ def test_task_tree_2():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def _test_task_web_3():
+def test_task_web_3():
     # 定义任务节点
     generate_stage = TaskManager(func=generate_urls_sleep, execution_mode='thread', worker_limit=4)
     logr_stage = TaskManager(func=log_urls_sleep, execution_mode='thread', worker_limit=4)
@@ -275,5 +275,5 @@ def profile_task_tree():
 # 在主函数或脚本中调用此函数，而不是在测试中
 if __name__ == "__main__":
     # test_task_tree_2()
-    _test_task_web_3()
+    # _test_task_web_3()
     pass

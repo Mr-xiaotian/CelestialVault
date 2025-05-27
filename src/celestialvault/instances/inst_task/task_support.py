@@ -226,9 +226,9 @@ class TaskReporter:
             for (err, tag), task_list in self.task_tree.get_error_timeline_dict().items():
                 for task, ts in task_list:
                     error_data.append({
-                        "error": err[:20]+"..." if len(err) > 20 else err,
+                        "error": err,
                         "node": tag,
-                        "task_id": task,
+                        "task_id": task if len(task) < 100 else task[:100]+"...",
                         "timestamp": ts,
                     })
             requests.post(f"{self.base_url}/api/push_errors", json=error_data, timeout=1)

@@ -160,7 +160,7 @@ function renderTree(data) {
     return html;
   }
 
-  const rootHTML = `<ul>${buildTreeHTML(data)}</ul>`;
+  const rootHTML = `${buildTreeHTML(data)}`;
   treeContainer.innerHTML = rootHTML;
 }
 
