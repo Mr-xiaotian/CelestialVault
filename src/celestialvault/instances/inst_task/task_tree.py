@@ -386,7 +386,7 @@ class TaskTree:
             prev = stage.prev_stage
             prev_tag = prev.get_stage_tag() if prev else None
 
-            total_input = self.stages_status_dict[tag].get("init_tasks_num", 0)
+            total_input = stage_status_dict.get("init_tasks_num", 0)
             if prev:
                 if isinstance(prev, TaskSplitter):
                     total_input += self.stage_extra_stats[prev_tag].get("split_output_count", ValueWrapper()).value
@@ -398,8 +398,8 @@ class TaskTree:
             failed = len(all_stage_error_dict.get(tag, {}))
             pending = max(0, total_input - processed - failed)
 
-            start_time = stage_status_dict.get("start_time", 0)
-            last_update_time = stage_status_dict.get("update_time", now)
+            start_time                    = stage_status_dict.get("start_time", 0)
+            last_update_time              = stage_status_dict.get("update_time", now)
             stage_is_pending_in_last_time = stage_status_dict.get("is_pending", False)
 
             stage_status_dict["is_pending"] = True if pending else False
@@ -418,6 +418,9 @@ class TaskTree:
 
             stage_status_dict["elapsed_time"] = elapsed
 
+            # 估算剩余时间
+            remaining = (elapsed / (processed + failed) * pending) if (processed or failed) and pending else 0
+
             # 计算平均时间（秒/任务）并格式化为字符串
             if processed or failed:
                 avg_time = elapsed / (processed + failed)
@@ -431,8 +434,13 @@ class TaskTree:
             else:
                 avg_time_str = "N/A"  # 或 "0.00s/it" 根据需求
 
-            # 估算剩余时间
-            remaining = (elapsed / (processed + failed) * pending) if (processed or failed) and pending else 0
+            history = stage_status_dict.get("history", [])
+            history.append({
+                "timestamp": now,
+                "tasks_processed": processed,
+            })
+            history.pop(0) if len(history) > 20 else None
+            stage_status_dict["history"] = history
 
             status_dict[tag] = {
                 **stage.get_status_snapshot(),
@@ -444,6 +452,7 @@ class TaskTree:
                 "elapsed_time": format_duration(elapsed),
                 "remaining_time": format_duration(remaining),
                 "task_avg_time": avg_time_str,  # 新增字段
+                "history": history  # ✅ 新增历史数据
             }
 
         return status_dict

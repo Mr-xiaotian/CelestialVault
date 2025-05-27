@@ -2,6 +2,10 @@ let nodeStatuses = {};
 let errors = [];
 let refreshRate = 5000;
 let refreshIntervalId = null;
+let progressChart = null;
+let hiddenNodes = new Set(
+  JSON.parse(localStorage.getItem("hiddenNodes") || "[]")
+);
 
 const themeToggleBtn = document.getElementById("theme-toggle");
 const refreshSelect = document.getElementById("refresh-interval");
@@ -69,6 +73,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 启动轮询
   refreshAll();
   pushRefreshRate(); // ✅ 初次加载也推送一次
+  initChart(); // 初始化折线图
   refreshIntervalId = setInterval(refreshAll, refreshRate);
 });
 
@@ -92,6 +97,10 @@ async function refreshAll() {
   updateSummary();
   renderErrors();
   populateNodeFilter();
+
+  // 在这里调用折线图更新
+  const progressData = extractProgressData(nodeStatuses);
+  updateChartData(progressData);
 }
 
 async function loadStatuses() {
@@ -305,7 +314,7 @@ function formatTimestamp(timestamp) {
 
 function populateNodeFilter() {
   const nodes = Object.keys(nodeStatuses);
-  const previousValue = nodeFilter.value;  // 记住当前选中值
+  const previousValue = nodeFilter.value; // 记住当前选中值
 
   // 重新填充选项
   nodeFilter.innerHTML = `<option value="">全部节点</option>`;
@@ -320,7 +329,106 @@ function populateNodeFilter() {
   if (nodes.includes(previousValue)) {
     nodeFilter.value = previousValue;
   } else {
-    nodeFilter.value = "";  // 默认选“全部节点”
+    nodeFilter.value = ""; // 默认选“全部节点”
   }
 }
 
+function initChart() {
+  const ctx = document.getElementById("node-progress-chart").getContext("2d");
+  progressChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [],
+    },
+    options: {
+      animation: false, // 直接关掉所有动画
+      responsive: true,
+      plugins: {
+        legend: {
+          display: true,
+          onClick: (e, legendItem, legend) => {
+            const index = legendItem.datasetIndex;
+            const nodeName = progressChart.data.datasets[index].label;
+
+            // 更新隐藏集合
+            if (hiddenNodes.has(nodeName)) {
+              hiddenNodes.delete(nodeName);
+            } else {
+              hiddenNodes.add(nodeName);
+            }
+
+            // 持久化保存到 localStorage
+            localStorage.setItem(
+              "hiddenNodes",
+              JSON.stringify([...hiddenNodes])
+            );
+
+            // 继续默认 Chart.js 的隐藏逻辑
+            const meta = legend.chart.getDatasetMeta(index);
+            meta.hidden =
+              meta.hidden === null
+                ? !legend.chart.data.datasets[index].hidden
+                : null;
+            legend.chart.update();
+          },
+        },
+      },
+      interaction: {
+        intersect: false,
+        mode: "index",
+      },
+      scales: {
+        x: { display: true, title: { display: true, text: "时间" } },
+        y: { display: true, title: { display: true, text: "完成任务数" } },
+      },
+    },
+  });
+}
+
+function updateChartData(nodeDataMap) {
+  const datasets = Object.entries(nodeDataMap).map(([node, data], index) => ({
+    label: node,
+    data: data,
+    borderColor: getColor(index),
+    fill: false,
+    tension: 0.3,
+    hidden: hiddenNodes.has(node), // 根据用户之前的选择
+  }));
+
+  const firstNode = Object.keys(nodeDataMap)[0];
+  progressChart.data.labels = nodeDataMap[firstNode]?.map((p) =>
+    new Date(p.x * 1000).toLocaleTimeString()
+  );
+  progressChart.data.datasets = datasets;
+
+  progressChart.update();
+}
+
+function getColor(index) {
+  const colors = [
+    "#3b82f6",
+    "#10b981",
+    "#f59e0b",
+    "#ef4444",
+    "#8b5cf6",
+    "#ec4899",
+    "#22c55e",
+    "#0ea5e9",
+    "#f97316",
+  ];
+  return colors[index % colors.length];
+}
+
+function extractProgressData(nodeStatuses) {
+  const result = {};
+  for (const [node, data] of Object.entries(nodeStatuses)) {
+    if (data.history) {
+      result[node] = data.history.map((point) => ({
+        x: point.timestamp,
+        y: point.tasks_processed,
+      }));
+    }
+  }
+  return result;
+}

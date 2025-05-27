@@ -9,6 +9,7 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
     />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
     <header>
@@ -84,8 +85,8 @@
           <!-- 右侧: 预留空白 -->
           <div class="right-panel">
             <div class="card">
-              <h2 class="card-title">后续功能区</h2>
-              <p>这里是预留区域。</p>
+              <h2 class="card-title">节点完成走向</h2>
+              <canvas id="node-progress-chart"></canvas>
             </div>
           </div>
         </div>

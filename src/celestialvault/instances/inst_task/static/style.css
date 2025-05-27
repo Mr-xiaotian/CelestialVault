@@ -520,7 +520,7 @@ h1 {
   width: 100vw; /* 全屏宽度 */
   margin-left: calc(-50vw + 50%); /* 左侧“负 margin”抵消 container 居中限制 */
   margin-right: calc(-50vw + 50%);
-  justify-content: space-between;
+  justify-content: space-evenly;
   gap: 1rem;
 }
 
@@ -528,7 +528,7 @@ h1 {
   flex: 0 0 30%;
   max-width: 25%;
   overflow: auto;
-  padding-left: 4rem; /* 右边再留点空白 */
+  /* padding-left: 4rem; 右边再留点空白 */
 }
 
 .middle-panel {
@@ -545,7 +545,7 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding-right: 4rem; /* 右边再留点空白 */
+  /* padding-right: 4rem; 右边再留点空白 */
 }
 
 .tree-container {
@@ -611,12 +611,6 @@ h1 {
   .right-panel {
     max-width: 100%;
     flex: 1 1 auto;
-  }
-  .left-panel {
-    padding-left: 0;
-  }
-  .right-panel {
-    padding-right: 0;
   }
   #dashboard-grid {
     grid-template-columns: 1fr !important;
