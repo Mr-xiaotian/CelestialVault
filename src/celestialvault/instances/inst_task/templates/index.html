@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>任务树监控系统</title>
-    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" />
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
@@ -34,41 +34,59 @@
     <main class="container">
       <div class="tabs">
         <button class="tab-btn active" data-tab="dashboard">仪表盘</button>
-        <button class="tab-btn" data-tab="structure">任务树结构</button>
         <button class="tab-btn" data-tab="errors">错误日志</button>
       </div>
 
       <div id="dashboard" class="tab-content active">
-        <div class="grid grid-cols-1 grid-cols-2" id="dashboard-grid"></div>
-
-        <div class="card summary-card">
-          <h2 class="card-title" style="margin-bottom: 1rem">总体状态摘要</h2>
-          <div class="summary-grid">
-            <div class="summary-item blue">
-              <div id="total-processed" class="summary-value blue">0</div>
-              <div class="summary-label">总处理任务</div>
+        <div class="three-column-container">
+          <!-- 左侧: 树结构 -->
+          <div class="left-panel">
+            <div class="card">
+              <h2 class="card-title">任务树结构</h2>
+              <div class="tree-container">
+                <div class="tree" id="task-tree">加载中...</div>
+              </div>
             </div>
-            <div class="summary-item yellow">
-              <div id="total-pending" class="summary-value yellow">0</div>
-              <div class="summary-label">总等待任务</div>
-            </div>
-            <div class="summary-item red">
-              <div id="total-errors" class="summary-value red">0</div>
-              <div class="summary-label">总错误任务</div>
-            </div>
-            <div class="summary-item green">
-              <div id="total-nodes" class="summary-value green">0</div>
-              <div class="summary-label">活动节点</div>
+            <div class="card summary-card">
+              <h2 class="card-title">总体状态摘要</h2>
+              <div class="summary-grid">
+                <div class="summary-item blue">
+                  <div id="total-processed" class="summary-value blue">0</div>
+                  <div class="summary-label">总处理任务</div>
+                </div>
+                <div class="summary-item yellow">
+                  <div id="total-pending" class="summary-value yellow">0</div>
+                  <div class="summary-label">总等待任务</div>
+                </div>
+                <div class="summary-item red">
+                  <div id="total-errors" class="summary-value red">0</div>
+                  <div class="summary-label">总错误任务</div>
+                </div>
+                <div class="summary-item green">
+                  <div id="total-nodes" class="summary-value green">0</div>
+                  <div class="summary-label">活动节点</div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div id="structure" class="tab-content">
-        <div class="card">
-          <h2 class="card-title" style="margin-bottom: 1rem">任务树结构</h2>
-          <div class="tree-container">
-            <div class="tree" id="task-tree">加载中...</div>
+          <!-- 中间: 节点卡片 -->
+          <div class="middle-panel">
+            <div class="card">
+              <h2 class="card-title">节点运行状态</h2>
+              <div
+                id="dashboard-grid"
+                class="grid grid-cols-1 md:grid-cols-2 gap-4"
+              ></div>
+            </div>
+          </div>
+
+          <!-- 右侧: 预留空白 -->
+          <div class="right-panel">
+            <div class="card">
+              <h2 class="card-title">后续功能区</h2>
+              <p>这里是预留区域。</p>
+            </div>
           </div>
         </div>
       </div>
