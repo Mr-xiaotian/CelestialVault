@@ -74,16 +74,16 @@ class TaskManager:
 
         self.init_dict()
 
-    def init_dict(self, success_dict=None, success_counter=None, success_lock=None, extra_stats=None):
+    def init_dict(self, success_counter=None, success_lock=None, extra_stats=None):
         """
         初始化结果字典
         """
-        self.success_dict = success_dict if success_dict is not None else {}
+        self.success_dict = {}
         self.error_dict = {}
+        self.retry_time_dict = {}
 
         self.success_counter = success_counter if success_counter is not None else ValueWrapper()
         self.success_lock = success_lock if success_lock is not None else null_lock
-
         self.extra_stats = extra_stats if extra_stats is not None else {}
 
     def init_env(self, task_queue=None, result_queues=None, fail_queue=None, logger_queue=None):
@@ -94,7 +94,6 @@ class TaskManager:
         self.init_pool()
         self.init_logger()
 
-        self.retry_time_dict = {}
         self.duplicates_num = 0
 
     def init_queue(self, task_queue=None, result_queues=None, fail_queue=None, logger_queue=None):
@@ -128,7 +127,7 @@ class TaskManager:
         """
         self.task_logger = TaskLogger(self.logger_queue)
 
-    def init_linster(self):
+    def init_listener(self):
         """
         初始化监听器
         """
@@ -425,7 +424,7 @@ class TaskManager:
         :param task_source: 任务迭代器或者生成器
         """
         start_time = time.time()
-        self.init_linster()
+        self.init_listener()
         self.init_env(logger_queue=self.log_listener.get_queue())
 
         try:
@@ -468,7 +467,7 @@ class TaskManager:
         """
         start_time = time.time()
         self.set_execution_mode("async")
-        self.init_linster()
+        self.init_listener()
         self.init_env(logger_queue=self.log_listener.get_queue())
 
         try:

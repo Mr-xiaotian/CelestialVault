@@ -114,7 +114,7 @@ class TaskTree:
         :param execution_mode: 节点内部执行模式, 可选值为 'serial' 或 'thread''
         """
 
-        def set_subsequent_satge_mode(stage: TaskManager):
+        def set_subsequent_stage_mode(stage: TaskManager):
             stage.set_stage_mode(stage_mode)
             stage.set_execution_mode(execution_mode)
             visited_stages.add(stage)
@@ -122,10 +122,10 @@ class TaskTree:
             for next_stage in stage.next_stages:
                 if next_stage in visited_stages:
                     continue
-                set_subsequent_satge_mode(next_stage)
+                set_subsequent_stage_mode(next_stage)
 
         visited_stages = set()
-        set_subsequent_satge_mode(self.root_stage)
+        set_subsequent_stage_mode(self.root_stage)
 
     def start_tree(self, init_tasks_dict: dict, put_termination_signal: bool=True):
         """
@@ -184,7 +184,6 @@ class TaskTree:
             self.stage_locks[stage_tag] = MPLock()
 
             stage.init_dict(
-                {}, 
                 self.stage_success_counter[stage_tag],
                 self.stage_locks[stage_tag],
                 self.stage_extra_stats[stage_tag]
@@ -198,7 +197,6 @@ class TaskTree:
             self.stage_success_counter[stage_tag] = ValueWrapper()
 
             stage.init_dict(
-                {}, 
                 self.stage_success_counter[stage_tag], 
                 None, 
                 self.stage_extra_stats[stage_tag]

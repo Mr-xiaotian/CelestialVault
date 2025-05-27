@@ -141,10 +141,10 @@ def _test_task_tree_0():
     stage3 = TaskManager(divide_by_two, execution_mode='thread', worker_limit=4, show_progress=False)
     stage4 = TaskManager(sleep_1, execution_mode='thread', worker_limit=4, show_progress=False)
 
-    stage1.set_tree_context([stage2, stage4], 'process', stage_name='satge1')
-    stage2.set_tree_context([stage3], 'process', stage_name='satge2')
-    stage3.set_tree_context([], 'process', stage_name='satge3')
-    stage4.set_tree_context([], 'process', stage_name='satge4')
+    stage1.set_tree_context([stage2, stage4], 'process', stage_name='stage1')
+    stage2.set_tree_context([stage3], 'process', stage_name='stage2')
+    stage3.set_tree_context([], 'process', stage_name='stage3')
+    stage4.set_tree_context([], 'process', stage_name='stage4')
 
     stage1.add_retry_exceptions(TypeError)
     stage2.add_retry_exceptions(ValueError)
@@ -252,6 +252,8 @@ def _test_task_web_3():
     download_stage.set_tree_context([], stage_mode='process', stage_name='Downloader')
     parse_stage.set_tree_context([], stage_mode='process', stage_name='Parser')
 
+    download_stage.add_retry_exceptions(ValueError)
+
     # 初始化 TaskTree
     tree = TaskTree(generate_stage)
     tree.set_reporter(True, host="127.0.0.1", port=5000)
@@ -275,5 +277,5 @@ def profile_task_tree():
 # 在主函数或脚本中调用此函数，而不是在测试中
 if __name__ == "__main__":
     # test_task_tree_2()
-    _test_task_web_3()
+    # _test_task_web_3()
     pass
