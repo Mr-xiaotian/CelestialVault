@@ -9,6 +9,10 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='inject.css') }}"
+    />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
@@ -36,6 +40,8 @@
       <div class="tabs">
         <button class="tab-btn active" data-tab="dashboard">仪表盘</button>
         <button class="tab-btn" data-tab="errors">错误日志</button>
+        <button class="tab-btn" data-tab="task-injection">任务注入</button>
+        <!-- 新 tab -->
       </div>
 
       <div id="dashboard" class="tab-content active">
@@ -119,8 +125,221 @@
           </div>
         </div>
       </div>
+
+      <div id="task-injection" class="tab-content">
+        <!-- 提示区域 -->
+        <div class="tip-section">
+          <div class="tip-content">
+            <svg
+              class="tip-icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+            <p class="tip-text">
+              选择目标节点并输入任务数据或上传文件，点击提交按钮进行注入。
+            </p>
+          </div>
+        </div>
+
+        <!-- 主要内容区域 -->
+        <div class="card-grid">
+          <!-- 节点选择区 -->
+          <div class="card">
+            <h3 class="card-title">节点选择</h3>
+
+            <!-- 搜索框 -->
+            <div class="search-container">
+              <svg
+                class="search-icon"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                ></path>
+              </svg>
+              <input
+                type="text"
+                id="search-input"
+                class="search-input"
+                placeholder="搜索节点..."
+              />
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="button-group">
+              <button class="btn-small btn-select" onclick="selectAllNodes()">
+                全选
+              </button>
+              <button class="btn-small btn-clear" onclick="clearSelection()">
+                清空
+              </button>
+            </div>
+
+            <!-- 节点列表 -->
+            <div class="node-list" id="node-list"></div>
+
+            <!-- 已选择的节点 -->
+            <div
+              class="selected-nodes"
+              id="selected-section"
+              style="display: none"
+            >
+              <div class="selected-title">
+                已选择节点 (<span id="selected-count">0</span>)
+              </div>
+              <div id="selected-list"></div>
+            </div>
+          </div>
+
+          <!-- 任务数据输入区 -->
+          <div class="card">
+            <h3 class="card-title">任务数据输入</h3>
+
+            <!-- 输入方式切换 -->
+            <div class="input-toggle">
+              <button
+                class="toggle-btn active"
+                id="json-toggle"
+                onclick="switchInputMethod('json')"
+              >
+                <svg
+                  class="toggle-icon"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                  ></path>
+                </svg>
+                JSON 输入
+              </button>
+              <button
+                class="toggle-btn"
+                id="file-toggle"
+                onclick="switchInputMethod('file')"
+              >
+                <svg
+                  class="toggle-icon"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  ></path>
+                </svg>
+                文件上传
+              </button>
+            </div>
+
+            <!-- JSON输入区 -->
+            <div id="json-input-section">
+              <div class="json-section">
+                <div class="json-header">
+                  <label class="json-label">任务数据 (JSON格式)</label>
+                  <button class="example-btn" onclick="fillExample()">
+                    填充示例
+                  </button>
+                </div>
+                <textarea
+                  id="json-textarea"
+                  class="json-textarea"
+                  placeholder="请输入JSON格式的任务数据..."
+                ></textarea>
+                <div
+                  id="json-error"
+                  class="error-message"
+                  style="display: none"
+                ></div>
+              </div>
+            </div>
+
+            <!-- 文件上传区 -->
+            <div id="file-input-section" class="hidden">
+              <label for="file-input" class="upload-area">
+                <svg
+                  class="upload-icon"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  ></path>
+                </svg>
+                <div class="upload-text">点击上传文件</div>
+                <div class="upload-hint">仅支持 .json 格式文件</div>
+              </label>
+              <input
+                type="file"
+                id="file-input"
+                class="file-input"
+                accept=".json"
+              />
+
+              <div id="file-info" class="file-info" style="display: none">
+                <svg
+                  class="file-icon"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  ></path>
+                </svg>
+                <span id="file-name" class="file-name"></span>
+              </div>
+              <div
+                id="file-error"
+                class="error-message"
+                style="visibility: hidden"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 提交区域 -->
+        <div class="submit-section">
+          <div
+            id="status-message"
+            class="status-message"
+            style="visibility: hidden"
+          ></div>
+          <button id="submit-btn" class="submit-btn" onclick="handleSubmit()">
+            提交任务注入
+          </button>
+        </div>
+      </div>
     </main>
 
     <script src="{{ url_for('static', filename='task_web.js') }}"></script>
+    <script src="{{ url_for('static', filename='task_injection.js') }}"></script>
   </body>
 </html>

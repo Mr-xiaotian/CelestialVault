@@ -15,6 +15,7 @@ class TaskWebServer:
         self.status_store = {}
         self.structure_store = []
         self.error_store = []
+        self.injection_store = []
 
         self.report_interval = 5
 
@@ -67,6 +68,35 @@ class TaskWebServer:
                 return "Interval updated", 200
             except Exception as e:
                 return f"Invalid interval: {e}", 400
+            
+        @app.route("/api/push_task_injection", methods=["POST"])
+        def push_task_injection():
+            try:
+                data = request.get_json(force=True)
+                nodes = data.get("nodes", [])
+                task_data = data.get("task_data", {})
+                timestamp = data.get("timestamp", "")
+
+                if not nodes or not task_data:
+                    return jsonify({"ok": False, "error": "节点或任务数据缺失"}), 400
+
+                # 👉 这里模拟保存任务注入（后续可替换为写数据库或分发任务等）
+                print(f"[任务注入] 时间: {timestamp}")
+                print(f"[任务注入] 节点: {nodes}")
+                print(f"[任务注入] 任务数据: {task_data}")
+
+                # ✅ 你可以把任务数据保存到一个列表，或存储到文件、数据库等
+                self.injection_store.append({
+                    "nodes": nodes,
+                    "task_data": task_data,
+                    "timestamp": timestamp,
+                })
+
+                return jsonify({"ok": True})
+            except Exception as e:
+                print(f"[任务注入] 处理异常: {e}")
+                return jsonify({"ok": False, "error": str(e)}), 500
+
 
         @app.route("/shutdown", methods=["POST"])
         def shutdown():
