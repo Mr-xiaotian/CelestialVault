@@ -256,7 +256,7 @@ def test_task_web_3():
 
     # 初始化 TaskTree
     tree = TaskTree(generate_stage)
-    tree.set_reporter(True, host="127.0.0.1", port=5000)
+    tree.set_reporter(True, host="127.0.0.1", port=5005)
 
     tree.start_tree({
         generate_stage.get_stage_tag(): range(10),
@@ -264,7 +264,7 @@ def test_task_web_3():
         # splitter.get_stage_tag(): tuple([f"url_{x}_{i}" for i in range(random.randint(1, 4)) for x in range(10, 15)]),
         download_stage.get_stage_tag(): [f"url_{x}_5" for x in range(10, 20)],
         parse_stage.get_stage_tag(): [f"url_{x}_5" for x in range(10, 20)],
-    }, False)
+    }, True)
     
 def profile_task_tree():
     target_func = 'test_task_tree_1'

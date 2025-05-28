@@ -39,9 +39,9 @@ th {
   color: var(--gray-dark);
 }
 
-td {
+/* td {
   font-size: 0.875rem;
-}
+} */
 
 .error-message {
   color: var(--danger-color);

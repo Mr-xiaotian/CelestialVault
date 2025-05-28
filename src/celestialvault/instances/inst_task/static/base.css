@@ -24,7 +24,6 @@
 body {
   background-color: #f9fafb;
   line-height: 1.5;
-  color: #111827;
 }
 
 .container {
@@ -34,14 +33,47 @@ body {
 }
 
 /* ================================
+  🌟 头部样式
+================================ */
+header {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 1rem 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap; /* 小屏自动换行 */
+  gap: 0.5rem; /* 可选：元素间距 */
+}
+
+
+/* ================================
   🌟 标题 & 文本
 ================================ */
 h1 {
   font-size: 1.5rem;
   font-weight: 700;
   text-align: center;
-  color: #111827;
+  color: #fff;
   margin-bottom: 30px;
+}
+
+/* ================================
+  🌟 标题 & 文本
+================================ */
+.control-panel {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.refresh-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* ================================
@@ -52,28 +84,27 @@ select {
   cursor: pointer;
   padding: 0.25rem 0.75rem;
   border-radius: 0.25rem;
-  border: none;
+  border: 1px solid var(--gray-medium);
+}
+
+button {
+  color: white;
   font-size: 0.875rem;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s;
 }
 
 select {
-  border: 1px solid var(--gray-medium);
   background-color: white;
 }
 
 /* 按钮样式 */
-.btn-start { background-color: var(--success-color); color: white; }
-.btn-start:hover { background-color: #059669; }
-
 .btn-stop { background-color: var(--danger-color); color: white; }
 .btn-stop:hover { background-color: #dc2626; }
 
-.btn-reset { background-color: var(--warning-color); color: white; }
-.btn-reset:hover { background-color: #d97706; }
-
 /* 主题切换按钮 */
 #theme-toggle {
+  position: absolute;
+  right: 20px;
   background-color: #374151;
   color: white;
   border: none;
@@ -85,6 +116,62 @@ select {
 
 #theme-toggle:hover {
   background-color: #3b6fd9;
+}
+
+/* ================================
+  🌟 Tabs & 选项卡样式
+================================ */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  margin: 1rem 0;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--gray-dark);
+  padding: 0.5rem 1rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab-btn.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+.tab-btn:hover {
+  background-color: #f9fafb;
+}
+
+/* ================================
+  🌟 卡片布局样式
+================================ */
+.card {
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  padding-bottom: 1rem;
 }
 
 /* ================================
@@ -112,17 +199,10 @@ select {
 /* ================================
   🌟 响应式调整（移动设备）
 ================================ */
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap; /* 小屏自动换行 */
-  gap: 0.5rem; /* 元素间距 */
-}
-
-@media (max-width: 768px) {
+@media (max-width: 2048px) {
   h1 {
-    font-size: 1.25rem;
+    width: 100%;
+    text-align: center; /* 或 center */
   }
   #theme-toggle {
     position: static; /* 取消绝对定位 */
@@ -144,29 +224,24 @@ select {
   color: #e0e0e0;
 }
 
+.dark-theme header {
+  background-color: #1a1a1a; /* 深蓝灰 */
+  color: #f3f4f6;
+}
+
 .dark-theme h1 {
   color: #f3f4f6;
 }
 
-.dark-theme select {
-  background-color: #2c2c2c;
-  color: #e0e0e0;
-  border: 1px solid #555;
-}
-
-.dark-theme button {
+.dark-theme .control-panel select,
+.dark-theme .control-panel button {
   background-color: #374151;
   color: #f3f4f6;
+  border: 1px solid #4b5563;
 }
 
-.dark-theme .btn-start { background-color: #15803d; }
-.dark-theme .btn-start:hover { background-color: #166534; }
-
-.dark-theme .btn-stop { background-color: #b91c1c; }
-.dark-theme .btn-stop:hover { background-color: #991b1b; }
-
-.dark-theme .btn-reset { background-color: #b45309; }
-.dark-theme .btn-reset:hover { background-color: #92400e; }
+/* .dark-theme .btn-stop { background-color: #b91c1c; }
+.dark-theme .btn-stop:hover { background-color: #991b1b; } */
 
 .dark-theme #theme-toggle {
   background-color: #3b6fd9;
@@ -176,6 +251,33 @@ select {
 
 .dark-theme #theme-toggle:hover {
   background-color: #4b5563;
+}
+
+.dark-theme .tabs {
+  border-bottom: 2px solid #374151;
+}
+
+.dark-theme .tab-btn {
+  color: #cbd5e1;
+}
+
+.dark-theme .tab-btn.active {
+  color: #3b82f6;
+  border-bottom: none;
+}
+
+.dark-theme .tab-btn:hover {
+  background-color: #2a2a2a;
+}
+
+.dark-theme .card {
+  background-color: #2a2a2a;
+  color: #e0e0e0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .card-title {
+  color: #f3f4f6;
 }
 
 .dark-theme .badge-success { background-color: #16a34a; }
