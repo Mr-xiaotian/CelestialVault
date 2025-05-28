@@ -20,27 +20,37 @@ const exampleTask = {
 };
 
 document.addEventListener("DOMContentLoaded", async function () {
-  await fetchNodes();
   renderNodeList();
   setupEventListeners();
 });
 
 function setupEventListeners() {
-  document.getElementById("search-input").addEventListener("input", function (e) {
-    renderNodeList(e.target.value);
-  });
+  document
+    .getElementById("search-input")
+    .addEventListener("input", function (e) {
+      renderNodeList(e.target.value);
+    });
 
-  document.getElementById("json-textarea").addEventListener("input", function (e) {
-    validateJSON(e.target.value);
-  });
+  document
+    .getElementById("json-textarea")
+    .addEventListener("input", function (e) {
+      validateJSON(e.target.value);
+    });
 
-  document.getElementById("file-input").addEventListener("change", handleFileUpload);
+  document
+    .getElementById("file-input")
+    .addEventListener("change", handleFileUpload);
 }
 
 function renderNodeList(searchTerm = "") {
-  const filteredNodes = nodes.filter((node) =>
-    node.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredNodes = Object.keys(nodeStatuses)
+    .map((nodeName) => ({
+      name: nodeName,
+      type: nodeStatuses[nodeName].active ? "运行中" : "未运行",
+    }))
+    .filter((node) =>
+      node.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   const nodeListHTML = filteredNodes
     .map(
@@ -58,10 +68,13 @@ function renderNodeList(searchTerm = "") {
 }
 
 function selectNode(nodeName) {
-  const node = nodes.find((n) => n.name === nodeName);
-  if (!node || selectedNodes.find((n) => n.name === nodeName)) return;
+  const node = {
+    name: nodeName,
+    type: nodeStatuses[nodeName].execution_mode || "unknown",
+  };
 
-  selectedNodes = [node]; // 永远只保存一个
+  selectedNodes = [node];
+  console.log("选中的节点列表:", selectedNodes);
   updateSelectedNodes();
 }
 
@@ -123,15 +136,27 @@ function clearSelection() {
 function switchInputMethod(method) {
   currentInputMethod = method;
 
-  document.getElementById("json-toggle").classList.toggle("active", method === "json");
-  document.getElementById("file-toggle").classList.toggle("active", method === "file");
+  document
+    .getElementById("json-toggle")
+    .classList.toggle("active", method === "json");
+  document
+    .getElementById("file-toggle")
+    .classList.toggle("active", method === "file");
 
-  document.getElementById("json-input-section").classList.toggle("hidden", method !== "json");
-  document.getElementById("file-input-section").classList.toggle("hidden", method !== "file");
+  document
+    .getElementById("json-input-section")
+    .classList.toggle("hidden", method !== "json");
+  document
+    .getElementById("file-input-section")
+    .classList.toggle("hidden", method !== "file");
 }
 
 function fillExample() {
-  document.getElementById("json-textarea").value = JSON.stringify(exampleTask, null, 2);
+  document.getElementById("json-textarea").value = JSON.stringify(
+    exampleTask,
+    null,
+    2
+  );
   hideError("json-error");
 }
 
@@ -196,7 +221,9 @@ function showStatus(message, isSuccess = false) {
     : '<svg class="status-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
 
   statusDiv.innerHTML = iconSVG + message;
-  statusDiv.className = `status-message ${isSuccess ? "status-success" : "status-error"}`;
+  statusDiv.className = `status-message ${
+    isSuccess ? "status-success" : "status-error"
+  }`;
   statusDiv.style.visibility = "visible";
 
   setTimeout(() => {
@@ -276,19 +303,4 @@ function clearForm() {
   hideError("file-error");
   document.getElementById("search-input").value = "";
   renderNodeList();
-}
-
-async function fetchNodes() {
-  try {
-    const res = await fetch("/api/get_status");
-    const statusData = await res.json();
-
-    nodes = Object.keys(statusData).map((nodeName) => ({
-      name: nodeName,
-      type: statusData[nodeName].execution_mode || "unknown",
-    }));
-  } catch (e) {
-    console.warn("获取节点状态失败，使用空节点列表:", e);
-    nodes = [];
-  }
 }
