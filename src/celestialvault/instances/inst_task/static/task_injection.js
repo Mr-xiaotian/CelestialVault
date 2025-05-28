@@ -61,7 +61,7 @@ function selectNode(nodeName) {
   const node = nodes.find((n) => n.name === nodeName);
   if (!node || selectedNodes.find((n) => n.name === nodeName)) return;
 
-  selectedNodes.push(node);
+  selectedNodes = [node]; // 永远只保存一个
   updateSelectedNodes();
 }
 
@@ -237,8 +237,8 @@ async function handleSubmit() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        nodes: selectedNodes.map((n) => n.name),
-        task_data: taskData,
+        node: selectedNodes[0].name,
+        task_datas: taskData,
         timestamp: new Date().toISOString(),
       }),
     });

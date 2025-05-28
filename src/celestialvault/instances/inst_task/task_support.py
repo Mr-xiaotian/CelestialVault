@@ -207,6 +207,7 @@ class TaskReporter:
 
     def push_once(self):
         self._sync_interval()
+        self._pull_and_inject_tasks()  # 新增的注入逻辑
         self._push_errors()
         self._push_status()
 
@@ -218,6 +219,22 @@ class TaskReporter:
                 self.interval = max(1.0, min(interval, 60.0))
         except Exception as e:
             self.logger._log("WARNING", f"[Reporter] Interval fetch failed: {type(e).__name__}({e}).")
+
+    def _pull_and_inject_tasks(self):
+        try:
+            res = requests.get(f"{self.base_url}/api/get_task_injection", timeout=2)
+            if res.ok:
+                tasks_list = res.json()
+                for task in tasks_list:
+                    target_node = task.get("node")
+                    task_datas = task.get("task_datas")
+                    task_datas = [task if task != "TERMINATION_SIGNAL" else TERMINATION_SIGNAL for task in task_datas]
+
+                    # 这里你可以按需注入到不同的节点
+                    self.task_tree.put_stage_queue({target_node: task_datas}, put_termination_signal=False)
+                    self.logger._log("INFO", f"[Reporter] 注入任务到 {target_node}: {task_datas}")
+        except Exception as e:
+            self.logger._log("WARNING", f"[Reporter] Task injection fetch failed: {type(e).__name__}({e}).")
 
     def _push_errors(self):
         try:

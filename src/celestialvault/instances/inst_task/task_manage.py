@@ -551,9 +551,12 @@ class TaskManager:
                 progress_manager.update(1)
                 break
             elif self.is_duplicate(task):
+                # 加锁方式（保证正确）
+                with self.success_lock:
+                    self.success_counter.value += 1
                 self.duplicates_num += 1
-                progress_manager.update(1)
                 self.task_logger.task_duplicate(self.func.__name__, self.get_task_info(task))
+                progress_manager.update(1)
                 continue
             try:
                 start_time = time.time()
@@ -619,9 +622,12 @@ class TaskManager:
                 progress_manager.update(1)
                 break
             elif self.is_duplicate(task):
+                # 加锁方式（保证正确）
+                with self.success_lock:
+                    self.success_counter.value += 1
                 self.duplicates_num += 1
-                progress_manager.update(1)
                 self.task_logger.task_duplicate(self.func.__name__, self.get_task_info(task))
+                progress_manager.update(1)
                 continue
 
             # 提交新任务时增加in_flight计数，并清除完成事件
@@ -676,9 +682,12 @@ class TaskManager:
                 progress_manager.update(1)
                 break
             elif self.is_duplicate(task):
+                # 加锁方式（保证正确）
+                with self.success_lock:
+                    self.success_counter.value += 1
                 self.duplicates_num += 1
-                progress_manager.update(1)
                 self.task_logger.task_duplicate(self.func.__name__, self.get_task_info(task))
+                progress_manager.update(1)
                 continue
             async_tasks.append(sem_task(task))  # 使用信号量包裹的任务
 

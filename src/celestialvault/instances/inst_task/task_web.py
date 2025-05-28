@@ -1,6 +1,7 @@
 # inst_task/task_web.py
 
-import logging, os
+import os
+import threading
 from flask import Flask, jsonify, render_template, request
 
 
@@ -15,9 +16,10 @@ class TaskWebServer:
         self.status_store = {}
         self.structure_store = []
         self.error_store = []
-        self.injection_store = []
+        self.pending_injection_tasks = []  # 存储前端注入任务
 
         self.report_interval = 5
+        self._task_injection_lock = threading.Lock()
 
     def _setup_routes(self):
         app = self.app
@@ -42,6 +44,15 @@ class TaskWebServer:
         @app.route("/api/get_interval", methods=["GET"])
         def get_interval():
             return jsonify({"interval": self.report_interval})
+        
+        # 提供给 reporter 来拉取这些任务
+        @app.route("/api/get_task_injection", methods=["GET"])
+        def get_task_injection():
+            # 取出并清空队列
+            with self._task_injection_lock:
+                tasks_to_send = self.pending_injection_tasks.copy()
+                self.pending_injection_tasks.clear()
+            return jsonify(tasks_to_send)
 
         # ---- 接收接口 ----
         @app.route("/api/push_structure", methods=["POST"])
@@ -69,34 +80,17 @@ class TaskWebServer:
             except Exception as e:
                 return f"Invalid interval: {e}", 400
             
+        # 前端 push 任务注入
         @app.route("/api/push_task_injection", methods=["POST"])
         def push_task_injection():
             try:
                 data = request.get_json(force=True)
-                nodes = data.get("nodes", [])
-                task_data = data.get("task_data", {})
-                timestamp = data.get("timestamp", "")
-
-                if not nodes or not task_data:
-                    return jsonify({"ok": False, "error": "节点或任务数据缺失"}), 400
-
-                # 👉 这里模拟保存任务注入（后续可替换为写数据库或分发任务等）
-                print(f"[任务注入] 时间: {timestamp}")
-                print(f"[任务注入] 节点: {nodes}")
-                print(f"[任务注入] 任务数据: {task_data}")
-
-                # ✅ 你可以把任务数据保存到一个列表，或存储到文件、数据库等
-                self.injection_store.append({
-                    "nodes": nodes,
-                    "task_data": task_data,
-                    "timestamp": timestamp,
-                })
-
+                print(f"[任务注入]: {data}")
+                with self._task_injection_lock:
+                    self.pending_injection_tasks.append(data)
                 return jsonify({"ok": True})
             except Exception as e:
-                print(f"[任务注入] 处理异常: {e}")
-                return jsonify({"ok": False, "error": str(e)}), 500
-
+                return jsonify({"ok": False, "msg": f"任务注入失败: {e}"}), 500
 
         @app.route("/shutdown", methods=["POST"])
         def shutdown():

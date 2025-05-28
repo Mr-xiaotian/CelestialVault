@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
-from .task_support import TERMINATION_SIGNAL, TaskError, TaskReporter, LogListener, TaskLogger, ValueWrapper
+from .task_support import TERMINATION_SIGNAL, TaskError, TaskReporter, LogListener, TaskLogger, ValueWrapper, TerminationSignal
 from .task_tools import format_duration, format_timestamp, cleanup_mpqueue
 
 
@@ -96,6 +96,8 @@ class TaskTree:
         for tag, tasks in tasks_dict.items():
             for task in tasks:
                 self.stages_status_dict[tag]["task_queue"].put(task)
+                if isinstance(task, TerminationSignal):
+                    continue
                 self.stages_status_dict[tag]["init_tasks_num"] = self.stages_status_dict[tag].get("init_tasks_num", 0) + 1
 
         self.stages_status_dict[self.root_stage.get_stage_tag()]["task_queue"].put(TERMINATION_SIGNAL) if put_termination_signal else None
