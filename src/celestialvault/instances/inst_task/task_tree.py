@@ -131,28 +131,30 @@ class TaskTree:
         """
         启动任务链
         """
-        self.log_listener.start()
-        self.start_time = time.time()
-        structure_list = self.format_structure_list_from_tree()
-        self.task_logger.start_tree(structure_list)
-        self._persist_structure_metadata()
-        self.reporter.start() if self.is_report else None
+        try:
+            self.log_listener.start()
+            self.start_time = time.time()
+            structure_list = self.format_structure_list_from_tree()
+            self.task_logger.start_tree(structure_list)
+            self._persist_structure_metadata()
+            self.reporter.start() if self.is_report else None
 
-        self.put_stage_queue(init_tasks_dict, put_termination_signal)
-        self._execute_stage(self.root_stage, set())
+            self.put_stage_queue(init_tasks_dict, put_termination_signal)
+            self._execute_stage(self.root_stage, set())
 
-        # 等待所有进程结束
-        for p in self.processes:
-            p.join()
-            self.stages_status_dict[p.name]["is_active"] = False
-            self.task_logger._log("DEBUG", f"{p.name} exitcode: {p.exitcode}")
+            # 等待所有进程结束
+            for p in self.processes:
+                p.join()
+                self.stages_status_dict[p.name]["is_active"] = False
+                self.task_logger._log("DEBUG", f"{p.name} exitcode: {p.exitcode}")
 
-        self.reporter.stop()
-        self.handle_fail_queue()
-        self.release_resources()
+        finally:
+            self.reporter.stop()
+            self.handle_fail_queue()
+            self.release_resources()
 
-        self.task_logger.end_tree(time.time() - self.start_time)
-        self.log_listener.stop()
+            self.task_logger.end_tree(time.time() - self.start_time)
+            self.log_listener.stop()
 
     def _execute_stage(self, stage: TaskManager, stage_visited: set):
         """
