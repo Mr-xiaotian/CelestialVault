@@ -98,6 +98,11 @@ async function refreshAll() {
   renderErrors();
   populateNodeFilter();
 
+  // 新增: 更新任务注入页面的节点列表
+  if (typeof renderNodeList === "function") {
+    renderNodeList();
+  }
+
   // 在这里调用折线图更新
   const progressData = extractProgressData(nodeStatuses);
   updateChartData(progressData);

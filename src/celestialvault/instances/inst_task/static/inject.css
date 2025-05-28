@@ -39,8 +39,6 @@
 }
 
 #task-injection .card {
-  background: white;
-  border-radius: 16px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   padding: 24px;
 }
@@ -375,10 +373,10 @@
 
 /* 提交区域 */
 #task-injection .submit-section {
-  background: white;
+  /* background: white;
   border-radius: 16px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  padding: 24px;
+  padding: 24px; */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -449,4 +447,15 @@
 
 #task-injection .hidden {
   display: none;
+}
+
+
+@media (max-width: 2048px) {
+  #task-injection .card-grid {
+    grid-template-columns: 1fr; /* 一列 */
+  }
+  #task-injection .node-list {
+    max-height: none;
+    overflow: visible;
+  }
 }

@@ -167,7 +167,7 @@ button {
 
 .card {
   background-color: white;
-  border-radius: 0.5rem;
+  border-radius: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   padding: 1rem;
 }
@@ -592,6 +592,10 @@ h1 {
 
 #theme-toggle:hover {
   background-color: #3b6fd9;
+}
+
+#errors-table-container {
+  overflow-x: auto;
 }
 
 /* 响应式：在小屏下改为上下布局 */
