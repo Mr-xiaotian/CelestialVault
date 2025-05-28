@@ -1,0 +1,189 @@
+/* ================================
+  🌟 变量定义（全局色彩、间距等）
+================================ */
+:root {
+  --primary-color: #3b82f6;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --danger-color: #ef4444;
+  --gray-light: #f3f4f6;
+  --gray-medium: #9ca3af;
+  --gray-dark: #4b5563;
+}
+
+/* ================================
+  🌟 全局重置 & 通用字体
+================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: #f9fafb;
+  line-height: 1.5;
+  color: #111827;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* ================================
+  🌟 标题 & 文本
+================================ */
+h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  color: #111827;
+  margin-bottom: 30px;
+}
+
+/* ================================
+  🌟 按钮 & 选择器
+================================ */
+button,
+select {
+  cursor: pointer;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.25rem;
+  border: none;
+  font-size: 0.875rem;
+  transition: background-color 0.2s ease;
+}
+
+select {
+  border: 1px solid var(--gray-medium);
+  background-color: white;
+}
+
+/* 按钮样式 */
+.btn-start { background-color: var(--success-color); color: white; }
+.btn-start:hover { background-color: #059669; }
+
+.btn-stop { background-color: var(--danger-color); color: white; }
+.btn-stop:hover { background-color: #dc2626; }
+
+.btn-reset { background-color: var(--warning-color); color: white; }
+.btn-reset:hover { background-color: #d97706; }
+
+/* 主题切换按钮 */
+#theme-toggle {
+  background-color: #374151;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 5px 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#theme-toggle:hover {
+  background-color: #3b6fd9;
+}
+
+/* ================================
+  🌟 状态徽章
+================================ */
+.badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  color: white;
+}
+
+.badge-success { background-color: var(--success-color); }
+.badge-inactive { background-color: var(--gray-medium); }
+
+/* ================================
+  🌟 文字颜色辅助类
+================================ */
+.text-red { color: var(--danger-color); }
+.text-blue { color: var(--primary-color); }
+.text-yellow { color: var(--warning-color); }
+.text-sm { font-size: 0.875rem; }
+.text-gray { color: var(--gray-medium); }
+
+/* ================================
+  🌟 响应式调整（移动设备）
+================================ */
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap; /* 小屏自动换行 */
+  gap: 0.5rem; /* 元素间距 */
+}
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: 1.25rem;
+  }
+  #theme-toggle {
+    position: static; /* 取消绝对定位 */
+    order: 3; /* 小屏下放到最后 */
+  }
+}
+
+/* ================================
+  🌟 暗黑模式
+================================ */
+.dark-theme {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+}
+
+.dark-theme body,
+.dark-theme .container {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+}
+
+.dark-theme h1 {
+  color: #f3f4f6;
+}
+
+.dark-theme select {
+  background-color: #2c2c2c;
+  color: #e0e0e0;
+  border: 1px solid #555;
+}
+
+.dark-theme button {
+  background-color: #374151;
+  color: #f3f4f6;
+}
+
+.dark-theme .btn-start { background-color: #15803d; }
+.dark-theme .btn-start:hover { background-color: #166534; }
+
+.dark-theme .btn-stop { background-color: #b91c1c; }
+.dark-theme .btn-stop:hover { background-color: #991b1b; }
+
+.dark-theme .btn-reset { background-color: #b45309; }
+.dark-theme .btn-reset:hover { background-color: #92400e; }
+
+.dark-theme #theme-toggle {
+  background-color: #3b6fd9;
+  color: #f3f4f6;
+  border: 1px solid #4b5563;
+}
+
+.dark-theme #theme-toggle:hover {
+  background-color: #4b5563;
+}
+
+.dark-theme .badge-success { background-color: #16a34a; }
+.dark-theme .badge-inactive { background-color: #6b7280; }
+
+.dark-theme .text-gray { color: #9ca3af; }
+
+/* ================================
+  🌟 可选：全局辅助样式
+================================ */
+/* 用于辅助布局的工具类可以在此扩展，比如 flex、grid、gap 等 */
