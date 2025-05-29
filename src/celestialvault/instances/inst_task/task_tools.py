@@ -32,6 +32,9 @@ def cleanup_mpqueue(queue: MPQueue):
     queue.join_thread()  # 确保队列的后台线程正确终止
 
 def load_error_by_stage(jsonl_path):
+    """
+    加载错误记录，按 stage 分类
+    """
     stage_dict = defaultdict(list)
     with open(jsonl_path, "r") as f:
         for line in f:
@@ -44,9 +47,12 @@ def load_error_by_stage(jsonl_path):
 
     return dict(stage_dict)
 
-def load_error_by_type(path):
+def load_error_by_type(jsonl_path):
+    """
+    加载错误记录，按 error 和 stage 分类
+    """
     type_dict = defaultdict(list)
-    with open(path, "r", encoding="utf-8") as f:
+    with open(jsonl_path, "r", encoding="utf-8") as f:
         for line in f:
             item = json.loads(line)
             if "error" not in item or "stage" not in item:
@@ -61,6 +67,9 @@ def load_error_by_type(path):
     return dict(type_dict)
 
 def is_queue_empty(q: ThreadQueue) -> bool:
+    """
+    判断队列是否为空
+    """
     try:
         item = q.get_nowait()
         q.put(item)  # optional: put it back
@@ -69,9 +78,28 @@ def is_queue_empty(q: ThreadQueue) -> bool:
         return True
     
 async def is_queue_empty_async(q: AsyncQueue) -> bool:
+    """
+    判断队列是否为空
+    """
     try:
         item = q.get_nowait()
         await q.put(item)  # ✅ 修复点
         return False
     except AsyncQueueEmpty:
         return True
+    
+def make_hashable(obj):
+    """
+    把 obj 转换成可哈希的形式。
+    """
+    if isinstance(obj, (tuple, list)):
+        return tuple(make_hashable(e) for e in obj)
+    elif isinstance(obj, dict):
+        # dict 转换成 (key, value) 对的元组，且按 key 排序以确保哈希结果一致
+        return tuple(sorted((make_hashable(k), make_hashable(v)) for k, v in obj.items()))
+    elif isinstance(obj, set):
+        # set 转换成排序后的 tuple
+        return tuple(sorted(make_hashable(e) for e in obj))
+    else:
+        # 基本类型直接返回
+        return obj

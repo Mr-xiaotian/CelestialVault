@@ -7,7 +7,7 @@
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
 from .task_support import BroadcastQueueManager, TerminationSignal
-from .task_tools import load_error_by_stage, load_error_by_type
+from .task_tools import load_error_by_stage, load_error_by_type, make_hashable
 from .task_tree import TaskChain, TaskTree
 from .task_web import TaskWebServer
 
@@ -21,4 +21,5 @@ __all__ = [
     "TaskWebServer",
     "load_error_by_stage",
     "load_error_by_type",
+    "make_hashable",
 ]
