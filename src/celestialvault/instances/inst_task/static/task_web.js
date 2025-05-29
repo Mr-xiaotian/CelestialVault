@@ -220,8 +220,8 @@ function renderDashboard() {
       data.tasks_processed + data.tasks_pending === 0
         ? 0
         : Math.floor(
-            ((data.tasks_processed + data.tasks_error) /
-              (data.tasks_processed + data.tasks_error + data.tasks_pending)) *
+            ((data.tasks_processed + data.tasks_failed) /
+              (data.tasks_processed + data.tasks_failed + data.tasks_pending)) *
               100
           );
 
@@ -238,13 +238,13 @@ function renderDashboard() {
           </div>
           <div class="stats-grid">
             <div><div class="stat-label">已处理</div><div class="stat-value">${
-              data.tasks_processed
+              formatWithDelta(data.tasks_processed, data.add_tasks_processed)
             }</div></div>
             <div><div class="stat-label">等待中</div><div class="stat-value">${
-              data.tasks_pending
+              formatWithDelta(data.tasks_pending, data.add_tasks_pending)
             }</div></div>
             <div><div class="stat-label">错误</div><div class="stat-value text-red">${
-              data.tasks_error
+              formatWithDelta(data.tasks_failed, data.add_tasks_failed)
             }</div></div>
             <div><div class="stat-label">模式</div><div class="stat-value">${
               data.execution_mode
@@ -271,6 +271,16 @@ function renderDashboard() {
   }
 }
 
+function formatWithDelta(value, delta) {
+  if (!delta || delta === 0) {
+    return `${value}`;
+  }
+  const sign = delta > 0 ? "+" : "-";
+  return `${value}<small style="color: ${
+    delta > 0 ? "green" : "red"
+  }; margin-left: 4px;">${sign}${Math.abs(delta)}</small>`;
+}
+
 function updateSummary() {
   let processed = 0,
     pending = 0,
@@ -279,7 +289,7 @@ function updateSummary() {
   Object.values(nodeStatuses).forEach((s) => {
     processed += s.tasks_processed;
     pending += s.tasks_pending;
-    error += s.tasks_error;
+    error += s.tasks_failed;
     if (s.active) active++;
   });
   totalProcessed.textContent = processed;

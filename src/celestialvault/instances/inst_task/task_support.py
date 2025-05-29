@@ -8,8 +8,6 @@ from typing import List, Union
 import requests
 from loguru import logger as loguru_logger
 
-from .task_tools import make_hashable
-
 
 class TerminationSignal:
     """用于标记任务队列终止的哨兵对象"""
@@ -236,7 +234,7 @@ class TaskReporter:
                         continue
 
                     # 这里你可以按需注入到不同的节点
-                    task_datas = [make_hashable(task) if task != "TERMINATION_SIGNAL" else TERMINATION_SIGNAL for task in task_datas]
+                    task_datas = [task if task != "TERMINATION_SIGNAL" else TERMINATION_SIGNAL for task in task_datas]
                     self.task_tree.put_stage_queue({target_node: task_datas}, put_termination_signal=False)
                     self.logger._log("INFO", f"[Reporter] 注入任务到 {target_node}: {task_datas}")
         except Exception as e:

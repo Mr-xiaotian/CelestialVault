@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
 from .task_support import TERMINATION_SIGNAL, TaskError, TaskReporter, LogListener, TaskLogger, ValueWrapper, TerminationSignal
-from .task_tools import format_duration, format_timestamp, cleanup_mpqueue
+from .task_tools import format_duration, format_timestamp, cleanup_mpqueue, make_hashable
 
 
 class TaskTree:
@@ -42,6 +42,7 @@ class TaskTree:
         """
         self.stages_status_dict: Dict[str, dict] = defaultdict(dict) # 用于保存每个节点的状态信息
         self.stage_extra_stats = defaultdict(dict) # 用于保存每个阶段的额外统计信息
+        self.last_status_dict = {}  # 用于保存每个节点的最后状态信息
         
         self.stage_locks = {}  # 可选的锁，用于控制每个阶段的并发数
         self.stage_success_counter = {}  # 用于保存每个阶段成功处理的任务数
@@ -102,7 +103,7 @@ class TaskTree:
         """
         for tag, tasks in tasks_dict.items():
             for task in tasks:
-                self.stages_status_dict[tag]["task_queue"].put(task)
+                self.stages_status_dict[tag]["task_queue"].put(make_hashable(task))
                 if isinstance(task, TerminationSignal):
                     continue
                 self.stages_status_dict[tag]["init_tasks_num"] = self.stages_status_dict[tag].get("init_tasks_num", 0) + 1
@@ -396,6 +397,7 @@ class TaskTree:
             stage: TaskManager = stage_status_dict["stage"]
             prev = stage.prev_stage
             prev_tag = prev.get_stage_tag() if prev else None
+            last_stage_status_dict = self.last_status_dict.get(tag, {})
 
             total_input = stage_status_dict.get("init_tasks_num", 0)
             if prev:
@@ -408,6 +410,10 @@ class TaskTree:
             processed = self.stage_success_counter.get(tag, ValueWrapper()).value
             failed = len(all_stage_error_dict.get(tag, {}))
             pending = max(0, total_input - processed - failed)
+
+            add_processed = processed - last_stage_status_dict.get("tasks_processed", 0)
+            add_failed = failed - last_stage_status_dict.get("tasks_failed", 0)
+            add_pending = pending - last_stage_status_dict.get("tasks_pending", 0)
 
             start_time                    = stage_status_dict.get("start_time", 0)
             last_update_time              = stage_status_dict.get("update_time", now)
@@ -457,14 +463,19 @@ class TaskTree:
                 **stage.get_status_snapshot(),
                 "active": is_active,
                 "tasks_processed": processed,
-                "tasks_error": failed,
+                "tasks_failed": failed,
                 "tasks_pending": pending,
+                "add_tasks_processed": add_processed,
+                "add_tasks_failed": add_failed,
+                "add_tasks_pending": add_pending,
                 "start_time": format_timestamp(start_time),
                 "elapsed_time": format_duration(elapsed),
                 "remaining_time": format_duration(remaining),
                 "task_avg_time": avg_time_str,  # 新增字段
                 "history": history  # ✅ 新增历史数据
             }
+
+        self.last_status_dict = status_dict
 
         return status_dict
 
@@ -497,13 +508,10 @@ class TaskTree:
 
         return node
     
-    def get_structure_tree(self):
-        return self.structure_tree
-    
-    def format_structure_list_from_tree(self, tree_root: dict = None, indent=0):
+    def format_structure_list_from_tree(self, root_root: dict = None, indent=0):
         """
         从 JSON 树结构直接生成带边框的格式化任务结构文本列表
-        :param tree_root: JSON 格式任务树根节点
+        :param root_root: JSON 格式任务树根节点
         :param indent: 当前缩进级别
         :return: 带边框的格式化字符串列表
         """
@@ -526,8 +534,8 @@ class TaskTree:
             return lines
 
         # 构建原始行列表
-        tree_root = tree_root or self.build_structure_tree(self.root_stage)
-        raw_lines = build_lines(tree_root, indent)
+        root_root = root_root or self.build_structure_tree(self.root_stage)
+        raw_lines = build_lines(root_root, indent)
 
         # 计算最大行宽
         max_length = max(len(line) for line in raw_lines)
@@ -536,6 +544,12 @@ class TaskTree:
         content_lines = [f"| {line.ljust(max_length)} |" for line in raw_lines]
         border = "+" + "-" * (max_length + 2) + "+"
         return [border] + content_lines + [border]
+    
+    def get_structure_tree(self):
+        return self.structure_tree
+    
+    def get_structure_list(self):
+        return self.format_structure_list_from_tree(self.structure_tree)
 
     def test_methods(self, init_tasks_dict: Dict[str, List], stage_modes: list=None, execution_modes: list=None) -> Dict[str, Any]:
         """
