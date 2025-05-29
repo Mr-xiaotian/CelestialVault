@@ -73,7 +73,7 @@
 }
 
 #task-injection .search-input:focus {
-  ring: 2px solid #3b82f6;
+  /* ring: 2px solid #3b82f6; */
   border-color: transparent;
 }
 
@@ -141,6 +141,7 @@
   margin-bottom: 8px;
   cursor: pointer;
   transition: all 0.2s;
+  justify-content: space-between;
 }
 
 #task-injection .node-item:hover {
@@ -302,7 +303,7 @@
 }
 
 #task-injection .json-textarea:focus {
-  ring: 2px solid #3b82f6;
+  /* ring: 2px solid #3b82f6; */
   border-color: transparent;
 }
 
@@ -469,3 +470,170 @@
     overflow: visible;
   }
 }
+
+/* ================================
+  🌙 暗黑模式：提示区域
+================================ */
+.dark-theme #task-injection .tip-section {
+  background: #1e3a8a;
+  border-left: 4px solid #3b82f6;
+}
+
+.dark-theme #task-injection .tip-text {
+  color: #c7d2fe;
+}
+
+/* ================================
+  🌙 暗黑模式：卡片 & 标题
+================================ */
+.dark-theme #task-injection .card {
+  background-color: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.dark-theme #task-injection .card-title {
+  color: #f3f4f6;
+}
+
+/* ================================
+  🌙 暗黑模式：搜索框
+================================ */
+.dark-theme #task-injection .search-input {
+  background-color: #374151;
+  border: 1px solid #4b5563;
+  color: #f3f4f6;
+}
+
+.dark-theme #task-injection .search-icon {
+  color: #9ca3af;
+}
+
+/* ================================
+  🌙 暗黑模式：按钮组
+================================ */
+.dark-theme #task-injection .btn-select {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.dark-theme #task-injection .btn-select:hover {
+  background: #2563eb;
+}
+
+.dark-theme #task-injection .btn-clear {
+  background: #4b5563;
+  color: #f3f4f6;
+}
+
+.dark-theme #task-injection .btn-clear:hover {
+  background: #374151;
+}
+
+/* ================================
+  🌙 暗黑模式：节点列表 & 已选节点
+================================ */
+.dark-theme #task-injection .node-item {
+  background-color: #374151;
+  border: 1px solid #4b5563;
+  color: #e0e0e0;
+}
+
+.dark-theme #task-injection .node-item:hover {
+  background-color: #4b5563;
+}
+
+.dark-theme #task-injection .selected-item {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.dark-theme #task-injection .selected-name {
+  color: #ffffff;
+}
+
+.dark-theme #task-injection .node-name {
+    color: #f3f4f6;
+}
+/* 节点类型在暗黑模式下仍然保留背景色彩（保持视觉层次） */
+
+/* ================================
+  🌙 暗黑模式：输入方式切换
+================================ */
+.dark-theme #task-injection .input-toggle {
+  background: #374151;
+}
+
+.dark-theme #task-injection .toggle-btn {
+  color: #9ca3af;
+}
+
+.dark-theme #task-injection .toggle-btn.active {
+  background: #4b5563;
+  color: #f3f4f6;
+}
+
+/* ================================
+  🌙 暗黑模式：JSON输入 & 文件上传区
+================================ */
+.dark-theme #task-injection .json-textarea {
+  background: #374151;
+  border: 1px solid #4b5563;
+  color: #f3f4f6;
+}
+
+.dark-theme #task-injection .json-label {
+  color: #f3f4f6;
+}
+
+.dark-theme #task-injection .upload-area {
+  border: 2px dashed #4b5563;
+  color: #e5e7eb;
+}
+
+.dark-theme #task-injection .upload-area:hover {
+  border-color: #6b7280;
+}
+
+.dark-theme #task-injection .upload-text {
+  color: #e5e7eb;
+}
+
+.dark-theme #task-injection .upload-hint {
+  color: #9ca3af;
+}
+
+.dark-theme #task-injection .file-info {
+  background: #166534;
+  border-color: #14532d;
+  color: #d1fae5;
+}
+
+.dark-theme #task-injection .file-name {
+  color: #d1fae5;
+}
+
+/* ================================
+  🌙 暗黑模式：提交区域 & 状态提示
+================================ */
+.dark-theme #task-injection .submit-btn {
+  background: #2563eb;
+  color: #f3f4f6;
+}
+
+.dark-theme #task-injection .submit-btn:hover {
+  background: #1d4ed8;
+}
+
+.dark-theme #task-injection .submit-btn:disabled {
+  background: #6b7280;
+  color: #d1d5db;
+}
+
+.dark-theme #task-injection .status-success {
+  color: #22c55e;
+}
+
+.dark-theme #task-injection .status-error {
+  color: #f87171;
+}
+
