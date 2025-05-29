@@ -22,6 +22,7 @@ class TaskTree:
         self.set_root_stage(root_stage)
 
         self.init_env()
+        self.init_structure_tree()
         self.set_reporter()
 
     def init_env(self):
@@ -79,6 +80,12 @@ class TaskTree:
         """
         self.log_listener = LogListener(level = "DEBUG")
         self.task_logger = TaskLogger(self.log_listener.get_queue())
+
+    def init_structure_tree(self):
+        """
+        初始化任务树结构
+        """
+        self.structure_tree = self.build_structure_tree(self.root_stage)
 
     def set_root_stage(self, root_stage: TaskManager):
         """
@@ -333,7 +340,7 @@ class TaskTree:
 
             log_item = {
                 "timestamp": datetime.now().isoformat(),
-                "structure": self.get_structure_tree(self.root_stage),
+                "structure": self.build_structure_tree(self.root_stage),
             }
 
             with open(file_path, "a", encoding="utf-8") as f:
@@ -461,7 +468,7 @@ class TaskTree:
 
         return status_dict
 
-    def get_structure_tree(self, task_manager: TaskManager, visited_stages=None):
+    def build_structure_tree(self, task_manager: TaskManager, visited_stages=None):
         """
         构建任务链的 JSON 树结构
         :param task_manager: 当前处理的 TaskManager
@@ -485,10 +492,13 @@ class TaskTree:
         visited_stages.add(task_manager.get_stage_tag())
 
         for next_stage in task_manager.next_stages:
-            child_node = self.get_structure_tree(next_stage, visited_stages)
+            child_node = self.build_structure_tree(next_stage, visited_stages)
             node["next_stages"].append(child_node)
 
         return node
+    
+    def get_structure_tree(self):
+        return self.structure_tree
     
     def format_structure_list_from_tree(self, tree_root: dict = None, indent=0):
         """
@@ -516,7 +526,7 @@ class TaskTree:
             return lines
 
         # 构建原始行列表
-        tree_root = tree_root or self.get_structure_tree(self.root_stage)
+        tree_root = tree_root or self.build_structure_tree(self.root_stage)
         raw_lines = build_lines(tree_root, indent)
 
         # 计算最大行宽

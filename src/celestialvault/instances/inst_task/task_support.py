@@ -187,8 +187,7 @@ class TaskReporter:
             self._stop_flag.clear()
             self._thread = threading.Thread(target=self._loop, daemon=True)
             self._thread.start()
-            self.push_structure_once()
-
+            
     def stop(self):
         if self._thread:
             self.push_once()  # 最后一次
@@ -210,6 +209,7 @@ class TaskReporter:
         self._pull_and_inject_tasks()  # 新增的注入逻辑
         self._push_errors()
         self._push_status()
+        self._push_structure()
 
     def _sync_interval(self):
         try:
@@ -259,9 +259,9 @@ class TaskReporter:
         except Exception as e:
             self.logger._log("WARNING", f"[Reporter] Status push failed: {type(e).__name__}({e}).")
 
-    def push_structure_once(self):
+    def _push_structure(self):
         try:
-            structure = self.task_tree.get_structure_tree(self.task_tree.root_stage)
+            structure = self.task_tree.get_structure_tree()
             requests.post(f"{self.base_url}/api/push_structure", json=structure, timeout=1)
         except Exception as e:
             self.logger._log("WARNING", f"[Reporter] Structure push failed: {type(e).__name__}({e})")
