@@ -228,9 +228,13 @@ class TaskReporter:
                 for task in tasks_list:
                     target_node = task.get("node")
                     task_datas = task.get("task_datas")
-                    task_datas = [task if task != "TERMINATION_SIGNAL" else TERMINATION_SIGNAL for task in task_datas]
+
+                    if target_node not in self.task_tree.stages_status_dict():
+                        self.logger._log("WARNING", f"[Reporter] Task injection target node {target_node} not found.")
+                        continue
 
                     # 这里你可以按需注入到不同的节点
+                    task_datas = [task if task != "TERMINATION_SIGNAL" else TERMINATION_SIGNAL for task in task_datas]
                     self.task_tree.put_stage_queue({target_node: task_datas}, put_termination_signal=False)
                     self.logger._log("INFO", f"[Reporter] 注入任务到 {target_node}: {task_datas}")
         except Exception as e:

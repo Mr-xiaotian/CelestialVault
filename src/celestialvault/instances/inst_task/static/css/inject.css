@@ -273,6 +273,7 @@
 /* ================================
   🌟 JSON输入区 & 文件上传区
 ================================ */
+/* JSON输入区 */
 #task-injection .json-section {
   margin-bottom: 16px;
 }
@@ -302,26 +303,6 @@
   color: #1d4ed8;
 }
 
-#task-injection .json-textarea:focus {
-  /* ring: 2px solid #3b82f6; */
-  border-color: transparent;
-}
-
-#task-injection .upload-text {
-  font-weight: 500;
-  color: #1f2937;
-  margin-bottom: 4px;
-}
-
-#task-injection .upload-hint {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-#task-injection .file-input {
-  display: none;
-}
-
 #task-injection .json-textarea {
   width: 100%;
   padding: 12px;
@@ -334,15 +315,24 @@
   outline: none;
 }
 
+#task-injection .json-textarea:focus {
+  /* ring: 2px solid #3b82f6; */
+  border-color: transparent;
+}
+
 #task-injection .error-message {
   margin-top: 4px;
   font-size: 12px;
   color: #dc2626;
 }
 
-#task-injection .upload-area {
+/* 文件上传区 */
+#task-injection #file-input-section {
   border: 2px dashed #d1d5db;
   border-radius: 8px;
+}
+
+#task-injection .upload-area {
   padding: 24px;
   text-align: center;
   transition: all 0.2s;
@@ -358,6 +348,21 @@
   height: 48px;
   color: #9ca3af;
   margin: 0 auto 16px;
+}
+
+#task-injection .upload-text {
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+#task-injection .upload-hint {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+#task-injection .file-input {
+  display: none;
 }
 
 /* 文件信息 */
