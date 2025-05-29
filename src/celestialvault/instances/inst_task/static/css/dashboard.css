@@ -291,6 +291,7 @@
 #dashboard-grid .card {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   margin: 0.5rem;
+  cursor: pointer;
 }
 
 #dashboard-grid .card:hover {
@@ -299,6 +300,20 @@
 
 #dashboard-grid .card-title {
   padding-bottom: 0;
+}
+
+.dragging {
+  opacity: 0.5;
+}
+
+/* 滑动卡片 */
+.sortable-ghost {
+  opacity: 0.4;
+  transform: rotate(1.5deg);
+}
+.sortable-chosen {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  cursor: grabbing;
 }
 
 /* ================================

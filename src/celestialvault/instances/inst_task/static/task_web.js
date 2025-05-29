@@ -3,6 +3,7 @@ let errors = [];
 let refreshRate = 5000;
 let refreshIntervalId = null;
 let progressChart = null;
+let draggingNodeName = null;
 let hiddenNodes = new Set(
   JSON.parse(localStorage.getItem("hiddenNodes") || "[]")
 );
@@ -70,12 +71,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     themeToggleBtn.textContent = "🌙 夜间模式";
   }
 
-  // 启动轮询
-  refreshAll();
+  initSortableDashboard(); // 初始化拖拽
+  refreshAll(); // 启动轮询
   pushRefreshRate(); // ✅ 初次加载也推送一次
   initChart(); // 初始化折线图
   refreshIntervalId = setInterval(refreshAll, refreshRate);
 });
+
+function initSortableDashboard() {
+  const el = document.getElementById("dashboard-grid");
+  new Sortable(el, {
+    animation: 200,
+    easing: "cubic-bezier(0.25, 1, 0.5, 1)",
+    onStart: function (evt) {
+      const title = evt.item.querySelector(".card-title").textContent;
+      draggingNodeName = title;
+    },
+    onEnd: function (evt) {
+      saveDashboardOrder();
+      draggingNodeName = null;
+    },
+  });
+}
+
+function saveDashboardOrder() {
+  const order = Array.from(
+    document.querySelectorAll("#dashboard-grid .card-title")
+  ).map((el) => el.textContent);
+  localStorage.setItem("dashboardOrder", JSON.stringify(order));
+}
+
+function getDashboardOrder() {
+  return JSON.parse(localStorage.getItem("dashboardOrder") || "[]");
+}
 
 async function pushRefreshRate() {
   try {
@@ -215,7 +243,20 @@ async function loadErrors() {
 
 function renderDashboard() {
   dashboardGrid.innerHTML = "";
-  for (const [node, data] of Object.entries(nodeStatuses)) {
+
+  // 获取用户排序顺序
+  const order = getDashboardOrder();
+  const orderedEntries = Object.entries(nodeStatuses).sort((a, b) => {
+    const indexA = order.indexOf(a[0]);
+    const indexB = order.indexOf(b[0]);
+    if (indexA === -1 && indexB === -1) return 0;
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
+
+  for (const [node, data] of orderedEntries) {
+    if (node === draggingNodeName) continue; // 正在拖动时，不渲染它
     const progress =
       data.tasks_processed + data.tasks_pending === 0
         ? 0
