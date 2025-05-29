@@ -1,4 +1,6 @@
-/* 提示区域 */
+/* ================================
+  🌟 提示区域
+================================ */
 #task-injection .tip-section {
   background: #dbeafe;
   border-left: 4px solid #3b82f6;
@@ -24,7 +26,9 @@
   font-size: 14px;
 }
 
-/* 卡片布局 */
+/* ================================
+  🌟 卡片布局 & 响应式
+================================ */
 #task-injection .card-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -50,7 +54,9 @@
   margin-bottom: 16px;
 }
 
-/* 搜索框 */
+/* ================================
+  🌟 搜索框
+================================ */
 #task-injection .search-container {
   position: relative;
   margin-bottom: 16px;
@@ -81,7 +87,9 @@
   color: #9ca3af;
 }
 
-/* 按钮组 */
+/* ================================
+  🌟 按钮组
+================================ */
 #task-injection .button-group {
   display: flex;
   gap: 8px;
@@ -115,7 +123,9 @@
   background: #e5e7eb;
 }
 
-/* 节点列表 */
+/* ================================
+  🌟 节点列表 & 已选节点
+================================ */
 #task-injection .node-list {
   max-height: 256px;
   overflow-y: auto;
@@ -137,10 +147,6 @@
   background: #f9fafb;
 }
 
-#task-injection .node-info {
-  flex: 1;
-}
-
 #task-injection .node-name {
   font-weight: 500;
   color: #1f2937;
@@ -159,6 +165,7 @@
   font-weight: 500;
 }
 
+/* 节点类型样式 */
 #task-injection .type-processing {
   background: #dcfce7;
   color: #166534;
@@ -184,7 +191,7 @@
   color: #dc2626;
 }
 
-/* 已选节点 */
+/* 已选节点区 */
 #task-injection .selected-nodes {
   margin-top: 16px;
 }
@@ -223,7 +230,9 @@
   color: #1d4ed8;
 }
 
-/* 输入方式切换 */
+/* ================================
+  🌟 输入方式切换
+================================ */
 #task-injection .input-toggle {
   display: flex;
   background: #f3f4f6;
@@ -243,9 +252,9 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
   background: transparent;
   color: #6b7280;
+  transition: all 0.2s;
 }
 
 #task-injection .toggle-btn.active {
@@ -260,7 +269,9 @@
   margin-right: 8px;
 }
 
-/* JSON输入区 */
+/* ================================
+  🌟 JSON输入区 & 文件上传区
+================================ */
 #task-injection .json-section {
   margin-bottom: 16px;
 }
@@ -290,6 +301,26 @@
   color: #1d4ed8;
 }
 
+#task-injection .json-textarea:focus {
+  ring: 2px solid #3b82f6;
+  border-color: transparent;
+}
+
+#task-injection .upload-text {
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+#task-injection .upload-hint {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+#task-injection .file-input {
+  display: none;
+}
+
 #task-injection .json-textarea {
   width: 100%;
   padding: 12px;
@@ -302,18 +333,12 @@
   outline: none;
 }
 
-#task-injection .json-textarea:focus {
-  ring: 2px solid #3b82f6;
-  border-color: transparent;
-}
-
 #task-injection .error-message {
   margin-top: 4px;
   font-size: 12px;
   color: #dc2626;
 }
 
-/* 文件上传区 */
 #task-injection .upload-area {
   border: 2px dashed #d1d5db;
   border-radius: 8px;
@@ -334,21 +359,7 @@
   margin: 0 auto 16px;
 }
 
-#task-injection .upload-text {
-  font-weight: 500;
-  color: #1f2937;
-  margin-bottom: 4px;
-}
-
-#task-injection .upload-hint {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-#task-injection .file-input {
-  display: none;
-}
-
+/* 文件信息 */
 #task-injection .file-info {
   margin-top: 16px;
   padding: 12px;
@@ -371,12 +382,10 @@
   color: #166534;
 }
 
-/* 提交区域 */
+/* ================================
+  🌟 提交区域 & 状态提示
+================================ */
 #task-injection .submit-section {
-  /* background: white;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  padding: 24px; */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -398,7 +407,6 @@
 #task-injection .status-success {
   color: #16a34a;
 }
-
 #task-injection .status-error {
   color: #dc2626;
 }
@@ -449,10 +457,12 @@
   display: none;
 }
 
-
+/* ================================
+  🌟 响应式：小屏兼容
+================================ */
 @media (max-width: 2048px) {
   #task-injection .card-grid {
-    grid-template-columns: 1fr; /* 一列 */
+    grid-template-columns: 1fr;
   }
   #task-injection .node-list {
     max-height: none;
