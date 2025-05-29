@@ -43,23 +43,18 @@ function setupEventListeners() {
 }
 
 function renderNodeList(searchTerm = "") {
-  const filteredNodes = Object.keys(nodeStatuses)
-    .map((nodeName) => ({
-      name: nodeName,
-      type: nodeStatuses[nodeName].active ? "运行中" : "未运行",
-    }))
-    .filter((node) =>
-      node.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-  const nodeListHTML = filteredNodes
+  const nodeListHTML = Object.keys(nodeStatuses)
     .map(
-      (node) => `
-        <div class="node-item" onclick="selectNode('${node.name}')">
+      (nodeName) => `
+        <div class="node-item" onclick="selectNode('${nodeName}')">
           <div class="node-info">
-            <div class="node-name">${node.name}</div>
+            <div class="node-name">${nodeName}</div>
           </div>
-          <div class="node-type">${node.type}</div>
+          <span class="badge ${
+            nodeStatuses[nodeName].active ? "badge-success" : "badge-inactive"
+              }">
+              ${nodeStatuses[nodeName].active ? "运行中" : "未运行"}
+          </span>
         </div>`
     )
     .join("");
