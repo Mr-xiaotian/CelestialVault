@@ -79,10 +79,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function initSortableDashboard() {
+  if (isMobile()) {
+    console.log("移动端，禁用拖动功能");
+    return;
+  }
+
   const el = document.getElementById("dashboard-grid");
   new Sortable(el, {
-    animation: 200,
+    animation: 300,
     easing: "cubic-bezier(0.25, 1, 0.5, 1)",
+    ghostClass: "sortable-ghost",
+    chosenClass: "sortable-chosen",
     onStart: function (evt) {
       const title = evt.item.querySelector(".card-title").textContent;
       draggingNodeName = title;
@@ -487,4 +494,9 @@ function extractProgressData(nodeStatuses) {
     }
   }
   return result;
+}
+
+// 简单移动端判断
+function isMobile() {
+  return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
