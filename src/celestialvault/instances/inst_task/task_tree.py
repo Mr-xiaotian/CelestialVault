@@ -159,10 +159,7 @@ class TaskTree:
                 self.task_logger._log("DEBUG", f"{p.name} exitcode: {p.exitcode}")
 
         finally:
-            for stage_tag, stage_status_dict in self.stages_status_dict.items():
-                if stage_status_dict["status"] != StageStatus.STOPPED:
-                    stage_status_dict["status"] = StageStatus.STOPPED
-
+            self.finalize_nodes()
             self.reporter.stop()
             self.handle_fail_queue()
             self.release_resources()
@@ -225,6 +222,39 @@ class TaskTree:
             if next_stage.get_stage_tag() in stage_visited:
                 continue
             self._execute_stage(next_stage, stage_visited)
+
+    def finalize_nodes(self):
+        """
+        确保所有子进程安全结束，更新节点状态，并导出每个节点队列剩余任务。
+        返回: dict, {stage_tag: [剩余任务列表]}
+        """
+        # 1️⃣ 确保所有进程安全结束（不一定要 terminate，但如果没结束就强制）
+        for p in self.processes:
+            if p.is_alive():
+                self.task_logger._log("WARNING", f"检测到进程 {p.name} 仍在运行, 尝试终止")
+                p.terminate()
+                p.join(timeout=5)
+                if p.is_alive():
+                    self.task_logger._log("WARNING", f"进程 {p.name} 仍未完全退出")
+
+        # 2️⃣ 更新所有节点状态为“已停止”
+        for stage_tag, stage_status in self.stages_status_dict.items():
+            stage_status["status"] = StageStatus.STOPPED  # 已停止
+
+        # # 3️⃣ 收集每个节点剩余的任务
+        # remaining_tasks = {}
+        # for stage_tag, stage_status in self.stages_status_dict.items():
+        #     q = stage_status["task_queue"]
+        #     remaining_list = []
+        #     while not q.empty():
+        #         try:
+        #             task = q.get_nowait()
+        #             remaining_list.append(task)
+        #         except Exception:
+        #             break
+        #     remaining_tasks[stage_tag] = remaining_list
+
+        # return remaining_tasks
 
     def release_resources(self):
         """

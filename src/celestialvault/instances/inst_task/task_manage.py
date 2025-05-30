@@ -516,7 +516,7 @@ class TaskManager:
         else:
             self.run_in_serial()
 
-        cleanup_mpqueue(input_queue)
+        # cleanup_mpqueue(input_queue) # 会影响之后finalize_nodes
         self.release_pool()
         self.put_result_queues(TERMINATION_SIGNAL)
 
