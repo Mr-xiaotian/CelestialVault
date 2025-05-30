@@ -129,7 +129,6 @@
 #task-injection .node-list {
   max-height: 256px;
   overflow-y: auto;
-  margin-bottom: 16px;
 }
 
 #task-injection .node-item {
@@ -229,6 +228,12 @@
 
 #task-injection .remove-btn:hover {
   color: #1d4ed8;
+}
+
+.disabled-node {
+  opacity: 0.5;
+  pointer-events: none; /* 禁止点击 */
+  cursor: not-allowed;
 }
 
 /* ================================

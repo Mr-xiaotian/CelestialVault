@@ -23,7 +23,7 @@ from httpx import (
 
 from .task_progress import ProgressManager
 from .task_support import TERMINATION_SIGNAL, TerminationSignal, LogListener, TaskLogger, null_lock, ValueWrapper
-from .task_tools import cleanup_mpqueue, is_queue_empty, is_queue_empty_async
+from .task_tools import cleanup_mpqueue, is_queue_empty, is_queue_empty_async, make_hashable
 
 
 class TaskManager:
@@ -215,7 +215,7 @@ class TaskManager:
         将任务放入任务队列
         """
         for item in task_source:
-            self.task_queue.put(item)
+            self.task_queue.put(make_hashable(item))
         self.task_queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
 
     async def put_task_queue_async(self, task_source):
@@ -223,7 +223,7 @@ class TaskManager:
         将任务放入任务队列(async模式)
         """
         for item in task_source:
-            await self.task_queue.put(item)
+            await self.task_queue.put(make_hashable(item))
         await self.task_queue.put(
             TERMINATION_SIGNAL
         )  # 添加一个哨兵任务，用于结束任务队列

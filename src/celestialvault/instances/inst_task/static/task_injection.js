@@ -57,8 +57,12 @@ function renderNodeList(searchTerm = "") {
         badgeText = "已停止";
       }
 
+      // ✅ 禁止点击已停止的节点
+      const clickable = status === 2 ? "" : `onclick="selectNode('${nodeName}')"`
+      const disabledClass = status === 2 ? "disabled-node" : "";
+
       return `
-        <div class="node-item" onclick="selectNode('${nodeName}')">
+        <div class="node-item ${disabledClass}" ${clickable}>
           <div class="node-info">
             <div class="node-name">${nodeName}</div>
           </div>
