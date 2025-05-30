@@ -184,8 +184,9 @@ select {
   color: white;
 }
 
-.badge-success { background-color: var(--success-color); }
 .badge-inactive { background-color: var(--gray-medium); }
+.badge-running { background-color: var(--success-color); }
+.badge-completed { background-color: var(--gray-medium); }
 
 /* ================================
   🌟 文字颜色辅助类
@@ -280,7 +281,7 @@ select {
   color: #f3f4f6;
 }
 
-.dark-theme .badge-success { background-color: #16a34a; }
+.dark-theme .badge-running { background-color: #16a34a; }
 .dark-theme .badge-inactive { background-color: #6b7280; }
 
 .dark-theme .text-gray { color: #9ca3af; }

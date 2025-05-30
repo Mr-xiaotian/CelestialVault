@@ -44,19 +44,27 @@ function setupEventListeners() {
 
 function renderNodeList(searchTerm = "") {
   const nodeListHTML = Object.keys(nodeStatuses)
-    .map(
-      (nodeName) => `
+    .map((nodeName) => {
+      // ✅ 根据 status 值确定样式和文本
+      const status = nodeStatuses[nodeName].status;
+      let badgeClass = "badge-inactive";
+      let badgeText = "未运行";
+      if (status === 1) {
+        badgeClass = "badge-running";
+        badgeText = "运行中";
+      } else if (status === 2) {
+        badgeClass = "badge-completed";
+        badgeText = "已停止";
+      }
+
+      return `
         <div class="node-item" onclick="selectNode('${nodeName}')">
           <div class="node-info">
             <div class="node-name">${nodeName}</div>
           </div>
-          <span class="badge ${
-            nodeStatuses[nodeName].active ? "badge-success" : "badge-inactive"
-              }">
-              ${nodeStatuses[nodeName].active ? "运行中" : "未运行"}
-          </span>
-        </div>`
-    )
+          <span class="badge ${badgeClass}">${badgeText}</span>
+        </div>`;
+    })
     .join("");
 
   document.getElementById("node-list").innerHTML = nodeListHTML;

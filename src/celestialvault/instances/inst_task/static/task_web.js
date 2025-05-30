@@ -264,6 +264,8 @@ function renderDashboard() {
 
   for (const [node, data] of orderedEntries) {
     if (node === draggingNodeName) continue; // 正在拖动时，不渲染它
+
+    // ✅ 计算进度
     const progress =
       data.tasks_processed + data.tasks_pending === 0
         ? 0
@@ -273,27 +275,37 @@ function renderDashboard() {
               100
           );
 
+    // ✅ 根据 status 决定 badge 样式和文本
+    let badgeClass = "badge-inactive";
+    let badgeText = "未运行";
+    if (data.status === 1) {
+      badgeClass = "badge-running";
+      badgeText = "运行中";
+    } else if (data.status === 2) {
+      badgeClass = "badge-completed";
+      badgeText = "已停止";
+    }
+
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `
           <div class="card-header">
             <h3 class="card-title">${node}</h3>
-            <span class="badge ${
-              data.active ? "badge-success" : "badge-inactive"
-            }">
-              ${data.active ? "运行中" : "未运行"}
-            </span>
+            <span class="badge ${badgeClass}">${badgeText}</span>
           </div>
           <div class="stats-grid">
-            <div><div class="stat-label">已处理</div><div class="stat-value">${
-              formatWithDelta(data.tasks_processed, data.add_tasks_processed)
-            }</div></div>
-            <div><div class="stat-label">等待中</div><div class="stat-value">${
-              formatWithDelta(data.tasks_pending, data.add_tasks_pending)
-            }</div></div>
-            <div><div class="stat-label">错误</div><div class="stat-value text-red">${
-              formatWithDelta(data.tasks_failed, data.add_tasks_failed)
-            }</div></div>
+            <div><div class="stat-label">已处理</div><div class="stat-value">${formatWithDelta(
+              data.tasks_processed,
+              data.add_tasks_processed
+            )}</div></div>
+            <div><div class="stat-label">等待中</div><div class="stat-value">${formatWithDelta(
+              data.tasks_pending,
+              data.add_tasks_pending
+            )}</div></div>
+            <div><div class="stat-label">错误</div><div class="stat-value text-red">${formatWithDelta(
+              data.tasks_failed,
+              data.add_tasks_failed
+            )}</div></div>
             <div><div class="stat-label">模式</div><div class="stat-value">${
               data.execution_mode
             }</div></div>

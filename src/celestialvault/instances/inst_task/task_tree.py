@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
-from .task_support import TERMINATION_SIGNAL, TaskError, TaskReporter, LogListener, TaskLogger, ValueWrapper, TerminationSignal
+from .task_support import TERMINATION_SIGNAL, TaskError, TaskReporter, LogListener, TaskLogger, ValueWrapper, TerminationSignal, StageStatus
 from .task_tools import format_duration, format_timestamp, cleanup_mpqueue, make_hashable
 
 
@@ -155,10 +155,14 @@ class TaskTree:
             # 等待所有进程结束
             for p in self.processes:
                 p.join()
-                self.stages_status_dict[p.name]["is_active"] = False
+                self.stages_status_dict[p.name]["status"] = StageStatus.STOPPED
                 self.task_logger._log("DEBUG", f"{p.name} exitcode: {p.exitcode}")
 
         finally:
+            for stage_tag, stage_status_dict in self.stages_status_dict.items():
+                if stage_status_dict["status"] != StageStatus.STOPPED:
+                    stage_status_dict["status"] = StageStatus.STOPPED
+
             self.reporter.stop()
             self.handle_fail_queue()
             self.release_resources()
@@ -183,7 +187,7 @@ class TaskTree:
             ]
         logger_queue = self.log_listener.get_queue()
 
-        self.stages_status_dict[stage_tag]["is_active"] = True
+        self.stages_status_dict[stage_tag]["status"] = StageStatus.RUNNING
         self.stages_status_dict[stage_tag]["start_time"] = time.time()
 
         if isinstance(stage, TaskSplitter):
@@ -215,7 +219,7 @@ class TaskTree:
                 )
             stage.start_stage(input_queue, output_queues, self.fail_queue, logger_queue)
 
-            self.stages_status_dict[stage_tag]["is_active"]  = False
+            self.stages_status_dict[stage_tag]["status"]  = StageStatus.STOPPED
 
         for next_stage in stage.next_stages:
             if next_stage.get_stage_tag() in stage_visited:
@@ -406,7 +410,7 @@ class TaskTree:
                 else:
                     total_input += status_dict[prev_tag]["tasks_processed"] 
 
-            is_active = stage_status_dict.get("is_active", False)
+            status = stage_status_dict.get("status", StageStatus.NOT_STARTED)
             processed = self.stage_success_counter.get(tag, ValueWrapper()).value
             failed = len(all_stage_error_dict.get(tag, {}))
             pending = max(0, total_input - processed - failed)
@@ -461,7 +465,7 @@ class TaskTree:
 
             status_dict[tag] = {
                 **stage.get_status_snapshot(),
-                "active": is_active,
+                "status": status,
                 "tasks_processed": processed,
                 "tasks_failed": failed,
                 "tasks_pending": pending,

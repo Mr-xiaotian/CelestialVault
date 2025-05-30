@@ -1,4 +1,5 @@
 import threading
+from enum import IntEnum
 from multiprocessing import Queue as MPQueue
 from queue import Queue as ThreadQueue, Empty
 from threading import Thread
@@ -281,6 +282,12 @@ class NoOpContext:
 class ValueWrapper:
     def __init__(self, value=0):
         self.value = value
+
+
+class StageStatus(IntEnum):
+    NOT_STARTED = 0
+    RUNNING = 1
+    STOPPED = 2
 
 
 null_lock = NoOpContext()
