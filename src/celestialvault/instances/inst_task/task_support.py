@@ -230,7 +230,7 @@ class TaskReporter:
                     target_node = task.get("node")
                     task_datas = task.get("task_datas")
 
-                    if target_node not in self.task_tree.stages_status_dict():
+                    if target_node not in self.task_tree.stages_status_dict:
                         self.logger._log("WARNING", f"[Reporter] Task injection target node {target_node} not found.")
                         continue
 
