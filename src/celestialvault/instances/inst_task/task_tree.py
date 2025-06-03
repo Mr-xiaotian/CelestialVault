@@ -431,7 +431,7 @@ class TaskTree:
             stage: TaskManager = stage_status_dict["stage"]
             prev = stage.prev_stage
             prev_tag = prev.get_stage_tag() if prev else None
-            last_stage_status_dict = self.last_status_dict.get(tag, {})
+            last_stage_status_dict: dict = self.last_status_dict.get(tag, {})
 
             total_input = stage_status_dict.get("init_tasks_num", 0)
             if prev:
@@ -450,20 +450,13 @@ class TaskTree:
             add_pending = pending - last_stage_status_dict.get("tasks_pending", 0)
 
             start_time                    = stage_status_dict.get("start_time", 0)
-            last_update_time              = stage_status_dict.get("update_time", now)
-            stage_is_pending_in_last_time = stage_status_dict.get("is_pending", False)
-
-            stage_status_dict["is_pending"] = True if pending else False
-
             # 更新时间消耗（仅在 pending 非 0 时刷新）
             if start_time:
                 elapsed = stage_status_dict.get("elapsed_time", 0)
                 # 如果上一次是 pending，则累计时间
-                if stage_is_pending_in_last_time:
-                    # 如果上一次活跃, 那么无论当前状况，累计从上一次更新时间到现在的时间
-                    elapsed += now - last_update_time
-                    # 更新最后更新时间
-                    stage_status_dict["update_time"] = now
+                if last_stage_status_dict.get("tasks_pending", 0):
+                    # 如果上一次活跃, 那么无论当前状况，累计一次更新时间
+                    elapsed += self.reporter.interval
             else:
                 elapsed = 0
 

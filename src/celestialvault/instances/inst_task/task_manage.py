@@ -32,7 +32,7 @@ class TaskManager:
         func,
         execution_mode="serial",
         worker_limit=50,
-        max_retries=1,
+        max_retries=3,
         max_info=50,
         progress_desc="Processing",
         show_progress=False,
