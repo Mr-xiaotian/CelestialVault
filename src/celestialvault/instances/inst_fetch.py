@@ -41,10 +41,28 @@ class Fetcher:
     def _load_proxy_list(self):
         resp = requests.get(f"{self.clash_api}/proxies")
         proxies_info = resp.json().get("proxies", {})
-        proxy_names = proxies_info.get("GLOBAL", {}).get("all", [])
-        exclude = ["DIRECT", "REJECT", "GLOBAL", "Proxy"]
-        valid_proxies = [p for p in proxy_names if p not in exclude]
-        return valid_proxies[:44]  # 只取前 44 个
+        global_proxy_names = proxies_info.get("GLOBAL", {}).get("all", [])
+        exclude = {"DIRECT", "REJECT", "GLOBAL", "Proxy", "节点选择", "自动选择"}  # 需要排除的一些特殊节点
+
+        # 收集每个代理的延迟（如果有的话）
+        proxy_delays = []
+        for name in global_proxy_names:
+            if name in exclude:
+                continue
+            proxy_info = proxies_info.get(name, {})
+            delay = 99999  # 默认延迟大值
+            try:
+                delay = proxy_info["extra"]["http://www.gstatic.com/generate_204"]["history"][0]["delay"]
+            except (KeyError, IndexError, TypeError):
+                pass  # 该节点没有延迟信息，默认99999
+            proxy_delays.append((name, delay))
+
+        # 按延迟排序，取最小的40个
+        sorted_proxies = sorted(proxy_delays, key=lambda x: x[1])
+        top_40 = [name for name, delay in sorted_proxies[:40]]
+
+        # print("🌟 选出延迟最低的 40 个代理:", top_40)
+        return top_40
 
     def _switch_proxy(self, tried_proxies=None):
         if not self.use_proxy:
