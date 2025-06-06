@@ -158,9 +158,9 @@ function switchInputMethod(method) {
     .classList.toggle("hidden", method !== "file");
 }
 
-function fillExample() {
+function fillTermination() {
   document.getElementById("json-textarea").value = JSON.stringify(
-    exampleTask,
+    ["TERMINATION_SIGNAL"],
     null,
     2
   );
