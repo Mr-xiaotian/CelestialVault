@@ -7,7 +7,7 @@ from queue import Queue as ThreadQueue
 from pathlib import Path
 from queue import Empty
 from asyncio import QueueEmpty as AsyncQueueEmpty
-from typing import TYPE_CHECKING, Dict, Any
+from typing import TYPE_CHECKING, Dict, Any, List, Optional
 
 if TYPE_CHECKING:
     from .task_manage import TaskManager  # 或者用绝对路径，例如 from task_tree.task_manage import TaskManager
@@ -35,40 +35,86 @@ def cleanup_mpqueue(queue: MPQueue):
     queue.close()
     queue.join_thread()  # 确保队列的后台线程正确终止
 
-def load_error_by_stage(jsonl_path):
+def load_jsonl_grouped_by_keys(
+    jsonl_path: str,
+    group_keys: List[str],
+    extract_fields: Optional[List[str]] = None,
+    eval_fields: Optional[List[str]] = None,
+    skip_if_missing: bool = True,
+) -> Dict[str, List[Any]]:
+    """
+    加载 JSONL 文件内容并按多个 key 分组。
+
+    :param jsonl_path: JSONL 文件路径
+    :param group_keys: 用于分组的字段名列表（如 ['error', 'stage']）
+    :param extract_fields: 要提取的字段名列表；为空时返回整个 item
+    :param eval_fields: 哪些字段需要用 ast.literal_eval 解析
+    :param skip_if_missing: 缺 key 是否跳过该条记录
+    :return: 一个 {"(k1, k2)": [items]} 的字典
+    """
+    result_dict = defaultdict(list)
+
+    with open(jsonl_path, "r", encoding="utf-8") as f:
+        for line in f:
+            try:
+                item = json.loads(line)
+            except Exception:
+                continue
+
+            # 确保 group_keys 都存在
+            if skip_if_missing and any(k not in item for k in group_keys):
+                continue
+
+            # 组合分组 key
+            group_values = tuple(item.get(k, "") for k in group_keys)
+            group_key = f"({', '.join(map(str, group_values))})" if len(group_values) > 1 else group_values[0]
+
+            # 字段反序列化（仅 eval_fields）
+            if eval_fields:
+                for key in eval_fields:
+                    if key in item:
+                        try:
+                            item[key] = ast.literal_eval(item[key])
+                        except Exception:
+                            pass  # 解析失败不终止
+
+            # 提取内容
+            if extract_fields:
+                if skip_if_missing and any(k not in item for k in extract_fields):
+                    continue
+
+                if len(extract_fields) == 1:
+                    value = item[extract_fields[0]]
+                else:
+                    value = {k: item[k] for k in extract_fields if k in item}
+            else:
+                value = item
+
+            result_dict[group_key].append(value)
+
+    return dict(result_dict)
+
+def load_task_by_stage(jsonl_path):
     """
     加载错误记录，按 stage 分类
     """
-    stage_dict = defaultdict(list)
-    with open(jsonl_path, "r") as f:
-        for line in f:
-            item = json.loads(line)
-            if "error" not in item or "stage" not in item:
-                continue  # 跳过结构条或非错误记录
-            
-            task = ast.literal_eval(item["task"])
-            stage_dict[item["stage"]].append(task)
+    return load_jsonl_grouped_by_keys(
+        jsonl_path,
+        group_keys=["stage"],
+        extract_fields=["task"],
+        eval_fields=["task"]
+    )
 
-    return dict(stage_dict)
-
-def load_error_by_type(jsonl_path):
+def load_task_by_error(jsonl_path):
     """
     加载错误记录，按 error 和 stage 分类
     """
-    type_dict = defaultdict(list)
-    with open(jsonl_path, "r", encoding="utf-8") as f:
-        for line in f:
-            item = json.loads(line)
-            if "error" not in item or "stage" not in item:
-                continue  # 跳过结构条或非错误记录
-
-            error = item["error"]
-            stage = item["stage"]
-            task = ast.literal_eval(item["task"])
-            key = f"({error}, {stage})"
-            type_dict[key].append(task)
-            
-    return dict(type_dict)
+    return load_jsonl_grouped_by_keys(
+        jsonl_path,
+        group_keys=["error", "stage"],
+        extract_fields=["task"],
+        eval_fields=["task"]
+    )
 
 def is_queue_empty(q: ThreadQueue) -> bool:
     """
