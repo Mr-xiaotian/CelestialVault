@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
 from .task_support import TERMINATION_SIGNAL, TaskError, TaskReporter, LogListener, TaskLogger, ValueWrapper, TerminationSignal, StageStatus
-from .task_tools import format_duration, format_timestamp, cleanup_mpqueue, make_hashable
+from .task_tools import format_duration, format_timestamp, cleanup_mpqueue, make_hashable, build_structure_tree, format_structure_list_from_tree, append_jsonl_log
 
 
 class TaskTree:
@@ -86,7 +86,7 @@ class TaskTree:
         """
         初始化任务树结构
         """
-        self.structure_tree = self.build_structure_tree(self.root_stage)
+        self.structure_tree = build_structure_tree(self.root_stage)
 
     def set_root_stage(self, root_stage: TaskManager):
         """
@@ -144,7 +144,7 @@ class TaskTree:
         try:
             self.log_listener.start()
             self.start_time = time.time()
-            structure_list = self.format_structure_list_from_tree()
+            structure_list = self.get_structure_list()
             self.task_logger.start_tree(structure_list)
             self._persist_structure_metadata()
             self.reporter.start() if self.is_report else None
@@ -341,47 +341,27 @@ class TaskTree:
 
             self._persist_single_failure(task_str, error_info, stage_tag, timestamp)
 
-    def _persist_single_failure(self, task_str, error_info, stage_tag, timestamp, path="./fallback"):
+    def _persist_single_failure(self, task_str, error_info, stage_tag, timestamp):
         """
         增量写入单条错误日志到每日文件中
         """
-        try:
-            date_str = datetime.fromtimestamp(self.start_time).strftime("%Y-%m-%d")
-            time_str = datetime.fromtimestamp(self.start_time).strftime("%H-%M-%S-%f")[:-3]
-            file_path = Path(path) / date_str / f"realtime_errors({time_str}).jsonl"
-            file_path.parent.mkdir(parents=True, exist_ok=True)
+        log_item = {
+            "timestamp": datetime.fromtimestamp(timestamp).isoformat(),
+            "stage": stage_tag,
+            "error": error_info,
+            "task": task_str,
+        }
+        append_jsonl_log(log_item, self.start_time, "./fallback", "realtime_errors", self.task_logger)
 
-            log_item = {
-                "timestamp": datetime.fromtimestamp(timestamp).isoformat(),
-                "stage": stage_tag,
-                "error": error_info,
-                "task": task_str,
-            }
-
-            with open(file_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps(log_item, ensure_ascii=False) + "\n")
-        except Exception as e:
-            self.task_logger._log("WARNING",f"[Persist] 写入实时错误日志失败: {e}")
-
-    def _persist_structure_metadata(self, path="./fallback"):
+    def _persist_structure_metadata(self):
         """
         在运行开始时写入任务结构元信息到 jsonl 文件
         """
-        try:
-            date_str = datetime.fromtimestamp(self.start_time).strftime("%Y-%m-%d")
-            time_str = datetime.fromtimestamp(self.start_time).strftime("%H-%M-%S-%f")[:-3]
-            file_path = Path(path) / date_str / f"realtime_errors({time_str}).jsonl"
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-
-            log_item = {
-                "timestamp": datetime.now().isoformat(),
-                "structure": self.build_structure_tree(self.root_stage),
-            }
-
-            with open(file_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps(log_item, ensure_ascii=False) + "\n")
-        except Exception as e:
-            self.task_logger._log("WARNING",f"[Persist] 写入结构失败: {e}")
+        log_item = {
+            "timestamp": datetime.now().isoformat(),
+            "structure": self.get_structure_tree(),
+        }
+        append_jsonl_log(log_item, self.start_time, "./fallback", "realtime_errors", self.task_logger)
 
     def get_stages_status_dict(self):
         """
@@ -506,78 +486,12 @@ class TaskTree:
         self.last_status_dict = status_dict
 
         return status_dict
-
-    def build_structure_tree(self, task_manager: TaskManager, visited_stages=None):
-        """
-        构建任务链的 JSON 树结构
-        :param task_manager: 当前处理的 TaskManager
-        :param visited_stages: 已访问的 TaskManager 集合，避免重复访问
-        :return: JSON 结构的任务树
-        """
-        visited_stages = visited_stages or set()
-
-        node = {
-            "stage_name": task_manager.stage_name,
-            "stage_mode": task_manager.stage_mode,
-            "func_name": task_manager.func.__name__,
-            "visited": False,
-            "next_stages": []
-        }
-
-        if task_manager.get_stage_tag() in visited_stages:
-            node["visited"] = True
-            return node
-
-        visited_stages.add(task_manager.get_stage_tag())
-
-        for next_stage in task_manager.next_stages:
-            child_node = self.build_structure_tree(next_stage, visited_stages)
-            node["next_stages"].append(child_node)
-
-        return node
-    
-    def format_structure_list_from_tree(self, root_root: dict = None, indent=0):
-        """
-        从 JSON 树结构直接生成带边框的格式化任务结构文本列表
-        :param root_root: JSON 格式任务树根节点
-        :param indent: 当前缩进级别
-        :return: 带边框的格式化字符串列表
-        """
-
-        def build_lines(node, current_indent):
-            lines = []
-
-            # 构建当前节点的行文本
-            visited_note = " (already visited)" if node.get("visited") else ""
-            line = f"{node['stage_name']} (stage_mode: {node['stage_mode']}, func: {node['func_name']}){visited_note}"
-            lines.append(line)
-
-            # 递归处理子节点
-            for child in node.get("next_stages", []):
-                sub_lines = build_lines(child, current_indent + 2)
-                arrow_prefix = "  " * current_indent + "╘-->"
-                sub_lines[0] = f"{arrow_prefix}{sub_lines[0]}"
-                lines.extend(sub_lines)
-
-            return lines
-
-        # 构建原始行列表
-        root_root = root_root or self.build_structure_tree(self.root_stage)
-        raw_lines = build_lines(root_root, indent)
-
-        # 计算最大行宽
-        max_length = max(len(line) for line in raw_lines)
-
-        # 包装为表格形式
-        content_lines = [f"| {line.ljust(max_length)} |" for line in raw_lines]
-        border = "+" + "-" * (max_length + 2) + "+"
-        return [border] + content_lines + [border]
     
     def get_structure_tree(self):
         return self.structure_tree
     
     def get_structure_list(self):
-        return self.format_structure_list_from_tree(self.structure_tree)
+        return format_structure_list_from_tree(self.structure_tree)
 
     def test_methods(self, init_tasks_dict: Dict[str, List], stage_modes: list=None, execution_modes: list=None) -> Dict[str, Any]:
         """

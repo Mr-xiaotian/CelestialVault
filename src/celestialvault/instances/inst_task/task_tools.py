@@ -1,12 +1,16 @@
-
 import json, ast
 from collections import defaultdict
 from datetime import datetime
 from multiprocessing import Queue as MPQueue
 from asyncio import Queue as AsyncQueue
 from queue import Queue as ThreadQueue
+from pathlib import Path
 from queue import Empty
 from asyncio import QueueEmpty as AsyncQueueEmpty
+from typing import TYPE_CHECKING, Dict, Any
+
+if TYPE_CHECKING:
+    from .task_manage import TaskManager  # 或者用绝对路径，例如 from task_tree.task_manage import TaskManager
 
 
 def format_duration(seconds):
@@ -103,3 +107,90 @@ def make_hashable(obj):
     else:
         # 基本类型直接返回
         return obj
+
+def build_structure_tree(task_manager: "TaskManager", visited_stages=None) -> Dict[str, Any]:
+    """
+    构建任务链的 JSON 树结构
+    :param task_manager: 当前处理的 TaskManager
+    :param visited_stages: 已访问的 TaskManager 集合，避免重复访问
+    :return: JSON 结构的任务树
+    """
+    visited_stages = visited_stages or set()
+
+    node = {
+        "stage_name": task_manager.stage_name,
+        "stage_mode": task_manager.stage_mode,
+        "func_name": task_manager.func.__name__,
+        "visited": False,
+        "next_stages": []
+    }
+
+    if task_manager.get_stage_tag() in visited_stages:
+        node["visited"] = True
+        return node
+
+    visited_stages.add(task_manager.get_stage_tag())
+
+    for next_stage in task_manager.next_stages:
+        child_node = build_structure_tree(next_stage, visited_stages)
+        node["next_stages"].append(child_node)
+
+    return node
+
+def format_structure_list_from_tree(root_root: dict = None, indent=0) -> list:
+    """
+    从 JSON 树结构直接生成带边框的格式化任务结构文本列表
+    :param root_root: JSON 格式任务树根节点
+    :param indent: 当前缩进级别
+    :return: 带边框的格式化字符串列表
+    """
+
+    def build_lines(node: dict, current_indent: int):
+        lines = []
+
+        # 构建当前节点的行文本
+        visited_note = " (already visited)" if node.get("visited") else ""
+        line = f"{node['stage_name']} (stage_mode: {node['stage_mode']}, func: {node['func_name']}){visited_note}"
+        lines.append(line)
+
+        # 递归处理子节点
+        for child in node.get("next_stages", []):
+            sub_lines = build_lines(child, current_indent + 2)
+            arrow_prefix = "  " * current_indent + "╘-->"
+            sub_lines[0] = f"{arrow_prefix}{sub_lines[0]}"
+            lines.extend(sub_lines)
+
+        return lines
+
+    # 构建原始行列表
+    raw_lines = build_lines(root_root, indent)
+
+    # 计算最大行宽
+    max_length = max(len(line) for line in raw_lines)
+
+    # 包装为表格形式
+    content_lines = [f"| {line.ljust(max_length)} |" for line in raw_lines]
+    border = "+" + "-" * (max_length + 2) + "+"
+    return [border] + content_lines + [border]
+
+def append_jsonl_log(log_data: dict, start_time: float, base_path: str, prefix: str, logger=None):
+    """
+    将日志字典写入指定目录下的 JSONL 文件。
+
+    :param log_data: 要写入的日志项（字典）
+    :param start_time: 运行开始时间，用于构造路径
+    :param base_path: 基础路径，例如 './fallback'
+    :param prefix: 文件名前缀，例如 'realtime_errors'
+    :param logger: 可选的日志对象用于记录失败信息
+    """
+    try:
+        date_str = datetime.fromtimestamp(start_time).strftime("%Y-%m-%d")
+        time_str = datetime.fromtimestamp(start_time).strftime("%H-%M-%S-%f")[:-3]
+        file_path = Path(base_path) / date_str / f"{prefix}({time_str}).jsonl"
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(file_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_data, ensure_ascii=False) + "\n")
+    except Exception as e:
+        if logger:
+            logger._log("WARNING", f"[Persist] 写入日志失败: {e}")
