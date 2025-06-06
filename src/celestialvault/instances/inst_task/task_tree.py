@@ -236,31 +236,28 @@ class TaskTree:
                 p.join(timeout=5)
                 if p.is_alive():
                     self.task_logger._log("WARNING", f"进程 {p.name} 仍未完全退出")
+                self.task_logger._log("DEBUG", f"{p.name} exitcode: {p.exitcode}")
 
         # 2️⃣ 更新所有节点状态为“已停止”
         for stage_tag, stage_status in self.stages_status_dict.items():
             stage_status["status"] = StageStatus.STOPPED  # 已停止
 
-        # # 3️⃣ 收集每个节点剩余的任务
-        # remaining_tasks = {}
-        # for stage_tag, stage_status in self.stages_status_dict.items():
-        #     q = stage_status["task_queue"]
-        #     remaining_list = []
-        #     while not q.empty():
-        #         try:
-        #             task = q.get_nowait()
-        #             remaining_list.append(task)
-        #         except Exception:
-        #             break
-        #     remaining_tasks[stage_tag] = remaining_list
+        # 3️⃣ 收集并持久化每个 stage 中未消费的任务
+        for stage_tag, stage_status in self.stages_status_dict.items():
+            queue: MPQueue = stage_status["task_queue"]
+            while not queue.empty():
+                try:
+                    task = queue.get_nowait()
+                    self.task_logger._log("DEBUG", f"获取 {stage_tag} 剩余任务: {task}")
 
-        # return remaining_tasks
+                    self._persist_unconsumed_task(stage_tag, task)
+                except Exception as e:
+                    self.task_logger._log("WARNING", f"获取 {stage_tag} 剩余任务失败: {e}")
 
     def release_resources(self):
         """
         释放资源
         """
-
         for stage_status_dict in self.stages_status_dict.values():
             stage_status_dict["stage"].release_queue()
 
@@ -341,6 +338,16 @@ class TaskTree:
 
             self._persist_single_failure(task_str, error_info, stage_tag, timestamp)
 
+    def _persist_structure_metadata(self):
+        """
+        在运行开始时写入任务结构元信息到 jsonl 文件
+        """
+        log_item = {
+            "timestamp": datetime.now().isoformat(),
+            "structure": self.get_structure_tree(),
+        }
+        append_jsonl_log(log_item, self.start_time, "./fallback", "realtime_errors", self.task_logger)
+
     def _persist_single_failure(self, task_str, error_info, stage_tag, timestamp):
         """
         增量写入单条错误日志到每日文件中
@@ -353,15 +360,16 @@ class TaskTree:
         }
         append_jsonl_log(log_item, self.start_time, "./fallback", "realtime_errors", self.task_logger)
 
-    def _persist_structure_metadata(self):
+    def _persist_unconsumed_task(self, stage_tag, task):
         """
-        在运行开始时写入任务结构元信息到 jsonl 文件
+        写入单个未消费任务到 JSONL 文件
         """
         log_item = {
             "timestamp": datetime.now().isoformat(),
-            "structure": self.get_structure_tree(),
+            "stage": stage_tag,
+            "task": str(task)
         }
-        append_jsonl_log(log_item, self.start_time, "./fallback", "realtime_errors", self.task_logger)
+        append_jsonl_log(log_item, self.start_time, "./fallback", "leftover_tasks", self.task_logger)
 
     def get_stages_status_dict(self):
         """
