@@ -17,6 +17,7 @@ tests/__pycache__/
 .vscode/
 result.json
 _preview.ipynb
+temp.py
 
 # 忽略临时文件
 profile/

@@ -425,6 +425,7 @@ class TaskTree:
         """
         status_dict = {}
         now = time.time()
+        interval = self.reporter.interval
         all_stage_error_dict = self.get_all_stage_error_dict()
 
         for tag, stage_status_dict in self.stages_status_dict.items():
@@ -438,25 +439,25 @@ class TaskTree:
                 if isinstance(prev, TaskSplitter):
                     total_input += self.stage_extra_stats[prev_tag].get("split_output_count", ValueWrapper()).value
                 else:
-                    total_input += status_dict[prev_tag]["tasks_processed"] 
+                    total_input += status_dict[prev_tag]["tasks_processed"]
 
-            status = stage_status_dict.get("status", StageStatus.NOT_STARTED)
-            processed = self.stage_success_counter.get(tag, ValueWrapper()).value
-            failed = len(all_stage_error_dict.get(tag, {}))
-            pending = max(0, total_input - processed - failed)
+            status        = stage_status_dict.get("status", StageStatus.NOT_STARTED)
+            processed     = self.stage_success_counter.get(tag, ValueWrapper()).value
+            failed        = len(all_stage_error_dict.get(tag, {}))
+            pending       = max(0, total_input - processed - failed)
 
             add_processed = processed - last_stage_status_dict.get("tasks_processed", 0)
-            add_failed = failed - last_stage_status_dict.get("tasks_failed", 0)
-            add_pending = pending - last_stage_status_dict.get("tasks_pending", 0)
+            add_failed    = failed - last_stage_status_dict.get("tasks_failed", 0)
+            add_pending   = pending - last_stage_status_dict.get("tasks_pending", 0)
 
-            start_time                    = stage_status_dict.get("start_time", 0)
+            start_time    = stage_status_dict.get("start_time", 0)
             # 更新时间消耗（仅在 pending 非 0 时刷新）
             if start_time:
                 elapsed = stage_status_dict.get("elapsed_time", 0)
                 # 如果上一次是 pending，则累计时间
                 if last_stage_status_dict.get("tasks_pending", 0):
                     # 如果上一次活跃, 那么无论当前状况，累计一次更新时间
-                    elapsed += self.reporter.interval
+                    elapsed += interval
             else:
                 elapsed = 0
 
@@ -498,7 +499,7 @@ class TaskTree:
                 "start_time": format_timestamp(start_time),
                 "elapsed_time": format_duration(elapsed),
                 "remaining_time": format_duration(remaining),
-                "task_avg_time": avg_time_str,  # 新增字段
+                "task_avg_time": avg_time_str,
                 "history": history  # ✅ 新增历史数据
             }
 
