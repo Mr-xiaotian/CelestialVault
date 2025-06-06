@@ -140,6 +140,22 @@ async def is_queue_empty_async(q: AsyncQueue) -> bool:
     except AsyncQueueEmpty:
         return True
 
+def format_repr(obj: Any, max_length: int) -> str:
+    """
+    将对象格式化为字符串，自动转义换行、截断超长文本。
+
+    :param obj: 任意对象
+    :param max_length: 显示的最大字符数（超出将被截断）
+    :return: 格式化字符串
+    """
+    obj_str = str(obj).replace("\\", "\\\\").replace("\n", "\\n")
+    if max_length <= 0 or len(obj_str) <= max_length:
+        return obj_str
+    # 截断逻辑（前 2/3 + ... + 后 1/3）
+    first_part = obj_str[: int(max_length * 2 / 3)]
+    last_part = obj_str[-int(max_length / 3):]
+    return f"{first_part}...{last_part}"
+
 
 # ========公共函数========
 def make_hashable(obj):

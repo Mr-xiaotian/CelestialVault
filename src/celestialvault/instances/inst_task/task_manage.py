@@ -23,7 +23,7 @@ from httpx import (
 
 from .task_progress import ProgressManager
 from .task_support import TERMINATION_SIGNAL, TerminationSignal, LogListener, TaskLogger, null_lock, ValueWrapper
-from .task_tools import cleanup_mpqueue, is_queue_empty, is_queue_empty_async, make_hashable
+from .task_tools import cleanup_mpqueue, is_queue_empty, is_queue_empty_async, make_hashable, format_repr
 
 
 class TaskManager:
@@ -295,40 +295,29 @@ class TaskManager:
 
     def get_task_info(self, task):
         """
-        获取任务信息
+        获取任务参数信息的可读字符串表示。
         """
-        info_list = []
         args = self.get_args(task)
 
-        def format_arg(arg):
-            arg_str = f"{arg}".replace("\\", "\\\\").replace("\n", "\\n")
-            if len(arg_str) < self.max_info or not self.max_info:
-                return arg_str
-            else:
-                first_info = arg_str[: int(self.max_info * 2 // 3)]
-                second_info = arg_str[-int(self.max_info * 1 // 3) :]
-                return f"{first_info}...{second_info}"
+        # 格式化每个参数
+        def format_args_list(args_list):
+            return [format_repr(arg, self.max_info) for arg in args_list]
 
         if len(args) <= 3:
-            info_list = [format_arg(arg) for arg in args]
+            formatted_args = format_args_list(args)
         else:
-            info_list = [format_arg(arg) for arg in args[:2]]
-            info_list.append("...")  # 表示中间省略
-            info_list.append(format_arg(args[-1]))
+            # 显示前两个 + ... + 最后一个
+            head = format_args_list(args[:2])
+            tail = format_args_list([args[-1]])
+            formatted_args = head + ["..."] + tail
 
-        return "(" + ", ".join(info_list) + ")"
+        return f"({', '.join(formatted_args)})"
 
     def get_result_info(self, result):
         """
         获取结果信息
         """
-        result = f"{result}".replace("\\", "\\\\").replace("\n", "\\n")
-        if len(result) < self.max_info:
-            return result
-        else:
-            first_info = result[: int(self.max_info * 2 // 3)]
-            second_info = result[-int(self.max_info * 1 // 3) :]
-            return f"{first_info}...{second_info}"
+        return format_repr(result, self.max_info)
 
     def process_task_success(self, task, result, start_time):
         """
