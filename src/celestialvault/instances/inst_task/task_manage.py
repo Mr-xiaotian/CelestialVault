@@ -210,23 +210,29 @@ class TaskManager:
         """
         self.retry_exceptions = self.retry_exceptions + tuple(exceptions)
 
-    def put_task_queue(self, task_source):
+    def put_task_queue(self, task_source) -> int:
         """
         将任务放入任务队列
         """
+        task_num = 0
         for item in task_source:
             self.task_queue.put(make_hashable(item))
+            task_num += 1
         self.task_queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
+        return task_num
 
-    async def put_task_queue_async(self, task_source):
+    async def put_task_queue_async(self, task_source) -> int:
         """
         将任务放入任务队列(async模式)
         """
+        task_num = 0
         for item in task_source:
             await self.task_queue.put(make_hashable(item))
+            task_num += 1
         await self.task_queue.put(
             TERMINATION_SIGNAL
         )  # 添加一个哨兵任务，用于结束任务队列
+        return task_num
 
     def put_result_queues(self, result):
         """
@@ -416,15 +422,10 @@ class TaskManager:
         self.init_listener()
         self.init_env(logger_queue=self.log_listener.get_queue())
 
-        try:
-            total_tasks = len(task_source)
-        except TypeError:
-            total_tasks = "Generator"
+        total_tasks = self.put_task_queue(task_source)
         self.task_logger.start_manager(
             self.func.__name__, total_tasks, self.execution_mode, self.worker_limit
         )
-
-        self.put_task_queue(task_source)
 
         # 根据模式运行对应的任务处理函数
         if self.execution_mode == "thread":
@@ -459,15 +460,11 @@ class TaskManager:
         self.init_listener()
         self.init_env(logger_queue=self.log_listener.get_queue())
 
-        try:
-            total_tasks = len(task_source)
-        except TypeError:
-            total_tasks = "Generator"
+        total_tasks = await self.put_task_queue_async(task_source)
         self.task_logger.start_manager(
             self.func.__name__, total_tasks, "async(await)", self.worker_limit
         )
 
-        await self.put_task_queue_async(task_source)
         await self.run_in_async()
 
         self.task_logger.end_manager(

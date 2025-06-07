@@ -14,7 +14,7 @@ class Suber:
 
         # Characters that need only lookahead checks
         self.lookahead_only_chars = (
-            '\]|』|」|】|》|\)|）|\}|\!|！|\?|？|\||”|"|\.|。|章|：|:'
+            '\]|』|」|】|》|\)|）|\}|\!|！|\?|？|\||”|"|\.|。|章|：|:|日'
         )
 
         # Characters that need only lookbehind checks

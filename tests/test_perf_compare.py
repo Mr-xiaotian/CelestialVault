@@ -12,27 +12,32 @@ N = 10000
 # =======================
 
 def mpqueue_worker(q):
-    start = time.time()
+    t0 = time.time()
     for i in range(N):
         q.put(i)
+    t1 = time.time()
     for i in range(N):
         _ = q.get()
-    print("MPQueue:", time.time() - start)
+    t2 = time.time()
+    print(f"MPQueue: put={t1 - t0:.4f}s, get={t2 - t1:.4f}s")
 
 def manager_dict_worker(d):
-    start = time.time()
+    t0 = time.time()
     for i in range(N):
         d[i] = i
+    t1 = time.time()
     for i in range(N):
         _ = d[i]
-    print("Manager.dict:", time.time() - start)
+    t2 = time.time()
+    print(f"Manager.dict: put={t1 - t0:.4f}s, get={t2 - t1:.4f}s")
 
 def value_worker(val):
-    start = time.time()
+    t0 = time.time()
     for _ in range(N):
         with val.get_lock():
             val.value += 1
-    print("Value (number):", time.time() - start)
+    t1 = time.time()
+    print(f"Value (number): inc={t1 - t0:.4f}s")
 
 # =======================
 # Fixtures
@@ -48,21 +53,25 @@ def redis_conn():
 
 def test_builtin_dict():
     d = {}
-    start = time.time()
+    t0 = time.time()
     for i in range(N):
         d[i] = i
+    t1 = time.time()
     for i in range(N):
         _ = d[i]
-    print("Built-in dict:", time.time() - start)
+    t2 = time.time()
+    print(f"Built-in dict: put={t1 - t0:.4f}s, get={t2 - t1:.4f}s")
 
 def test_queue_thread():
     q = queue.Queue()
-    start = time.time()
+    t0 = time.time()
     for i in range(N):
         q.put(i)
+    t1 = time.time()
     for i in range(N):
         _ = q.get()
-    print("Queue (thread):", time.time() - start)
+    t2 = time.time()
+    print(f"Queue (thread): put={t1 - t0:.4f}s, get={t2 - t1:.4f}s")
 
 def test_mpqueue():
     q = multiprocessing.Queue()
@@ -84,24 +93,27 @@ def test_value_number():
     p.join()
 
 def test_redis_plain(redis_conn):
-    start = time.time()
+    t0 = time.time()
     for i in range(N):
         redis_conn.set(f'plain_key{i}', i)
+    t1 = time.time()
     for i in range(N):
         _ = redis_conn.get(f'plain_key{i}')
-    print("Redis (plain):", time.time() - start)
+    t2 = time.time()
+    print(f"Redis (plain): set={t1 - t0:.4f}s, get={t2 - t1:.4f}s")
 
 def test_redis_pipeline(redis_conn):
-    start = time.time()
-
+    t0 = time.time()
     pipe = redis_conn.pipeline()
     for i in range(N):
         pipe.set(f'pipe_key{i}', i)
     pipe.execute()
+    t1 = time.time()
 
     pipe = redis_conn.pipeline()
     for i in range(N):
         pipe.get(f'pipe_key{i}')
     _ = pipe.execute()
+    t2 = time.time()
 
-    print("Redis (pipeline):", time.time() - start)
+    print(f"Redis (pipeline): set={t1 - t0:.4f}s, get={t2 - t1:.4f}s")
