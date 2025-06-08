@@ -203,7 +203,7 @@ def _test_task_tree_1():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def _test_task_tree_2():    
+def test_task_tree_2():    
     # 定义任务节点
     generate_stage = TaskManager(func=generate_urls, execution_mode='thread', worker_limit=4)
     logr_stage = TaskManager(func=log_urls, execution_mode='thread', worker_limit=4)
@@ -237,12 +237,12 @@ def _test_task_tree_2():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def test_task_web_3():
+def _test_task_web_3():
     # 定义任务节点
     generate_stage = TaskManager(func=generate_urls_sleep, execution_mode='thread', worker_limit=4)
     logr_stage = TaskManager(func=log_urls_sleep, execution_mode='thread', worker_limit=4)
     splitter = TaskSplitter()
-    download_stage = TaskManager(func=download_sleep, execution_mode='thread', worker_limit=4)
+    download_stage = TaskManager(func=download_sleep, execution_mode='thread', worker_limit=4, max_retries=1)
     parse_stage = TaskManager(func=parse_sleep, execution_mode='thread', worker_limit=4)
 
     # 设置链关系
@@ -252,7 +252,7 @@ def test_task_web_3():
     download_stage.set_tree_context([], stage_mode='process', stage_name='Downloader')
     parse_stage.set_tree_context([], stage_mode='process', stage_name='Parser')
 
-    download_stage.add_retry_exceptions(ValueError)
+    # download_stage.add_retry_exceptions(ValueError)
 
     # 初始化 TaskTree
     tree = TaskTree(generate_stage)

@@ -74,7 +74,7 @@ class TaskManager:
 
         self.init_dict()
 
-    def init_redis(self, host="localhost", port=6379, db=0, decode_responses=True):
+    def init_redis(self, host="localhost", port=6379, db=0, decode_responses=True, clear_data=False):
         self.redis_client = redis.Redis(
             host=host,             # 默认 Redis 服务地址
             port=port,             # 默认端口
@@ -82,10 +82,13 @@ class TaskManager:
             decode_responses=decode_responses  # 字符串自动解码为 str，而不是 bytes
         )
 
+        self.clear_stage_data() if clear_data else None
+
     def init_dict(self, success_counter=None, success_lock=None, extra_stats=None):
         """
         初始化结果字典
         """
+        self.success_dict = {}
         self.retry_time_dict = {}
 
         self.success_counter = success_counter if success_counter is not None else ValueWrapper()
@@ -263,7 +266,7 @@ class TaskManager:
         判断任务是否重复
         """
         task_str = str(task)
-        exists_success = self.redis_client.hexists(name=f"{self.get_stage_tag()}:success", key=task_str)
+        exists_success = task in self.success_dict
         exists_error = self.redis_client.hexists(name=f"{self.get_stage_tag()}:error", key=task_str)
         return exists_success or exists_error
 
@@ -343,8 +346,9 @@ class TaskManager:
         :param start_time: 任务开始时间
         """
         processed_result = self.process_result(task, result)
-        self.redis_client.hset(f"{self.get_stage_tag()}:success", str(task), str(processed_result))
-        self.redis_client.hset(f"{self.get_stage_tag()}:done_time", str(task), time.time())
+        self.success_dict[task] = processed_result
+        # self.redis_client.hset(f"{self.get_stage_tag()}:success", str(task), str(processed_result))
+        # self.redis_client.hset(f"{self.get_stage_tag()}:done_time", str(task), time.time())
 
         # 加锁方式（保证正确）
         with self.success_lock:
@@ -431,7 +435,7 @@ class TaskManager:
         :param task_source: 任务迭代器或者生成器
         """
         start_time = time.time()
-        self.init_redis()
+        self.init_redis(clear_data=True)
         self.init_listener()
         self.init_env(logger_queue=self.log_listener.get_queue())
 
@@ -456,7 +460,7 @@ class TaskManager:
             self.func.__name__,
             self.execution_mode,
             time.time() - start_time,
-            self.redis_client.hlen(f"{self.get_stage_tag()}:success"),
+            self.success_counter.value,
             self.redis_client.hlen(f"{self.get_stage_tag()}:error"),
             self.duplicates_num,
         )
@@ -470,7 +474,7 @@ class TaskManager:
         """
         start_time = time.time()
         self.set_execution_mode("async")
-        self.init_redis()
+        self.init_redis(clear_data=True)
         self.init_listener()
         self.init_env(logger_queue=self.log_listener.get_queue())
 
@@ -485,7 +489,7 @@ class TaskManager:
             self.func.__name__,
             self.execution_mode,
             time.time() - start_time,
-            self.redis_client.hlen(f"{self.get_stage_tag()}:success"),
+            self.success_counter.value,
             self.redis_client.hlen(f"{self.get_stage_tag()}:error"),
             self.duplicates_num,
         )
@@ -525,7 +529,7 @@ class TaskManager:
             self.func.__name__,
             self.execution_mode,
             time.time() - start_time,
-            self.redis_client.hlen(f"{self.get_stage_tag()}:success"),
+            self.success_counter.value,
             self.redis_client.hlen(f"{self.get_stage_tag()}:error"),
             self.duplicates_num,
         )
@@ -723,8 +727,7 @@ class TaskManager:
         """
         获取成功任务的字典，并还原为原始类型
         """
-        raw_dict = self.redis_client.hgetall(f"{self.get_stage_tag()}:success")
-        return {ast.literal_eval(k): ast.literal_eval(v) for k, v in raw_dict.items()}
+        return self.success_dict
 
     def get_error_dict(self) -> dict:
         """
@@ -754,8 +757,9 @@ class TaskManager:
         self.redis_client = None
 
     def clear_stage_data(self):
-        self.redis_client.delete(f"{self.get_stage_tag()}:success")
+        # self.redis_client.delete(f"{self.get_stage_tag()}:success")
         self.redis_client.delete(f"{self.get_stage_tag()}:error")
+        self.redis_client.delete(f"{self.get_stage_tag()}:done_time")
 
     def test_method(self, execution_mode: str, task_list: list) -> float:
         """
@@ -765,7 +769,6 @@ class TaskManager:
         self.set_execution_mode(execution_mode)
         self.init_dict()
         self.start(task_list)
-        self.clear_stage_data()  # 清理数据
         return time.time() - start
 
     def test_methods(self, task_source: list | tuple | set) -> dict:
