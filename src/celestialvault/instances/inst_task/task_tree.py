@@ -56,7 +56,6 @@ class TaskTree:
         self.stage_success_counter = {}  # 用于保存每个阶段成功处理的任务数
         
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
-        self.error_timeline_dict: Dict[str, list] = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
 
     def init_task_queues(self):
         """
@@ -337,10 +336,6 @@ class TaskTree:
             task_str = item["task"]
             error_info = item["error_info"]
             timestamp = item["timestamp"]
-            error_key = (error_info, stage_tag)
-
-            if task_str not in self.error_timeline_dict[error_key]:
-                self.error_timeline_dict[error_key].append((task_str, timestamp))
 
             self._persist_single_failure(task_str, error_info, stage_tag, timestamp)
 
@@ -388,13 +383,28 @@ class TaskTree:
         返回最终结果字典
         """
         return self.final_result_dict
-
-    def get_error_timeline_dict(self):
-        """
-        返回最终错误字典
-        """
-        return dict(self.error_timeline_dict)
     
+    def get_error_timeline_list(self) -> List[dict]:
+        """
+        从 Redis 中提取所有节点的错误信息，包含错误类型、节点、任务 ID（截断）、时间戳。
+        """
+        timeline = []
+
+        for tag in self.stages_status_dict:
+            error_map = self.redis_client.hgetall(f"{tag}:error")
+            time_map  = self.redis_client.hgetall(f"{tag}:done_time")
+
+            for task, err in error_map.items():
+                ts = float(time_map.get(task, 0))  # 没找到时间也不崩
+                timeline.append({
+                    "error": err,
+                    "node": tag,
+                    "task_id": task if len(task) < 100 else task[:100] + "...",
+                    "timestamp": ts,
+                })
+
+        return timeline
+
     def get_fail_by_error_dict(self):
         result = {}
 

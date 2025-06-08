@@ -244,15 +244,7 @@ class TaskReporter:
     def _push_errors(self):
         try:
             self.task_tree.handle_fail_queue()
-            error_data = []
-            for (err, tag), task_list in self.task_tree.get_error_timeline_dict().items():
-                for task, ts in task_list:
-                    error_data.append({
-                        "error": err,
-                        "node": tag,
-                        "task_id": task if len(task) < 100 else task[:100]+"...",
-                        "timestamp": ts,
-                    })
+            error_data = self.task_tree.get_error_timeline_list()
             requests.post(f"{self.base_url}/api/push_errors", json=error_data, timeout=1)
         except Exception as e:
             self.logger._log("WARNING", f"[Reporter] Error push failed: {type(e).__name__}({e}).")
