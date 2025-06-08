@@ -57,7 +57,6 @@ class TaskTree:
         
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
         self.error_timeline_dict: Dict[str, list] = defaultdict(list)  # 用于保存错误到出现该错误任务的映射
-        self.all_stage_error_dict: Dict[str, dict] = defaultdict(dict)  # 用于保存节点到节点失败任务的映射
 
     def init_task_queues(self):
         """
@@ -343,9 +342,6 @@ class TaskTree:
             if task_str not in self.error_timeline_dict[error_key]:
                 self.error_timeline_dict[error_key].append((task_str, timestamp))
 
-            if task_str not in self.all_stage_error_dict[stage_tag]:
-                self.all_stage_error_dict[stage_tag][task_str] = error_key
-
             self._persist_single_failure(task_str, error_info, stage_tag, timestamp)
 
     def _persist_structure_metadata(self):
@@ -398,12 +394,6 @@ class TaskTree:
         返回最终错误字典
         """
         return dict(self.error_timeline_dict)
-
-    def get_all_stage_error_dict(self):
-        """
-        返回最终失败字典
-        """
-        return dict(self.all_stage_error_dict)
     
     def get_fail_by_error_dict(self):
         return {
@@ -413,8 +403,9 @@ class TaskTree:
 
     def get_fail_by_stage_dict(self):
         return {
-            stage: list(inner_dict.keys())
-            for stage, inner_dict in self.get_all_stage_error_dict().items()
+            stage: list(self.redis_client.hkeys(f"{stage}:error"))
+            for stage in self.stages_status_dict
+            if self.redis_client.exists(f"{stage}:error")
         }
     
     def get_status_dict(self) -> dict:
@@ -424,7 +415,6 @@ class TaskTree:
         status_dict = {}
         now = time.time()
         interval = self.reporter.interval
-        all_stage_error_dict = self.get_all_stage_error_dict()
 
         for tag, stage_status_dict in self.stages_status_dict.items():
             stage: TaskManager = stage_status_dict["stage"]
@@ -441,7 +431,7 @@ class TaskTree:
 
             status        = stage_status_dict.get("status", StageStatus.NOT_STARTED)
             processed     = self.stage_success_counter.get(tag, ValueWrapper()).value
-            failed        = len(all_stage_error_dict.get(tag, {}))
+            failed        = self.redis_client.hlen(f"{tag}:error")
             pending       = max(0, total_input - processed - failed)
 
             add_processed = processed - last_stage_status_dict.get("tasks_processed", 0)
