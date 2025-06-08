@@ -151,7 +151,7 @@ def _test_task_tree_0():
 
     # 初始化 TaskTree
     tree = TaskTree(root_stage = stage1)
-    tree.set_reporter(True)
+    tree.set_reporter(True, host="127.0.0.1", port=5005)
 
     # 要测试的任务列表
     test_task_0 = range(25, 37)
@@ -169,7 +169,7 @@ def _test_task_tree_0():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def _test_task_tree_1():
+def test_task_tree_1():
     # 定义任务节点
     A = TaskManager(func=sleep_random_A, execution_mode='thread')
     B = TaskManager(func=sleep_random_B, execution_mode='serial')
@@ -188,7 +188,7 @@ def _test_task_tree_1():
 
     # 初始化 TaskTree, 并设置根节点
     tree = TaskTree(A)
-    tree.set_reporter(True)
+    tree.set_reporter(True, host="127.0.0.1", port=5005)
 
     input_tasks = {
         A.get_stage_tag(): range(10),
@@ -237,7 +237,7 @@ def _test_task_tree_2():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def test_task_web_3():
+def _test_task_web_3():
     # 定义任务节点
     generate_stage = TaskManager(func=generate_urls_sleep, execution_mode='thread', worker_limit=4)
     logr_stage = TaskManager(func=log_urls_sleep, execution_mode='thread', worker_limit=4)
@@ -278,4 +278,5 @@ def profile_task_tree():
 if __name__ == "__main__":
     # test_task_tree_2()
     # _test_task_web_3()
+    # test_task_manager()
     pass

@@ -1,4 +1,4 @@
-import time
+import time, redis
 import multiprocessing
 from collections import defaultdict
 from datetime import datetime
@@ -30,9 +30,19 @@ class TaskTree:
         """
         self.processes: List[multiprocessing.Process] = []
 
+        self.init_redis()
         self.init_dict()
         self.init_task_queues()
         self.init_log()
+
+    def init_redis(self, host="localhost", port=6379, db=0, decode_responses=True):
+        self.redis_client = redis.Redis(
+            host=host,             # 默认 Redis 服务地址
+            port=port,             # 默认端口
+            db=db,               # 使用的 Redis 数据库编号
+            decode_responses=decode_responses  # 字符串自动解码为 str，而不是 bytes
+        )
+        self.redis_client.flushdb()
 
     def init_dict(self):
         """
@@ -523,7 +533,6 @@ class TaskTree:
             for execution_mode in execution_modes:
                 start_time = time.time()
                 self.init_env()
-                # self.init_log()
                 self.set_tree_mode(stage_mode, execution_mode)
                 self.start_tree(init_tasks_dict)
 

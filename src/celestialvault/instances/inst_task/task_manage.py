@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import asyncio, time, redis
+import asyncio, time, redis, ast
 from asyncio import Queue as AsyncQueue
 from collections import defaultdict
 from collections.abc import Iterable  
@@ -74,12 +74,12 @@ class TaskManager:
 
         self.init_dict()
 
-    def init_redis(self, redis_client=None):
-        self.redis_client = redis_client or redis.Redis(
-            host="localhost",  # 默认 Redis 服务地址
-            port=6379,         # 默认端口
-            db=0,              # 使用的 Redis 数据库编号
-            decode_responses=True  # 字符串自动解码为 str，而不是 bytes
+    def init_redis(self, host="localhost", port=6379, db=0, decode_responses=True):
+        self.redis_client = redis.Redis(
+            host=host,             # 默认 Redis 服务地址
+            port=port,             # 默认端口
+            db=db,               # 使用的 Redis 数据库编号
+            decode_responses=decode_responses  # 字符串自动解码为 str，而不是 bytes
         )
 
     def init_dict(self, success_counter=None, success_lock=None, extra_stats=None):
@@ -263,10 +263,9 @@ class TaskManager:
         判断任务是否重复
         """
         task_str = str(task)
-        return (
-            self.redis_client.hexists(f"{self.get_stage_tag()}:success", task_str) or
-            self.redis_client.hexists(f"{self.get_stage_tag()}:error", task_str)
-        )
+        exists_success = self.redis_client.hexists(name=f"{self.get_stage_tag()}:success", key=task_str)
+        exists_error = self.redis_client.hexists(name=f"{self.get_stage_tag()}:error", key=task_str)
+        return exists_success or exists_error
 
     def get_args(self, task):
         """
@@ -516,7 +515,6 @@ class TaskManager:
             self.run_in_serial()
 
         # cleanup_mpqueue(input_queue) # 会影响之后finalize_nodes
-        self.release_pool()
         self.put_result_queues(TERMINATION_SIGNAL)
 
         self.task_logger.end_stage(
@@ -528,6 +526,7 @@ class TaskManager:
             self.redis_client.hlen(f"{self.get_stage_tag()}:error"),
             self.duplicates_num,
         )
+        self.release_pool()
 
     def run_in_serial(self):
         """
@@ -719,15 +718,17 @@ class TaskManager:
 
     def get_success_dict(self) -> dict:
         """
-        获取成功任务的字典
+        获取成功任务的字典，并还原为原始类型
         """
-        return self.redis_client.hgetall(f"{self.get_stage_tag()}:success")
+        raw_dict = self.redis_client.hgetall(f"{self.get_stage_tag()}:success")
+        return {ast.literal_eval(k): ast.literal_eval(v) for k, v in raw_dict.items()}
 
     def get_error_dict(self) -> dict:
         """
-        获取出错任务的字典
+        获取出错任务的字典，并还原为原始类型
         """
-        return self.redis_client.hgetall(f"{self.get_stage_tag()}:error")
+        raw_dict = self.redis_client.hgetall(f"{self.get_stage_tag()}:error")
+        return {ast.literal_eval(k): ast.literal_eval(v) for k, v in raw_dict.items()}
 
     def release_queue(self):
         """
@@ -746,6 +747,8 @@ class TaskManager:
                 pool.shutdown(wait=True)
         self.thread_pool = None
         self.process_pool = None
+
+        self.redis_client = None
 
     def clear_stage_data(self):
         self.redis_client.delete(f"{self.get_stage_tag()}:success")
