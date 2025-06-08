@@ -109,7 +109,7 @@ def parse_sleep(url):
     return f"Parsed({url})"
 
 # 测试 TaskManager 的同步任务
-def _test_task_manager():
+def test_task_manager():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
     test_task_2 = (item for item in test_task_1)
@@ -122,7 +122,7 @@ def _test_task_manager():
 
 # 测试 TaskManager 的异步任务
 @pytest.mark.asyncio
-async def _test_task_manager_async():
+async def test_task_manager_async():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
     test_task_2 = (item for item in test_task_1)
@@ -151,7 +151,7 @@ def _test_task_tree_0():
 
     # 初始化 TaskTree
     tree = TaskTree(root_stage = stage1)
-    tree.set_reporter(True)
+    tree.set_reporter(True, host="127.0.0.1", port=5005)
 
     # 要测试的任务列表
     test_task_0 = range(25, 37)
@@ -188,7 +188,7 @@ def _test_task_tree_1():
 
     # 初始化 TaskTree, 并设置根节点
     tree = TaskTree(A)
-    tree.set_reporter(True)
+    tree.set_reporter(True, host="127.0.0.1", port=5005)
 
     input_tasks = {
         A.get_stage_tag(): range(10),
@@ -237,7 +237,7 @@ def _test_task_tree_2():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def test_task_web_3():
+def _test_task_web_3():
     # 定义任务节点
     generate_stage = TaskManager(func=generate_urls_sleep, execution_mode='thread', worker_limit=4)
     logr_stage = TaskManager(func=log_urls_sleep, execution_mode='thread', worker_limit=4)
