@@ -274,7 +274,7 @@ class TaskTree:
         
     def process_final_result_dict(self, initial_tasks):
         """
-        查找对应的初始任务并更新 final_result_dict
+        查找对应的初始任务并更新 final_result_dict(已弃用)
 
         :param initial_tasks: 一个包含初始任务的列表
         """
@@ -396,10 +396,17 @@ class TaskTree:
         return dict(self.error_timeline_dict)
     
     def get_fail_by_error_dict(self):
-        return {
-            key: [a for a, _ in tuple_list]
-            for key, tuple_list in self.get_error_timeline_dict().items()
-        }
+        result = {}
+
+        # 遍历所有阶段
+        for tag in self.stages_status_dict:
+            error_entries = self.redis_client.hgetall(f"{tag}:error")
+
+            for task_str, error_repr in error_entries.items():
+                key = (error_repr, tag)
+                result.setdefault(key, []).append(task_str)
+
+        return result
 
     def get_fail_by_stage_dict(self):
         return {

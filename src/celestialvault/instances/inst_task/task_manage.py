@@ -344,6 +344,7 @@ class TaskManager:
         """
         processed_result = self.process_result(task, result)
         self.redis_client.hset(f"{self.get_stage_tag()}:success", str(task), str(processed_result))
+        self.redis_client.hset(f"{self.get_stage_tag()}:done_time", str(task), time.time())
 
         # 加锁方式（保证正确）
         with self.success_lock:
@@ -383,6 +384,7 @@ class TaskManager:
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.redis_client.hset(f"{self.get_stage_tag()}:error", str(task), repr(exception))
+            self.redis_client.hset(f"{self.get_stage_tag()}:done_time", str(task), time.time())
             self.put_fail_queue(task, exception)
             self.task_logger.task_error(
                 self.func.__name__, self.get_task_info(task), exception
@@ -414,6 +416,7 @@ class TaskManager:
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
             self.redis_client.hset(f"{self.get_stage_tag()}:error", str(task), repr(exception))
+            self.redis_client.hset(f"{self.get_stage_tag()}:done_time", str(task), time.time())
             self.put_fail_queue(task, exception)
             self.task_logger.task_error(
                 self.func.__name__, self.get_task_info(task), exception

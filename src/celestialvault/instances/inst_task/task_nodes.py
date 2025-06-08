@@ -1,4 +1,4 @@
-from time import time
+import time
 
 from .task_manage import TaskManager
 
@@ -45,6 +45,7 @@ class TaskSplitter(TaskManager):
         """
         processed_result = self.process_result(task, result)
         self.redis_client.hset(f"{self.get_stage_tag()}:success", str(task), str(processed_result))
+        self.redis_client.hset(f"{self.get_stage_tag()}:done_time", str(task), time.time())
 
         # 加锁方式（保证正确）
         with self.success_lock:
@@ -61,6 +62,6 @@ class TaskSplitter(TaskManager):
             self.func.__name__,
             self.get_task_info(task),
             split_count,
-            time() - start_time,
+            time.time() - start_time,
         )
 
