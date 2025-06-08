@@ -1,6 +1,8 @@
 import time
 import queue
 import redis
+import logging
+import threading
 import pytest
 import multiprocessing
 from multiprocessing import Manager, Queue, Process, Value
@@ -117,3 +119,44 @@ def test_redis_pipeline(redis_conn):
     t2 = time.time()
 
     print(f"Redis (pipeline): set={t1 - t0:.4f}s, get={t2 - t1:.4f}s")
+
+def test_redis_multithread_plain(redis_conn, num_threads=10):
+    """
+    多线程并发写入 + 读取 Redis，不使用 pipeline
+    """
+    count_per_thread = N // num_threads
+    threads = []
+
+    # --- 写入阶段 ---
+    def writer(tid, base):
+        for i in range(count_per_thread):
+            redis_conn.set(f"mt_key{tid}_{i+base}", i)
+
+    t0 = time.time()
+    for t_id in range(num_threads):
+        base = t_id * count_per_thread
+        thread = threading.Thread(target=writer, args=(t_id, base))
+        thread.start()
+        threads.append(thread)
+
+    for t in threads:
+        thread.join()
+    t1 = time.time()
+
+    # --- 读取阶段 ---
+    threads = []
+    def reader(tid, base):
+        for i in range(count_per_thread):
+            _ = redis_conn.get(f"mt_key{tid}_{i+base}")
+
+    for t_id in range(num_threads):
+        base = t_id * count_per_thread
+        thread = threading.Thread(target=reader, args=(t_id, base))
+        thread.start()
+        threads.append(thread)
+
+    for t in threads:
+        thread.join()
+    t2 = time.time()
+
+    print(f"Redis (multi-thread x{num_threads}, no pipeline): set={t1 - t0:.4f}s, get={t2 - t1:.4f}s")

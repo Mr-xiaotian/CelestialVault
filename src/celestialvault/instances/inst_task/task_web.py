@@ -1,6 +1,6 @@
 # inst_task/task_web.py
 
-import os
+import os, sys
 import threading
 from flask import Flask, jsonify, render_template, request
 
@@ -114,5 +114,12 @@ class TaskWebServer:
             print(f"[stop_server] 停止 Web 服务时发生异常: {e}")
 
 if __name__ == "__main__":
-    server = TaskWebServer(port=5005)
+    port = 5000  # 默认端口
+    if len(sys.argv) > 1:
+        try:
+            port = int(sys.argv[1])
+        except ValueError:
+            print(f"无效的端口号: {sys.argv[1]}，使用默认端口 {port}")
+    print(f"启动 Web 服务，监听端口 {port}")
+    server = TaskWebServer(port=port)
     server.start_server()
