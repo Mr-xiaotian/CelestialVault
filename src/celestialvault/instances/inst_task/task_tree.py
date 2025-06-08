@@ -29,7 +29,6 @@ class TaskTree:
         初始化环境
         """
         self.processes: List[multiprocessing.Process] = []
-        # self.manager = multiprocessing.Manager()
 
         self.init_dict()
         self.init_task_queues()
@@ -247,6 +246,8 @@ class TaskTree:
             while not queue.empty():
                 try:
                     task = queue.get_nowait()
+                    if isinstance(task, TerminationSignal):
+                        continue
                     self.task_logger._log("DEBUG", f"获取 {stage_tag} 剩余任务: {task}")
 
                     self._persist_unconsumed_task(stage_tag, task)

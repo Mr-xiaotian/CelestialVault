@@ -44,7 +44,7 @@ class TaskSplitter(TaskManager):
         :param start_time: 任务开始时间
         """
         processed_result = self.process_result(task, result)
-        self.success_dict[task] = processed_result
+        self.redis_client.hset(f"{self.get_stage_tag()}:success", str(task), str(processed_result))
 
         # 加锁方式（保证正确）
         with self.success_lock:

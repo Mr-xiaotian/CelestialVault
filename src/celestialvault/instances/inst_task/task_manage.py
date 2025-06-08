@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import asyncio, time
+import asyncio, time, redis
 from asyncio import Queue as AsyncQueue
 from collections import defaultdict
 from collections.abc import Iterable  
@@ -74,12 +74,18 @@ class TaskManager:
 
         self.init_dict()
 
+    def init_redis(self, redis_client=None):
+        self.redis_client = redis_client or redis.Redis(
+            host="localhost",  # 默认 Redis 服务地址
+            port=6379,         # 默认端口
+            db=0,              # 使用的 Redis 数据库编号
+            decode_responses=True  # 字符串自动解码为 str，而不是 bytes
+        )
+
     def init_dict(self, success_counter=None, success_lock=None, extra_stats=None):
         """
         初始化结果字典
         """
-        self.success_dict = {}
-        self.error_dict = {}
         self.retry_time_dict = {}
 
         self.success_counter = success_counter if success_counter is not None else ValueWrapper()
@@ -256,7 +262,11 @@ class TaskManager:
         """
         判断任务是否重复
         """
-        return task in self.success_dict or task in self.error_dict
+        task_str = str(task)
+        return (
+            self.redis_client.hexists(f"{self.get_stage_tag()}:success", task_str) or
+            self.redis_client.hexists(f"{self.get_stage_tag()}:error", task_str)
+        )
 
     def get_args(self, task):
         """
@@ -334,7 +344,7 @@ class TaskManager:
         :param start_time: 任务开始时间
         """
         processed_result = self.process_result(task, result)
-        self.success_dict[task] = processed_result
+        self.redis_client.hset(f"{self.get_stage_tag()}:success", str(task), str(processed_result))
 
         # 加锁方式（保证正确）
         with self.success_lock:
@@ -373,7 +383,7 @@ class TaskManager:
             )
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
-            self.error_dict[task] = exception
+            self.redis_client.hset(f"{self.get_stage_tag()}:error", str(task), repr(exception))
             self.put_fail_queue(task, exception)
             self.task_logger.task_error(
                 self.func.__name__, self.get_task_info(task), exception
@@ -404,7 +414,7 @@ class TaskManager:
             # sleep(delay_time)  # 指数退避
         else:
             # 如果不是可重试的异常，直接将任务标记为失败
-            self.error_dict[task] = exception
+            self.redis_client.hset(f"{self.get_stage_tag()}:error", str(task), repr(exception))
             self.put_fail_queue(task, exception)
             self.task_logger.task_error(
                 self.func.__name__, self.get_task_info(task), exception
@@ -419,6 +429,7 @@ class TaskManager:
         :param task_source: 任务迭代器或者生成器
         """
         start_time = time.time()
+        self.init_redis()
         self.init_listener()
         self.init_env(logger_queue=self.log_listener.get_queue())
 
@@ -443,8 +454,8 @@ class TaskManager:
             self.func.__name__,
             self.execution_mode,
             time.time() - start_time,
-            len(self.success_dict),
-            len(self.error_dict),
+            self.redis_client.hlen(f"{self.get_stage_tag()}:success"),
+            self.redis_client.hlen(f"{self.get_stage_tag()}:error"),
             self.duplicates_num,
         )
         self.log_listener.stop()
@@ -457,6 +468,7 @@ class TaskManager:
         """
         start_time = time.time()
         self.set_execution_mode("async")
+        self.init_redis()
         self.init_listener()
         self.init_env(logger_queue=self.log_listener.get_queue())
 
@@ -471,8 +483,8 @@ class TaskManager:
             self.func.__name__,
             self.execution_mode,
             time.time() - start_time,
-            len(self.success_dict),
-            len(self.error_dict),
+            self.redis_client.hlen(f"{self.get_stage_tag()}:success"),
+            self.redis_client.hlen(f"{self.get_stage_tag()}:error"),
             self.duplicates_num,
         )
         self.log_listener.stop()
@@ -487,6 +499,7 @@ class TaskManager:
         """
         start_time = time.time()
         self.active = True
+        self.init_redis()
         self.init_env(input_queue, output_queues, fail_queue, logger_queue)
         self.task_logger.start_stage(
             self.stage_name, self.func.__name__, self.execution_mode, self.worker_limit
@@ -511,8 +524,8 @@ class TaskManager:
             self.func.__name__,
             self.execution_mode,
             time.time() - start_time,
-            len(self.success_dict),
-            len(self.error_dict),
+            self.redis_client.hlen(f"{self.get_stage_tag()}:success"),
+            self.redis_client.hlen(f"{self.get_stage_tag()}:error"),
             self.duplicates_num,
         )
 
@@ -708,13 +721,13 @@ class TaskManager:
         """
         获取成功任务的字典
         """
-        return dict(self.success_dict)
+        return self.redis_client.hgetall(f"{self.get_stage_tag()}:success")
 
     def get_error_dict(self) -> dict:
         """
         获取出错任务的字典
         """
-        return dict(self.error_dict)
+        return self.redis_client.hgetall(f"{self.get_stage_tag()}:error")
 
     def release_queue(self):
         """
@@ -734,6 +747,10 @@ class TaskManager:
         self.thread_pool = None
         self.process_pool = None
 
+    def clear_stage_data(self):
+        self.redis_client.delete(f"{self.get_stage_tag()}:success")
+        self.redis_client.delete(f"{self.get_stage_tag()}:error")
+
     def test_method(self, execution_mode: str, task_list: list) -> float:
         """
         测试方法
@@ -742,6 +759,7 @@ class TaskManager:
         self.set_execution_mode(execution_mode)
         self.init_dict()
         self.start(task_list)
+        self.clear_stage_data()  # 清理数据
         return time.time() - start
 
     def test_methods(self, task_source: list | tuple | set) -> dict:
