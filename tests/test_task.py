@@ -252,7 +252,7 @@ def _test_task_web_3():
     download_stage.set_tree_context([], stage_mode='process', stage_name='Downloader')
     parse_stage.set_tree_context([], stage_mode='process', stage_name='Parser')
 
-    download_stage.add_retry_exceptions(ValueError)
+    # download_stage.add_retry_exceptions(ValueError)
 
     # 初始化 TaskTree
     tree = TaskTree(generate_stage)
