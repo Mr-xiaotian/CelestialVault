@@ -92,7 +92,7 @@ class TaskTree:
         设定根节点
         """
         self.root_stage = root_stage
-        self.root_stage.set_prev_stage(None)
+        self.root_stage.prev_stages = []
 
     def put_stage_queue(self, tasks_dict: dict, put_termination_signal=True):
         """
@@ -417,12 +417,12 @@ class TaskTree:
 
         for tag, stage_status_dict in self.stages_status_dict.items():
             stage: TaskManager = stage_status_dict["stage"]
-            prev = stage.prev_stage
-            prev_tag = prev.get_stage_tag() if prev else None
             last_stage_status_dict: dict = self.last_status_dict.get(tag, {})
 
             total_input = stage_status_dict.get("init_tasks_num", 0)
-            if prev:
+            
+            for prev in stage.prev_stages:
+                prev_tag = prev.get_stage_tag()
                 if isinstance(prev, TaskSplitter):
                     total_input += self.stage_extra_stats[prev_tag].get("split_output_count", ValueWrapper()).value
                 else:
@@ -466,7 +466,7 @@ class TaskTree:
             else:
                 avg_time_str = "N/A"  # 或 "0.00s/it" 根据需求
 
-            history = stage_status_dict.get("history", [])
+            history: list = stage_status_dict.get("history", [])
             history.append({
                 "timestamp": now,
                 "tasks_processed": processed,

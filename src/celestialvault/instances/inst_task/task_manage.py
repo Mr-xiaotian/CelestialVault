@@ -59,7 +59,7 @@ class TaskManager:
         self.thread_pool = None
         self.process_pool = None
 
-        self.set_prev_stage(None)
+        self.prev_stages = []
         self.set_stage_name(None)
 
         self.retry_exceptions = (
@@ -167,7 +167,7 @@ class TaskManager:
         """
         self.next_stages = next_stages or []  # 默认为空列表
         for next_stage in self.next_stages:
-            next_stage.set_prev_stage(self)
+            next_stage.add_prev_stages(self)
 
     def set_stage_mode(self, stage_mode: str):
         """
@@ -181,11 +181,11 @@ class TaskManager:
         """
         self.stage_name = name or id(self)
 
-    def set_prev_stage(self, prev_stage: TaskManager):
+    def add_prev_stages(self, prev_stage: TaskManager):
         """
-        设置当前节点为最后一个节点
+        添加前置节点
         """
-        self.prev_stage = prev_stage
+        self.prev_stages.append(prev_stage)
 
     def get_stage_tag(self):
         """
