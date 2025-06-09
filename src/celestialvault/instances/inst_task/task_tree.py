@@ -107,13 +107,16 @@ class TaskTree:
         :param put_termination_signal: 是否放入终止信号
         """
         for tag, tasks in tasks_dict.items():
+            prev_stage = self.stages_status_dict[tag]["stage"].prev_stages[0]
+            prev_tag = prev_stage.get_stage_tag() if prev_stage else None
             for task in tasks:
-                self.stages_status_dict[tag]["task_queue"].put(make_hashable(task))
+                self.edge_queue_map[(prev_tag, tag)].put(make_hashable(task))
                 if isinstance(task, TerminationSignal):
                     continue
                 self.stages_status_dict[tag]["init_tasks_num"] = self.stages_status_dict[tag].get("init_tasks_num", 0) + 1
 
-        self.stages_status_dict[self.root_stage.get_stage_tag()]["task_queue"].put(TERMINATION_SIGNAL) if put_termination_signal else None
+        edge_key = (None, self.root_stage.get_stage_tag())
+        self.edge_queue_map[edge_key].put(TERMINATION_SIGNAL) if put_termination_signal else None
 
     def set_reporter(self, is_report=False, host="127.0.0.1", port=5000):
         """
@@ -252,16 +255,16 @@ class TaskTree:
             stage_status["status"] = StageStatus.STOPPED  # 已停止
 
         # 3️⃣ 收集并持久化每个 stage 中未消费的任务
-        for stage_tag, stage_status in self.stages_status_dict.items():
-            queue: MPQueue = stage_status["task_queue"]
-            while not queue.empty():
-                try:
-                    task = queue.get_nowait()
-                    self.task_logger._log("DEBUG", f"获取 {stage_tag} 剩余任务: {task}")
+        # for stage_tag, stage_status in self.stages_status_dict.items():
+        #     queue: MPQueue = stage_status["task_queue"]
+        #     while not queue.empty():
+        #         try:
+        #             task = queue.get_nowait()
+        #             self.task_logger._log("DEBUG", f"获取 {stage_tag} 剩余任务: {task}")
 
-                    self._persist_unconsumed_task(stage_tag, task)
-                except Exception as e:
-                    self.task_logger._log("WARNING", f"获取 {stage_tag} 剩余任务失败: {e}")
+        #             self._persist_unconsumed_task(stage_tag, task)
+        #         except Exception as e:
+        #             self.task_logger._log("WARNING", f"获取 {stage_tag} 剩余任务失败: {e}")
 
     def release_resources(self):
         """
@@ -432,6 +435,8 @@ class TaskTree:
             total_input = stage_status_dict.get("init_tasks_num", 0)
             
             for prev in stage.prev_stages:
+                if not prev:
+                    break
                 prev_tag = prev.get_stage_tag()
                 if isinstance(prev, TaskSplitter):
                     total_input += self.stage_extra_stats[prev_tag].get("split_output_count", ValueWrapper()).value
