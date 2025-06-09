@@ -1,12 +1,7 @@
 from __future__ import annotations
 
-<<<<<<< HEAD
 import asyncio, time, redis, ast
-from asyncio import Queue as AsyncQueue
-=======
-import asyncio, time
 from asyncio import Queue as AsyncQueue, QueueEmpty
->>>>>>> main
 from collections import defaultdict
 from collections.abc import Iterable  
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
