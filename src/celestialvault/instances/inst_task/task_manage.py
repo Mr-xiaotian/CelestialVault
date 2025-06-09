@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Iterable  
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from multiprocessing import Queue as MPQueue
-from queue import Queue as ThreadQueue
+from queue import Queue as ThreadQueue, Empty
 from threading import Event, Lock
 from typing import List
 
@@ -209,6 +209,40 @@ class TaskManager:
         添加需要重试的异常类型
         """
         self.retry_exceptions = self.retry_exceptions + tuple(exceptions)
+
+    def get_task_queues(self, input_queues: List[ThreadQueue], poll_interval: float = 0.01):
+        """
+        从多个队列中轮询获取任务。
+
+        :param input_queues: 队列列表
+        :param poll_interval: 每轮遍历后的等待时间（秒）
+        :return: 获取到的任务，或 TerminationSignal 表示所有队列已终止
+        """
+        terminated_set = set()
+        total_queues = len(input_queues)
+
+        while True:
+            for idx, queue in enumerate(input_queues):
+                if idx in terminated_set:
+                    continue
+                try:
+                    item = queue.get_nowait()
+                    if isinstance(item, TerminationSignal):
+                        terminated_set.add(idx)
+                        continue
+                    return item
+                except Empty:
+                    continue
+                except Exception as e:
+                    self.task_logger._log("WARNING", f"get_task_queues: Error from queue[{idx}]: {type(e).__name__}({e})")
+                    continue
+
+            # 所有队列都终止了
+            if len(terminated_set) == total_queues:
+                return TERMINATION_SIGNAL
+
+            # 所有队列都暂时无数据，避免 busy-wait
+            time.sleep(poll_interval)
 
     def put_task_queue(self, task_source) -> int:
         """

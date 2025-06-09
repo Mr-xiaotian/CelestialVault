@@ -511,7 +511,7 @@ class TaskTree:
         """
         results = {}
         test_table_list = []
-        final_result_dict = {}
+        # final_result_dict = {}
         fail_by_error_dict = {}
         fail_by_stage_dict = {}
 
@@ -527,7 +527,7 @@ class TaskTree:
                 self.start_tree(init_tasks_dict)
 
                 time_list.append(time.time() - start_time)
-                final_result_dict.update(self.get_final_result_dict())
+                # final_result_dict.update(self.get_final_result_dict())
                 fail_by_error_dict.update(self.get_fail_by_error_dict())
                 fail_by_stage_dict.update(self.get_fail_by_stage_dict())
 
@@ -539,7 +539,7 @@ class TaskTree:
             stage_modes,
             r"stage\execution",
         )
-        results["Final result dict"] = final_result_dict
+        # results["Final result dict"] = final_result_dict
         results["Fail error dict"] = fail_by_error_dict
         results["Fail stage dict"] = fail_by_stage_dict
         return results
