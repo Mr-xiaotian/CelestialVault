@@ -109,7 +109,7 @@ def parse_sleep(url):
     return f"Parsed({url})"
 
 # 测试 TaskManager 的同步任务
-def _test_task_manager():
+def test_task_manager():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
     test_task_2 = (item for item in test_task_1)
@@ -122,7 +122,7 @@ def _test_task_manager():
 
 # 测试 TaskManager 的异步任务
 @pytest.mark.asyncio
-async def _test_task_manager_async():
+async def test_task_manager_async():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
     test_task_2 = (item for item in test_task_1)
@@ -169,7 +169,7 @@ def _test_task_tree_0():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def test_task_tree_1():
+def _test_task_tree_1():
     # 定义任务节点
     A = TaskManager(func=sleep_random_A, execution_mode='thread')
     B = TaskManager(func=sleep_random_B, execution_mode='serial')
@@ -281,5 +281,5 @@ def profile_task_tree():
 if __name__ == "__main__":
     # test_task_tree_2()
     # _test_task_web_3()
-    test_task_tree_1()
+    # test_task_tree_1()
     pass

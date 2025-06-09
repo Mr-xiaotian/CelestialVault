@@ -571,6 +571,7 @@ class TaskManager:
         """
         start_time = time.time()
         self.active = True
+        self.init_redis(clear_data=True)
         self.init_env(input_queues, output_queues, fail_queue, logger_queue)
         self.task_logger.start_stage(
             self.stage_name, self.func.__name__, self.execution_mode, self.worker_limit
@@ -587,7 +588,6 @@ class TaskManager:
             self.run_in_serial()
 
         # cleanup_mpqueue(input_queues) # 会影响之后finalize_nodes
-        self.release_pool()
         self.put_result_queues(TERMINATION_SIGNAL)
 
         self.task_logger.end_stage(
