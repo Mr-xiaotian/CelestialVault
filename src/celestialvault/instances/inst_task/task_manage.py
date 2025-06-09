@@ -59,6 +59,8 @@ class TaskManager:
         self.thread_pool = None
         self.process_pool = None
 
+        self.terminated_queue_set = set()
+
         self.prev_stages: List[TaskManager] = []
         self.set_stage_name(None)
 
@@ -217,17 +219,17 @@ class TaskManager:
         :param poll_interval: 每轮遍历后的等待时间（秒）
         :return: 获取到的任务，或 TerminationSignal 表示所有队列已终止
         """
-        terminated_set = set()
         total_queues = len(self.task_queues)
 
         while True:
             for idx, queue in enumerate(self.task_queues):
-                if idx in terminated_set:
+                if idx in self.terminated_queue_set:
                     continue
                 try:
                     item = queue.get_nowait()
                     if isinstance(item, TerminationSignal):
-                        terminated_set.add(idx)
+                        self.terminated_queue_set.add(idx)
+                        self.task_logger._log("TRACE", f"get_task_queues: queue[{idx}] terminated")
                         continue
                     return item
                 except Empty:
@@ -237,7 +239,7 @@ class TaskManager:
                     continue
 
             # 所有队列都终止了
-            if len(terminated_set) == total_queues:
+            if len(self.terminated_queue_set) == total_queues:
                 return TERMINATION_SIGNAL
 
             # 所有队列都暂时无数据，避免 busy-wait
@@ -617,6 +619,7 @@ class TaskManager:
             progress_manager.update(1)
 
         progress_manager.close()
+        self.terminated_queue_set = set()
 
         if not are_queues_empty(self.task_queues):
             self.task_logger._log("DEBUG", f"Retrying tasks for '{self.func.__name__}'")
@@ -696,6 +699,7 @@ class TaskManager:
 
         # 所有任务和回调都完成了，现在可以安全关闭进度条
         progress_manager.close()
+        self.terminated_queue_set = set()
 
         if not are_queues_empty(self.task_queues):
             self.task_logger._log("DEBUG", f"Retrying tasks for '{self.func.__name__}'")
@@ -752,6 +756,7 @@ class TaskManager:
             progress_manager.update(1)
 
         progress_manager.close()
+        self.terminated_queue_set = set()
 
         if not await are_queues_empty_async(self.task_queues):
             self.task_logger._log("DEBUG", f"Retrying tasks for '{self.func.__name__}'")

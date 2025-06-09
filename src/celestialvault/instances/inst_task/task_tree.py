@@ -150,6 +150,7 @@ class TaskTree:
 
         visited_stages = set()
         set_subsequent_stage_mode(self.root_stage)
+        self.init_structure_tree()
 
     def start_tree(self, init_tasks_dict: dict, put_termination_signal: bool=True):
         """
