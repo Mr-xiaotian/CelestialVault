@@ -169,7 +169,7 @@ def _test_task_tree_0():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def _test_task_tree_1():
+def test_task_tree_1():
     # 定义任务节点
     A = TaskManager(func=sleep_random_A, execution_mode='thread')
     B = TaskManager(func=sleep_random_B, execution_mode='serial')
@@ -181,7 +181,7 @@ def _test_task_tree_1():
     # 设置链式上下文
     A.set_tree_context(next_stages=[B, C], stage_mode='process', stage_name="Stage_A")
     B.set_tree_context(next_stages=[D, F], stage_mode='process', stage_name="Stage_B")
-    C.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_C")
+    C.set_tree_context(next_stages=[F], stage_mode='process', stage_name="Stage_C")
     D.set_tree_context(next_stages=[E], stage_mode='process', stage_name="Stage_D")
     E.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_E")
     F.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_F")
@@ -237,7 +237,7 @@ def _test_task_tree_2():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def test_task_web_3():
+def _test_task_web_3():
     # 定义任务节点
     generate_stage = TaskManager(func=generate_urls_sleep, execution_mode='thread', worker_limit=4)
     logr_stage = TaskManager(func=log_urls_sleep, execution_mode='thread', worker_limit=4)
@@ -278,4 +278,5 @@ def profile_task_tree():
 if __name__ == "__main__":
     # test_task_tree_2()
     # _test_task_web_3()
+    test_task_tree_1()
     pass

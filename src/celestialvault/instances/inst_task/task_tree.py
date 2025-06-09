@@ -1,6 +1,6 @@
 import time
 import multiprocessing
-from collections import defaultdict
+from collections import defaultdict, deque
 from datetime import datetime
 from multiprocessing import Value as MPValue, Lock as MPLock
 from multiprocessing import Queue as MPQueue
@@ -57,33 +57,39 @@ class TaskTree:
         初始化任务队列
         :param tasks: 待处理的任务列表
         """
+        visited_stages = set()
+        queue = deque([self.root_stage])  # BFS 用队列代替递归
 
-        def collect_queue(stage: TaskManager):
-            # 为每个节点创建队列
+        while queue:
+            stage = queue.popleft()
             stage_tag = stage.get_stage_tag()
+            if stage_tag in visited_stages:
+                continue
+
+            # 记录节点
             self.stages_status_dict[stage_tag]["stage"] = stage
 
+            # 为每个边 (prev -> stage) 创建队列
             for prev_stage in stage.prev_stages:
                 prev_tag = prev_stage.get_stage_tag() if prev_stage else None
                 self.edge_queue_map[(prev_tag, stage_tag)] = MPQueue()
 
+            if not stage.prev_stages:
+                # 起点节点
+                self.edge_queue_map[(None, stage_tag)] = MPQueue()
+
             visited_stages.add(stage_tag)
 
             for next_stage in stage.next_stages:
-                if next_stage.get_stage_tag() in visited_stages:
-                    continue
-                collect_queue(next_stage)
+                queue.append(next_stage)
 
-        # 初始化每个节点的队列
-        visited_stages = set()
-        collect_queue(self.root_stage)
         self.fail_queue = MPQueue()
 
     def init_log(self):
         """
         初始化日志
         """
-        self.log_listener = LogListener(level = "DEBUG")
+        self.log_listener = LogListener(level = "TRACE")
         self.task_logger = TaskLogger(self.log_listener.get_queue())
 
     def init_structure_tree(self):
@@ -158,7 +164,7 @@ class TaskTree:
             self.reporter.start() if self.is_report else None
 
             self.put_stage_queue(init_tasks_dict, put_termination_signal)
-            self._execute_stage(self.root_stage, set())
+            self._excute_stages()
 
             # 等待所有进程结束
             for p in self.processes:
@@ -175,12 +181,15 @@ class TaskTree:
             self.task_logger.end_tree(time.time() - self.start_time)
             self.log_listener.stop()
 
-    def _execute_stage(self, stage: TaskManager, stage_visited: set):
+    def _excute_stages(self):
+        for tag in self.stages_status_dict:
+            self._execute_stage(self.stages_status_dict[tag]["stage"])
+
+    def _execute_stage(self, stage: TaskManager):
         """
         递归地执行节点任务
         """
         stage_tag = stage.get_stage_tag()
-        stage_visited.add(stage_tag)
 
         input_queues = []
         for prev_stage in stage.prev_stages:
@@ -229,11 +238,6 @@ class TaskTree:
             stage.start_stage(input_queues, output_queues, self.fail_queue, logger_queue)
 
             self.stages_status_dict[stage_tag]["status"]  = StageStatus.STOPPED
-
-        for next_stage in stage.next_stages:
-            if next_stage.get_stage_tag() in stage_visited:
-                continue
-            self._execute_stage(next_stage, stage_visited)
 
     def finalize_nodes(self):
         """
@@ -441,7 +445,7 @@ class TaskTree:
                 if isinstance(prev, TaskSplitter):
                     total_input += self.stage_extra_stats[prev_tag].get("split_output_count", ValueWrapper()).value
                 else:
-                    total_input += status_dict[prev_tag]["tasks_processed"]
+                    total_input += status_dict[prev_tag]["tasks_processed"] # if prev_tag in status_dict else 0
 
             status        = stage_status_dict.get("status", StageStatus.NOT_STARTED)
             processed     = self.stage_success_counter.get(tag, ValueWrapper()).value
