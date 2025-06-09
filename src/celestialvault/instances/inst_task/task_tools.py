@@ -139,6 +139,26 @@ async def is_queue_empty_async(q: AsyncQueue) -> bool:
         return False
     except AsyncQueueEmpty:
         return True
+    
+def are_queues_empty(queues: List[ThreadQueue]) -> bool:
+    """
+    判断多个同步队列是否都为空。
+    所有队列都为空才返回 True。
+    """
+    for q in queues:
+        if not is_queue_empty(q):
+            return False
+    return True
+
+async def are_queues_empty_async(queues: List[AsyncQueue]) -> bool:
+    """
+    判断多个异步队列是否都为空。
+    所有队列都为空才返回 True。
+    """
+    for q in queues:
+        if not await is_queue_empty_async(q):
+            return False
+    return True
 
 def format_repr(obj: Any, max_length: int) -> str:
     """

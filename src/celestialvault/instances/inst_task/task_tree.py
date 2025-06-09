@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import datetime
 from multiprocessing import Value as MPValue, Lock as MPLock
 from multiprocessing import Queue as MPQueue
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
@@ -42,6 +42,8 @@ class TaskTree:
         self.stages_status_dict: Dict[str, dict] = defaultdict(dict) # 用于保存每个节点的状态信息
         self.stage_extra_stats = defaultdict(dict) # 用于保存每个阶段的额外统计信息
         self.last_status_dict = {}  # 用于保存每个节点的最后状态信息
+
+        self.edge_queue_map: Dict[Tuple[str, str], MPQueue] = {}  # 用于保存每个节点到下一个节点的队列
         
         self.stage_locks = {}  # 可选的锁，用于控制每个阶段的并发数
         self.stage_success_counter = {}  # 用于保存每个阶段成功处理的任务数
@@ -60,7 +62,10 @@ class TaskTree:
             # 为每个节点创建队列
             stage_tag = stage.get_stage_tag()
             self.stages_status_dict[stage_tag]["stage"] = stage
-            self.stages_status_dict[stage_tag]["task_queue"] = MPQueue()
+
+            for prev_stage in stage.prev_stages:
+                prev_tag = prev_stage.get_stage_tag() if prev_stage else None
+                self.edge_queue_map[(prev_tag, stage_tag)] = MPQueue()
 
             visited_stages.add(stage_tag)
 
@@ -93,6 +98,7 @@ class TaskTree:
         """
         self.root_stage = root_stage
         self.root_stage.prev_stages = []
+        self.root_stage.add_prev_stages(None)
 
     def put_stage_queue(self, tasks_dict: dict, put_termination_signal=True):
         """
@@ -173,12 +179,16 @@ class TaskTree:
         stage_tag = stage.get_stage_tag()
         stage_visited.add(stage_tag)
 
-        input_queue = self.stages_status_dict[stage_tag]["task_queue"]
+        input_queues = []
+        for prev_stage in stage.prev_stages:
+            prev_tag = prev_stage.get_stage_tag() if prev_stage else None
+            input_queues.append(self.edge_queue_map[(prev_tag, stage_tag)])
+
         if not stage.next_stages:
             output_queues = []
         else:
             output_queues = [
-                self.stages_status_dict[next_stage.get_stage_tag()]["task_queue"]
+                self.edge_queue_map[(stage_tag, next_stage.get_stage_tag())]
                 for next_stage in stage.next_stages
             ]
         logger_queue = self.log_listener.get_queue()
@@ -201,7 +211,7 @@ class TaskTree:
                 self.stage_extra_stats[stage_tag]
                 )
             p = multiprocessing.Process(
-                target=stage.start_stage, args=(input_queue, output_queues, self.fail_queue, logger_queue), name=stage_tag
+                target=stage.start_stage, args=(input_queues, output_queues, self.fail_queue, logger_queue), name=stage_tag
             )
             p.start()
             self.processes.append(p)
@@ -213,7 +223,7 @@ class TaskTree:
                 None, 
                 self.stage_extra_stats[stage_tag]
                 )
-            stage.start_stage(input_queue, output_queues, self.fail_queue, logger_queue)
+            stage.start_stage(input_queues, output_queues, self.fail_queue, logger_queue)
 
             self.stages_status_dict[stage_tag]["status"]  = StageStatus.STOPPED
 
