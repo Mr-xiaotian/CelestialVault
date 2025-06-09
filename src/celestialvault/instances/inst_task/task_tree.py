@@ -1,10 +1,10 @@
 import time, redis
 import multiprocessing
-from collections import defaultdict
+from collections import defaultdict, deque
 from datetime import datetime
 from multiprocessing import Value as MPValue, Lock as MPLock
 from multiprocessing import Queue as MPQueue
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from .task_manage import TaskManager
 from .task_nodes import TaskSplitter
@@ -51,6 +51,8 @@ class TaskTree:
         self.stages_status_dict: Dict[str, dict] = defaultdict(dict) # 用于保存每个节点的状态信息
         self.stage_extra_stats = defaultdict(dict) # 用于保存每个阶段的额外统计信息
         self.last_status_dict = {}  # 用于保存每个节点的最后状态信息
+
+        self.edge_queue_map: Dict[Tuple[str, str], MPQueue] = {}  # 用于保存每个节点到下一个节点的队列
         
         self.stage_locks = {}  # 可选的锁，用于控制每个阶段的并发数
         self.stage_success_counter = {}  # 用于保存每个阶段成功处理的任务数
@@ -62,30 +64,39 @@ class TaskTree:
         初始化任务队列
         :param tasks: 待处理的任务列表
         """
+        visited_stages = set()
+        queue = deque([self.root_stage])  # BFS 用队列代替递归
 
-        def collect_queue(stage: TaskManager):
-            # 为每个节点创建队列
+        while queue:
+            stage = queue.popleft()
             stage_tag = stage.get_stage_tag()
+            if stage_tag in visited_stages:
+                continue
+
+            # 记录节点
             self.stages_status_dict[stage_tag]["stage"] = stage
-            self.stages_status_dict[stage_tag]["task_queue"] = MPQueue()
+
+            # 为每个边 (prev -> stage) 创建队列
+            for prev_stage in stage.prev_stages:
+                prev_tag = prev_stage.get_stage_tag() if prev_stage else None
+                self.edge_queue_map[(prev_tag, stage_tag)] = MPQueue()
+
+            if not stage.prev_stages:
+                # 起点节点
+                self.edge_queue_map[(None, stage_tag)] = MPQueue()
 
             visited_stages.add(stage_tag)
 
             for next_stage in stage.next_stages:
-                if next_stage.get_stage_tag() in visited_stages:
-                    continue
-                collect_queue(next_stage)
+                queue.append(next_stage)
 
-        # 初始化每个节点的队列
-        visited_stages = set()
-        collect_queue(self.root_stage)
         self.fail_queue = MPQueue()
 
     def init_log(self):
         """
         初始化日志
         """
-        self.log_listener = LogListener(level = "DEBUG")
+        self.log_listener = LogListener(level = "TRACE")
         self.task_logger = TaskLogger(self.log_listener.get_queue())
 
     def init_structure_tree(self):
@@ -99,7 +110,8 @@ class TaskTree:
         设定根节点
         """
         self.root_stage = root_stage
-        self.root_stage.set_prev_stage(None)
+        self.root_stage.prev_stages = []
+        self.root_stage.add_prev_stages(None)
 
     def put_stage_queue(self, tasks_dict: dict, put_termination_signal=True):
         """
@@ -108,13 +120,16 @@ class TaskTree:
         :param put_termination_signal: 是否放入终止信号
         """
         for tag, tasks in tasks_dict.items():
+            prev_stage = self.stages_status_dict[tag]["stage"].prev_stages[0]
+            prev_tag = prev_stage.get_stage_tag() if prev_stage else None
             for task in tasks:
-                self.stages_status_dict[tag]["task_queue"].put(make_hashable(task))
+                self.edge_queue_map[(prev_tag, tag)].put(make_hashable(task))
                 if isinstance(task, TerminationSignal):
                     continue
                 self.stages_status_dict[tag]["init_tasks_num"] = self.stages_status_dict[tag].get("init_tasks_num", 0) + 1
 
-        self.stages_status_dict[self.root_stage.get_stage_tag()]["task_queue"].put(TERMINATION_SIGNAL) if put_termination_signal else None
+        edge_key = (None, self.root_stage.get_stage_tag())
+        self.edge_queue_map[edge_key].put(TERMINATION_SIGNAL) if put_termination_signal else None
 
     def set_reporter(self, is_report=False, host="127.0.0.1", port=5000):
         """
@@ -142,6 +157,7 @@ class TaskTree:
 
         visited_stages = set()
         set_subsequent_stage_mode(self.root_stage)
+        self.init_structure_tree()
 
     def start_tree(self, init_tasks_dict: dict, put_termination_signal: bool=True):
         """
@@ -156,7 +172,7 @@ class TaskTree:
             self.reporter.start() if self.is_report else None
 
             self.put_stage_queue(init_tasks_dict, put_termination_signal)
-            self._execute_stage(self.root_stage, set())
+            self._excute_stages()
 
             # 等待所有进程结束
             for p in self.processes:
@@ -173,19 +189,26 @@ class TaskTree:
             self.task_logger.end_tree(time.time() - self.start_time)
             self.log_listener.stop()
 
-    def _execute_stage(self, stage: TaskManager, stage_visited: set):
+    def _excute_stages(self):
+        for tag in self.stages_status_dict:
+            self._execute_stage(self.stages_status_dict[tag]["stage"])
+
+    def _execute_stage(self, stage: TaskManager):
         """
         递归地执行节点任务
         """
         stage_tag = stage.get_stage_tag()
-        stage_visited.add(stage_tag)
 
-        input_queue = self.stages_status_dict[stage_tag]["task_queue"]
+        input_queues = []
+        for prev_stage in stage.prev_stages:
+            prev_tag = prev_stage.get_stage_tag() if prev_stage else None
+            input_queues.append(self.edge_queue_map[(prev_tag, stage_tag)])
+
         if not stage.next_stages:
             output_queues = []
         else:
             output_queues = [
-                self.stages_status_dict[next_stage.get_stage_tag()]["task_queue"]
+                self.edge_queue_map[(stage_tag, next_stage.get_stage_tag())]
                 for next_stage in stage.next_stages
             ]
         logger_queue = self.log_listener.get_queue()
@@ -208,7 +231,7 @@ class TaskTree:
                 self.stage_extra_stats[stage_tag]
                 )
             p = multiprocessing.Process(
-                target=stage.start_stage, args=(input_queue, output_queues, self.fail_queue, logger_queue), name=stage_tag
+                target=stage.start_stage, args=(input_queues, output_queues, self.fail_queue, logger_queue), name=stage_tag
             )
             p.start()
             self.processes.append(p)
@@ -220,14 +243,9 @@ class TaskTree:
                 None, 
                 self.stage_extra_stats[stage_tag]
                 )
-            stage.start_stage(input_queue, output_queues, self.fail_queue, logger_queue)
+            stage.start_stage(input_queues, output_queues, self.fail_queue, logger_queue)
 
             self.stages_status_dict[stage_tag]["status"]  = StageStatus.STOPPED
-
-        for next_stage in stage.next_stages:
-            if next_stage.get_stage_tag() in stage_visited:
-                continue
-            self._execute_stage(next_stage, stage_visited)
 
     def finalize_nodes(self):
         """
@@ -249,18 +267,16 @@ class TaskTree:
             stage_status["status"] = StageStatus.STOPPED  # 已停止
 
         # 3️⃣ 收集并持久化每个 stage 中未消费的任务
-        for stage_tag, stage_status in self.stages_status_dict.items():
-            queue: MPQueue = stage_status["task_queue"]
-            while not queue.empty():
-                try:
-                    task = queue.get_nowait()
-                    if isinstance(task, TerminationSignal):
-                        continue
-                    self.task_logger._log("DEBUG", f"获取 {stage_tag} 剩余任务: {task}")
+        # for stage_tag, stage_status in self.stages_status_dict.items():
+        #     queue: MPQueue = stage_status["task_queue"]
+        #     while not queue.empty():
+        #         try:
+        #             task = queue.get_nowait()
+        #             self.task_logger._log("DEBUG", f"获取 {stage_tag} 剩余任务: {task}")
 
-                    self._persist_unconsumed_task(stage_tag, task)
-                except Exception as e:
-                    self.task_logger._log("WARNING", f"获取 {stage_tag} 剩余任务失败: {e}")
+        #             self._persist_unconsumed_task(stage_tag, task)
+        #         except Exception as e:
+        #             self.task_logger._log("WARNING", f"获取 {stage_tag} 剩余任务失败: {e}")
 
     def release_resources(self):
         """
@@ -435,16 +451,18 @@ class TaskTree:
 
         for tag, stage_status_dict in self.stages_status_dict.items():
             stage: TaskManager = stage_status_dict["stage"]
-            prev = stage.prev_stage
-            prev_tag = prev.get_stage_tag() if prev else None
             last_stage_status_dict: dict = self.last_status_dict.get(tag, {})
 
             total_input = stage_status_dict.get("init_tasks_num", 0)
-            if prev:
+            
+            for prev in stage.prev_stages:
+                if not prev:
+                    break
+                prev_tag = prev.get_stage_tag()
                 if isinstance(prev, TaskSplitter):
                     total_input += self.stage_extra_stats[prev_tag].get("split_output_count", ValueWrapper()).value
                 else:
-                    total_input += status_dict[prev_tag]["tasks_processed"]
+                    total_input += status_dict[prev_tag]["tasks_processed"] # if prev_tag in status_dict else 0
 
             status        = stage_status_dict.get("status", StageStatus.NOT_STARTED)
             processed     = self.stage_success_counter.get(tag, ValueWrapper()).value
@@ -484,7 +502,7 @@ class TaskTree:
             else:
                 avg_time_str = "N/A"  # 或 "0.00s/it" 根据需求
 
-            history = stage_status_dict.get("history", [])
+            history: list = stage_status_dict.get("history", [])
             history.append({
                 "timestamp": now,
                 "tasks_processed": processed,
@@ -529,7 +547,7 @@ class TaskTree:
         """
         results = {}
         test_table_list = []
-        final_result_dict = {}
+        # final_result_dict = {}
         fail_by_error_dict = {}
         fail_by_stage_dict = {}
 
@@ -544,7 +562,7 @@ class TaskTree:
                 self.start_tree(init_tasks_dict)
 
                 time_list.append(time.time() - start_time)
-                final_result_dict.update(self.get_final_result_dict())
+                # final_result_dict.update(self.get_final_result_dict())
                 fail_by_error_dict.update(self.get_fail_by_error_dict())
                 fail_by_stage_dict.update(self.get_fail_by_stage_dict())
 
@@ -556,7 +574,7 @@ class TaskTree:
             stage_modes,
             r"stage\execution",
         )
-        results["Final result dict"] = final_result_dict
+        # results["Final result dict"] = final_result_dict
         results["Fail error dict"] = fail_by_error_dict
         results["Fail stage dict"] = fail_by_stage_dict
         return results

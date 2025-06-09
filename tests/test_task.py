@@ -109,7 +109,7 @@ def parse_sleep(url):
     return f"Parsed({url})"
 
 # 测试 TaskManager 的同步任务
-def test_task_manager():
+def _test_task_manager():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
     test_task_2 = (item for item in test_task_1)
@@ -122,7 +122,7 @@ def test_task_manager():
 
 # 测试 TaskManager 的异步任务
 @pytest.mark.asyncio
-async def test_task_manager_async():
+async def _test_task_manager_async():
     test_task_0 = range(25, 37)
     test_task_1 = list(range(25,32)) + [0, 27, None, 0, '']
     test_task_2 = (item for item in test_task_1)
@@ -169,7 +169,7 @@ def _test_task_tree_0():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def _test_task_tree_1():
+def test_task_tree_1():
     # 定义任务节点
     A = TaskManager(func=sleep_random_A, execution_mode='thread')
     B = TaskManager(func=sleep_random_B, execution_mode='serial')
@@ -180,9 +180,9 @@ def _test_task_tree_1():
 
     # 设置链式上下文
     A.set_tree_context(next_stages=[B, C], stage_mode='process', stage_name="Stage_A")
-    B.set_tree_context(next_stages=[D, F], stage_mode='process', stage_name="Stage_B")
-    C.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_C")
-    D.set_tree_context(next_stages=[E], stage_mode='process', stage_name="Stage_D")
+    B.set_tree_context(next_stages=[D, E], stage_mode='process', stage_name="Stage_B")
+    C.set_tree_context(next_stages=[E], stage_mode='process', stage_name="Stage_C")
+    D.set_tree_context(next_stages=[F], stage_mode='process', stage_name="Stage_D")
     E.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_E")
     F.set_tree_context(next_stages=[], stage_mode='process', stage_name="Stage_F")
 
@@ -193,9 +193,12 @@ def _test_task_tree_1():
     input_tasks = {
         A.get_stage_tag(): range(10),
     }
+    stage_modes = ['serial', 'process']
+    execution_modes = ['serial', 'thread']
 
     # 开始任务链
-    result = tree.test_methods(input_tasks)
+    sleep(5)
+    result = tree.test_methods(input_tasks, stage_modes, execution_modes)
     test_table_list, execution_modes, stage_modes, index_header = result["Time table"]
     result["Time table"] = format_table(test_table_list, column_names = execution_modes, row_names = stage_modes, index_header = index_header)
     for key, value in result.items():
@@ -278,5 +281,5 @@ def profile_task_tree():
 if __name__ == "__main__":
     # test_task_tree_2()
     # _test_task_web_3()
-    # test_task_manager()
+    test_task_tree_1()
     pass

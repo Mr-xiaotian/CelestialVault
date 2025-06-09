@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+<<<<<<< HEAD
 import asyncio, time, redis, ast
 from asyncio import Queue as AsyncQueue
+=======
+import asyncio, time
+from asyncio import Queue as AsyncQueue, QueueEmpty
+>>>>>>> main
 from collections import defaultdict
 from collections.abc import Iterable  
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from multiprocessing import Queue as MPQueue
-from queue import Queue as ThreadQueue
+from queue import Queue as ThreadQueue, Empty
 from threading import Event, Lock
 from typing import List
 
@@ -23,7 +28,7 @@ from httpx import (
 
 from .task_progress import ProgressManager
 from .task_support import TERMINATION_SIGNAL, TerminationSignal, LogListener, TaskLogger, null_lock, ValueWrapper
-from .task_tools import cleanup_mpqueue, is_queue_empty, is_queue_empty_async, make_hashable, format_repr
+from .task_tools import cleanup_mpqueue, are_queues_empty, are_queues_empty_async, make_hashable, format_repr
 
 
 class TaskManager:
@@ -59,7 +64,9 @@ class TaskManager:
         self.thread_pool = None
         self.process_pool = None
 
-        self.set_prev_stage(None)
+        self.terminated_queue_set = set()
+
+        self.prev_stages: List[TaskManager] = []
         self.set_stage_name(None)
 
         self.retry_exceptions = (
@@ -95,17 +102,17 @@ class TaskManager:
         self.success_lock = success_lock if success_lock is not None else null_lock
         self.extra_stats = extra_stats if extra_stats is not None else {}
 
-    def init_env(self, task_queue=None, result_queues=None, fail_queue=None, logger_queue=None):
+    def init_env(self, task_queues=None, result_queues=None, fail_queue=None, logger_queue=None):
         """
         初始化环境
         """
-        self.init_queue(task_queue, result_queues, fail_queue, logger_queue)
+        self.init_queue(task_queues, result_queues, fail_queue, logger_queue)
         self.init_pool()
         self.init_logger()
 
         self.duplicates_num = 0
 
-    def init_queue(self, task_queue=None, result_queues=None, fail_queue=None, logger_queue=None):
+    def init_queue(self, task_queues=None, result_queues=None, fail_queue=None, logger_queue=None):
         """
         初始化队列
         """
@@ -115,7 +122,7 @@ class TaskManager:
             "thread": ThreadQueue,
             "serial": ThreadQueue,
         }
-        self.task_queue: ThreadQueue|MPQueue = task_queue or queue_map[self.execution_mode]()
+        self.task_queues: List[ThreadQueue|MPQueue] = task_queues or [queue_map[self.execution_mode]()]
         self.result_queues = result_queues or [ThreadQueue()]
         self.fail_queue = fail_queue or ThreadQueue()
         self.logger_queue = logger_queue or ThreadQueue()
@@ -176,7 +183,7 @@ class TaskManager:
         """
         self.next_stages = next_stages or []  # 默认为空列表
         for next_stage in self.next_stages:
-            next_stage.set_prev_stage(self)
+            next_stage.add_prev_stages(self)
 
     def set_stage_mode(self, stage_mode: str):
         """
@@ -190,11 +197,11 @@ class TaskManager:
         """
         self.stage_name = name or id(self)
 
-    def set_prev_stage(self, prev_stage: TaskManager):
+    def add_prev_stages(self, prev_stage: TaskManager):
         """
-        设置当前节点为最后一个节点
+        添加前置节点
         """
-        self.prev_stage = prev_stage
+        self.prev_stages.append(prev_stage)
 
     def get_stage_tag(self):
         """
@@ -219,28 +226,92 @@ class TaskManager:
         """
         self.retry_exceptions = self.retry_exceptions + tuple(exceptions)
 
-    def put_task_queue(self, task_source) -> int:
+    def get_task_queues(self, poll_interval: float = 0.01):
+        """
+        从多个队列中轮询获取任务。
+
+        :param poll_interval: 每轮遍历后的等待时间（秒）
+        :return: 获取到的任务，或 TerminationSignal 表示所有队列已终止
+        """
+        total_queues = len(self.task_queues)
+
+        while True:
+            for idx, queue in enumerate(self.task_queues):
+                if idx in self.terminated_queue_set:
+                    continue
+                try:
+                    item = queue.get_nowait()
+                    if isinstance(item, TerminationSignal):
+                        self.terminated_queue_set.add(idx)
+                        self.task_logger._log("TRACE", f"get_task_queues: queue[{idx}] terminated")
+                        continue
+                    return item
+                except Empty:
+                    continue
+                except Exception as e:
+                    self.task_logger._log("WARNING", f"get_task_queues: Error from queue[{idx}]: {type(e).__name__}({e})")
+                    continue
+
+            # 所有队列都终止了
+            if len(self.terminated_queue_set) == total_queues:
+                return TERMINATION_SIGNAL
+
+            # 所有队列都暂时无数据，避免 busy-wait
+            time.sleep(poll_interval)
+
+    async def get_task_queues_async(self, poll_interval=0.01):
+        """
+        异步轮询多个 AsyncQueue，获取任务。
+        
+        :param poll_interval: 全部为空时的 sleep 间隔（秒）
+        :return: task 或 TerminationSignal
+        """
+        terminated_set = set()
+        total_queues = len(self.task_queues)
+
+        while True:
+            for i, queue in enumerate(self.task_queues):
+                if i in terminated_set:
+                    continue
+                try:
+                    task = queue.get_nowait()
+                    if isinstance(task, TerminationSignal):
+                        terminated_set.add(i)
+                        continue
+                    return task
+                except QueueEmpty:
+                    continue
+                except Exception as e:
+                    self.task_logger._log("WARNING", f"{self.func.__name__} async queue[{i}] error: {e}")
+                    continue
+
+            if len(terminated_set) == total_queues:
+                return TERMINATION_SIGNAL
+
+            await asyncio.sleep(poll_interval)
+
+    def put_task_queues(self, task_source) -> int:
         """
         将任务放入任务队列
         """
         task_num = 0
         for item in task_source:
-            self.task_queue.put(make_hashable(item))
+            self.task_queues[0].put(make_hashable(item))
             task_num += 1
-        self.task_queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
+        for queue in self.task_queues:
+            queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
         return task_num
 
-    async def put_task_queue_async(self, task_source) -> int:
+    async def put_task_queues_async(self, task_source) -> int:
         """
         将任务放入任务队列(async模式)
         """
         task_num = 0
         for item in task_source:
-            await self.task_queue.put(make_hashable(item))
+            await self.task_queues[0].put(make_hashable(item))
             task_num += 1
-        await self.task_queue.put(
-            TERMINATION_SIGNAL
-        )  # 添加一个哨兵任务，用于结束任务队列
+        for queue in self.task_queues:
+            await queue.put(TERMINATION_SIGNAL)  # 添加一个哨兵任务，用于结束任务队列
         return task_num
 
     def put_result_queues(self, result):
@@ -378,7 +449,7 @@ class TaskManager:
             isinstance(exception, self.retry_exceptions)
             and retry_time < self.max_retries
         ):
-            self.task_queue.put(task)
+            self.task_queues[0].put(task) # 只在第一个队列存放retry task
             self.retry_time_dict[task] += 1
             # delay_time = 2 ** retry_time
             # sleep(delay_time)  # 指数退避
@@ -410,7 +481,7 @@ class TaskManager:
             isinstance(exception, self.retry_exceptions)
             and retry_time < self.max_retries
         ):  # isinstance(exception, self.retry_exceptions) and
-            await self.task_queue.put(task)
+            await self.task_queues[0].put(task) # 只在第一个队列存放retry task
             self.retry_time_dict[task] += 1
             # delay_time = 2 ** retry_time
             self.task_logger.task_retry(
@@ -439,7 +510,7 @@ class TaskManager:
         self.init_listener()
         self.init_env(logger_queue=self.log_listener.get_queue())
 
-        total_tasks = self.put_task_queue(task_source)
+        total_tasks = self.put_task_queues(task_source)
         self.task_logger.start_manager(
             self.func.__name__, total_tasks, self.execution_mode, self.worker_limit
         )
@@ -449,7 +520,7 @@ class TaskManager:
             self.run_with_executor(self.thread_pool)
         elif self.execution_mode == "process":
             self.run_with_executor(self.process_pool)
-            cleanup_mpqueue(self.task_queue)
+            # cleanup_mpqueue(self.task_queues)
         elif self.execution_mode == "async":
             asyncio.run(self.run_in_async())
         else:
@@ -478,7 +549,7 @@ class TaskManager:
         self.init_listener()
         self.init_env(logger_queue=self.log_listener.get_queue())
 
-        total_tasks = await self.put_task_queue_async(task_source)
+        total_tasks = await self.put_task_queues_async(task_source)
         self.task_logger.start_manager(
             self.func.__name__, total_tasks, "async(await)", self.worker_limit
         )
@@ -495,18 +566,17 @@ class TaskManager:
         )
         self.log_listener.stop()
 
-    def start_stage(self, input_queue: MPQueue, output_queues: List[MPQueue], fail_queue: MPQueue, logger_queue: MPQueue):
+    def start_stage(self, input_queues: List[MPQueue], output_queues: List[MPQueue], fail_queue: MPQueue, logger_queue: MPQueue):
         """
         根据 start_type 的值，选择串行、并行执行任务
 
-        :param input_queue: 输入队列
+        :param input_queues: 输入队列
         :param output_queue: 输出队列
         :param fail_queue: 失败队列
         """
         start_time = time.time()
         self.active = True
-        self.init_redis()
-        self.init_env(input_queue, output_queues, fail_queue, logger_queue)
+        self.init_env(input_queues, output_queues, fail_queue, logger_queue)
         self.task_logger.start_stage(
             self.stage_name, self.func.__name__, self.execution_mode, self.worker_limit
         )
@@ -521,7 +591,8 @@ class TaskManager:
         else:
             self.run_in_serial()
 
-        # cleanup_mpqueue(input_queue) # 会影响之后finalize_nodes
+        # cleanup_mpqueue(input_queues) # 会影响之后finalize_nodes
+        self.release_pool()
         self.put_result_queues(TERMINATION_SIGNAL)
 
         self.task_logger.end_stage(
@@ -540,7 +611,7 @@ class TaskManager:
         串行地执行任务
         """
         progress_manager = ProgressManager(
-            total_tasks=self.task_queue.qsize(),
+            total_tasks=self.task_queues[0].qsize(),
             desc=f"{self.progress_desc}(serial)",
             mode="normal",
             show_progress=self.show_progress,
@@ -548,7 +619,7 @@ class TaskManager:
 
         # 从队列中依次获取任务并执行
         while True:
-            task = self.task_queue.get()
+            task = self.get_task_queues()
             self.task_logger._log("TRACE",
                 f"Task {task} is submitted to {self.func.__name__}"
             )
@@ -572,10 +643,11 @@ class TaskManager:
             progress_manager.update(1)
 
         progress_manager.close()
+        self.terminated_queue_set = set()
 
-        if not is_queue_empty(self.task_queue):
+        if not are_queues_empty(self.task_queues):
             self.task_logger._log("DEBUG", f"Retrying tasks for '{self.func.__name__}'")
-            self.task_queue.put(TERMINATION_SIGNAL)
+            self.put_task_queues([])
             self.run_in_serial()
 
     def run_with_executor(self, executor: ThreadPoolExecutor | ProcessPoolExecutor):
@@ -593,7 +665,7 @@ class TaskManager:
         all_done_event.set()  # 初始为无任务状态，设为完成状态
 
         progress_manager = ProgressManager(
-            total_tasks=self.task_queue.qsize(),
+            total_tasks=self.task_queues[0].qsize(),
             desc=f"{self.progress_desc}({self.execution_mode}-{self.worker_limit})",
             mode="normal",
             show_progress=self.show_progress,
@@ -617,7 +689,7 @@ class TaskManager:
 
         # 从任务队列中提交任务到执行池
         while True:
-            task = self.task_queue.get()
+            task = self.get_task_queues()
             self.task_logger._log("TRACE",
                 f"Task {task} is submitted to {self.func.__name__}"
             )
@@ -651,10 +723,11 @@ class TaskManager:
 
         # 所有任务和回调都完成了，现在可以安全关闭进度条
         progress_manager.close()
+        self.terminated_queue_set = set()
 
-        if not is_queue_empty(self.task_queue):
+        if not are_queues_empty(self.task_queues):
             self.task_logger._log("DEBUG", f"Retrying tasks for '{self.func.__name__}'")
-            self.task_queue.put(TERMINATION_SIGNAL)
+            self.put_task_queues([])
             self.run_with_executor(executor)
 
     async def run_in_async(self):
@@ -672,14 +745,14 @@ class TaskManager:
         # 创建异步任务列表
         async_tasks = []
         progress_manager = ProgressManager(
-            total_tasks=self.task_queue.qsize(),
+            total_tasks=self.task_queues[0].qsize(),
             desc=f"{self.progress_desc}(async-{self.worker_limit})",
             mode="async",
             show_progress=self.show_progress,
         )
 
         while True:
-            task = await self.task_queue.get()
+            task = await self.get_task_queues_async()
             self.task_logger._log("TRACE",
                 f"Task {task} is submitted to {self.func.__name__}"
             )
@@ -707,10 +780,11 @@ class TaskManager:
             progress_manager.update(1)
 
         progress_manager.close()
+        self.terminated_queue_set = set()
 
-        if not await is_queue_empty_async(self.task_queue):
+        if not await are_queues_empty_async(self.task_queues):
             self.task_logger._log("DEBUG", f"Retrying tasks for '{self.func.__name__}'")
-            await self.task_queue.put(TERMINATION_SIGNAL)
+            await self.put_task_queues_async([])
             await self.run_in_async()
 
     async def _run_single_task(self, task):
@@ -740,7 +814,7 @@ class TaskManager:
         """
         清理环境
         """
-        self.task_queue = None
+        self.task_queues = None
         self.result_queues = None
         self.fail_queue = None
 
