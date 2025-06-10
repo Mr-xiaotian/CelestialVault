@@ -318,6 +318,11 @@ class TaskManager:
             "timestamp": time.time()
         })
 
+    def add_succes_counter(self):
+        # 加锁方式（保证正确）
+        with self.success_lock:
+            self.success_counter.value += 1
+
     def is_duplicate(self, task):
         """
         判断任务是否重复
@@ -402,9 +407,7 @@ class TaskManager:
         processed_result = self.process_result(task, result)
         self.success_dict[task] = processed_result
 
-        # 加锁方式（保证正确）
-        with self.success_lock:
-            self.success_counter.value += 1
+        self.add_succes_counter()
 
         self.put_result_queues(processed_result)
         self.task_logger.task_success(
@@ -603,9 +606,7 @@ class TaskManager:
                 progress_manager.update(1)
                 break
             elif self.is_duplicate(task):
-                # 加锁方式（保证正确）
-                with self.success_lock:
-                    self.success_counter.value += 1
+                self.add_succes_counter()
                 self.duplicates_num += 1
                 self.task_logger.task_duplicate(self.func.__name__, self.get_task_info(task))
                 progress_manager.update(1)
@@ -675,9 +676,7 @@ class TaskManager:
                 progress_manager.update(1)
                 break
             elif self.is_duplicate(task):
-                # 加锁方式（保证正确）
-                with self.success_lock:
-                    self.success_counter.value += 1
+                self.add_succes_counter()
                 self.duplicates_num += 1
                 self.task_logger.task_duplicate(self.func.__name__, self.get_task_info(task))
                 progress_manager.update(1)
@@ -736,9 +735,7 @@ class TaskManager:
                 progress_manager.update(1)
                 break
             elif self.is_duplicate(task):
-                # 加锁方式（保证正确）
-                with self.success_lock:
-                    self.success_counter.value += 1
+                self.add_succes_counter()
                 self.duplicates_num += 1
                 self.task_logger.task_duplicate(self.func.__name__, self.get_task_info(task))
                 progress_manager.update(1)

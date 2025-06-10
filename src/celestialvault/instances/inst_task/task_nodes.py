@@ -46,9 +46,7 @@ class TaskSplitter(TaskManager):
         processed_result = self.process_result(task, result)
         self.success_dict[task] = processed_result
 
-        # 加锁方式（保证正确）
-        with self.success_lock:
-            self.success_counter.value += 1
+        self.add_succes_counter()
 
         split_count = 0
         for item in processed_result:
