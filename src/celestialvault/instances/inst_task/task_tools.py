@@ -1,4 +1,6 @@
 import json, ast
+import hashlib
+import pickle
 from collections import defaultdict
 from datetime import datetime
 from multiprocessing import Queue as MPQueue
@@ -175,6 +177,13 @@ def format_repr(obj: Any, max_length: int) -> str:
     first_part = obj_str[: int(max_length * 2 / 3)]
     last_part = obj_str[-int(max_length / 3):]
     return f"{first_part}...{last_part}"
+
+def object_to_str_hash(obj) -> str:
+    """
+    将任意对象转换为 MD5 字符串。
+    """
+    obj_bytes = pickle.dumps(obj)  # 序列化对象
+    return hashlib.md5(obj_bytes).hexdigest()
 
 
 # ========公共函数========
