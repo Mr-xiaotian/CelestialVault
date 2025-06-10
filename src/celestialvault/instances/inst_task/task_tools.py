@@ -70,7 +70,7 @@ def format_structure_list_from_tree(root_root: dict = None, indent=0) -> list:
         lines = []
 
         # 构建当前节点的行文本
-        visited_note = " (already visited)" if node.get("visited") else ""
+        visited_note = " [Visited]" if node.get("visited") else ""
         line = f"{node['stage_name']} (stage_mode: {node['stage_mode']}, func: {node['func_name']}){visited_note}"
         lines.append(line)
 

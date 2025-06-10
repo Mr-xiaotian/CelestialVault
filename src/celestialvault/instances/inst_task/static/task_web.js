@@ -190,7 +190,7 @@ function renderTree(data) {
     html += `<span class="stage-func">func: ${node.func_name}</span>`;
 
     if (node.visited) {
-      html += `<span class="visited-mark">already visited</span>`;
+      html += `<span class="visited-mark">visited</span>`;
     }
 
     html += "</div>";

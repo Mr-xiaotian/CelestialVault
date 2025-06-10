@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-# 版本 2.70
+# 版本 3.00
 # 作者：晓天, GPT-4o
-# 时间：5/22/2025
+# 时间：6/10/2025
 # Github: https://github.com/Mr-xiaotian
 
 from .task_manage import TaskManager

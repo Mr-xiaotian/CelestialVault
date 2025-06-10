@@ -45,7 +45,7 @@ class TaskTree:
 
         self.edge_queue_map: Dict[Tuple[str, str], MPQueue] = {}  # 用于保存每个节点到下一个节点的队列
         
-        self.stage_locks = {}  # 可选的锁，用于控制每个阶段的并发数
+        self.stage_locks = {}  # 锁，用于控制每个阶段success_counter的并发
         self.stage_success_counter = {}  # 用于保存每个阶段成功处理的任务数
         
         self.final_result_dict = {}  # 用于保存初始任务到最终结果的映射
@@ -89,7 +89,7 @@ class TaskTree:
         """
         初始化日志
         """
-        self.log_listener = LogListener(level = "TRACE")
+        self.log_listener = LogListener(level = "INFO")
         self.task_logger = TaskLogger(self.log_listener.get_queue())
 
     def init_structure_tree(self):
@@ -542,7 +542,6 @@ class TaskTree:
             for execution_mode in execution_modes:
                 start_time = time.time()
                 self.init_env()
-                # self.init_log()
                 self.set_tree_mode(stage_mode, execution_mode)
                 self.start_tree(init_tasks_dict)
 
