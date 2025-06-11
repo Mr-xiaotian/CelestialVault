@@ -267,16 +267,21 @@ def _test_task_tree_3():
     }, False)
 
 def test_task_tree_4():
+    root_stage = TaskManager(sleep_1, execution_mode='thread')
     redis_transfer = TaskRedisTransfer()
-    redis_transfer.set_tree_context([], stage_mode='process', stage_name='RedisTransfer')
+    fibonacci_stage = TaskManager(fibonacci, 'thread')
 
-    tree = TaskTree(redis_transfer)
+    root_stage.set_tree_context([redis_transfer, fibonacci_stage], stage_mode='serial', stage_name='Root')
+    redis_transfer.set_tree_context([], stage_mode='process', stage_name='RedisTransfer')
+    fibonacci_stage.set_tree_context([], stage_mode='process', stage_name='Fibonacci')
+
+    tree = TaskTree(root_stage)
+    tree.set_reporter(True, host="127.0.0.1", port=5005)
 
     tree.start_tree({
-        redis_transfer.get_stage_tag(): range(10),
+        root_stage.get_stage_tag(): range(25, 37),
     })
 
-    
 def profile_task_tree():
     target_func = 'test_task_tree_1'
     now_time = strftime("%m-%d-%H-%M", localtime())
