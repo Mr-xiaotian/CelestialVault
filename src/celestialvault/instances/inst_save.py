@@ -6,10 +6,10 @@ import subprocess
 from pathlib import Path
 
 import pandas as pd
+from celestialflow import TaskChain, TaskManager
 
 from .inst_error import FFmpegError
 from .inst_fetch import Fetcher
-from .inst_task import TaskChain, TaskManager
 
 
 class FetchManager(TaskManager):

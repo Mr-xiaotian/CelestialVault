@@ -12,9 +12,9 @@ import py7zr
 import rarfile
 from tqdm import tqdm
 from wcwidth import wcswidth
+from celestialflow import TaskManager
 
 from ..constants import FILE_ICONS, IMG_SUFFIXES, VIDEO_SUFFIXES
-from ..instances.inst_task import TaskManager
 from .TextTools import format_table
 from .Utilities import bytes_to_human_readable
 

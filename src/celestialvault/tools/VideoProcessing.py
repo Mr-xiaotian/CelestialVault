@@ -7,7 +7,7 @@ from typing import List, Tuple
 import ffmpeg
 from moviepy.editor import CompositeVideoClip, TextClip, VideoFileClip, clips_array
 
-from ..instances.inst_task import TaskManager
+from celestialflow import TaskManager
 
 
 class GetCodecManager(TaskManager):
