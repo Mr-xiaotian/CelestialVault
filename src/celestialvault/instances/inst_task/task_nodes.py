@@ -1,6 +1,9 @@
-from time import time
+import json
+import time
+import redis
 
 from .task_manage import TaskManager
+from .task_tools import object_to_str_hash
 
 
 class TaskSplitter(TaskManager):
@@ -59,6 +62,40 @@ class TaskSplitter(TaskManager):
             self.func.__name__,
             self.get_task_info(task),
             split_count,
-            time() - start_time,
+            time.time() - start_time,
         )
 
+
+class TaskRedisTransfer(TaskManager):
+    def __init__(self, host="localhost", port=6379, db=0, timeout=10):
+        super().__init__(self._process_via_redis, "thread")
+
+        self.host = host
+        self.port = port
+        self.db = db
+        self.timeout = timeout
+
+    def init_redis(self):
+        if not hasattr(self, "redis_client"):
+            self.redis_client = redis.Redis(host=self.host, port=self.port, db=self.db, decode_responses=True)
+
+    def _process_via_redis(self, task):
+        self.init_redis()
+        input_key = f"{self.get_stage_tag()}:input"
+        output_key = f"{self.get_stage_tag()}:output"
+
+        # 将任务写入 redis（如 list 或 stream）
+        task_id = object_to_str_hash(task)
+        payload = json.dumps({"id": task_id, "task": task})
+        self.redis_client.rpush(input_key, payload)
+
+        # 等待结果（可以阻塞，或轮询）
+        start_time = time.time()
+        while True:
+            result = self.redis_client.hget(output_key, task_id)
+            if result:
+                self.redis_client.hdel(output_key, task_id)
+                return json.loads(result)
+            elif time.time() - start_time > self.timeout:
+                raise TimeoutError("Redis result not returned in time")
+            time.sleep(0.1)

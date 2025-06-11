@@ -5,7 +5,7 @@
 # Github: https://github.com/Mr-xiaotian
 
 from .task_manage import TaskManager
-from .task_nodes import TaskSplitter
+from .task_nodes import TaskSplitter, TaskRedisTransfer
 from .task_support import BroadcastQueueManager, TerminationSignal
 from .task_tools import load_task_by_stage, load_task_by_error, make_hashable
 from .task_tree import TaskChain, TaskTree
@@ -16,6 +16,7 @@ __all__ = [
     "TaskChain",
     "TaskManager",
     "TaskSplitter",
+    "TaskRedisTransfer",
     "BroadcastQueueManager",
     "TerminationSignal",
     "TaskWebServer",

@@ -1,8 +1,8 @@
-import pytest, logging, asyncio, pprint
+import pytest, logging, asyncio, pprint, re
 import cProfile, subprocess, random
 from time import time, strftime, localtime, sleep
 from celestialvault.tools.TextTools import format_table
-from celestialvault.instances.inst_task import TaskManager, TaskTree, TaskSplitter
+from celestialvault.instances.inst_task import TaskManager, TaskTree, TaskSplitter, TaskRedisTransfer
 
 def sleep_1(n):
     sleep(1)
@@ -86,27 +86,24 @@ def download(url):
     return f"Downloaded({url})"
 
 def parse(url):
-    return f"Parsed({url})"
+    num_list = re.findall(r'\d+', url)
+    return int("".join(num_list))
 
 def generate_urls_sleep(x):
     sleep_random_46(5)
-    return tuple([f"url_{x}_{i}" for i in range(random.randint(1, 4))])
+    return generate_urls(x)
 
 def log_urls_sleep(url):
     sleep_random_46(5)
-    if url == ('url_1_0', 'url_1_1'):
-        raise ValueError("Test error in ('url_1_0', 'url_1_1')")
-    return f"Logged({url})"
+    return log_urls(url)
 
 def download_sleep(url):
     sleep_random_46(5)
-    if "url_3" in url:
-        raise ValueError("Test error in url_3_*")
-    return f"Downloaded({url})"
+    return download(url)
 
 def parse_sleep(url):
     sleep_random_46(5)
-    return f"Parsed({url})"
+    return parse(url)
 
 # 测试 TaskManager 的同步任务
 def _test_task_manager():
@@ -206,7 +203,7 @@ def _test_task_tree_1():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def test_task_tree_2():    
+def _test_task_tree_2():    
     # 定义任务节点
     generate_stage = TaskManager(func=generate_urls, execution_mode='thread', worker_limit=4)
     logr_stage = TaskManager(func=log_urls, execution_mode='thread', worker_limit=4)
@@ -240,7 +237,7 @@ def test_task_tree_2():
             value = pprint.pformat(value)
         logging.info(f"{key}: \n{value}")
 
-def _test_task_web_3():
+def _test_task_tree_3():
     # 定义任务节点
     generate_stage = TaskManager(func=generate_urls_sleep, execution_mode='thread', worker_limit=4)
     logr_stage = TaskManager(func=log_urls_sleep, execution_mode='thread', worker_limit=4)
@@ -268,6 +265,17 @@ def _test_task_web_3():
         download_stage.get_stage_tag(): [f"url_{x}_5" for x in range(10, 20)],
         parse_stage.get_stage_tag(): [f"url_{x}_5" for x in range(10, 20)],
     }, False)
+
+def test_task_tree_4():
+    redis_transfer = TaskRedisTransfer()
+    redis_transfer.set_tree_context([], stage_mode='process', stage_name='RedisTransfer')
+
+    tree = TaskTree(redis_transfer)
+
+    tree.start_tree({
+        redis_transfer.get_stage_tag(): range(10),
+    })
+
     
 def profile_task_tree():
     target_func = 'test_task_tree_1'
