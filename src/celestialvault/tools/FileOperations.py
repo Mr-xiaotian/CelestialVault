@@ -22,25 +22,21 @@ from .Utilities import bytes_to_human_readable
 class HandleFileManager(TaskManager):
     def __init__(
         self,
-        func,
+        func: Callable,
         folder_path: Path,
         new_folder_path: Path,
         rules: Dict[str, Tuple[Callable, Callable]],
-        execution_mode="serial",
-        worker_limit=50,
-        max_retries=3,
-        max_info=50,
-        progress_desc="Processing",
-        show_progress=False,
+        execution_mode: str,
+        progress_desc: str,
     ):
         super().__init__(
-            func,
-            execution_mode,
-            worker_limit,
-            max_retries,
-            max_info,
-            progress_desc,
-            show_progress,
+            func=func,
+            execution_mode=execution_mode,
+            worker_limit=6,
+            max_info=100,
+            enable_result_cache=True,
+            progress_desc=progress_desc,
+            show_progress=False,
         )
         self.folder_path = folder_path
         self.new_folder_path = new_folder_path
@@ -141,9 +137,6 @@ class CopyManager(TaskManager):
 
 
 class DeleteReturnSizeManager(TaskManager):
-    def get_args(self, task):
-        return (*task,)
-
     def process_result_dict(self):
         delete_size = 0
         for size in self.get_success_dict().values():
@@ -216,15 +209,12 @@ def handle_folder_files(
     new_folder_path = folder_path.parent / (folder_path.name + folder_name_siffix)
 
     handlefile_manager = HandleFileManager(
-        handle_item,
-        folder_path,
-        new_folder_path,
-        rules,
+        func=handle_item,
+        folder_path=folder_path,
+        new_folder_path=new_folder_path,
+        rules=rules,
         execution_mode=execution_mode,
-        worker_limit=6,
-        max_info=100,
         progress_desc=progress_desc,
-        show_progress=True,
     )
 
     file_path_iter = (
@@ -257,15 +247,12 @@ def handle_subfolders(
     new_folder_path = folder_path.parent / (folder_path.name + folder_name_siffix)
 
     handlefile_manager = HandleSubFolderManager(
-        handle_item,
-        folder_path,
-        new_folder_path,
-        rules,
+        func=handle_item,
+        folder_path=folder_path,
+        new_folder_path=new_folder_path,
+        rules=rules,
         execution_mode=execution_mode,
-        worker_limit=6,
-        max_info=100,
         progress_desc=progress_desc,
-        show_progress=True,
     )
 
     sub_folder_iter = (
@@ -801,12 +788,14 @@ def detect_identical_files(
     scan_size_manager = ScanSizeManager(
         get_file_size,
         execution_mode,
+        enable_result_cache=True,
         progress_desc="Scanning file size",
         show_progress=True,
     )
     scan_hash_manager = ScanHashManager(
         get_file_hash,
         execution_mode,
+        enable_result_cache=True,
         progress_desc="Calculating file hashes",
         show_progress=True,
     )
@@ -898,7 +887,11 @@ def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
     for (hash_value, file_size), file_list in identical_dict.items():
         delete_list.extend([(file_path, file_size) for file_path in file_list])
 
-    delete_return_size_manager = DeleteReturnSizeManager(delete_and_return_size)
+    delete_return_size_manager = DeleteReturnSizeManager(
+        delete_and_return_size, 
+        unpack_task_args=True,
+        enable_result_cache=True
+    )
     delete_return_size_manager.start(delete_list)
     delete_size = delete_return_size_manager.process_result_dict()
 
