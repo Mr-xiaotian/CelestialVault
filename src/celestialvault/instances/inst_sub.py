@@ -10,11 +10,11 @@ from ..tools.TextTools import pro_slash, safe_open_txt
 class Suber:
     def __init__(self):
         # Characters that need both lookbehind and lookahead checks
-        self.both_check_chars = "#|◆|\*|＊|=|＝|…|_|～|—|－|\n"
+        self.both_check_chars = "#|◆|\*|＊|=|＝|…|_|～|—|－"
 
         # Characters that need only lookahead checks
         self.lookahead_only_chars = (
-            '\]|』|」|】|》|\)|）|\}|\!|！|\?|？|\||”|"|\.|。|章|：|:|日'
+            '作者：[^\s]+|字数：\d+|\]|』|」|】|》|\)|）|\}|\!|！|\?|？|\||”|"|\.|。|章|：|:|日'
         )
 
         # Characters that need only lookbehind checks
