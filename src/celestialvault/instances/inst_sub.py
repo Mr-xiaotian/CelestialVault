@@ -14,7 +14,7 @@ class Suber:
 
         # Characters that need only lookahead checks
         self.lookahead_only_chars = (
-            '作者：[^\s]+|字数：\d+|\]|』|」|】|》|\)|）|\}|\!|！|\?|？|\||”|"|\.|。|章|：|:|日'
+            '章节[^\s]+|作者：[^\s]+|字数：\d+|20\d+[^\s]+|第[^\s]+|\]|』|」|】|》|\)|）|\}|\!|！|\?|？|\||”|"|\.|。|章|：|:|日'
         )
 
         # Characters that need only lookbehind checks
@@ -30,7 +30,7 @@ class Suber:
 
         self.special_character_removal = [
             (
-                "(\t|\r|\f|\v|\0|　| |||\u001e|\x1e|\u3000|\x150|\u0015)+",
+                "(\t|\r|\f|\v|\0|　| |||\u001e|\x1e|\u3000|\x150|\u0015|\u0010)+",
                 "",
             ),  # 移除制表符、回车符、换页符、垂直制表符、空字符、全角空格和特殊符号
             ("\~", "-"),  # 将波浪号替换为连字符

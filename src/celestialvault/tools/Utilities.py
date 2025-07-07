@@ -81,7 +81,7 @@ def human_readable_to_bytes(human_readable: str) -> int:
     return int(size_in_bytes)
 
 
-def get_total_size(obj, seen=None):
+def get_total_size(obj, seen=None) -> int:
     """
     递归计算对象及其内部元素的总内存大小。
     :param obj: 任意 Python 对象。
