@@ -289,7 +289,6 @@ def compress_folder(
 
     from .ImageProcessing import compress_img
     from .VideoProcessing import compress_video
-
     # from .DocumentConversion import compress_pdf
 
     rules = {suffix: (compress_img, lambda x: x) for suffix in IMG_SUFFIXES}
@@ -389,10 +388,12 @@ def unzip_folder(folder_path: str | Path):
         new_name = f"{name}({suffix})_unzip"
         return file_path.with_name(new_name)
 
-    rules = {".zip": (unzip_zip_file, rename_unzip)}
-    rules.update({".rar": (unzip_rar_file, rename_unzip)})
-    rules.update({".tar": (unzip_tar_file, rename_unzip)})
-    rules.update({".7z": (unzip_7z_file, rename_unzip)})
+    rules = {
+        ".zip": (unzip_zip_file, rename_unzip),
+        ".rar": (unzip_rar_file, rename_unzip), 
+        ".tar": (unzip_tar_file, rename_unzip), 
+        ".7z": (unzip_7z_file, rename_unzip)
+    }
 
     return handle_folder_files(folder_path, rules, progress_desc="Unziping folder")
 
@@ -646,7 +647,8 @@ def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str = 
     :param diff: 差异字典
     :param dir1: 第一个文件夹路径
     :param dir2: 第二个文件夹路径
-    :param mode: 同步模式，'->' 表示以第一个文件夹为主，
+    :param mode: 同步模式，
+                 '->' 表示以第一个文件夹为主，
                  '<-' 表示以第二个文件夹为主，
                  '<->' 表示双向同步
     """
@@ -912,16 +914,19 @@ def move_identical_files(
     :return: 移动的文件列表。
     """
     target_folder = Path(target_folder)
-    moved_files = []
+    moved_files = {}
     report = []
 
     for (hash_value, file_size), file_list in tqdm(identical_dict.items()):
+        target_subfolder = target_folder / f"{hash_value}({file_size})"
+        if not target_subfolder.exists():
+            target_subfolder.mkdir(parents=True)
+
+        moved_files[hash_value] = []
+
         for file in file_list:
             if size_threshold is not None and file_size <= size_threshold:
                 continue
-            target_subfolder = target_folder / hash_value
-            if not target_subfolder.exists():
-                target_subfolder.mkdir(parents=True)
             target_path = target_subfolder / file.name
 
             # 如果文件已经在目标路径，跳过
@@ -937,7 +942,7 @@ def move_identical_files(
 
             try:
                 file.rename(target_path)
-                moved_files.append((file, target_path))
+                moved_files[hash_value].append((file, target_path))
                 report.append(f"Moved: {file} -> {target_path}")
             except Exception as e:
                 report.append(f"Error moving {file} to {target_path}: {e}")

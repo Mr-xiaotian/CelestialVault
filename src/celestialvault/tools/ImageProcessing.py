@@ -4,6 +4,7 @@ import math
 from colorsys import hsv_to_rgb
 from itertools import product
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -140,13 +141,15 @@ def img_to_base64(img: Image.Image) -> str:
     return encoded_text
 
 
-def generate_palette(color_num=256, style="morandi", mode="random", random_seed=0):
+def generate_palette(color_num: int=256, style: str="morandi", mode: str="random", random_seed: int=0) -> List[int]:
     """
     生成调色板，支持均匀和螺旋两种模式，并确保颜色唯一或规律分布。
 
     :param color_num: 要生成的颜色数量
     :param style: 调色板风格，可选 'morandi', 'grey', 'hawaiian', 'deepsea', 'twilight', 'sunrise', 'cyberpunk', 'autumn'，默认为 'morandi'
     :param mode: 颜色生成模式，可选 'random' 'uniform', 'spiral'
+    :param random_seed: 随机种子，用于生成可重复的随机颜色
+    :return: 返回生成的颜色列表
     """
 
     def select_random_range(range_tuple):
@@ -227,7 +230,7 @@ def generate_palette(color_num=256, style="morandi", mode="random", random_seed=
     return [value for color in colors for value in color]
 
 
-def display_palette(palette, block_size=1):
+def display_palette(palette: List[int], block_size: int=1):
     """
     展示调色板。
 
