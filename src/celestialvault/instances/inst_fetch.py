@@ -32,6 +32,8 @@ class Fetcher:
             "https://": f"http://127.0.0.1:{clash_proxy_port}",
         } if use_proxy else None  # 🟢 不使用代理则为 None
 
+        self.show_info = False
+
         self.headers = headers
         self.cl = None
         if self.use_proxy:
@@ -78,12 +80,12 @@ class Fetcher:
 
         next_proxy = random.choice(available_proxies)
         self.proxy_index = self.proxy_list.index(next_proxy)
-        print(f"⚡️ 随机切换到节点: {next_proxy}")
+        print(f"⚡️ 随机切换到节点: {next_proxy}") if self.show_info else None
         resp = requests.put(f"{self.clash_api}/proxies/GLOBAL", json={"name": next_proxy})
         if resp.status_code == 204:
-            print("✅ 切换成功!")
+            print("✅ 切换成功!") if self.show_info else None
         else:
-            print("❌ 切换失败:", resp.status_code, resp.text)
+            print("❌ 切换失败:", resp.status_code, resp.text) if self.show_info else None
         time.sleep(1)
 
     def init_client(self):
@@ -124,7 +126,7 @@ class Fetcher:
                 status, content = method(self.cl.post, *method_args, **method_kwargs)
             else:
                 status, content = method(self.cl.get, *method_args, **method_kwargs)
-            print(f"✅ 直连成功, 状态码: {status}")
+            print(f"✅ 直连成功, 状态码: {status}") if self.show_info else None
             return status, content
 
         tried_proxies = set()
@@ -137,14 +139,14 @@ class Fetcher:
                     status, content = method(self.cl.get, *method_args, **method_kwargs)
 
                 if status in [403, 429, 503, 502, 302]:
-                    print(f"⚠️ 状态码 {status}, 需要换代理…")
+                    print(f"⚠️ 状态码 {status}, 需要换代理…") if self.show_info else None
                     tried_proxies.add(self.proxy_list[self.proxy_index])
                     self._switch_proxy(tried_proxies)
                     continue
-                print(f"✅ 成功请求, 状态码: {status}")
+                print(f"✅ 成功请求, 状态码: {status}") if self.show_info else None
                 return status, content
             except (httpx.RequestError, httpx.ProxyError) as e:
-                print(f"❌ 代理请求异常: {e}, 切换代理…")
+                print(f"❌ 代理请求异常: {e}, 切换代理…") if self.show_info else None
                 tried_proxies.add(self.proxy_list[self.proxy_index])
                 self._switch_proxy(tried_proxies)
         raise RuntimeError("🚫 所有节点均请求失败！")
