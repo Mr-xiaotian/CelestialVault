@@ -8,9 +8,9 @@ from ..constants import image_mode_params, style_params
 from ..tools.ImageProcessing import generate_palette
 from ..tools.TextTools import (
     compress_text_to_bytes,
-    decode_crc,
     decompress_text_from_bytes,
     encode_crc,
+    decode_crc,
     safe_open_txt,
 )
 

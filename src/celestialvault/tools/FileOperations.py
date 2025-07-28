@@ -289,7 +289,6 @@ def compress_folder(
 
     from .ImageProcessing import compress_img
     from .VideoProcessing import compress_video
-
     # from .DocumentConversion import compress_pdf
 
     rules = {suffix: (compress_img, lambda x: x) for suffix in IMG_SUFFIXES}
@@ -389,10 +388,12 @@ def unzip_folder(folder_path: str | Path):
         new_name = f"{name}({suffix})_unzip"
         return file_path.with_name(new_name)
 
-    rules = {".zip": (unzip_zip_file, rename_unzip)}
-    rules.update({".rar": (unzip_rar_file, rename_unzip)})
-    rules.update({".tar": (unzip_tar_file, rename_unzip)})
-    rules.update({".7z": (unzip_7z_file, rename_unzip)})
+    rules = {
+        ".zip": (unzip_zip_file, rename_unzip),
+        ".rar": (unzip_rar_file, rename_unzip), 
+        ".tar": (unzip_tar_file, rename_unzip), 
+        ".7z": (unzip_7z_file, rename_unzip)
+    }
 
     return handle_folder_files(folder_path, rules, progress_desc="Unziping folder")
 
@@ -500,8 +501,8 @@ def print_directory_structure(
 
 
 def compare_structure(
-    dir1,
-    dir2,
+    dir1: str|Path,
+    dir2: str|Path,
     exclude_dirs: list = None,
     exclude_exts: list = None,
     compare_common_file=False,
@@ -515,71 +516,50 @@ def compare_structure(
     :param exclude_exts: 要排除的文件扩展名列表，默认为空列表
     :param compare_common_file: 是否比较两个文件夹中相同文件的大小
     """
-    dir1 = Path(dir1)
-    dir2 = Path(dir2)
-
-    exclude_dirs = exclude_dirs or []
-    exclude_exts = exclude_exts or []
-
-    # 检查目录是否有效
-    if not dir1.is_dir() or not dir2.is_dir():
-        raise ValueError(f"输入路径必须是有效的文件夹: {dir1} 或 {dir2}")
-
-    diff_size = {"dir1": 0, "dir2": 0}
-    diff_dir = {"only_in_dir1": [], "only_in_dir2": [], "different_files": []}
-
-    def get_structure_list(d1: Path, d2: Path, indent):
-        # 获取文件和文件夹
+    def _collect_structure_diff(d1, d2, indent):
         try:
             d1_files = set(os.listdir(d1))
             d2_files = set(os.listdir(d2))
-        except FileNotFoundError:
-            return [f"{indent}📁 [{d1}] 或 [{d2}] 不存在"]
-        except PermissionError:
-            return [f"{indent}📁 [{d1}] 或 [{d2}] 没有权限访问"]
+        except (FileNotFoundError, PermissionError) as e:
+            return [f"{indent}📁 [{d1}] 或 [{d2}] 无法访问: {e}"]
 
         only_in_d1 = sorted(d1_files - d2_files)
         only_in_d2 = sorted(d2_files - d1_files)
         common_files = sorted(d1_files & d2_files)
 
-        print_folder_list = []
-        print_file_list = []
+        d1_folder_list, d1_file_list = _process_unique_items(d1, only_in_d1, indent, origin="dir1")
+        d2_folder_list, d2_file_list = _process_unique_items(d2, only_in_d2, indent, origin="dir2")
 
-        item_size = 0
+        common_folder_list, common_file_list = _compare_common_items(d1, d2, common_files, indent)
 
-        # 打印仅在 d1 和 d2 中存在的项目
-        for item in only_in_d1 + only_in_d2:
-            if item in only_in_d1:
-                item_path = d1 / item
-                location = dir1
-            else:
-                item_path = d2 / item
-                location = dir2
-
-            if item_path.is_dir():
+        return d1_folder_list + d2_folder_list + common_folder_list + d1_file_list + d2_file_list + common_file_list
+    
+    def _process_unique_items(base_dir, items, indent, origin):
+        folder_list = []
+        file_list = []
+        for item in items:
+            path: Path = base_dir / item
+            if path.is_dir():
                 if item in exclude_dirs:
                     continue
-                item_size = get_folder_size(item_path)
-                print_folder_list.append(
-                    f"{indent}📁 [{location}] {item} ({bytes_to_human_readable(item_size)})"
-                )
-            elif item_path.is_file():
-                if item_path.suffix in exclude_exts:
+                size = get_folder_size(path)
+                folder_list.append(f"{indent}📁 [{base_dir}] {item} ({bytes_to_human_readable(size)})")
+            elif path.is_file():
+                if path.suffix.lower() in exclude_exts:
                     continue
-                item_size = get_file_size(item_path)
-                icon = FILE_ICONS.get(item_path.suffix, FILE_ICONS["default"])
-                print_file_list.append(
-                    f"{indent}{icon} [{location}] {item} ({bytes_to_human_readable(item_size)})"
-                )
-
-            if item in only_in_d1:
-                diff_size["dir1"] += item_size
-                diff_dir["only_in_dir1"].append(item_path.relative_to(dir1))
+                size = get_file_size(path)
+                icon = FILE_ICONS.get(path.suffix.lower(), FILE_ICONS["default"])
+                file_list.append(f"{indent}{icon} [{base_dir}] {item} ({bytes_to_human_readable(size)})")
             else:
-                diff_size["dir2"] += item_size
-                diff_dir["only_in_dir2"].append(item_path.relative_to(dir2))
+                continue
+            diff_size[origin] += size
+            diff_dir_key = "only_in_dir1" if origin == "dir1" else "only_in_dir2"
+            diff_dir[diff_dir_key].append(path.relative_to(base_dir))
+        return folder_list, file_list
 
-        # 打印共同项目
+    def _compare_common_items(d1, d2, common_files, indent):
+        folder_list = []
+        file_list = []
         for item in common_files:
             item_path1, item_path2 = d1 / item, d2 / item
 
@@ -587,18 +567,18 @@ def compare_structure(
             if item_path1.is_dir() and item_path2.is_dir():
                 if item in exclude_dirs:
                     continue
-                subfolder_print_list = get_structure_list(
+                subfolder_list = _collect_structure_diff(
                     item_path1, item_path2, indent + "    "
                 )
-                if subfolder_print_list:
-                    print_folder_list.append(f"{indent}📁 {item}/")
-                    print_folder_list.extend(subfolder_print_list)
+                if subfolder_list:
+                    folder_list.append(f"{indent}📁 {item}/")
+                    folder_list.extend(subfolder_list)
 
             # 打印文件夹与文件的混合情况
             elif (item_path1.is_file() and item_path2.is_dir()) or (
                 item_path1.is_dir() and item_path2.is_file()
             ):
-                print_file_list.append(
+                file_list.append(
                     f"{indent}{item} (one is a file, the other is a folder)"
                 )
                 diff_dir["different_files"].append(item_path1.relative_to(dir1))
@@ -606,36 +586,47 @@ def compare_structure(
             # 打印文件与文件的比较结果
             elif compare_common_file and item_path1.is_file() and item_path2.is_file():
                 if (
-                    item_path1.suffix in exclude_exts
-                    or item_path2.suffix in exclude_exts
+                    item_path1.suffix.lower() in exclude_exts
+                    or item_path2.suffix.lower() in exclude_exts
                 ):
                     continue
                 item_path1_size = get_file_size(item_path1)
                 item_path2_size = get_file_size(item_path2)
                 if item_path1_size != item_path2_size:
-                    icon = FILE_ICONS.get(item_path1.suffix, FILE_ICONS["default"])
-                    print_file_list.append(
+                    icon = FILE_ICONS.get(item_path1.suffix.lower(), FILE_ICONS["default"])
+                    file_list.append(
                         f"{indent}{icon} [{dir1}] {item} ({bytes_to_human_readable(item_path1_size)})"
                     )
-                    print_file_list.append(
+                    file_list.append(
                         f"{indent}{icon} [{dir2}] {item} ({bytes_to_human_readable(item_path2_size)})"
                     )
 
-                    diff_size["dir1"] += item_size
-                    diff_size["dir2"] += item_size
+                    diff_size["dir1"] += item_path1_size
+                    diff_size["dir2"] += item_path2_size
                     diff_dir["different_files"].append(item_path1.relative_to(dir1))
+        return folder_list, file_list
 
-        return print_folder_list + print_file_list
 
-    structure_list = get_structure_list(dir1, dir2, "")
-    dir1_data = [dir1, bytes_to_human_readable(diff_size["dir1"])]
-    dir2_data = [dir2, bytes_to_human_readable(diff_size["dir2"])]
-    table_text = format_table(
-        [dir1_data, dir2_data], column_names=["Directory", "Diff Size"]
-    )
+    dir1 = Path(dir1)
+    dir2 = Path(dir2)
+    exclude_dirs = exclude_dirs or []
+    exclude_exts = exclude_exts or []
+
+    if not dir1.is_dir() or not dir2.is_dir():
+        raise ValueError(f"输入路径必须是有效的文件夹: {dir1} 或 {dir2}")
+
+    diff_size = {"dir1": 0, "dir2": 0}
+    diff_dir = {"only_in_dir1": [], "only_in_dir2": [], "different_files": []}
+
+    structure_list = _collect_structure_diff(dir1, dir2, "")
 
     print("\n".join(structure_list))
-    print("\n" + table_text)
+    print("\n" + format_table(
+        [[dir1, bytes_to_human_readable(diff_size['dir1'])],
+         [dir2, bytes_to_human_readable(diff_size['dir2'])]],
+        column_names=["Directory", "Diff Size"]
+    ))
+
     return diff_dir
 
 
@@ -646,7 +637,8 @@ def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str = 
     :param diff: 差异字典
     :param dir1: 第一个文件夹路径
     :param dir2: 第二个文件夹路径
-    :param mode: 同步模式，'->' 表示以第一个文件夹为主，
+    :param mode: 同步模式，
+                 '->' 表示以第一个文件夹为主，
                  '<-' 表示以第二个文件夹为主，
                  '<->' 表示双向同步
     """
@@ -912,16 +904,19 @@ def move_identical_files(
     :return: 移动的文件列表。
     """
     target_folder = Path(target_folder)
-    moved_files = []
+    moved_files = {}
     report = []
 
     for (hash_value, file_size), file_list in tqdm(identical_dict.items()):
+        target_subfolder = target_folder / f"{hash_value}({file_size})"
+        if not target_subfolder.exists():
+            target_subfolder.mkdir(parents=True)
+
+        moved_files[hash_value] = []
+
         for file in file_list:
             if size_threshold is not None and file_size <= size_threshold:
                 continue
-            target_subfolder = target_folder / hash_value
-            if not target_subfolder.exists():
-                target_subfolder.mkdir(parents=True)
             target_path = target_subfolder / file.name
 
             # 如果文件已经在目标路径，跳过
@@ -937,7 +932,7 @@ def move_identical_files(
 
             try:
                 file.rename(target_path)
-                moved_files.append((file, target_path))
+                moved_files[hash_value].append((file, target_path))
                 report.append(f"Moved: {file} -> {target_path}")
             except Exception as e:
                 report.append(f"Error moving {file} to {target_path}: {e}")
