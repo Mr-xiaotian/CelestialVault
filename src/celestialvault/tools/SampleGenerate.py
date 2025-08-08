@@ -83,12 +83,12 @@ def create_sample_pdf(file_path: str | Path):
 def generate_test_data(length: int, data_types: Union[str, List[str]] = None):
     """
     生成测试数据
-    :param data_types: 数据类型，可以是字符串（'str', 'word', 'int', 'float'）或列表（支持多选）。
-                       如果为 None，则默认全选所有类型。
     :param length: 数据数量
+    :param data_types: 数据类型，可以是字符串（'str', 'int', 'float', 'bool', 'none', 'list', 'dict', 'bytes', 'choice'）
+                       或列表（支持多选）。如果为 None，则默认全选所有类型。
     :return: 随机数据列表
     """
-    all_types = ["str", "word", "int", "float"]
+    all_types = ["str", "int", "float", "bool", "none", "list", "dict", "bytes", "choice"]
 
     # 统一成列表形式
     if data_types is None:
@@ -104,12 +104,22 @@ def generate_test_data(length: int, data_types: Union[str, List[str]] = None):
     def random_item(dtype: str):
         if dtype == "str":
             return ''.join(random.choices(string.ascii_lowercase, k=random.randint(5, 10)))
-        elif dtype == "word":
-            return ''.join(random.choices(string.ascii_lowercase, k=random.randint(3, 8))).capitalize()
         elif dtype == "int":
-            return random.randint(1, 1000)
+            return random.randint(-1000, 1000)
         elif dtype == "float":
-            return round(random.uniform(0, 100), 2)
+            return round(random.uniform(-100, 100), 2)
+        elif dtype == "bool":
+            return random.choice([True, False])
+        elif dtype == "none":
+            return None
+        elif dtype == "list":
+            return [random_item(random.choice(data_types)) for _ in range(random.randint(2, 5))]
+        elif dtype == "dict":
+            return {f"k{i}": random_item(random.choice(data_types)) for i in range(random.randint(1, 3))}
+        elif dtype == "bytes":
+            return bytes(random.getrandbits(8) for _ in range(random.randint(4, 8)))
+        elif dtype == "choice":
+            return random.choice(["apple", "banana", "cherry", "dog", "cat"])
         else:
             raise ValueError(f"不支持的数据类型: {dtype}")
 
