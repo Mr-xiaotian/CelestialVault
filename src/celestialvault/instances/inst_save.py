@@ -14,15 +14,14 @@ from .inst_fetch import Fetcher
 
 class FetchManager(TaskManager):
     def get_args(self, task: object):
-        return (task[1],)
+        return (task[0],)
 
     def process_result(self, task, result):
-        return (task[0], result, task[2])
+        return (result, task[1], task[2])
 
 
 class SaveManager(TaskManager):
-    def get_args(self, task: object):
-        return (task[0], task[1], task[2])
+    pass
 
 
 class Saver(object):
@@ -52,7 +51,7 @@ class Saver(object):
             return False
         return True
 
-    def save_text(self, file_name, text, encoding="utf-8", suffix_name=".txt"):
+    def save_text(self, text, file_name, encoding="utf-8", suffix_name=".txt"):
         path = self.get_path(file_name, suffix_name)
         if not self.can_overwrite(path):
             return path
@@ -61,7 +60,7 @@ class Saver(object):
         path.write_text(text, encoding=encoding, errors="ignore")
         return path
 
-    def add_text(self, file_name, text, encoding="utf-8", suffix_name=".txt"):
+    def add_text(self, text, file_name, encoding="utf-8", suffix_name=".txt"):
         path = self.get_path(file_name, suffix_name)
         if not self.can_overwrite(path):
             return path
@@ -70,7 +69,7 @@ class Saver(object):
             f.write(text.encode(encoding, "ignore").decode(encoding, "ignore"))
         return path
 
-    def save_content(self, file_name, content, suffix_name=".dat"):
+    def save_content(self, content, file_name, suffix_name=".dat"):
         path = self.get_path(file_name, suffix_name)
         if not self.can_overwrite(path):
             return path
@@ -80,7 +79,7 @@ class Saver(object):
         return path
 
     def save_dataframe(
-        self, file_name: str, dataframe: pd.DataFrame, suffix_name=".csv"
+        self, dataframe: pd.DataFrame, file_name: str, suffix_name=".csv"
     ):
         path = self.get_path(file_name, suffix_name)
         if not self.can_overwrite(path):
@@ -88,7 +87,7 @@ class Saver(object):
 
         dataframe.to_csv(path, index=False, sep=",", encoding="utf-8-sig")
 
-    def save_pickle(self, file_name, obj, suffix_name=".pkl"):
+    def save_pickle(self, obj, file_name, suffix_name=".pkl"):
         path = self.get_path(file_name, suffix_name)
         if not self.can_overwrite(path):
             return path
@@ -97,7 +96,7 @@ class Saver(object):
             pickle.dump(obj, f)
         return path
 
-    def save_json(self, file_name, data, suffix_name=".json", encoding="utf-8"):
+    def save_json(self, data, file_name, suffix_name=".json", encoding="utf-8"):
         path = self.get_path(file_name, suffix_name)
         if not self.can_overwrite(path):
             return path
@@ -106,7 +105,7 @@ class Saver(object):
             json.dump(data, f, ensure_ascii=False, indent=4)
         return path
 
-    def download_url(self, file_name, url, suffix_name=".dat"):
+    def download_url(self, url, file_name, suffix_name=".dat"):
         path = self.get_path(file_name, suffix_name)
         if not self.can_overwrite(path):
             return path
@@ -127,8 +126,8 @@ class Saver(object):
 
         :param task_list: list[tuple[str, str, str]]
                         每个元组包含三个元素:
-                        - 文件名 (str): 要保存内容的文件名
                         - URL (str): 要下载内容的 URL
+                        - 文件名 (str): 要保存内容的文件名
                         - 文件后缀 (str): 要保存文件的后缀名（例如 '.txt', '.jpg' 等）
         :param chain_mode: "serial" 或 "process"
                         - "serial": 任务链将串行执行
@@ -148,6 +147,7 @@ class Saver(object):
             execution_mode="serial",
             progress_desc="urlsSaveProcess",
             show_progress=show_progress,
+            unpack_task_args=True
         )
 
         # 创建 TaskChain 来管理 Fetch 和 Save 两个阶段的任务处理
@@ -156,8 +156,8 @@ class Saver(object):
             fetch_manager.get_stage_tag(): task_list
         })  # 开始任务树
 
-        final_result_dict = chain.get_final_result_dict()  # 获取任务链的最终结果字典
-        return final_result_dict  # 返回结果
+        # final_result_dict = chain.get_final_result_dict()  # 获取任务链的最终结果字典
+        # return final_result_dict  # 返回结果
 
     async def download_urls_async(self, task_list: list[tuple[str, str, str]]):
         # await self.fetcher.start_session()
