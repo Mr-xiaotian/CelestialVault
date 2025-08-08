@@ -1,5 +1,7 @@
 import random
+import string
 from pathlib import Path
+from typing import List, Union
 
 import fitz  # PyMuPDF
 from PIL import Image, ImageDraw, ImageFont
@@ -76,3 +78,39 @@ def create_sample_pdf(file_path: str | Path):
     doc.save(str(file_path))
 
     print(f"✅ 成功创建示例 PDF 文件：{file_path}")
+
+
+def generate_test_data(length: int, data_types: Union[str, List[str]] = None):
+    """
+    生成测试数据
+    :param data_types: 数据类型，可以是字符串（'str', 'word', 'int', 'float'）或列表（支持多选）。
+                       如果为 None，则默认全选所有类型。
+    :param length: 数据数量
+    :return: 随机数据列表
+    """
+    all_types = ["str", "word", "int", "float"]
+
+    # 统一成列表形式
+    if data_types is None:
+        data_types = all_types
+    elif isinstance(data_types, str):
+        data_types = [data_types]
+    else:
+        # 过滤无效类型
+        data_types = [t for t in data_types if t in all_types]
+        if not data_types:
+            raise ValueError(f"不支持的数据类型: {data_types}")
+
+    def random_item(dtype: str):
+        if dtype == "str":
+            return ''.join(random.choices(string.ascii_lowercase, k=random.randint(5, 10)))
+        elif dtype == "word":
+            return ''.join(random.choices(string.ascii_lowercase, k=random.randint(3, 8))).capitalize()
+        elif dtype == "int":
+            return random.randint(1, 1000)
+        elif dtype == "float":
+            return round(random.uniform(0, 100), 2)
+        else:
+            raise ValueError(f"不支持的数据类型: {dtype}")
+
+    return [random_item(random.choice(data_types)) for _ in range(length)]
