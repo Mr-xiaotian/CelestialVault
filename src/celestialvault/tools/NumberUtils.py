@@ -351,3 +351,46 @@ def generate_magic_squares_by_random(num):
     progress_bar.close()
 
     return magic_squares
+
+
+def is_probable_prime(n: int, k: int = 10) -> bool:
+    """
+    Miller-Rabin 素数判定
+    :param n: 要检测的整数
+    :param k: 测试轮数 (轮数越多，错误率越低)
+    :return: True 表示可能是素数，False 表示合数
+    """
+    if n < 2:
+        return False
+    if n in (2, 3):
+        return True
+    if n % 2 == 0:
+        return False
+
+    # 将 n-1 分解为 d * 2^r，d 为奇数
+    r, d = 0, n - 1
+    while d % 2 == 0:
+        r += 1
+        d //= 2
+
+    # 重复 k 轮测试
+    for _ in range(k):
+        a = random.randrange(2, n - 1)  # 随机选择基数
+        x = pow(a, d, n)  # 计算 a^d mod n
+        if x == 1 or x == n - 1:
+            continue
+        for _ in range(r - 1):
+            x = pow(x, 2, n)
+            if x == n - 1:
+                break
+        else:
+            return False
+    return True
+
+
+def generate_large_prime(bits=512):
+    while True:
+        candidate = random.getrandbits(bits)
+        candidate |= 1  # 保证奇数
+        if is_probable_prime(candidate, 20):
+            return candidate
