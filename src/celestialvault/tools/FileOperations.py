@@ -36,7 +36,7 @@ class HandleFileManager(TaskManager):
             max_info=100,
             enable_result_cache=True,
             progress_desc=progress_desc,
-            show_progress=False,
+            show_progress=True,
         )
         self.folder_path = folder_path
         self.new_folder_path = new_folder_path
@@ -47,12 +47,12 @@ class HandleFileManager(TaskManager):
         new_file_path = self.new_folder_path / rel_path
 
         file_suffix = file_path.suffix.lower()
-        action_func, rename_func = self.rules.get(
-            file_suffix, (shutil.copy, lambda x: x)
+        action_func, rename_func, args_extra = self.rules.get(
+            file_suffix, (shutil.copy2, lambda x: x, {})
         )
 
         final_path = rename_func(new_file_path)
-        return (file_path, final_path, action_func)
+        return (file_path, final_path, action_func, args_extra)
 
     def process_result(self, file_path: Path, result):
         return
@@ -73,12 +73,12 @@ class HandleSubFolderManager(HandleFileManager):
         rel_path = sub_folder_path.relative_to(self.folder_path)
         new_sub_folder_path = self.new_folder_path / rel_path
 
-        action_func, rename_func = self.rules.get(
-            'folder', (shutil.copy, lambda x: x)
+        action_func, rename_func, args_extra = self.rules.get(
+            'folder', (shutil.copy, lambda x: x, {})
         )
 
         final_path = rename_func(new_sub_folder_path)
-        return (sub_folder_path, final_path, action_func)
+        return (sub_folder_path, final_path, action_func, args_extra)
 
 
 class ScanSizeManager(TaskManager):
@@ -166,7 +166,7 @@ def create_folder(path: str | Path) -> Path:
     return path
 
 
-def handle_item(source: Path, destination: Path, action: Callable[[Path, Path], Any]):
+def handle_item(source: Path, destination: Path, action: Callable[[Path, Path, Any], Any], extra: dict):
     """
     处理文件，如果目标文件不存在则执行指定的操作。
 
@@ -183,17 +183,17 @@ def handle_item(source: Path, destination: Path, action: Callable[[Path, Path], 
         destination.parent.mkdir(parents=True, exist_ok=True)
     else:
         destination.mkdir(parents=True, exist_ok=True)
-    action_result = action(source, destination)
+    action_result = action(source, destination, **extra)
     return action_result
 
 
 def handle_folder_files(
     folder_path: str | Path,
-    rules: Dict[str, Tuple[Callable[[Path, Path], None], Callable[[Path], Path]]],
+    rules: Dict[str, Tuple[Callable[[Path, Path, Dict], None], Callable[[Path], Path]]],
     execution_mode: str = "serial",
     progress_desc: str = "Processing files",
-    folder_name_siffix: str = "_re",
-) -> Dict[Exception, List[Path]]:
+    folder_name_suffix: str = "_re",
+) -> Dict[Tuple[str, str], List[Path]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行处理，并将处理后的文件存储到新的目录中。
     不属于指定后缀的文件将被直接复制到新目录中。处理后的文件会保持原始的目录结构。
@@ -206,7 +206,7 @@ def handle_folder_files(
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
     folder_path = Path(folder_path)
-    new_folder_path = folder_path.parent / (folder_path.name + folder_name_siffix)
+    new_folder_path = folder_path.parent / (folder_path.name + folder_name_suffix)
 
     handlefile_manager = HandleFileManager(
         func=handle_item,
@@ -227,11 +227,11 @@ def handle_folder_files(
 
 def handle_subfolders(
     folder_path: str | Path,
-    rules: Dict[str, Tuple[Callable[[Path, Path], None], Callable[[Path], Path]]],
+    rules: Dict[str, Tuple[Callable[[Path, Path, Dict], None], Callable[[Path], Path]]],
     execution_mode: str = "serial",
     progress_desc: str = "Processing folders",
-    folder_name_siffix: str = "_re",
-) -> Dict[Exception, List[Path]]:
+    folder_name_suffix: str = "_re",
+) -> Dict[Tuple[str, str], List[Path]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行处理，并将处理后的文件存储到新的目录中。
     不属于指定后缀的文件将被直接复制到新目录中。处理后的文件会保持原始的目录结构。
@@ -244,7 +244,7 @@ def handle_subfolders(
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
     folder_path = Path(folder_path)
-    new_folder_path = folder_path.parent / (folder_path.name + folder_name_siffix)
+    new_folder_path = folder_path.parent / (folder_path.name + folder_name_suffix)
 
     handlefile_manager = HandleSubFolderManager(
         func=handle_item,
@@ -291,9 +291,9 @@ def compress_folder(
     from .VideoProcessing import compress_video
     # from .DocumentConversion import compress_pdf
 
-    rules = {suffix: (compress_img, lambda x: x) for suffix in IMG_SUFFIXES}
-    rules.update({suffix: (compress_video, rename_mp4) for suffix in VIDEO_SUFFIXES})
-    # rules.update({'.pdf': (compress_pdf,rename_pdf)})
+    rules = {suffix: (compress_img, lambda x: x, {}) for suffix in IMG_SUFFIXES}
+    rules.update({suffix: (compress_video, rename_mp4, {}) for suffix in VIDEO_SUFFIXES})
+    # rules.update({'.pdf': (compress_pdf,rename_pdf, {})})
 
     return handle_folder_files(
         folder_path, rules, execution_mode, progress_desc="Compressing Folder"
@@ -389,10 +389,10 @@ def unzip_folder(folder_path: str | Path):
         return file_path.with_name(new_name)
 
     rules = {
-        ".zip": (unzip_zip_file, rename_unzip),
-        ".rar": (unzip_rar_file, rename_unzip), 
-        ".tar": (unzip_tar_file, rename_unzip), 
-        ".7z": (unzip_7z_file, rename_unzip)
+        ".zip": (unzip_zip_file, rename_unzip, {}),
+        ".rar": (unzip_rar_file, rename_unzip, {}), 
+        ".tar": (unzip_tar_file, rename_unzip, {}), 
+        ".7z": (unzip_7z_file, rename_unzip, {})
     }
 
     return handle_folder_files(folder_path, rules, progress_desc="Unziping folder")

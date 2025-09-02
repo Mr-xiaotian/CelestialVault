@@ -64,7 +64,7 @@ def combine_imgs_to_pdf(
 
     # 生成器函数：逐步处理图片，调整宽度
     def generate_resized_images():
-        for img_path in tqdm(image_paths, desc=f"Combining '{root_path.name}'"):
+        for img_path in image_paths:
             img = Image.open(img_path).convert("RGB")
             width, height = img.size
             if width != max_width:
@@ -87,20 +87,20 @@ def combine_imgs_folder(folder_path: Path, special_keywords: dict = None):
     :param special_keywords: 特殊关键词，用于排序图片。eg: {'番外': 1, '特典': 1, '原画': 2}
     :return: None
     """
-    from .FileOperations import folder_to_file_path
+    def rename_pdf(file_path: Path) -> Path:
+        return folder_to_file_path(file_path, "pdf")
 
-    folder_path = Path(folder_path)
-    subfolders = [f for f in sorted(folder_path.iterdir()) if f.is_dir()]
+    from .FileOperations import folder_to_file_path, handle_subfolders
 
-    new_folder_path = folder_path.parent / (folder_path.name + "_img2pdf")
-    new_folder_path.mkdir(exist_ok=True)
+    rules = {
+        "folder": (combine_imgs_to_pdf, rename_pdf, {"special_keywords": special_keywords}),
+    }
 
-    for subfolder in subfolders:
-        pdf_path = folder_to_file_path(subfolder, "pdf", parent_dir=new_folder_path)
-        if pdf_path.exists():
-            print(f"PDF already exists for {subfolder.name}. Skipping...")
-            continue
-        combine_imgs_to_pdf(subfolder, pdf_path, special_keywords)
+    return handle_subfolders(folder_path, rules, 
+                             execution_mode="serial", 
+                             progress_desc="Combine Img Folders", 
+                             folder_name_suffix="_img2pdf"
+                            )
 
 
 def img_to_binary(img: Image.Image) -> bytes:

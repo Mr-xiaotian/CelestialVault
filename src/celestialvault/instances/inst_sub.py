@@ -79,7 +79,7 @@ class Suber:
     def clear_book_folder(
         self, folder_path: Path | str, execution_mode: str = "thread"
     ):
-        rules = {".txt": (self.clear_book, lambda a: a)}
+        rules = {".txt": (self.clear_book, lambda a: a, {})}
 
         return handle_folder_files(
             folder_path, rules, execution_mode, progress_desc="Clearing book folder"
