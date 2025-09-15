@@ -42,8 +42,8 @@ class Saver(object):
         middle_path.mkdir(parents=True, exist_ok=True)  # 确保目录存在
 
         path: Path = middle_path / str(file_name)  # 拼接文件路径
-        if not path.suffix:  # 如果没有文件后缀
-            path = path.with_suffix(suffix_name)  # 添加后缀
+        if path.suffix != suffix_name:         
+            path = path.with_suffix(suffix_name)   # 添加后缀
         return path
 
     def can_overwrite(self, path):

@@ -130,7 +130,7 @@ class Fetcher:
             return status, content
 
         tried_proxies = set()
-        for attempt in range(self._max_repeat):
+        for _ in range(self._max_repeat):
             try:
                 self.init_client()
                 if request_mode == "POST":
@@ -145,7 +145,7 @@ class Fetcher:
                     continue
                 print(f"✅ 成功请求, 状态码: {status}") if self.show_info else None
                 return status, content
-            except (httpx.RequestError, httpx.ProxyError) as e:
+            except (httpx.RequestError, httpx.ProxyError, httpx.ConnectError) as e:
                 print(f"❌ 代理请求异常: {e}, 切换代理…") if self.show_info else None
                 tried_proxies.add(self.proxy_list[self.proxy_index])
                 self._switch_proxy(tried_proxies)

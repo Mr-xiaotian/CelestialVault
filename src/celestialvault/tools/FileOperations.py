@@ -79,6 +79,16 @@ class HandleSubFolderManager(HandleFileManager):
 
         final_path = rename_func(new_sub_folder_path)
         return (sub_folder_path, final_path, action_func, args_extra)
+    
+    def handle_error_dict(self):
+        error_path_dict = defaultdict(list)
+
+        for file_path, error in self.get_error_dict().items():
+            rel_path = file_path.relative_to(self.folder_path)
+            new_file_path = self.new_folder_path / rel_path
+            # shutil.copy(file_path, new_file_path)
+            error_path_dict[(type(error).__name__, str(error))].append(new_file_path)
+        return dict(error_path_dict)
 
 
 class ScanSizeManager(TaskManager):
@@ -1044,3 +1054,46 @@ def move_files_with_keyword(
             moved_count += 1
 
     print(f"已移动 {moved_count} 个文件到 {target}")
+
+
+def extract_folder_numbers(folder_path: Path | str) -> set:
+    """
+    遍历给定文件夹，提取所有文件夹名称中匹配*(\d+)的数字部分，返回字典 {文件夹名: 数字(str)}。
+
+    :param folder_path: 文件夹路径（str 或 Path）
+    :return: 字典，包含文件夹名称和对应的数字部分。
+    """
+    num_set = set()
+    pattern = re.compile("\((\d+)\)")
+    
+    path = Path(folder_path)
+    path_list = list(path.iterdir())
+    for item in tqdm(path_list, desc="extract_folder_numbers"):
+        if item.is_dir():
+            match = pattern.search(item.name)
+            if match:
+                num_set.add(match.group(1))
+    
+    return num_set
+
+
+def extract_file_numbers(folder_path: Path | str, suffix: str) -> set:
+    """
+    遍历给定文件夹，提取所有文件名中匹配*(\d+)的数字部分，返回数字(str)列表。
+
+    :param folder_path: 文件夹路径（str 或 Path）
+    :param suffix: 文件后缀名
+    :return: 数字(str)列表
+    """
+    num_set = set()
+    pattern = re.compile("\((\d+)\)")
+    
+    path = Path(folder_path)
+    path_list = list(path.iterdir())
+    for item in tqdm(path_list, desc="extract_txt_numbers"):
+        if item.is_file() and item.suffix == suffix:
+            match = pattern.search(item.name)
+            if match:
+                num_set.add(match.group(1))
+    
+    return num_set
