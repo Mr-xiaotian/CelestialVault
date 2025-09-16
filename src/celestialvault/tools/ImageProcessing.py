@@ -396,3 +396,42 @@ def compare_images_by_ssim(folder1: Path | str, folder2: Path | str) -> pd.DataF
     # 返回包含图像名称和 SSIM 值的 DataFrame
     df = pd.DataFrame(data, columns=["Image Name", "SSIM"])
     return df
+
+
+def is_image_valid(data: str|Path|io.BytesIO) -> bool:
+    """
+    检测图片是否有效
+    :param data: 图片的路径、文件对象或二进制数据
+    :return: True 表示正常，False 表示损坏或格式不符
+    """
+    try:
+        # 统一 Path -> str
+        if isinstance(data, Path):
+            data = str(data)
+
+        # 第一次打开 + verify
+        with Image.open(data) as img:
+            img.verify()
+
+        # 如果是文件流/BytesIO，重置指针
+        if hasattr(data, "seek"):
+            data.seek(0)
+
+        # 第二次打开 + load，确保像素可解码
+        with Image.open(data) as img:
+            img.load()
+
+        return True
+
+    except Exception as e:
+        return False
+
+
+def is_image_valid_bytes(byte_data: bytes) -> bool:
+    """
+    检测二进制图片数据是否有效
+    :param byte_data: 图片的二进制内容
+    :return: True 表示正常，False 表示损坏或格式不符
+    """
+    return is_image_valid(io.BytesIO(byte_data))
+

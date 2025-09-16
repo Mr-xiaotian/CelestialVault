@@ -98,13 +98,13 @@ class Fetcher:
             )
 
     def obtainText(self, func: object, *args, **kwargs) -> Tuple[int, Any, str]:
-        response = func(*args, **kwargs)
+        response: httpx.Response  = func(*args, **kwargs)
         response_text = response.content.decode(self._text_encoding, "ignore")
         response_text = unquote(unescape(response_text))
         return response.status_code, response_text
 
     def obtainContent(self, func: object, *args, **kwargs) -> Tuple[int, Any, str]:
-        response = func(*args, **kwargs)
+        response: httpx.Response = func(*args, **kwargs)
         return response.status_code, response.content
 
     def getText(self, url: str, *args, **kwargs) -> str:
