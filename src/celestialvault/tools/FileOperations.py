@@ -1030,14 +1030,14 @@ def sort_by_number(file_path: Path, special_keywords: dict) -> tuple:
 
 
 def move_files_with_keyword(
-    source_folder: Path | str, keyword: str, target_folder: Path | str
+    source_folder: Path | str, target_folder: Path | str, keyword: str
 ):
     """
     将 source_folder 中所有文件名包含 keyword 的文件移动到 target_folder。
 
     :param source_folder: 源文件夹路径（str 或 Path）
-    :param keyword: 需要匹配的关键词（str）
     :param target_folder: 目标文件夹路径（str 或 Path）
+    :param keyword: 需要匹配的关键词（str）
     """
     source = Path(source_folder)
     target = Path(target_folder)
@@ -1079,11 +1079,11 @@ def extract_folder_numbers(folder_path: Path | str) -> set:
 
 def extract_file_numbers(folder_path: Path | str, suffix: str) -> set:
     """
-    遍历给定文件夹，提取所有文件名中匹配*(\d+)的数字部分，返回数字(str)列表。
+    遍历给定文件夹，提取所有文件名中匹配*(\d+)的数字部分，返回字典 {文件夹名: 数字(str)}。
 
     :param folder_path: 文件夹路径（str 或 Path）
     :param suffix: 文件后缀名
-    :return: 数字(str)列表
+    :return: 字典，包含文件夹名称和对应的数字部分。
     """
     num_set = set()
     pattern = re.compile("\((\d+)\)")

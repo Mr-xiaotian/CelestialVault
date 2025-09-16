@@ -334,13 +334,13 @@ def safe_open_txt(file_path: str | Path) -> str:
     return book_text
 
 
-def combine_txt_files(folder_path: str | Path):
+def combine_txt_files(source_folder: str | Path, target_file: str | Path):
     """
     将指定文件夹内的所有txt文件按文件名中的数字排序，合并为一个新的txt文件。
     合并时每个文件的内容前面加入该文件的名字，合并文件名为文件夹名。
 
-    :param folder_path: 包含txt文件的文件夹路径。
-    :return: None
+    :param source_folder: 包含txt文件的文件夹路径。
+    :param target_file: 合并后的txt文件路径。
     """
 
     def extract_number(file_name: Path) -> int:
@@ -351,31 +351,25 @@ def combine_txt_files(folder_path: str | Path):
         return int("".join(matches)) if matches else float("inf")
 
     # 转换路径为 Path 对象
-    folder_path = Path(folder_path)
+    source_folder = Path(source_folder)
 
-    if not folder_path.is_dir():
-        raise ValueError(f"The provided path {folder_path} is not a directory.")
-
-    # 获取文件夹名称作为输出文件名
-    output_file_name = f"{folder_path.name}.txt"
-    output_file_path = folder_path / output_file_name
+    if not source_folder.is_dir():
+        raise ValueError(f"The provided path {source_folder} is not a directory.")
 
     # 获取所有txt文件路径，并按文件名中的数字排序
-    txt_files = sorted(folder_path.glob("*.txt"), key=extract_number)
+    txt_files = sorted(source_folder.glob("*.txt"), key=extract_number)
 
     if not txt_files:
-        raise ValueError(f"No txt files found in {folder_path}.")
+        raise ValueError(f"No txt files found in {source_folder}.")
 
     # 合并文件
-    with open(output_file_path, "w", encoding="utf-8") as outfile:
+    with open(target_file, "w", encoding="utf-8") as outfile:
         for txt_file in tqdm(txt_files):
             with open(txt_file, "r", encoding="utf-8") as infile:
                 content = infile.read()
                 # 写入文件名和内容
                 outfile.write(f"== {txt_file.name} ==\n\n")
                 outfile.write(content + "\n\n")
-
-    print(f"All files have been combined into {output_file_path}")
 
 
 def character_ratio(target_str: str) -> Dict[str, float]:
