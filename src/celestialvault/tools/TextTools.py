@@ -234,7 +234,7 @@ def decode_crc(decoded_text: str) -> str:
     # 计算校验和并验证
     crc_calculated = zlib.crc32(actual_text.encode("utf-8"))
     if crc_received != crc_calculated:
-        print("校验和验证失败！")
+        raise ValueError("校验和验证失败！")
 
     return actual_text
 

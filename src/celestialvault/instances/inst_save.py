@@ -156,9 +156,6 @@ class Saver(object):
             fetch_manager.get_stage_tag(): task_list
         })  # 开始任务树
 
-        # final_result_dict = chain.get_final_result_dict()  # 获取任务链的最终结果字典
-        # return final_result_dict  # 返回结果
-
     async def download_urls_async(self, task_list: list[tuple[str, str, str]]):
         # await self.fetcher.start_session()
         # await self.fetch_threader.start_async(task_list)
