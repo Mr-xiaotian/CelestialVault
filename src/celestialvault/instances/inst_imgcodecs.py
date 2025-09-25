@@ -342,6 +342,95 @@ class PaletteCodec(BaseCodec):
         return crc_text
 
 
+class RedundancyCodec(BaseCodec):
+    def __init__(self, mode_name: str, channels: int):
+        """
+        mode_name: 图像模式名称，比如 'RGB', 'RGBA', 'L'
+        channels: 通道数
+        """
+        self.mode_name = mode_name.lower() + "_redundancy"  # 注册名
+        self.base_mode = mode_name.upper()                  # Pillow 图像模式
+        self.channels = channels
+
+    def _encode_core(self, text: str) -> Image.Image:
+        compressed_binary = compress_text_to_bytes(text, 1)
+
+        str_len = len(compressed_binary)
+        edge = math.ceil(math.sqrt(str_len))
+        total_pixels = edge * edge
+
+        # 填充到正方形
+        binary_str = compressed_binary.ljust(total_pixels, b"\0")
+
+        img = Image.new(self.base_mode, (edge, edge), (0,) * self.channels)
+
+        # 索引表
+        r_indices = [edge * y + x for y in range(edge) for x in range(edge)]
+        g_indices = [edge * x + edge - 1 - y for y in range(edge) for x in range(edge)]
+        b_indices = [edge * (edge - 1 - y) + edge - 1 - x for y in range(edge) for x in range(edge)]
+        a_indices = [edge * (edge - 1 - x) + y for y in range(edge) for x in range(edge)]
+
+        for idx in tqdm(range(total_pixels), desc=f"Encoding text({self.mode_name})"):
+            r = binary_str[r_indices[idx]] if self.channels > 0 else 0
+            g = binary_str[g_indices[idx]] if self.channels > 1 else 0
+            b = binary_str[b_indices[idx]] if self.channels > 2 else 0
+            a = binary_str[a_indices[idx]] if self.channels > 3 else 0
+            pixel_value = (r, g, b, a)[:self.channels]
+            img.putpixel((idx % edge, idx // edge), pixel_value)
+
+        return img
+
+    def _decode_core(self, img: Image.Image) -> str:
+        channels = len(img.mode)
+        decoded_data = []
+
+        for channel_index in range(channels):
+            if channel_index == 0:
+                data = self._decode_one_channel(img, 0)
+            elif channel_index == 1:
+                data = self._decode_one_channel(img.rotate(270, expand=True), 1)
+            elif channel_index == 2:
+                data = self._decode_one_channel(img.rotate(180, expand=True), 2)
+            elif channel_index == 3:
+                data = self._decode_one_channel(img.rotate(90, expand=True), 3)
+            decoded_data.append(data)
+
+        # 如果完全一致
+        if all(decoded_data[0] == d for d in decoded_data):
+            merged = decoded_data[0]
+        else:
+            # 多数投票
+            combined_data = bytearray(len(decoded_data[0]))
+            for i in range(len(combined_data)):
+                candidates = [decoded_data[ch][i] for ch in range(channels)]
+                combined_data[i] = max(set(candidates), key=candidates.count)
+            merged = bytes(combined_data)
+
+        return decompress_text_from_bytes(merged)
+
+    def _decode_one_channel(self, img: Image.Image, channel_index: int) -> bytes:
+        width, height = img.size
+        pixels = img.load()
+        bytes_list = []
+
+        desc = f"Decoding img(channel {channel_index}-redundancy):"
+        progress_bar = tqdm(total=height * width, desc=desc)
+
+        for y in range(height):
+            for x in range(width):
+                pixel_data = pixels[x, y]
+                if isinstance(pixel_data, int):
+                    # L 模式
+                    bytes_list.append(pixel_data)
+                else:
+                    # RGB/RGBA 模式
+                    bytes_list.append(pixel_data[channel_index])
+                progress_bar.update(1)
+
+        progress_bar.close()
+        return bytes(bytes_list)
+
+
 CODEC_REGISTRY: Dict[str, BaseCodec] = {
     GreyCodec.mode_name: GreyCodec(),
     RGBCodec.mode_name: RGBCodec(),
@@ -351,16 +440,19 @@ CODEC_REGISTRY: Dict[str, BaseCodec] = {
 
 # 从 image_mode_params 动态生成
 for mode, params in image_mode_params.items():
+    # 普通模式
     CODEC_REGISTRY[mode] = ChannelCodec(
         mode_name=params["mode_name"],
         channels=params["channels"]
     )
 
-# 从 style_params 动态生成
-for style in style_params:
-    CODEC_REGISTRY[style] = PaletteCodec(style=style)
+    # 冗余模式
+    redundancy_mode = mode + "_redundancy"
+    CODEC_REGISTRY[redundancy_mode] = RedundancyCodec(
+        mode_name=params["mode_name"],
+        channels=params["channels"]
+    )
 
-def get_codec(mode: str) -> BaseCodec:
-    if mode not in CODEC_REGISTRY:
-        raise ValueError(f"Unsupported mode: {mode}")
-    return CODEC_REGISTRY[mode]
+# # 从 style_params 动态生成
+# for style in style_params:
+#     CODEC_REGISTRY[style] = PaletteCodec(style=style)

@@ -2,7 +2,7 @@ import pytest, logging
 from celestialvault.instances.inst_imgcodecs import CODEC_REGISTRY
 
 
-def _test_codecs():
+def _test_codecs_text():
     """
     测试所有注册的 codec 是否能正确进行 编码 -> 解码
     """

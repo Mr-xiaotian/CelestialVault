@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, List, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from PIL import Image
+from PIL import Image, PngImagePlugin
 from pillow_heif import register_heif_opener
 from skimage.metrics import structural_similarity as compare_ssim
 from tqdm import tqdm
@@ -435,3 +435,32 @@ def is_image_valid_bytes(byte_data: bytes) -> bool:
     """
     return is_image_valid(io.BytesIO(byte_data))
 
+
+def create_image_with_text_chunk(img: Image.Image, output_path: str, messages: dict[str, str]):
+    """
+    将文本字典写入 PNG 文件的 tEXt chunk 中
+
+    :param img: PIL.Image 对象
+    :param output_path: 输出文件路径
+    :param messages: 键值对形式的文本信息
+    """
+    meta = PngImagePlugin.PngInfo()
+    for key, value in messages.items():
+        meta.add_text(key, value)
+
+    img.save(output_path, "PNG", pnginfo=meta)
+
+
+def read_text_chunks(img_path: str) -> dict[str, str]:
+    """
+    从 PNG 文件中读取所有 tEXt chunk 信息
+
+    :param img_path: PNG 文件路径
+    :return: 包含所有文本块的字典
+    """
+    with Image.open(img_path) as img:
+        info = img.text  # Pillow >= 9.2 推荐用 .text 获取
+        # 兼容旧版本 Pillow，若没有 .text 就退回 .info
+        if not info:
+            info = img.info
+        return dict(info)
