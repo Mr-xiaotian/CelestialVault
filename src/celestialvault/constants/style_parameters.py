@@ -217,31 +217,31 @@ image_mode_params = {
         "mode_name": "RGBA",
         "description": "4x8-bit pixels, true color with transparency mask",
     },
-    "palette": {  # 调色板模式
-        "channels": 1,  # 实际上每个像素存储的是调色板索引
-        "mode_name": "P",
-        "description": "8-bit pixels, mapped to any other mode using a color palette",
-    },
-    "cmyk": {  # 印刷用色彩模型
-        "channels": 4,
-        "mode_name": "CMYK",
-        "description": "4x8-bit pixels, color separation",
-    },
+    # "palette": {  # 调色板模式
+    #     "channels": 1,  # 实际上每个像素存储的是调色板索引
+    #     "mode_name": "P",
+    #     "description": "8-bit pixels, mapped to any other mode using a color palette",
+    # },
+    # "cmyk": {  # 印刷用色彩模型
+    #     "channels": 4,
+    #     "mode_name": "CMYK",
+    #     "description": "4x8-bit pixels, color separation",
+    # },
     # 'ycbcr': {  # 颜色视频格式
     #     'channels': 3,
     #     'mode_name': "YCbCr",
     #     'description': "3x8-bit pixels, color video format"
     # },
-    "lab": {  # Lab 色彩空间
-        "channels": 3,
-        "mode_name": "LAB",
-        "description": "3x8-bit pixels, L*a*b color space",
-    },
-    "hsv": {  # 色调、饱和度、明度
-        "channels": 3,
-        "mode_name": "HSV",
-        "description": "3x8-bit pixels, Hue, Saturation, Value color space",
-    },
+    # "lab": {  # Lab 色彩空间
+    #     "channels": 3,
+    #     "mode_name": "LAB",
+    #     "description": "3x8-bit pixels, L*a*b color space",
+    # },
+    # "hsv": {  # 色调、饱和度、明度
+    #     "channels": 3,
+    #     "mode_name": "HSV",
+    #     "description": "3x8-bit pixels, Hue, Saturation, Value color space",
+    # },
     # '1bit': {  # 单通道黑白图像
     #     'channels': 1,
     #     'mode_name': "1",

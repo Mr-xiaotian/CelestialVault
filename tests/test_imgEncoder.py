@@ -3,7 +3,6 @@ from celestialvault.instances.inst_imgEncoder import ImgEncoder, ImgDecoder
 
 def test_imgEncoder():
     text_path = r"Q:\Project\test\text\test.txt"
-    image_path_1bit = text_path.replace('.txt', '(1bit).png')
     image_path_morandi = text_path.replace('.txt', '(morandi).png')
     image_path_grey = text_path.replace('.txt', '(grey).png')
     image_path_rgb = text_path.replace('.txt', '(rgb).png')
@@ -13,7 +12,6 @@ def test_imgEncoder():
 
     # 编码
     encoder = ImgEncoder()
-    encoder.encode_text_file(text_path, mode='1bit')
     encoder.encode_text_file(text_path, mode='morandi')
     encoder.encode_text_file(text_path, mode='grey')
     encoder.encode_text_file(text_path, mode='rgb')
@@ -25,7 +23,6 @@ def test_imgEncoder():
     # 解码
     decoder = ImgDecoder()
     decoder.decode_image_file(image_path_morandi, mode='morandi')
-    decoder.decode_image_file(image_path_1bit, mode='1bit')
     decoder.decode_image_file(image_path_grey, mode='grey')
     decoder.decode_image_file(image_path_rgb, mode='rgb')
     decoder.decode_image_file(image_path_rgba, mode='rgba')

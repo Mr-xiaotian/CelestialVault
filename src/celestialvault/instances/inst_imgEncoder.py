@@ -26,10 +26,7 @@ class ImgEncoder:
     def encode_text(self, target_text, mode: str = "morandi") -> Image.Image:
         crc_text = encode_crc(target_text)
 
-        if mode == "1bit":
-            compressed_binary = compress_text_to_bytes(crc_text, 1)
-            img = self.encode_1bit(compressed_binary)
-        elif mode in style_params:
+        if mode in style_params:
             palette = generate_palette(256, style=mode)
             compressed_binary = compress_text_to_bytes(crc_text, 1)
             img = self.encode_channels(compressed_binary, "P", palette)
@@ -55,23 +52,6 @@ class ImgEncoder:
             return 0, old_y + 1
         else:
             return old_x + 1, old_y
-
-    def encode_1bit(self, binary_str: bytes) -> Image.Image:
-        total_bits_needed = len(binary_str) * 8  # 每个字节有8位
-        width = math.ceil(math.sqrt(total_bits_needed))  # 计算图像的宽度
-        height = math.ceil(total_bits_needed / width)  # 计算图像的高度
-
-        img = Image.new("1", (width, height), 0)  # 创建1位模式的图像，默认黑色
-
-        x, y = 0, 0
-        for byte in tqdm(binary_str, desc="Encoding text(1-bit-binary):"):
-            for bit in range(8):  # 每个字节的8位逐一处理
-                pixel_value = (byte >> (7 - bit)) & 1  # 提取对应位的值
-                img.putpixel((x, y), pixel_value)
-
-                x, y = self.get_new_xy(x, y, width)
-
-        return img
 
     def encode_channels(
         self, binary_str: bytes, mode: str, palette: list = None
@@ -172,10 +152,7 @@ class ImgDecoder:
             f.write(actual_text)
 
     def decode_image(self, img: Image.Image, mode: str = "morandi") -> None:
-        if mode == "1bit":
-            crc_binary = self.decode_1bit(img)
-            crc_text = decompress_text_from_bytes(crc_binary)
-        elif mode in style_params or mode in image_mode_params:
+        if mode in style_params or mode in image_mode_params:
             crc_binary = self.decode_channels(img)
             crc_text = decompress_text_from_bytes(crc_binary)
         elif "redundancy" in mode and mode[:-11] in image_mode_params:
@@ -187,34 +164,6 @@ class ImgDecoder:
         actual_text = decode_crc(crc_text)
 
         return actual_text
-
-    def decode_1bit(self, img: Image.Image) -> bytes:
-        """
-        将1bit图像解码为binary串
-        :param img: 图像对象
-        :return: 解码后的binary串
-        """
-        width, height = img.size
-        pixels = img.load()
-
-        bytes_list = []
-        progress_len = (height * width) // 8
-        progress_bar = tqdm(total=progress_len, desc="Decoding img(1bit-binary):")
-        for i in range(0, progress_len * 8, 8):  # 8个像素表示一个binary
-            current_byte = 0
-            for index in range(8):
-                bit_value = pixels[(i + index) % width, (i + index) // width]
-
-                # 将255转换为1，表示白色
-                bit_value = 1 if bit_value == 255 else bit_value
-
-                current_byte += bit_value * (2 ** (7 - index))
-
-            bytes_list.append(current_byte)
-            progress_bar.update(1)
-
-        progress_bar.close()
-        return bytes(bytes_list)
 
     def decode_channels(self, img: Image.Image) -> bytes:
         width, height = img.size

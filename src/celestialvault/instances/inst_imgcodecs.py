@@ -201,11 +201,164 @@ class RGBACodec(BaseCodec):
         return "".join(chars)
 
 
+# ========== 1bit ==========
+class OneBitCodec(BaseCodec):
+    mode_name = "1bit"
+
+    def _encode_core(self, text: str) -> Image.Image:
+        """
+        将带CRC的文本压缩为二进制串，并编码为1bit黑白图像
+        """
+        # 压缩为二进制（1通道）
+        compressed_binary = compress_text_to_bytes(text, 1)
+
+        total_bits_needed = len(compressed_binary) * 8
+        width = math.ceil(math.sqrt(total_bits_needed))
+        height = math.ceil(total_bits_needed / width)
+
+        img = Image.new("1", (width, height), 0)  # 黑白图像
+
+        x, y = 0, 0
+        for byte in tqdm(compressed_binary, desc="Encoding text(1bit-binary):"):
+            for bit in range(8):
+                pixel_value = (byte >> (7 - bit)) & 1
+                img.putpixel((x, y), pixel_value)
+                x, y = self.get_new_xy(x, y, width)
+
+        return img
+
+    def _decode_core(self, img: Image.Image) -> str:
+        """
+        将1bit图像解码为带CRC的文本串（解压缩）
+        """
+        width, height = img.size
+        pixels = img.load()
+
+        bytes_list = []
+        progress_len = (height * width) // 8
+        progress_bar = tqdm(total=progress_len, desc="Decoding img(1bit-binary):")
+
+        for i in range(0, progress_len * 8, 8):
+            current_byte = 0
+            for index in range(8):
+                bit_value = pixels[(i + index) % width, (i + index) // width]
+
+                # Pillow在"1"模式下返回的是 0 或 255，需要转成 0/1
+                bit_value = 1 if bit_value == 255 else bit_value
+
+                current_byte |= (bit_value << (7 - index))
+
+            bytes_list.append(current_byte)
+            progress_bar.update(1)
+
+        progress_bar.close()
+
+        # 解压缩
+        crc_text = decompress_text_from_bytes(bytes(bytes_list))
+        return crc_text
+
+
+class ChannelCodec(BaseCodec):
+    def __init__(self, mode_name: str, channels: int):
+        self.mode_name = mode_name
+        self.channels = channels
+
+    def _encode_core(self, text: str) -> Image.Image:
+        compressed_binary = compress_text_to_bytes(text, self.channels)
+
+        str_len = len(compressed_binary)
+        total_pixels_needed = math.ceil(str_len / self.channels)
+        width = math.ceil(math.sqrt(total_pixels_needed))
+        height = math.ceil(total_pixels_needed / width)
+
+        img = Image.new(self.mode_name, (width, height), (0,) * self.channels)
+
+        x, y = 0, 0
+        for i in tqdm(range(0, str_len, self.channels), desc=f"Encoding text({self.mode_name}-binary):"):
+            chars = compressed_binary[i : i + self.channels]
+            img.putpixel((x, y), tuple(chars))
+            x, y = self.get_new_xy(x, y, width)
+
+        return img
+
+    def _decode_core(self, img: Image.Image) -> str:
+        width, height = img.size
+        pixels = img.load()
+        channels = len(img.mode)
+
+        bytes_list = []
+        desc = f"Decoding img({channels}-channel-binary):"
+        progress_bar = tqdm(total=height * width, desc=desc)
+
+        for y in range(height):
+            for x in range(width):
+                pixel_data = pixels[x, y]
+                if channels == 1:
+                    bytes_list.append(pixel_data)
+                else:
+                    bytes_list.extend(pixel_data)
+                progress_bar.update(1)
+
+        progress_bar.close()
+        crc_text = decompress_text_from_bytes(bytes(bytes_list))
+        return crc_text
+
+
+class PaletteCodec(BaseCodec):
+    def __init__(self, style: str):
+        self.mode_name = style  # 用 style 名称作为 mode
+        self.palette = generate_palette(256, style=style)
+
+    def _encode_core(self, text: str) -> Image.Image:
+        compressed_binary = compress_text_to_bytes(text, 1)
+
+        str_len = len(compressed_binary)
+        width = math.ceil(math.sqrt(str_len))
+        height = math.ceil(str_len / width)
+
+        img = Image.new("P", (width, height))
+        img.putpalette(self.palette)
+
+        x, y = 0, 0
+        for byte in tqdm(compressed_binary, desc=f"Encoding text(Palette-{self.mode_name})"):
+            img.putpixel((x, y), byte)
+            x, y = self.get_new_xy(x, y, width)
+
+        return img
+
+    def _decode_core(self, img: Image.Image) -> str:
+        width, height = img.size
+        pixels = img.load()
+
+        bytes_list = []
+        progress_bar = tqdm(total=height * width, desc=f"Decoding img(Palette-{self.mode_name})")
+        for y in range(height):
+            for x in range(width):
+                bytes_list.append(pixels[x, y])
+                progress_bar.update(1)
+
+        progress_bar.close()
+        crc_text = decompress_text_from_bytes(bytes(bytes_list))
+        return crc_text
+
+
 CODEC_REGISTRY: Dict[str, BaseCodec] = {
     GreyCodec.mode_name: GreyCodec(),
     RGBCodec.mode_name: RGBCodec(),
     RGBACodec.mode_name: RGBACodec(),
+    OneBitCodec.mode_name: OneBitCodec(),
 }
+
+# 从 image_mode_params 动态生成
+for mode, params in image_mode_params.items():
+    CODEC_REGISTRY[mode] = ChannelCodec(
+        mode_name=params["mode_name"],
+        channels=params["channels"]
+    )
+
+# 从 style_params 动态生成
+for style in style_params:
+    CODEC_REGISTRY[style] = PaletteCodec(style=style)
 
 def get_codec(mode: str) -> BaseCodec:
     if mode not in CODEC_REGISTRY:
