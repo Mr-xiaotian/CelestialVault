@@ -7,10 +7,13 @@ from typing import Dict
 from ..constants import image_mode_params, style_params
 from ..tools.ImageProcessing import generate_palette
 from ..tools.TextTools import (
-    compress_text_to_bytes,
-    decompress_text_from_bytes,
     encode_crc,
     decode_crc,
+    compress_text_to_bytes,
+    decompress_text_from_bytes,
+    rs_encode_with_ratio,
+    rs_decode_with_ratio,
+    pad_to_align,
     safe_open_txt,
 )
 
@@ -211,7 +214,7 @@ class OneBitCodec(BaseCodec):
         将带CRC的文本压缩为二进制串，并编码为1bit黑白图像
         """
         # 压缩为二进制（1通道）
-        compressed_binary = compress_text_to_bytes(text, 1)
+        compressed_binary = compress_text_to_bytes(text)
 
         total_bits_needed = len(compressed_binary) * 8
         width = math.ceil(math.sqrt(total_bits_needed))
@@ -265,9 +268,10 @@ class ChannelCodec(BaseCodec):
         self.channels = channels
 
     def _encode_core(self, text: str) -> Image.Image:
-        compressed_binary = compress_text_to_bytes(text, self.channels)
+        compressed_binary = compress_text_to_bytes(text)
+        pad_binary = pad_to_align(compressed_binary, self.channels)
 
-        str_len = len(compressed_binary)
+        str_len = len(pad_binary)
         total_pixels_needed = math.ceil(str_len / self.channels)
         width = math.ceil(math.sqrt(total_pixels_needed))
         height = math.ceil(total_pixels_needed / width)
@@ -276,7 +280,7 @@ class ChannelCodec(BaseCodec):
 
         x, y = 0, 0
         for i in tqdm(range(0, str_len, self.channels), desc=f"Encoding text({self.mode_name}-binary):", mininterval=0.5, disable=not self.show_progress):
-            chars = compressed_binary[i : i + self.channels]
+            chars = pad_binary[i : i + self.channels]
             img.putpixel((x, y), tuple(chars))
             x, y = self.get_new_xy(x, y, width)
 
@@ -302,6 +306,7 @@ class ChannelCodec(BaseCodec):
 
         progress_bar.close()
         crc_text = decompress_text_from_bytes(bytes(bytes_list))
+
         return crc_text
 
 
@@ -311,7 +316,7 @@ class PaletteCodec(BaseCodec):
         self.palette = generate_palette(256, style=style)
 
     def _encode_core(self, text: str) -> Image.Image:
-        compressed_binary = compress_text_to_bytes(text, 1)
+        compressed_binary = compress_text_to_bytes(text)
 
         str_len = len(compressed_binary)
         width = math.ceil(math.sqrt(str_len))
@@ -354,7 +359,7 @@ class RedundancyCodec(BaseCodec):
         self.channels = channels
 
     def _encode_core(self, text: str) -> Image.Image:
-        compressed_binary = compress_text_to_bytes(text, 1)
+        compressed_binary = compress_text_to_bytes(text)
 
         str_len = len(compressed_binary)
         edge = math.ceil(math.sqrt(str_len))
