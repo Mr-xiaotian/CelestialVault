@@ -18,6 +18,7 @@ from ..tools.TextTools import (
 class BaseCodec:
     """所有编码器的基类"""
     mode_name: str = ""
+    show_progress: bool = True  # 默认开启进度条
 
     # --- 外部统一接口 ---
     def encode(self, text: str) -> Image.Image:
@@ -77,7 +78,7 @@ class GreyCodec(BaseCodec):
         img = Image.new("L", (width, height), 0)
 
         x, y = 0, 0
-        for i in tqdm(text, desc="Encoding text(grey):", mininterval=0.5):
+        for i in tqdm(text, desc="Encoding text(grey):", mininterval=0.5, disable=not self.show_progress):
             index = ord(i)
             high, low = divmod(index, 256)
 
@@ -95,7 +96,7 @@ class GreyCodec(BaseCodec):
         chars = []
 
         progress_len = (height * width) // 2
-        progress_bar = tqdm(total=progress_len, desc="Decoding img(grey):", mininterval=0.5)
+        progress_bar = tqdm(total=progress_len, desc="Decoding img(grey):", mininterval=0.5, disable=not self.show_progress)
         for i in range(0, progress_len * 2, 2):
             high = pixels[i % width, i // width]
             low = pixels[(i + 1) % width, (i + 1) // width]
@@ -123,7 +124,7 @@ class RGBCodec(BaseCodec):
         img = Image.new("RGB", (width, height), (0, 0, 0))
 
         x, y = 0, 0
-        for i in tqdm(range(0, str_len, 3), desc="Encoding text(rgb):", mininterval=0.5):
+        for i in tqdm(range(0, str_len, 3), desc="Encoding text(rgb):", mininterval=0.5, disable=not self.show_progress):
             index1 = ord(text[i])
             index2 = ord(text[i + 1]) if i + 1 < str_len else 0
             index3 = ord(text[i + 2]) if i + 2 < str_len else 0
@@ -144,7 +145,7 @@ class RGBCodec(BaseCodec):
         chars = []
 
         progress_len = (height * width) // 2
-        progress_bar = tqdm(total=progress_len, desc="Decoding img(rgb):", mininterval=0.5)
+        progress_bar = tqdm(total=progress_len, desc="Decoding img(rgb):", mininterval=0.5, disable=not self.show_progress)
         for i in range(0, progress_len * 2, 2):
             rgb_0 = pixels[i % width, i // width]
             rgb_1 = pixels[(i + 1) % width, (i + 1) // width]
@@ -175,7 +176,7 @@ class RGBACodec(BaseCodec):
         img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
 
         x, y = 0, 0
-        for i in tqdm(range(0, str_len, 2), desc="Encoding text(rgba):", mininterval=0.5):
+        for i in tqdm(range(0, str_len, 2), desc="Encoding text(rgba):", mininterval=0.5, disable=not self.show_progress):
             index1 = ord(text[i])
             index2 = ord(text[i + 1]) if i + 1 < str_len else 0
             rgba = (index1 >> 8, index1 & 0xFF, index2 >> 8, index2 & 0xFF)
@@ -189,7 +190,7 @@ class RGBACodec(BaseCodec):
         pixels = img.load()
         chars = []
 
-        progress_bar = tqdm(total=height * width, desc="Decoding img(rgba):", mininterval=0.5)
+        progress_bar = tqdm(total=height * width, desc="Decoding img(rgba):", mininterval=0.5, disable=not self.show_progress)
         for y, x in product(range(height), range(width)):
             rgba = pixels[x, y]
             char1 = chr((rgba[0] << 8) + rgba[1]) if (rgba[0] << 8) + rgba[1] else ""
@@ -219,7 +220,7 @@ class OneBitCodec(BaseCodec):
         img = Image.new("1", (width, height), 0)  # 黑白图像
 
         x, y = 0, 0
-        for byte in tqdm(compressed_binary, desc="Encoding text(1bit-binary):"):
+        for byte in tqdm(compressed_binary, desc="Encoding text(1bit-binary):", mininterval=0.5, disable=not self.show_progress):
             for bit in range(8):
                 pixel_value = (byte >> (7 - bit)) & 1
                 img.putpixel((x, y), pixel_value)
@@ -236,7 +237,7 @@ class OneBitCodec(BaseCodec):
 
         bytes_list = []
         progress_len = (height * width) // 8
-        progress_bar = tqdm(total=progress_len, desc="Decoding img(1bit-binary):")
+        progress_bar = tqdm(total=progress_len, desc="Decoding img(1bit-binary):", mininterval=0.5, disable=not self.show_progress)
 
         for i in range(0, progress_len * 8, 8):
             current_byte = 0
@@ -274,7 +275,7 @@ class ChannelCodec(BaseCodec):
         img = Image.new(self.mode_name, (width, height), (0,) * self.channels)
 
         x, y = 0, 0
-        for i in tqdm(range(0, str_len, self.channels), desc=f"Encoding text({self.mode_name}-binary):"):
+        for i in tqdm(range(0, str_len, self.channels), desc=f"Encoding text({self.mode_name}-binary):", mininterval=0.5, disable=not self.show_progress):
             chars = compressed_binary[i : i + self.channels]
             img.putpixel((x, y), tuple(chars))
             x, y = self.get_new_xy(x, y, width)
@@ -288,7 +289,7 @@ class ChannelCodec(BaseCodec):
 
         bytes_list = []
         desc = f"Decoding img({channels}-channel-binary):"
-        progress_bar = tqdm(total=height * width, desc=desc)
+        progress_bar = tqdm(total=height * width, desc=desc, mininterval=0.5, disable=not self.show_progress)
 
         for y in range(height):
             for x in range(width):
@@ -370,7 +371,7 @@ class RedundancyCodec(BaseCodec):
         b_indices = [edge * (edge - 1 - y) + edge - 1 - x for y in range(edge) for x in range(edge)]
         a_indices = [edge * (edge - 1 - x) + y for y in range(edge) for x in range(edge)]
 
-        for idx in tqdm(range(total_pixels), desc=f"Encoding text({self.mode_name})"):
+        for idx in tqdm(range(total_pixels), desc=f"Encoding text({self.mode_name})", mininterval=0.5, disable=not self.show_progress):
             r = binary_str[r_indices[idx]] if self.channels > 0 else 0
             g = binary_str[g_indices[idx]] if self.channels > 1 else 0
             b = binary_str[b_indices[idx]] if self.channels > 2 else 0
@@ -397,16 +398,16 @@ class RedundancyCodec(BaseCodec):
 
         # 如果完全一致
         if all(decoded_data[0] == d for d in decoded_data):
-            merged = decoded_data[0]
+            merged_bytes = decoded_data[0]
         else:
             # 多数投票
             combined_data = bytearray(len(decoded_data[0]))
             for i in range(len(combined_data)):
                 candidates = [decoded_data[ch][i] for ch in range(channels)]
                 combined_data[i] = max(set(candidates), key=candidates.count)
-            merged = bytes(combined_data)
+            merged_bytes = bytes(combined_data)
 
-        return decompress_text_from_bytes(merged)
+        return decompress_text_from_bytes(merged_bytes)
 
     def _decode_one_channel(self, img: Image.Image, channel_index: int) -> bytes:
         width, height = img.size
@@ -414,7 +415,7 @@ class RedundancyCodec(BaseCodec):
         bytes_list = []
 
         desc = f"Decoding img(channel {channel_index}-redundancy):"
-        progress_bar = tqdm(total=height * width, desc=desc)
+        progress_bar = tqdm(total=height * width, desc=desc, mininterval=0.5, disable=not self.show_progress)
 
         for y in range(height):
             for x in range(width):
@@ -453,6 +454,6 @@ for mode, params in image_mode_params.items():
         channels=params["channels"]
     )
 
-# # 从 style_params 动态生成
-# for style in style_params:
-#     CODEC_REGISTRY[style] = PaletteCodec(style=style)
+# 从 style_params 动态生成
+for style in style_params:
+    CODEC_REGISTRY[style] = PaletteCodec(style=style)

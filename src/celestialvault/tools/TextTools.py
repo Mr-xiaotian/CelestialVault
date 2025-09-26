@@ -2,6 +2,7 @@ import base64
 import re
 import string
 import zlib
+import struct
 from itertools import zip_longest
 from pathlib import Path
 from pprint import pprint
@@ -241,30 +242,39 @@ def decode_crc(decoded_text: str) -> str:
 
 def compress_text_to_bytes(text: str, padding_length: int = 1) -> bytes:
     """
-    压缩文本并返回字节流，确保字节流长度是指定的 padding_length 的倍数。
+    压缩文本并返回字节流，前 4 字节存储真实压缩长度。
+    确保总长度是 padding_length 的倍数。
 
     :param text: 要压缩的文本
-    :param padding_length: 填充长度，使压缩结果的字节长度为此参数的倍数
-    :return: 压缩后的字节流
+    :param padding_length: 填充长度，使字节流长度为此参数的倍数
+    :return: 压缩后的字节流（包含长度头 + 压缩数据 + 填充）
     """
-    # 使用 zlib 压缩文本，先将文本编码为 UTF-8
     compressed_data = zlib.compress(text.encode("utf-8"))
+    length_prefix = struct.pack(">I", len(compressed_data))  # 4 字节长度头
 
-    # 计算需要填充的字节数，以使字节流长度为 padding_length 的倍数
-    padding_length = (
-        padding_length - len(compressed_data) % padding_length
-    ) % padding_length
-    compressed_data += b"\0" * padding_length  # 添加零字节作为填充
+    # 拼接
+    data_with_len = length_prefix + compressed_data
 
-    return compressed_data
+    # 补齐到 padding_length 的倍数
+    padding = (padding_length - len(data_with_len) % padding_length) % padding_length
+    data_with_len += b"\0" * padding
+
+    return data_with_len
 
 
 def decompress_text_from_bytes(compressed_data: bytes) -> str:
     """
-    从字节流中解压缩文本。
+    从字节流中解压缩文本，使用前 4 字节长度头来截取有效压缩数据。
     """
-    original_text = zlib.decompress(compressed_data.rstrip(b"\0")).decode("utf-8")
+    if len(compressed_data) < 4:
+        raise ValueError("压缩数据过短，缺少长度头")
 
+    # 取出真实长度
+    true_len = struct.unpack(">I", compressed_data[:4])[0]
+    compressed_part = compressed_data[4:4 + true_len]
+
+    # 解压
+    original_text = zlib.decompress(compressed_part).decode("utf-8")
     return original_text
 
 
