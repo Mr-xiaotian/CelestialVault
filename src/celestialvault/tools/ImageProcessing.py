@@ -1,6 +1,7 @@
 import base64
 import io
 import math
+import random
 from colorsys import hsv_to_rgb
 from itertools import product
 from pathlib import Path
@@ -464,3 +465,51 @@ def read_text_chunks(img_path: str) -> dict[str, str]:
         if not info:
             info = img.info
         return dict(info)
+
+
+def simulate_rectangle_damage(img: Image.Image, x0: int, y0: int, w: int, h: int) -> Image.Image:
+    """
+    在图像上指定位置生成一个 w×h 的损坏矩形（置零）。
+
+    :param img: 原始图像
+    :param x0: 矩形左上角 x 坐标
+    :param y0: 矩形左上角 y 坐标
+    :param w: 矩形宽度
+    :param h: 矩形高度
+    :return: 损坏后的图像
+    """
+    damaged = img.copy()
+    pixels = damaged.load()
+    for y in range(y0, min(y0 + h, img.height)):
+        for x in range(x0, min(x0 + w, img.width)):
+            pixels[x, y] = (0, 0, 0, 0)  # RGBA 清零
+    return damaged
+
+
+def simulate_random_damage(img: Image.Image, damage_ratio: float) -> Image.Image:
+    """
+    随机损坏图像的一部分像素（置零）。
+    
+    :param img: 原始图像 (RGBA)
+    :param damage_ratio: 损坏比例 (0~1)，表示要损坏的像素数占总像素的比例
+    :return: 损坏后的图像
+    """
+    if not (0 <= damage_ratio <= 1):
+        raise ValueError("damage_ratio 必须在 0 到 1 之间")
+
+    damaged = img.copy()
+    pixels = damaged.load()
+    width, height = img.size
+    total_pixels = width * height
+
+    # 需要损坏的像素数
+    num_damaged = int(total_pixels * damage_ratio)
+
+    # 随机选出像素坐标
+    damaged_coords = random.sample([(x, y) for y in range(height) for x in range(width)], num_damaged)
+
+    # 把这些像素置零
+    for x, y in damaged_coords:
+        pixels[x, y] = (0, 0, 0, 0)
+
+    return damaged
