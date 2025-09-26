@@ -3,6 +3,7 @@ import re
 import string
 import zlib
 import struct
+import reedsolo
 from itertools import zip_longest
 from pathlib import Path
 from pprint import pprint
@@ -276,6 +277,34 @@ def decompress_text_from_bytes(compressed_data: bytes) -> str:
     # 解压
     original_text = zlib.decompress(compressed_part).decode("utf-8")
     return original_text
+
+
+def rs_encode_with_ratio(data: bytes, ratio: float) -> bytes:
+    """
+    使用 Reed–Solomon 编码给数据加冗余
+    :param data: 原始字节流
+    :param ratio: 冗余比例 (0~1)，如 0.3 表示冗余 30%
+    :return: 带冗余的字节流
+    """
+    if not (0 <= ratio <= 1):
+        raise ValueError("ratio 必须在 0 到 1 之间")
+    
+    nsym = max(1, int(len(data) * ratio))  # 至少 1 个冗余字节
+    rs = reedsolo.RSCodec(nsym)
+    return rs.encode(data)
+
+
+def rs_decode_with_ratio(encoded: bytes, ratio: float) -> bytes:
+    """
+    使用 Reed–Solomon 解码数据
+    :param encoded: 带冗余的字节流
+    :param ratio: 冗余比例 (必须和编码时一致)
+    :return: 恢复后的原始字节流
+    """
+    nsym = max(1, int(len(encoded) / (1 + ratio) * ratio))  
+    rs = reedsolo.RSCodec(nsym)
+    decoded, _, _ = rs.decode(encoded)
+    return decoded
 
 
 def compress_to_base64(text: str) -> str:

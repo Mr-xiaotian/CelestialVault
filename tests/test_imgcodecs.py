@@ -8,7 +8,7 @@ from celestialflow import TaskManager
 from celestialvault.instances.inst_imgcodecs import BaseCodec, CODEC_REGISTRY
 from celestialvault.tools.ImageProcessing import simulate_rectangle_damage, simulate_random_damage
 
-class TestRectangleDamageManager(TaskManager):
+class RectangleDamageManager(TaskManager):
     codec: BaseCodec
     img: Image.Image
     text: str
@@ -20,7 +20,7 @@ class TestRectangleDamageManager(TaskManager):
         return super().process_result_dict()
     
 
-class TestRandomDamageManager(TaskManager):
+class RandomDamageManager(TaskManager):
     codec: BaseCodec
     img: Image.Image
     text: str
@@ -32,7 +32,7 @@ class TestRandomDamageManager(TaskManager):
         return super().process_result_dict()
 
 
-def _test_codecs_text():
+def test_codecs_text():
     """
     测试所有注册的 codec 是否能正确进行 编码 -> 解码
     """
@@ -130,22 +130,22 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
     # 结果矩阵
     result = np.zeros((height, width))
 
-    test_rectangle_damage_manager = TestRectangleDamageManager(success_rate_rectangle_damage_block, "thread", 5, enable_result_cache=True, show_progress=True)
-    test_rectangle_damage_manager.codec = codec
-    test_rectangle_damage_manager.img = img
-    test_rectangle_damage_manager.text = text
+    rectangle_damage_manager = RectangleDamageManager(success_rate_rectangle_damage_block, "thread", 5, enable_result_cache=True, show_progress=True)
+    rectangle_damage_manager.codec = codec
+    rectangle_damage_manager.img = img
+    rectangle_damage_manager.text = text
 
-    test_random_damage_manager = TestRandomDamageManager(success_rate_random_damage, "thread", 5, enable_result_cache=True, show_progress=True)
-    test_random_damage_manager.codec = codec
-    test_random_damage_manager.img = img
-    test_random_damage_manager.text = text
+    random_damage_manager = RandomDamageManager(success_rate_random_damage, "thread", 5, enable_result_cache=True, show_progress=True)
+    random_damage_manager.codec = codec
+    random_damage_manager.img = img
+    random_damage_manager.text = text
 
-    test_rectangle_damage_manager.start(product(range(1, width+1), range(1, height+1)))
-    rectangle_damage_result_dict = test_rectangle_damage_manager.process_result_dict()
+    rectangle_damage_manager.start(product(range(1, width+1), range(1, height+1)))
+    rectangle_damage_result_dict = rectangle_damage_manager.process_result_dict()
 
     ratios = np.arange(0, 1.01, 0.01)  # 从0到1，步长0.01
-    test_random_damage_manager.start(ratios)
-    random_damage_result_dict = test_random_damage_manager.process_result_dict()
+    random_damage_manager.start(ratios)
+    random_damage_result_dict = random_damage_manager.process_result_dict()
     success_rates = [random_damage_result_dict[r] for r in ratios]
 
     for (w, h), success in rectangle_damage_result_dict.items():
@@ -179,6 +179,6 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
 if __name__ == "__main__":
     codec = CODEC_REGISTRY["rgba_redundancy"]
     codec.show_progress = False
-    text = "Hello World! " * int(4e5)  # 足够长的测试文本(1e3, 4e5)
+    text = "Hello World! " * int(1e5)  # 足够长的测试文本(1e3, 4e5)
 
     redundancy_heatmap(codec, text)
