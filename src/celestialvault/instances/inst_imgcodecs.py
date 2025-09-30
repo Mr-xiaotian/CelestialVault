@@ -11,8 +11,6 @@ from ..tools.TextTools import (
     decode_crc,
     compress_text_to_bytes,
     decompress_text_from_bytes,
-    choose_square_container,
-    redundancy_from_container,
     rs_encode,
     rs_decode,
     pad_bytes,
@@ -20,6 +18,7 @@ from ..tools.TextTools import (
     pad_to_align,
     safe_open_txt,
 )
+from ..tools.NumberUtils import choose_square_container, redundancy_from_container
 
 # ========== 公共基类 ==========
 class BaseCodec:
@@ -312,7 +311,7 @@ class ChannelCodec(BaseCodec):
         crc_text = decompress_text_from_bytes(bytes(bytes_list))
 
         return crc_text
-
+    
 
 class PaletteCodec(BaseCodec):
     def __init__(self, style: str):
@@ -330,7 +329,7 @@ class PaletteCodec(BaseCodec):
         img.putpalette(self.palette)
 
         x, y = 0, 0
-        for byte in tqdm(compressed_binary, desc=f"Encoding text(Palette-{self.mode_name})"):
+        for byte in tqdm(compressed_binary, desc=f"Encoding text(Palette-{self.mode_name})", disable=not self.show_progress):
             img.putpixel((x, y), byte)
             x, y = self.get_new_xy(x, y, width)
 
@@ -341,7 +340,7 @@ class PaletteCodec(BaseCodec):
         pixels = img.load()
 
         bytes_list = []
-        progress_bar = tqdm(total=height * width, desc=f"Decoding img(Palette-{self.mode_name})")
+        progress_bar = tqdm(total=height * width, desc=f"Decoding img(Palette-{self.mode_name})", disable=not self.show_progress)
         for y in range(height):
             for x in range(width):
                 bytes_list.append(pixels[x, y])
@@ -349,6 +348,48 @@ class PaletteCodec(BaseCodec):
 
         progress_bar.close()
         crc_text = decompress_text_from_bytes(bytes(bytes_list))
+        return crc_text
+
+
+class PaletteWithRsCodec(BaseCodec):
+    def __init__(self, style: str, threshold: float = 0.7):
+        self.mode_name = style + "_rs"  # 用 style 名称作为 mode
+        self.palette = generate_palette(256, style=style)
+        self.threshold = threshold
+
+    def _encode_core(self, text: str) -> Image.Image:
+        compressed_binary = compress_text_to_bytes(text)
+        side_len, max_payload, nsym = choose_square_container(len(compressed_binary), self.threshold)
+        pad_binary = pad_bytes(compressed_binary, max_payload)
+        rs_binary = rs_encode(pad_binary, nsym)
+
+        img = Image.new("P", (side_len, side_len))
+        img.putpalette(self.palette)
+
+        x, y = 0, 0
+        for byte in tqdm(rs_binary, desc=f"Encoding text(Palette-{self.mode_name})", disable=not self.show_progress):
+            img.putpixel((x, y), byte)
+            x, y = self.get_new_xy(x, y, side_len)
+
+        return img
+
+    def _decode_core(self, img: Image.Image) -> str:
+        side_len, side_len = img.size
+        pixels = img.load()
+
+        bytes_list = []
+        progress_bar = tqdm(total=side_len * side_len, desc=f"Decoding img(Palette-{self.mode_name})", disable=not self.show_progress)
+        for y in range(side_len):
+            for x in range(side_len):
+                bytes_list.append(pixels[x, y])
+                progress_bar.update(1)
+
+        progress_bar.close()
+
+        nsym = redundancy_from_container(side_len*side_len, self.threshold)
+        ders_binary = rs_decode(bytes(bytes_list), nsym)
+        unpad_binary = unpad_bytes(ders_binary)
+        crc_text = decompress_text_from_bytes(unpad_binary)
         return crc_text
 
 
@@ -443,28 +484,29 @@ class RedundancyCodec(BaseCodec):
 
 CODEC_REGISTRY: Dict[str, BaseCodec] = {}
 
-# CODEC_REGISTRY.update({
-#     GreyCodec.mode_name: GreyCodec(),
-#     RGBCodec.mode_name: RGBCodec(),
-#     RGBACodec.mode_name: RGBACodec(),
-#     OneBitCodec.mode_name: OneBitCodec(),
-# })
+CODEC_REGISTRY.update({
+    GreyCodec.mode_name: GreyCodec(),
+    RGBCodec.mode_name: RGBCodec(),
+    RGBACodec.mode_name: RGBACodec(),
+    OneBitCodec.mode_name: OneBitCodec(),
+})
 
-# # 从 image_mode_params 动态生成
-# for mode, params in image_mode_params.items():
-#     # 普通模式
-#     CODEC_REGISTRY[mode] = ChannelCodec(
-#         mode_name=params["mode_name"],
-#         channels=params["channels"]
-#     )
+# 从 image_mode_params 动态生成
+for mode, params in image_mode_params.items():
+    # 普通模式
+    CODEC_REGISTRY[mode] = ChannelCodec(
+        mode_name=params["mode_name"],
+        channels=params["channels"]
+    )
 
-#     # 冗余模式
-#     redundancy_mode = mode + "_redundancy"
-#     CODEC_REGISTRY[redundancy_mode] = RedundancyCodec(
-#         mode_name=params["mode_name"],
-#         channels=params["channels"]
-#     )
+    # 冗余模式
+    redundancy_mode = mode + "_redundancy"
+    CODEC_REGISTRY[redundancy_mode] = RedundancyCodec(
+        mode_name=params["mode_name"],
+        channels=params["channels"]
+    )
 
 # 从 style_params 动态生成
 for style in style_params:
     CODEC_REGISTRY[style] = PaletteCodec(style=style)
+    CODEC_REGISTRY[style + "_rs"] = PaletteWithRsCodec(style=style)

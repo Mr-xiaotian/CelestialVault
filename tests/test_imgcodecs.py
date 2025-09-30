@@ -130,12 +130,12 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
     # 结果矩阵
     result = np.zeros((height, width))
 
-    rectangle_damage_manager = RectangleDamageManager(success_rate_rectangle_damage_block, "thread", 5, enable_result_cache=True, show_progress=True)
+    rectangle_damage_manager = RectangleDamageManager(success_rate_rectangle_damage_block, "serial", 5, enable_result_cache=True, show_progress=True)
     rectangle_damage_manager.codec = codec
     rectangle_damage_manager.img = img
     rectangle_damage_manager.text = text
 
-    random_damage_manager = RandomDamageManager(success_rate_random_damage, "thread", 5, enable_result_cache=True, show_progress=True)
+    random_damage_manager = RandomDamageManager(success_rate_random_damage, "serial", 5, enable_result_cache=True, show_progress=True)
     random_damage_manager.codec = codec
     random_damage_manager.img = img
     random_damage_manager.text = text
@@ -177,10 +177,11 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
     plt.show()
 
 if __name__ == "__main__":
-    # codec = CODEC_REGISTRY["rgba_redundancy"]
-    # codec.show_progress = False
-    # text = "Hello World! " * int(1e5)  # 足够长的测试文本(1e3, 4e5)
+    codec = CODEC_REGISTRY["morandi_rs"] # morandi_rs rgba_redundancy
+    codec.show_progress = False
+    text = "Hello World! " * int(4e5)  # 足够长的测试文本(1e3, 4e5)
 
-    # redundancy_heatmap(codec, text)
+    redundancy_heatmap(codec, text)
 
-    test_codecs_file()
+    # test_codecs_file()
+    pass

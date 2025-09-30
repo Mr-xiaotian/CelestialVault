@@ -480,9 +480,21 @@ def simulate_rectangle_damage(img: Image.Image, x0: int, y0: int, w: int, h: int
     """
     damaged = img.copy()
     pixels = damaged.load()
+
+    if img.mode == "RGBA":
+        zero_val = (0, 0, 0, 0)
+    elif img.mode == "RGB":
+        zero_val = (0, 0, 0)
+    elif img.mode == "L":
+        zero_val = 0
+    elif img.mode == "P":
+        zero_val = 0
+    else:
+        raise ValueError(f"Unsupported mode: {img.mode}")
+    
     for y in range(y0, min(y0 + h, img.height)):
         for x in range(x0, min(x0 + w, img.width)):
-            pixels[x, y] = (0, 0, 0, 0)  # RGBA 清零
+            pixels[x, y] = zero_val
     return damaged
 
 
@@ -502,6 +514,17 @@ def simulate_random_damage(img: Image.Image, damage_ratio: float) -> Image.Image
     width, height = img.size
     total_pixels = width * height
 
+    if img.mode == "RGBA":
+        zero_val = (0, 0, 0, 0)
+    elif img.mode == "RGB":
+        zero_val = (0, 0, 0)
+    elif img.mode == "L":
+        zero_val = 0
+    elif img.mode == "P":
+        zero_val = 0
+    else:
+        raise ValueError(f"Unsupported mode: {img.mode}")
+
     # 需要损坏的像素数
     num_damaged = int(total_pixels * damage_ratio)
 
@@ -510,6 +533,6 @@ def simulate_random_damage(img: Image.Image, damage_ratio: float) -> Image.Image
 
     # 把这些像素置零
     for x, y in damaged_coords:
-        pixels[x, y] = (0, 0, 0, 0)
+        pixels[x, y] = zero_val
 
     return damaged

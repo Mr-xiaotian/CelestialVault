@@ -388,9 +388,42 @@ def is_probable_prime(n: int, k: int = 10) -> bool:
     return True
 
 
-def generate_large_prime(bits=512):
+def generate_large_prime(bits=512) -> int:
+    """
+    生成一个大素数，位数由 bits 参数指定。
+    :param bits: 素数的位数
+    :return: 大素数
+    """
     while True:
         candidate = random.getrandbits(bits)
         candidate |= 1  # 保证奇数
         if is_probable_prime(candidate, 20):
             return candidate
+        
+
+def choose_square_container(n: int, threshold: float = 0.7):
+    """
+    给定原始数据长度 n，选择一个平方数容器。
+    threshold 控制最大允许的填充率（0~1）。
+    返回: (容器边长, 最大可用数据长度, 冗余长度)
+    """
+    # 从理论下限 sqrt((n+4)/threshold) 开始
+    s = math.ceil(math.sqrt((n + 4) / threshold))
+    while True:
+        container = s * s
+        max_payload = math.floor(threshold * container)
+        if n + 4 <= max_payload:  # 预留4字节头
+            return s, max_payload, container - max_payload
+        s += 1
+
+
+def redundancy_from_container(container: int, threshold: float = 0.7) -> int:
+    """
+    已知容器长度（平方数），计算对应冗余长度。
+    threshold 控制最大允许的填充率（0~1）。
+    返回: 冗余长度
+    """
+    if int(math.isqrt(container)) ** 2 != container:
+        raise ValueError("container 必须是一个平方数")
+    max_payload = math.floor(threshold * container)
+    return container - max_payload

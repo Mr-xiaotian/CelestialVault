@@ -267,49 +267,82 @@ def decompress_text_from_bytes(compressed_data: bytes) -> str:
     return zlib.decompress(compressed_part).decode("utf-8")
 
 
-def choose_square_container(n: int, threshold: float = 0.7):
-    """
-    给定原始数据长度 n，选择一个平方数容器。
-    threshold 控制最大允许的填充率（0~1）。
-    返回: (容器边长, 最大可用数据长度, 冗余长度)
-    """
-    # 从理论下限 sqrt((n+4)/threshold) 开始
-    s = math.ceil(math.sqrt((n + 4) / threshold))
-    while True:
-        container = s * s
-        max_payload = math.floor(threshold * container)
-        if n + 4 <= max_payload:  # 预留4字节头
-            return s, max_payload, container - max_payload
-        s += 1
-
-
-def redundancy_from_container(container: int, threshold: float = 0.7) -> int:
-    """
-    已知容器长度（平方数），计算对应冗余长度。
-    threshold 控制最大允许的填充率（0~1）。
-    返回: 冗余长度
-    """
-    if int(math.isqrt(container)) ** 2 != container:
-        raise ValueError("container 必须是一个平方数")
-    max_payload = math.floor(threshold * container)
-    return container - max_payload
-
-
 def rs_encode(data: bytes, nsym: int) -> bytes:
     """
-    使用 Reed–Solomon 编码给数据加冗余
+    把 data 分成 n 份，每份添加 nsym/n 个冗余，
+    保证 (len(data)/n + nsym/n) < 255。
     """
-    rs = reedsolo.RSCodec(nsym)
-    return rs.encode(data)
+    if nsym < 1:
+        raise ValueError("nsym 必须 >= 1")
+
+    # 计算最小分块数 n
+    n = 1
+    while True:
+        data_per_block = math.ceil(len(data) / n)
+        ecc_per_block = math.ceil(nsym / n)
+        if data_per_block + ecc_per_block < 255:
+            break
+        n += 1
+
+    # 平均分配数据和冗余
+    q_dat, r_dat = divmod(len(data), n)
+    q_sym, r_sym = divmod(nsym, n)
+
+    encoded_blocks = []
+    start = 0
+    for i in range(n):
+        block_size = q_dat + (1 if i < r_dat else 0)
+        nsym_block = q_sym + (1 if i < r_sym else 0)
+        chunk = data[start:start + block_size]
+        start += block_size
+        
+        rs = reedsolo.RSCodec(nsym_block)
+        encoded_blocks.append(rs.encode(chunk))
+
+    return b"".join(encoded_blocks)
 
 
 def rs_decode(encoded: bytes, nsym: int) -> bytes:
     """
-    使用 Reed–Solomon 解码数据
+    解码由 rs_encode 生成的数据。
+    输入: encoded (编码数据), nsym (总冗余字节数)
+    输出: 原始 data
     """
-    rs = reedsolo.RSCodec(nsym)
-    decoded, _, _ = rs.decode(encoded)
-    return bytes(decoded)  # 成功返回
+    if nsym < 1:
+        raise ValueError("nsym 必须 >= 1")
+
+    total_len = len(encoded)
+    data_len = total_len - nsym
+    if data_len < 0:
+        raise ValueError("encoded 长度比 nsym 还小，数据非法")
+
+    # 计算最小分块数 n
+    n = 1
+    while True:
+        data_per_block = math.ceil(data_len / n)
+        ecc_per_block = math.ceil(nsym / n)
+        if data_per_block + ecc_per_block < 255:
+            break
+        n += 1
+
+    # 平均分配数据和冗余
+    q_dat, r_dat = divmod(data_len, n)
+    q_sym, r_sym = divmod(nsym, n)
+
+    decoded_chunks = []
+    start = 0
+    for i in range(n):
+        block_size = q_dat + (1 if i < r_dat else 0)
+        nsym_block = q_sym + (1 if i < r_sym else 0)
+        encoded_block_size = block_size + nsym_block
+        block = encoded[start:start + encoded_block_size]
+        start += encoded_block_size
+
+        rs = reedsolo.RSCodec(nsym_block)
+        decoded, _, _ = rs.decode(block)
+        decoded_chunks.append(bytes(decoded))
+
+    return b"".join(decoded_chunks)
 
 
 def pad_bytes(data: bytes, target_len: int) -> bytes:
