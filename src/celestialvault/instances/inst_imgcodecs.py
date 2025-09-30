@@ -11,8 +11,12 @@ from ..tools.TextTools import (
     decode_crc,
     compress_text_to_bytes,
     decompress_text_from_bytes,
-    rs_encode_with_ratio,
-    rs_decode_with_ratio,
+    choose_square_container,
+    redundancy_from_container,
+    rs_encode,
+    rs_decode,
+    pad_bytes,
+    unpad_bytes,
     pad_to_align,
     safe_open_txt,
 )
@@ -437,27 +441,29 @@ class RedundancyCodec(BaseCodec):
         return bytes(bytes_list)
 
 
-CODEC_REGISTRY: Dict[str, BaseCodec] = {
-    GreyCodec.mode_name: GreyCodec(),
-    RGBCodec.mode_name: RGBCodec(),
-    RGBACodec.mode_name: RGBACodec(),
-    OneBitCodec.mode_name: OneBitCodec(),
-}
+CODEC_REGISTRY: Dict[str, BaseCodec] = {}
 
-# 从 image_mode_params 动态生成
-for mode, params in image_mode_params.items():
-    # 普通模式
-    CODEC_REGISTRY[mode] = ChannelCodec(
-        mode_name=params["mode_name"],
-        channels=params["channels"]
-    )
+# CODEC_REGISTRY.update({
+#     GreyCodec.mode_name: GreyCodec(),
+#     RGBCodec.mode_name: RGBCodec(),
+#     RGBACodec.mode_name: RGBACodec(),
+#     OneBitCodec.mode_name: OneBitCodec(),
+# })
 
-    # 冗余模式
-    redundancy_mode = mode + "_redundancy"
-    CODEC_REGISTRY[redundancy_mode] = RedundancyCodec(
-        mode_name=params["mode_name"],
-        channels=params["channels"]
-    )
+# # 从 image_mode_params 动态生成
+# for mode, params in image_mode_params.items():
+#     # 普通模式
+#     CODEC_REGISTRY[mode] = ChannelCodec(
+#         mode_name=params["mode_name"],
+#         channels=params["channels"]
+#     )
+
+#     # 冗余模式
+#     redundancy_mode = mode + "_redundancy"
+#     CODEC_REGISTRY[redundancy_mode] = RedundancyCodec(
+#         mode_name=params["mode_name"],
+#         channels=params["channels"]
+#     )
 
 # 从 style_params 动态生成
 for style in style_params:

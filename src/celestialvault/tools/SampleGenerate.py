@@ -124,3 +124,17 @@ def generate_test_data(length: int, data_types: Union[str, List[str]] = None):
             raise ValueError(f"不支持的数据类型: {dtype}")
 
     return [random_item(random.choice(data_types)) for _ in range(length)]
+
+
+def random_increasing_sequence(length: int, start: int = 0, max_step: int = 10) -> list[int]:
+    """
+    生成一个随机递增整数序列
+    :param length: 序列长度
+    :param start: 起始值
+    :param max_step: 每次递增的最大步长（至少 1）
+    """
+    seq = [start]
+    for _ in range(length - 1):
+        step = random.randint(1, max_step)  # 随机步长 ≥1 保证递增
+        seq.append(seq[-1] + step)
+    return seq

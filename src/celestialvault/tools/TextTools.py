@@ -1,5 +1,6 @@
 import base64
 import re
+import math
 import string
 import zlib
 import struct
@@ -258,37 +259,89 @@ def decompress_text_from_bytes(compressed_data: bytes) -> str:
         raise ValueError("压缩数据过短，缺少长度头")
 
     true_len = struct.unpack(">I", compressed_data[:4])[0]
+    if len(compressed_data) < 4 + true_len:
+        raise ValueError("数据不完整或损坏，无法解压")
+
     compressed_part = compressed_data[4:4 + true_len]
 
     return zlib.decompress(compressed_part).decode("utf-8")
 
 
-def rs_encode_with_ratio(data: bytes, ratio: float) -> bytes:
+def choose_square_container(n: int, threshold: float = 0.7):
+    """
+    给定原始数据长度 n，选择一个平方数容器。
+    threshold 控制最大允许的填充率（0~1）。
+    返回: (容器边长, 最大可用数据长度, 冗余长度)
+    """
+    # 从理论下限 sqrt((n+4)/threshold) 开始
+    s = math.ceil(math.sqrt((n + 4) / threshold))
+    while True:
+        container = s * s
+        max_payload = math.floor(threshold * container)
+        if n + 4 <= max_payload:  # 预留4字节头
+            return s, max_payload, container - max_payload
+        s += 1
+
+
+def redundancy_from_container(container: int, threshold: float = 0.7) -> int:
+    """
+    已知容器长度（平方数），计算对应冗余长度。
+    threshold 控制最大允许的填充率（0~1）。
+    返回: 冗余长度
+    """
+    if int(math.isqrt(container)) ** 2 != container:
+        raise ValueError("container 必须是一个平方数")
+    max_payload = math.floor(threshold * container)
+    return container - max_payload
+
+
+def rs_encode(data: bytes, nsym: int) -> bytes:
     """
     使用 Reed–Solomon 编码给数据加冗余
-    :param data: 原始字节流
-    :param ratio: 冗余比例 (0~1)，如 0.3 表示冗余 30%
-    :return: 带冗余的字节流
     """
-    if not (0 <= ratio <= 1):
-        raise ValueError("ratio 必须在 0 到 1 之间")
-    
-    nsym = max(1, int(len(data) * ratio))  # 至少 1 个冗余字节
     rs = reedsolo.RSCodec(nsym)
     return rs.encode(data)
 
 
-def rs_decode_with_ratio(encoded: bytes, ratio: float) -> bytes:
+def rs_decode(encoded: bytes, nsym: int) -> bytes:
     """
     使用 Reed–Solomon 解码数据
-    :param encoded: 带冗余的字节流
-    :param ratio: 冗余比例 (必须和编码时一致)
-    :return: 恢复后的原始字节流
     """
-    nsym = max(1, int(len(encoded) / (1 + ratio) * ratio))  
     rs = reedsolo.RSCodec(nsym)
     decoded, _, _ = rs.decode(encoded)
-    return decoded
+    return bytes(decoded)  # 成功返回
+
+
+def pad_bytes(data: bytes, target_len: int) -> bytes:
+    """
+    在 data 前加 4 字节长度头，并用 0xEC, 0x11 循环补齐到 target_len
+    """
+    header = len(data).to_bytes(4, "big")
+    data_with_header = header + data
+
+    if target_len < len(data_with_header):
+        raise ValueError("target_len 不能小于 原始长度+4")
+
+    pad_len = target_len - len(data_with_header)
+    pad_pattern = (0xEC, 0x11)
+    padding = bytes(pad_pattern[i % 2] for i in range(pad_len))
+    return data_with_header + padding
+
+
+def unpad_bytes(data: bytes) -> bytes:
+    """
+    去掉补位并根据头部恢复原始数据
+    """
+    if len(data) < 4:
+        raise ValueError("数据太短，缺少长度头")
+
+    orig_len = int.from_bytes(data[:4], "big")
+    raw = data[4:4 + orig_len]
+
+    if len(raw) != orig_len:
+        raise ValueError("数据长度不匹配，可能损坏")
+
+    return raw
 
 
 def pad_to_align(data: bytes, align: int) -> bytes:
@@ -309,10 +362,11 @@ def compress_to_base64(text: str) -> str:
     :return: 压缩后并转换为 Base64 的字符串
     """
     # 每三字节(3×8-bit)映射到四位Base64字符(4×6-bit)进制字符，所以需要填充以避免出现 "="
-    compressed_data = compress_text_to_bytes(text, 3)
+    compressed_data = compress_text_to_bytes(text)
+    pad_data = pad_to_align(compressed_data, 3)
 
     # 转为Base64码时由于以字节码存储, 体积会变为bytes的4/3
-    base64_text = base64.b64encode(compressed_data).decode("utf-8")
+    base64_text = base64.b64encode(pad_data).decode("utf-8")
 
     return base64_text
 

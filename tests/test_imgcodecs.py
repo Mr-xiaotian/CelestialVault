@@ -32,7 +32,7 @@ class RandomDamageManager(TaskManager):
         return super().process_result_dict()
 
 
-def test_codecs_text():
+def _test_codecs_text():
     """
     测试所有注册的 codec 是否能正确进行 编码 -> 解码
     """
@@ -56,7 +56,7 @@ def test_codecs_text():
             print("     Original:", repr(sample_text))
             print("     Decoded :", repr(decoded_text))
 
-def _test_codecs_file():
+def test_codecs_file():
     """
     测试所有注册的 codec 是否能正确进行 文件编码 -> 文件解码
     """
@@ -177,8 +177,10 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
     plt.show()
 
 if __name__ == "__main__":
-    codec = CODEC_REGISTRY["rgba_redundancy"]
-    codec.show_progress = False
-    text = "Hello World! " * int(1e5)  # 足够长的测试文本(1e3, 4e5)
+    # codec = CODEC_REGISTRY["rgba_redundancy"]
+    # codec.show_progress = False
+    # text = "Hello World! " * int(1e5)  # 足够长的测试文本(1e3, 4e5)
 
-    redundancy_heatmap(codec, text)
+    # redundancy_heatmap(codec, text)
+
+    test_codecs_file()
