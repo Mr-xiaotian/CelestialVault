@@ -7,8 +7,8 @@ from typing import Dict
 from ..constants import image_mode_params, style_params
 from ..tools.ImageProcessing import generate_palette
 from ..tools.TextTools import (
-    encode_crc,
-    decode_crc,
+    crc_encode,
+    crc_decode,
     compress_text_to_bytes,
     decompress_text_from_bytes,
     rs_encode,
@@ -29,13 +29,13 @@ class BaseCodec:
     # --- 外部统一接口 ---
     def encode(self, text: str) -> Image.Image:
         """对文本加上 CRC 后再调用子类实现的像素编码"""
-        crc_text = encode_crc(text)
+        crc_text = crc_encode(text)
         return self._encode_core(crc_text)
 
     def decode(self, img: Image.Image) -> str:
         """对像素数据解码后，再做 CRC 校验"""
         crc_text = self._decode_core(img)
-        return decode_crc(crc_text)
+        return crc_decode(crc_text)
 
     # --- 子类需要实现的接口 ---
     def _encode_core(self, text: str) -> Image.Image:
