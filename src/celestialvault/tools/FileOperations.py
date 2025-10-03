@@ -265,10 +265,8 @@ def handle_subfolders(
         progress_desc=progress_desc,
     )
 
-    sub_folder_iter = (
-        sub_folder for sub_folder in folder_path.iterdir() if sub_folder.is_dir()
-        )
-    handlefile_manager.start(sub_folder_iter)
+    sub_folder_list = find_pure_folders(folder_path, True)
+    handlefile_manager.start(sub_folder_list)
 
     error_path_dict = handlefile_manager.handle_error_dict()
     return error_path_dict
@@ -1008,14 +1006,16 @@ def replace_filenames(folder_path: Path | str, pattern: str, replacement: str):
 
 def sort_by_number(file_path: Path, special_keywords: dict) -> tuple:
     """
-    提取文件路径中的文件夹名称和文件名中的数字，作为排序依据。
-    一级排序: 关键字优先级
-    二级排序：文件名中的数字
+    文件排序规则：
+    1. 按父目录路径进行分组（保证同目录下的文件排在一起）
+    2. 再按关键字优先级
+    3. 最后按文件名中的数字
     """
     file_name = file_path.name
+    dir_key = file_path.parent.as_posix()   # 用字符串，避免混入 int
 
-    # 关键字优先级控制
-    folder_priority = min(
+    # 关键字优先级（越小越靠前）
+    keyword_priority = min(
         (
             special_keywords[keyword]
             for keyword in special_keywords
@@ -1024,9 +1024,11 @@ def sort_by_number(file_path: Path, special_keywords: dict) -> tuple:
         default=0,
     )
 
-    matches = re.findall(r"\d+", file_path.name)
-    number = [int(num) for num in matches] if matches else [float("inf")]
-    return (folder_priority, *number)
+    # 数字提取
+    matches = re.findall(r"\d+", file_name)
+    numbers = [int(num) for num in matches] if matches else [float("inf")]
+
+    return (dir_key, keyword_priority, *numbers)
 
 
 def move_files_with_keyword(
@@ -1097,3 +1099,28 @@ def extract_file_numbers(folder_path: Path | str, suffix: str) -> set:
                 num_set.add(match.group(1))
     
     return num_set
+
+
+def find_pure_folders(root: str | Path, only_nonempty: bool = False) -> list[Path]:
+    """
+    查找指定路径下所有的“纯粹文件夹”，即只包含文件而不包含子文件夹的文件夹。
+
+    :param root: 根目录路径
+    :param only_nonempty: 是否只返回至少包含一个文件的纯粹文件夹
+    :return: 纯粹文件夹的 Path 列表
+    """
+    root = Path(root)
+    pure_folders = []
+
+    for folder in root.rglob("*"):
+        if folder.is_dir():
+            subdirs = [p for p in folder.iterdir() if p.is_dir()]
+            if not subdirs:  # 没有子文件夹
+                files = [p for p in folder.iterdir() if p.is_file()]
+                if only_nonempty:
+                    if files:
+                        pure_folders.append(folder)
+                else:
+                    pure_folders.append(folder)
+
+    return pure_folders

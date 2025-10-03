@@ -79,62 +79,77 @@ def compress_pdf(old_pdf_path: str | Path, new_pdf_path: str | Path):
     shutil.rmtree(temp_img_path)
 
 
-def merge_pdfs_in_order(folder_path: str | Path, special_keywords: dict = None) -> list:
+def merge_pdfs_in_order(folder_path: str | Path, special_keywords: dict = None) -> tuple[list[Path], dict[str, int]]:
     """
-    将指定文件夹下的所有 PDF 文件按指定顺序合并，并在输出 PDF 中为每个源文件添加
-    一个一级目录（书签），书签名称为该 PDF 文件的文件名（去掉后缀）。
+    将指定文件夹及子文件夹中的所有 PDF 文件按顺序合并，
+    并在输出 PDF 中用目录层级构建书签结构。
 
-    :param folder_path: 存放 PDF 文件的文件夹路径。
-    :param special_keywords: 特殊关键词，用于排序图片。
-    :return: 合并时所使用的 PDF 文件列表（按合并顺序）。
+    :param folder_path: 文件夹路径
+    :param special_keywords: 用于排序的特殊关键字字典
+    :return: (pdf_files, bookmark_dict)
     """
     from .FileOperations import folder_to_file_path, sort_by_number
 
-    resize_pdfs(folder_path)
-
-    temp_folder_path = Path(str(folder_path) + '_resized')
-    pdf_path = folder_to_file_path(folder_path, "pdf")
+    folder_path = Path(folder_path)
     special_keywords = special_keywords or {}
 
-    # 初始化 PdfWriter 用来输出合并后的 PDF
-    output_pdf = PyPDF2.PdfWriter()
+    resize_pdfs(folder_path)
 
-    # 按自定义规则排序 PDF 文件，这里用 sort_by_number
+    temp_folder_path = Path(str(folder_path) + "_resized")
+    pdf_path = folder_to_file_path(folder_path, "pdf")
+
+    writer = PyPDF2.PdfWriter()
     pdf_files = sorted(
-        temp_folder_path.glob("*.pdf"),
-        key=lambda path: sort_by_number(path, special_keywords),
+        temp_folder_path.rglob("*.pdf"),
+        key=lambda p: sort_by_number(p, special_keywords),
     )
 
-    # 用来记录当前合并后 PDF 的已有页数，下一个文件的起始页就是它
+    # 记录层级节点，避免重复创建；key 用相对路径的 parts 元组
+    outline_nodes: dict[tuple[str, ...], object] = {}
+    bookmark_dict: dict[str, int] = {}
+
     current_page_count = 0
     for pdf_file in tqdm(pdf_files, desc="Merging PDFs"):
         with open(pdf_file, "rb") as f:
-            pdf_reader = PyPDF2.PdfReader(f)
-            start_page = current_page_count  # 记录此 PDF 添加前的起始页
+            reader = PyPDF2.PdfReader(f)
+            start_page = current_page_count
 
-            # 把此文件所有页追加到 output_pdf
-            for page in pdf_reader.pages:
-                output_pdf.add_page(page)
+            # 添加页面
+            for page in reader.pages:
+                writer.add_page(page)
 
-            # 为此文件创建一个书签（即一级目录），标题用文件名（去后缀），
-            # 指向它在合并 PDF 中的第一页位置
-            # 注：如果要让阅读器显示的“第 1 页”与书签一致，可能需要 +1
-            output_pdf.add_outline_item(
-                title=pdf_file.stem,  # 例如 "MyDocument"
-                page_number=start_page,  # 0-based index
-                parent=None,  # 为空表示加在顶级目录
-            )
+            # 构建书签层级
+            rel_parts = pdf_file.relative_to(temp_folder_path).with_suffix("").parts
+            parent = None
+            path_so_far = []
 
-            # 更新总页数
-            current_page_count += len(pdf_reader.pages)
+            for part in rel_parts:
+                path_so_far.append(part)
+                key = tuple(path_so_far)
 
-    # 最后写出合并后的 PDF
-    with open(pdf_path, "wb") as f_out:
-        output_pdf.write(f_out)
+                if key not in outline_nodes:
+                    # 关键点：目录&文件“第一次出现”时，就把该节点指向当前文件的起始页
+                    # 这样父级目录会落到该目录下“第一个文件”的开头，而不是默认到第 1 页
+                    node = writer.add_outline_item(
+                        title=part,
+                        page_number=start_page,  # 指向文件起始页
+                        parent=parent,
+                    )
+                    outline_nodes[key] = node
+
+                    # 只在最后一层（具体文件）里记录页码
+                    if key == tuple(rel_parts):
+                        bookmark_dict["/".join(rel_parts)] = start_page + 1
+
+                parent = outline_nodes[key]
+
+            current_page_count += len(reader.pages)
+
+    with open(pdf_path, "wb") as fout:
+        writer.write(fout)
 
     shutil.rmtree(temp_folder_path)
-
-    return pdf_files
+    return bookmark_dict
 
 
 def resize_pdf_to_max_width(

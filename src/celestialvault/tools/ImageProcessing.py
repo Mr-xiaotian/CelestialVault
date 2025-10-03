@@ -5,16 +5,18 @@ import random
 from colorsys import hsv_to_rgb
 from itertools import product
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple
+from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from PIL import Image, PngImagePlugin
+from PIL import Image, PngImagePlugin, ImageFile
 from pillow_heif import register_heif_opener
 from skimage.metrics import structural_similarity as compare_ssim
 from tqdm import tqdm
 
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True  # 允许加载截断的图片
 
 def compress_img(old_img_path: str | Path, new_img_path: str | Path):
     register_heif_opener()
@@ -24,6 +26,21 @@ def compress_img(old_img_path: str | Path, new_img_path: str | Path):
     # 打开图片并压缩
     img = Image.open(old_img_path)
     img.save(new_img_path, optimize=True, quality=75)
+
+
+def safe_open_image(path: Path) -> tuple[Image.Image | None, bool]:
+    """
+    尝试安全地打开一张图片。
+    :param path: 图片路径
+    :return: (Image对象或None, 是否成功打开的bool)
+    """
+    try:
+        with Image.open(path) as img:
+            img.verify()  # 基础完整性检查
+        return Image.open(path), True  # 再次真正打开
+    except Exception as e:
+        print(f"跳过损坏图片 {path}: {e}")
+        return None, False
 
 
 def combine_imgs_to_pdf(
@@ -55,29 +72,35 @@ def combine_imgs_to_pdf(
         image_paths, key=lambda path: sort_by_number(path, special_keywords)
     )  # 按文件名中的数字排序
 
-    if not image_paths:
+    # 安全打开图片，过滤掉损坏的
+    valid_images: list[Image.Image] = []
+    for p in image_paths:
+        img, ok = safe_open_image(p)
+        if ok:
+            valid_images.append(img)
+
+    if not valid_images:
         raise ValueError(
-            f"No images found in {root_path} with suffixes: \n{IMG_SUFFIXES}"
+            f"No valid images could be opened in {root_path}."
         )
 
-    # 找到最大宽度的图片
-    max_width = max(img.size[0] for img in (Image.open(p) for p in image_paths))
+     # 找到最大宽度
+    max_width = max(img.size[0] for img in valid_images)
 
-    # 生成器函数：逐步处理图片，调整宽度
     def generate_resized_images():
-        for img_path in image_paths:
-            img = Image.open(img_path).convert("RGB")
+        for img in valid_images:
+            img = img.convert("RGB")
             width, height = img.size
             if width != max_width:
                 new_height = int(max_width * height / width)
                 img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
             yield img
 
-    # 保存第一张图片，并附加后续图片到 PDF
-    resized_images = generate_resized_images()  # 生成其余的图片
-    first_image = next(resized_images)  # 获取第一张图片
+    resized_images = generate_resized_images()
+    first_image = next(resized_images)
 
-    first_image.save(pdf_path, save_all=True, append_images=resized_images)
+    # 保存PDF
+    first_image.save(pdf_path, save_all=True, append_images=list(resized_images))
 
 
 def combine_imgs_folder(folder_path: Path, special_keywords: dict = None):
