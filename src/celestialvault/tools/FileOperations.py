@@ -287,7 +287,7 @@ def compress_folder(
     def rename_mp4(file_path: Path) -> Path:
         name = file_path.stem.replace("_compressed", "")
         suffix = file_path.suffix.lstrip(".")
-        new_name = f"{name}({suffix})_compressed.mp4"
+        new_name = f"{name}_compressed({suffix}).mp4"
         return file_path.with_name(new_name)
 
     def rename_pdf(file_path: Path) -> Path:
@@ -1031,9 +1031,7 @@ def sort_by_number(file_path: Path, special_keywords: dict) -> tuple:
     return (dir_key, keyword_priority, *numbers)
 
 
-def move_files_with_keyword(
-    source_folder: Path | str, target_folder: Path | str, keyword: str
-):
+def move_files_with_keyword(source_folder: Path | str, target_folder: Path | str, keyword: str = None):
     """
     将 source_folder 中所有文件名包含 keyword 的文件移动到 target_folder。
 
@@ -1041,21 +1039,39 @@ def move_files_with_keyword(
     :param target_folder: 目标文件夹路径（str 或 Path）
     :param keyword: 需要匹配的关键词（str）
     """
-    source = Path(source_folder)
-    target = Path(target_folder)
+    source = Path(source_folder).resolve()
+    target = Path(target_folder).resolve()
+    keyword = keyword or ""
 
+    # 源路径检查
     if not source.exists() or not source.is_dir():
-        raise ValueError(f"源文件夹不存在: {source}")
+        raise ValueError(f"源目录不存在或不是文件夹: {source}")
 
+    # 确保目标路径存在
     target.mkdir(parents=True, exist_ok=True)
 
-    moved_count = 0
-    for file in source.glob("**/*"):
-        if file.is_file() and keyword in file.name:
-            shutil.move(str(file), str(target / file.name))
-            moved_count += 1
+    count_moved = 0
+    count_skipped = 0
 
-    print(f"已移动 {moved_count} 个文件到 {target}")
+    for file in source.rglob("*"):
+        if file.is_file() and (keyword in file.name):
+            target_path = target / file.name  # ✅ 不要修改 target 本身
+            if target_path == file:
+                print(f"⚠️ 跳过自身移动: {file}")
+                count_skipped += 1
+                continue
+            elif target_path.exists():
+                print(f"⚠️ 跳过同名文件: {target_path.name}")
+                count_skipped += 1
+                continue
+            try:
+                shutil.move(str(file), str(target_path))
+                print(f"✅ 移动: {file} -> {target_path}")
+                count_moved += 1
+            except Exception as e:
+                print(f"❌ 移动失败 {file}: {e}")
+
+    print(f"\n📦 完成：移动 {count_moved} 个文件，跳过 {count_skipped} 个同名文件。")
 
 
 def extract_folder_numbers(folder_path: Path | str) -> set:

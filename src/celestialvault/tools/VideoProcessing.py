@@ -251,6 +251,7 @@ def rotate_video_folder(
         }
     else:
         raise ValueError(f"不支持的旋转角度: {angle}，仅支持 0, 90, 180, 270")
+    
     return handle_folder_files(
         folder_path,
         rules,
