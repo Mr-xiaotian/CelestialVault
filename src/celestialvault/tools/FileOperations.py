@@ -482,7 +482,7 @@ def print_directory_structure(
                 icon = FILE_ICONS.get(item.suffix, FILE_ICONS["default"])
                 reable_file_size = bytes_to_human_readable(file_size)
                 file_structure_list.append(
-                    f"{indent}{icon} {item.name:<{max_name_len - (wcswidth(item.name)-len(item.name))}}\t({reable_file_size})"
+                    f"{indent}{icon} {align_width(item.name, max_name_len)}\t({reable_file_size})"
                 )
 
         if exclude_dirs_num > 0:
@@ -1140,3 +1140,16 @@ def find_pure_folders(root: str | Path, only_nonempty: bool = False) -> list[Pat
                     pure_folders.append(folder)
 
     return pure_folders
+
+
+def align_width(s: str, max_len: int) -> str:
+    """
+    将字符串 s 左对齐到最大长度 max_len，如果需要则添加空格。
+
+    :param s: 输入字符串
+    :param max_len: 最大长度
+    :return: 左对齐后的字符串
+    """
+    adjust = wcswidth(s) - len(s)
+    width = max(max_len - adjust, 0)  # 确保非负
+    return f"{s:<{width}}"
