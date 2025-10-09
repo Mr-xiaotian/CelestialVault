@@ -1,8 +1,19 @@
 import pytest
 import logging
-from celestialvault.tools.TextTools import pro_slash, str_to_dict, language_fingerprint, calculate_valid_chinese_text, calculate_valid_text, format_table, string_split
+import os, random
+from celestialvault.tools.TextTools import (
+    pro_slash, str_to_dict, language_fingerprint, 
+    calculate_valid_chinese_text, calculate_valid_text, 
+    format_table, string_split,
+    rs_encode, rs_decode,
+    pad_bytes, unpad_bytes,
+)
+from celestialvault.tools.NumberUtils import (
+    choose_square_container,
+    redundancy_from_container,
+)
 
-def _test_pro_slash():
+def test_pro_slash():
     string_a = '(W//R\S/H\\U)'
     string_b = "https:\/\/m10.music.126.net\/20211221203525\/cb633fbb6fd0423417ef492e2225ba45\/ymusic\/7dbe\/b17e\/1937\/9982bb924f5c3adc6f85679fcf221418.mp3"
     string_c = r"this\\is\a\\test\\\\string"
@@ -22,7 +33,7 @@ def _test_pro_slash():
     logging.info(f"{'Expected output2':<16}: this\\is\\a\\test\\\\string")
     logging.info(f"{'Actual output2':<16}: {slash_c}")
 
-def _test_str_to_dict():
+def test_str_to_dict():
     test_str_0 = "key1:value1\nkey2:value2\n\n:key3:value3"
     test_str_1 = "key1=value1; key2=value2; key3= ; key4=value4"
 
@@ -112,7 +123,60 @@ def test_format_table():
 
 def test_string_split():
     input_string = ('dfg4354df6g654dfg585d8gd87fg56df132e1rg8df87f56g4d3s1dg45431', '3')
-    except_result = []
     result = string_split(*input_string)
 
     logging.info(result)
+
+def test_rs_encode_decode():
+    # 1. 造一段随机数据
+    data = os.urandom(1024)  # 1KB 随机数据
+    nsym = 600               # 故意设很大，触发分块逻辑
+
+    # 2. 编码
+    encoded = rs_encode(data, nsym)
+    print(f"原始长度:{len(data)}, 编码后长度:{len(encoded)}")
+    assert len(encoded) == len(data) + nsym
+    print("✅ 编码成功，数据一致！")
+
+    # 3. 人为损坏一些字节
+    encoded_list = bytearray(encoded)
+    for _ in range(100):  # 随机破坏100个字节
+        pos = random.randint(0, len(encoded_list) - 1)
+        encoded_list[pos] ^= 0xFF
+    corrupted = bytes(encoded_list)
+
+    # 4. 解码
+    decoded = rs_decode(corrupted, nsym)
+
+    # 5. 验证
+    assert decoded == data
+    print("✅ 解码成功，数据一致！")
+
+def test_rs_workflow():
+    raw = b"Hello, Reed-Solomon with container!"
+    print("原始数据长度:", len(raw))
+
+    # 1. 选择容器
+    side_length, max_payload, nsym = choose_square_container(len(raw), 0.7)
+    print("容器大小:", side_length**2, "最大有效载荷:", max_payload, "冗余长度:", nsym)
+
+    # 2. 补位到容器
+    padded = pad_bytes(raw, max_payload)
+    print("总长度:", len(padded))
+
+    # 3. RS 编码
+    encoded = rs_encode(padded, nsym)
+    print("编码后:", encoded)
+    print("编码后长度:", len(encoded))
+
+    # 4. RS 解码
+    decode_nsym = redundancy_from_container(side_length**2, 0.7)
+    decoded = rs_decode(encoded, decode_nsym)
+    print("解码后:", decoded)
+
+    # 5. 去除补位
+    unpadded = unpad_bytes(decoded)
+    print("去补位后:", unpadded)
+
+    if unpadded == raw:
+        print("数据完整，无错误")
