@@ -1,3 +1,5 @@
+# pyright: reportGeneralTypeIssues=false
+
 import base64
 import re
 import math

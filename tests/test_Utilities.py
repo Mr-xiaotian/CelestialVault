@@ -1,5 +1,6 @@
 import pytest, logging
-from celestialvault.tools.Utilities import get_total_size, bytes_to_human_readable
+import time
+from celestialvault.tools.Utilities import get_total_size, bytes_to_human_readable, log_time
 
 def test_get_total_size():
     data = {
@@ -15,3 +16,11 @@ def test_get_total_size():
     logging.info(f"{'Input':<15}:\n{data}")
     logging.info(f"{'Expected output':<15}: 1KB 423B")
     logging.info(f"{'Actual output':<15}: {reable_size}\n")
+
+def test_log_time():
+    @log_time
+    def print_num(num):
+        time.sleep(num)
+        print(num)
+
+    print_num(5)
