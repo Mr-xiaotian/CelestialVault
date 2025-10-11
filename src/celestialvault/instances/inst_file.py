@@ -279,7 +279,7 @@ class FileTree:
             common = n1_map.keys() & n2_map.keys()
 
             diff_children = []
-            diff_size = 0
+            diff_size = HumanBytes(0)
 
             # 左独有
             for name in n1_map.keys() - n2_map.keys():

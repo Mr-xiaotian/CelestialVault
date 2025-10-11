@@ -14,7 +14,7 @@ from wcwidth import wcswidth
 from celestialflow import TaskManager
 
 from ..constants import IMG_SUFFIXES, VIDEO_SUFFIXES
-from ..instances.inst_units import HumanBytes
+from ..instances.inst_units import HumanBytes, HumanTimestamp
 from .TextTools import format_table
 
 
@@ -118,31 +118,6 @@ class ScanHashManager(TaskManager):
 
         identical_dict = {k: v for k, v in identical_dict.items() if len(v) > 1}
         return identical_dict
-
-
-class DeleteManager(TaskManager):
-    def __init__(self, func, parent_dir: Path):
-        super().__init__(func, progress_desc="Delete files/folders", show_progress=True)
-        self.parent_dir = parent_dir
-
-    def get_args(self, rel_path):
-        target = self.parent_dir / rel_path
-        return (target,)
-
-
-class CopyManager(TaskManager):
-    def __init__(self, func, main_dir: Path, minor_dir: Path, copy_mode: str):
-        super().__init__(
-            func, progress_desc=f"Copy files/folders[{copy_mode}]", show_progress=True
-        )
-        self.main_dir = main_dir
-        self.minor_dir = minor_dir
-
-    def get_args(self, rel_path: Path):
-        source = self.main_dir / rel_path
-        target = self.minor_dir / rel_path
-        target.parent.mkdir(parents=True, exist_ok=True)
-        return (source, target)
 
 
 class DeleteReturnSizeManager(TaskManager):
@@ -435,22 +410,22 @@ def get_file_size(file_path: Path) -> HumanBytes:
     获取文件大小。
 
     :param file_path: 文件路径。
-    :return: 文件大小（字节）。
+    :return: 文件大小（HumanBytes）。
     """
     return HumanBytes(file_path.stat().st_size)
 
 
-def get_folder_size(folder_path: Path | str) -> HumanBytes:
+def get_folder_size(folder_path: Path) -> HumanBytes:
     """
-    计算文件夹的大小（以字节为单位）。
+    计算文件夹的大小。
     遍历指定文件夹中的所有文件和子目录，并计算它们的大小总和。
 
     :param folder_path: 文件夹的路径。
-    :return: 文件夹的总大小（以字节为单位）。
+    :return: 文件夹的总大小（HumanBytes）。
     """
     total_size = 0
     folder = Path(folder_path)
-    for file in folder.rglob("*"):  # rglob('*') 遍历所有文件和子目录
+    for file in folder.rglob("*"): 
         if file.is_file():
             total_size += file.stat().st_size  # 获取文件大小
     return HumanBytes(total_size)
@@ -469,6 +444,23 @@ def get_file_hash(file_path: Path, chunk_size: int = 65536) -> str:
         for chunk in iter(lambda: f.read(chunk_size), b""):
             hash_algo.update(chunk)
     return hash_algo.hexdigest()
+
+
+def get_mtime(path: Path) -> HumanTimestamp:
+    """
+    获取文件或文件夹的最后修改时间 (mtime)
+
+    :param path: 文件或目录的 Path 对象
+    :return: 修改时间戳(HumanTimestamp)
+    """
+    path = Path(path)
+    try:
+        mtime = HumanTimestamp(path.stat().st_mtime)  # 返回 float（UNIX 时间戳）
+        return mtime
+    except FileNotFoundError:
+        raise FileNotFoundError(f"路径不存在: {path}")
+    except PermissionError:
+        raise PermissionError(f"无法访问: {path}")
 
 
 def detect_identical_files(

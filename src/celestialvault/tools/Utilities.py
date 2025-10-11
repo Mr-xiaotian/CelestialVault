@@ -1,4 +1,3 @@
-import re
 import sys
 import time
 from collections.abc import Container, Mapping
@@ -9,7 +8,8 @@ from typing import Callable
 
 from ..instances.inst_units import HumanBytes
 
-def get_format_time(now_time=None):
+
+def get_format_time(now_time=None) -> str:
     """
     获取当前时间
     :return:
