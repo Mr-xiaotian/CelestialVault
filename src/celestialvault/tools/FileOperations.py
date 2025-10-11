@@ -406,208 +406,6 @@ def unzip_folder(folder_path: str | Path):
     return handle_folder_files(folder_path, rules, progress_desc="Unziping folder")
 
 
-def compare_structure(
-    dir1: str|Path,
-    dir2: str|Path,
-    exclude_dirs: list = None,
-    exclude_exts: list = None,
-    compare_common_file=False,
-):
-    """
-    比较两个文件夹的结构，并打印出仅在一个文件夹中存在的文件或文件夹。
-
-    :param dir1: 第一个文件夹路径
-    :param dir2: 第二个文件夹路径
-    :param exclude_dirs: 要排除的目录列表，默认为空列表
-    :param exclude_exts: 要排除的文件扩展名列表，默认为空列表
-    :param compare_common_file: 是否比较两个文件夹中相同文件的大小
-    """
-    def _collect_structure_diff(d1, d2, indent):
-        try:
-            d1_files = set(os.listdir(d1))
-            d2_files = set(os.listdir(d2))
-        except (FileNotFoundError, PermissionError) as e:
-            return [f"{indent}📁 [{d1}] 或 [{d2}] 无法访问: {e}"]
-
-        only_in_d1 = sorted(d1_files - d2_files)
-        only_in_d2 = sorted(d2_files - d1_files)
-        common_files = sorted(d1_files & d2_files)
-
-        d1_folder_list, d1_file_list = _process_unique_items(d1, only_in_d1, indent, origin="dir1")
-        d2_folder_list, d2_file_list = _process_unique_items(d2, only_in_d2, indent, origin="dir2")
-
-        common_folder_list, common_file_list = _compare_common_items(d1, d2, common_files, indent)
-
-        return d1_folder_list + d2_folder_list + common_folder_list + d1_file_list + d2_file_list + common_file_list
-    
-    def _process_unique_items(base_dir, items, indent, origin):
-        folder_list = []
-        file_list = []
-        for item in items:
-            path: Path = base_dir / item
-            if path.is_dir():
-                if item in exclude_dirs:
-                    continue
-                size = get_folder_size(path)
-                folder_list.append(f"{indent}📁 [{base_dir}] {item} ({bytes_to_human_readable(size)})")
-            elif path.is_file():
-                if path.suffix.lower() in exclude_exts:
-                    continue
-                size = get_file_size(path)
-                icon = FILE_ICONS.get(path.suffix.lower(), FILE_ICONS["default"])
-                file_list.append(f"{indent}{icon} [{base_dir}] {item} ({bytes_to_human_readable(size)})")
-            else:
-                continue
-            diff_size[origin] += size
-            diff_dir_key = "only_in_dir1" if origin == "dir1" else "only_in_dir2"
-            diff_dir[diff_dir_key].append(path.relative_to(base_dir))
-        return folder_list, file_list
-
-    def _compare_common_items(d1, d2, common_files, indent):
-        folder_list = []
-        file_list = []
-        for item in common_files:
-            item_path1, item_path2 = d1 / item, d2 / item
-
-            # 打印文件夹与文件夹的比较结果
-            if item_path1.is_dir() and item_path2.is_dir():
-                if item in exclude_dirs:
-                    continue
-                subfolder_list = _collect_structure_diff(
-                    item_path1, item_path2, indent + "    "
-                )
-                if subfolder_list:
-                    folder_list.append(f"{indent}📁 {item}/")
-                    folder_list.extend(subfolder_list)
-
-            # 打印文件夹与文件的混合情况
-            elif (item_path1.is_file() and item_path2.is_dir()) or (
-                item_path1.is_dir() and item_path2.is_file()
-            ):
-                file_list.append(
-                    f"{indent}{item} (one is a file, the other is a folder)"
-                )
-                diff_dir["different_files"].append(item_path1.relative_to(dir1))
-
-            # 打印文件与文件的比较结果
-            elif compare_common_file and item_path1.is_file() and item_path2.is_file():
-                if (
-                    item_path1.suffix.lower() in exclude_exts
-                    or item_path2.suffix.lower() in exclude_exts
-                ):
-                    continue
-                item_path1_size = get_file_size(item_path1)
-                item_path2_size = get_file_size(item_path2)
-                if item_path1_size != item_path2_size:
-                    icon = FILE_ICONS.get(item_path1.suffix.lower(), FILE_ICONS["default"])
-                    file_list.append(
-                        f"{indent}{icon} [{dir1}] {item} ({bytes_to_human_readable(item_path1_size)})"
-                    )
-                    file_list.append(
-                        f"{indent}{icon} [{dir2}] {item} ({bytes_to_human_readable(item_path2_size)})"
-                    )
-
-                    diff_size["dir1"] += item_path1_size
-                    diff_size["dir2"] += item_path2_size
-                    diff_dir["different_files"].append(item_path1.relative_to(dir1))
-        return folder_list, file_list
-
-
-    dir1 = Path(dir1)
-    dir2 = Path(dir2)
-    exclude_dirs = exclude_dirs or []
-    exclude_exts = exclude_exts or []
-
-    if not dir1.is_dir() or not dir2.is_dir():
-        raise ValueError(f"输入路径必须是有效的文件夹: {dir1} 或 {dir2}")
-
-    diff_size = {"dir1": 0, "dir2": 0}
-    diff_dir = {"only_in_dir1": [], "only_in_dir2": [], "different_files": []}
-
-    structure_list = _collect_structure_diff(dir1, dir2, "")
-
-    print("\n".join(structure_list))
-    print("\n" + format_table(
-        [[dir1, bytes_to_human_readable(diff_size['dir1'])],
-         [dir2, bytes_to_human_readable(diff_size['dir2'])]],
-        column_names=["Directory", "Diff Size"]
-    ))
-
-    return diff_dir
-
-
-def sync_folders(diff: Dict[str, List[Path]], dir1: str, dir2: str, mode: str = "->"):
-    """
-    根据差异字典同步两个文件夹。
-
-    :param diff: 差异字典
-    :param dir1: 第一个文件夹路径
-    :param dir2: 第二个文件夹路径
-    :param mode: 同步模式，
-                 '->' 表示以第一个文件夹为主，
-                 '<-' 表示以第二个文件夹为主，
-                 '<->' 表示双向同步
-    """
-
-    def append_hash_to_filename(file_path: Path):
-        """在文件名中添加哈希值标识"""
-        hash_value = get_file_hash(file_path)
-        name, ext = file_path.stem, file_path.suffix
-        new_file_path = file_path.with_name(f"{name}({hash_value}){ext}")
-        file_path.rename(new_file_path)
-        return new_file_path.name
-
-    dir1 = Path(dir1)
-    dir2 = Path(dir2)
-
-    if mode in ["->", "<-"]:
-        # 确定主目录和次目录
-        is_mode_a = mode == "->"
-        main_dir, minor_dir = (dir1, dir2) if is_mode_a else (dir2, dir1)
-
-        # 预计算 diff 访问键
-        main_dir_key = "only_in_" + ("dir1" if is_mode_a else "dir2")
-        minor_dir_key = "only_in_" + ("dir2" if is_mode_a else "dir1")
-
-        # 差异分配
-        main_dir_diff = diff[main_dir_key] + diff["different_files"]
-        minor_dir_diff = diff[minor_dir_key]
-
-        delete_manager = DeleteManager(delete_file_or_folder, minor_dir)
-        copy_manager = CopyManager(
-            copy_file_or_folder, main_dir, minor_dir, copy_mode=mode
-        )
-
-        delete_manager.start(minor_dir_diff)
-        copy_manager.start(main_dir_diff)
-
-    elif mode == "<->":
-        copy_a_to_b_manager = CopyManager(
-            copy_file_or_folder, dir1, dir2, copy_mode="->"
-        )
-        copy_b_to_a_manager = CopyManager(
-            copy_file_or_folder, dir2, dir1, copy_mode="<-"
-        )
-
-        diff_file_in_dir1 = []
-        diff_file_in_dir2 = []
-        for rel_path in diff["different_files"]:
-            file1 = dir1 / rel_path
-            file2 = dir2 / rel_path
-
-            new_file1_name = append_hash_to_filename(file1)
-            new_file2_name = append_hash_to_filename(file2)
-
-            diff_file_in_dir1.append(new_file1_name)
-            diff_file_in_dir2.append(new_file2_name)
-
-        copy_a_to_b_manager.start(diff["only_in_dir1"] + diff_file_in_dir1)
-        copy_b_to_a_manager.start(diff["only_in_dir2"] + diff_file_in_dir2)
-
-    else:
-        raise ValueError("无效的模式，必须为 '->', '<-' 或 '<->'")
-
-
 def delete_file_or_folder(path: Path) -> None:
     """
     删除文件或文件夹。
@@ -761,7 +559,9 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
     report.append(
         f"Total size of duplicate files: {bytes_to_human_readable(total_size)}"
     )
-    report.append(f"Total number of duplicate files: {total_file_num}")
+    report.append(
+        f"Total number of duplicate files: {total_file_num}"
+    )
     report.append(
         f"File with the most duplicates: {hash_value}(hash) {bytes_to_human_readable(file_size)}(size) {max_file_num}(number)"
     )
@@ -1051,3 +851,17 @@ def align_width(s: str, max_len: int) -> str:
     adjust = wcswidth(s) - len(s)
     width = max(max_len - adjust, 0)  # 确保非负
     return f"{s:<{width}}"
+
+
+def append_hash_to_filename(file_path: Path) -> str:
+    """
+    在文件名中添加哈希值标识
+
+    :param file_path: 文件路径
+    :return: 新文件名
+    """
+    hash_value = get_file_hash(file_path)
+    name, ext = file_path.stem, file_path.suffix
+    new_file_path = file_path.with_name(f"{name}({hash_value}){ext}")
+    file_path.rename(new_file_path)
+    return new_file_path.name
