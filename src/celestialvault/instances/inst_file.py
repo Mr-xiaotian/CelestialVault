@@ -4,13 +4,13 @@ from dataclasses import dataclass, field
 from celestialflow import TaskManager
 
 from ..constants import FILE_ICONS
+from ..instances.inst_units import HumanBytes
 from ..tools.FileOperations import (
     get_file_size, get_folder_size, get_file_hash, 
     align_width, delete_file_or_folder, copy_file_or_folder, 
     append_hash_to_filename
 )
 from ..tools.TextTools import format_table
-from ..tools.Utilities import bytes_to_human_readable
 
 
 class DeleteManager(TaskManager):
@@ -43,7 +43,7 @@ class FileNode:
     name: str
     node_path: Path
     is_dir: bool
-    size: int
+    size: HumanBytes
     icon: str
     level: int
     children: list["FileNode"] = field(default_factory=list)
@@ -56,7 +56,7 @@ class FileNode:
         return self.to_string(
             indent = "    "*self.level,
             # prefix = f"[{self.node_path.parent.as_posix()}]",
-            suffix = f"({bytes_to_human_readable(self.size)})"
+            suffix = f"({self.size})"
         )
 
 
@@ -82,13 +82,13 @@ class FileDiff:
             elif node.is_dir and node.children:
                 print(node.to_string(
                     indent = "    "*(node.level-1),
-                    suffix = f"({bytes_to_human_readable(node.size)})"
+                    suffix = node.size
                 ))
             else:
                 print(node.to_string(
                     indent = "    "*(node.level-1),
                     prefix = f"[{node.node_path.parent.as_posix()}]",
-                    suffix = f"({bytes_to_human_readable(node.size)})"
+                    suffix = node.size
                 ))
             dirs = [c for c in node.children if c.is_dir]
             files = [c for c in node.children if not c.is_dir]
@@ -104,8 +104,8 @@ class FileDiff:
         _print(self.diff_tree.root)
         print()
         print(format_table([
-            [self.left_path, bytes_to_human_readable(self.diff_size_left)],
-            [self.right_path, bytes_to_human_readable(self.diff_size_right)]],
+            [self.left_path, self.diff_size_left],
+            [self.right_path, self.diff_size_right]],
             column_names=["Directory", "Diff Size"]
         ))
 
@@ -208,10 +208,10 @@ class FileTree:
             max_file_name_len = max((wcswidth(str(item.name)) for item in files), default=0)
 
             children = []
-            total_size = 0
+            total_size = HumanBytes(0)
 
-            exclude_dirs_size = 0
-            exclude_file_size = 0
+            exclude_dirs_size = HumanBytes(0)
+            exclude_file_size = HumanBytes(0)
 
             exclude_dirs_num = 0
             exclude_file_num = 0

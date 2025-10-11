@@ -1,5 +1,4 @@
 import hashlib
-import os
 import re
 import shutil
 import tarfile
@@ -14,9 +13,9 @@ from tqdm import tqdm
 from wcwidth import wcswidth
 from celestialflow import TaskManager
 
-from ..constants import FILE_ICONS, IMG_SUFFIXES, VIDEO_SUFFIXES
+from ..constants import IMG_SUFFIXES, VIDEO_SUFFIXES
+from ..instances.inst_units import HumanBytes
 from .TextTools import format_table
-from .Utilities import bytes_to_human_readable
 
 
 class HandleFileManager(TaskManager):
@@ -151,7 +150,7 @@ class DeleteReturnSizeManager(TaskManager):
         delete_size = 0
         for size in self.get_success_dict().values():
             delete_size += size
-        return delete_size
+        return HumanBytes(delete_size)
 
 
 def create_folder(path: str | Path) -> Path:
@@ -431,17 +430,17 @@ def copy_file_or_folder(source: Path, target: Path) -> None:
         shutil.copytree(source, target, dirs_exist_ok=True)
 
 
-def get_file_size(file_path: Path) -> int:
+def get_file_size(file_path: Path) -> HumanBytes:
     """
     获取文件大小。
 
     :param file_path: 文件路径。
     :return: 文件大小（字节）。
     """
-    return file_path.stat().st_size
+    return HumanBytes(file_path.stat().st_size)
 
 
-def get_folder_size(folder_path: Path | str) -> int:
+def get_folder_size(folder_path: Path | str) -> HumanBytes:
     """
     计算文件夹的大小（以字节为单位）。
     遍历指定文件夹中的所有文件和子目录，并计算它们的大小总和。
@@ -454,7 +453,7 @@ def get_folder_size(folder_path: Path | str) -> int:
     for file in folder.rglob("*"):  # rglob('*') 遍历所有文件和子目录
         if file.is_file():
             total_size += file.stat().st_size  # 获取文件大小
-    return total_size
+    return HumanBytes(total_size)
 
 
 def get_file_hash(file_path: Path, chunk_size: int = 65536) -> str:
@@ -513,7 +512,7 @@ def detect_identical_files(
     return identical_dict
 
 
-def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
+def duplicate_files_report(identical_dict: Dict[Tuple[str, HumanBytes], List[Path]]):
     """
     生成一个详细报告，列出所有重复的文件及其位置。
 
@@ -524,7 +523,7 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
         return
 
     report = []
-    total_size = 0
+    total_size = HumanBytes(0)
     total_file_num = 0
     max_file_num = 0
     index = 0
@@ -546,24 +545,23 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, int], List[Path]]):
             max_file_num = file_num
             max_file_key = (hash_value, file_size)
 
-        file_readable_size = bytes_to_human_readable(file_size)
-        files_readable_size = bytes_to_human_readable(file_size * file_num)
-        data = [(str(file), file_readable_size) for file in file_list]
+        files_size = file_size * file_num
+        data = [(str(file), file_size) for file in file_list]
         table_text = format_table(data, column_names=["File", "Size"])
 
-        report.append(f"{index}.Hash: {hash_value} (Size: {files_readable_size})")
+        report.append(f"{index}.Hash: {hash_value} (Size: {files_size})")
         report.append(table_text + "\n")
         index += 1
 
     hash_value, file_size = max_file_key
     report.append(
-        f"Total size of duplicate files: {bytes_to_human_readable(total_size)}"
+        f"Total size of duplicate files: {total_size}"
     )
     report.append(
         f"Total number of duplicate files: {total_file_num}"
     )
     report.append(
-        f"File with the most duplicates: {hash_value}(hash) {bytes_to_human_readable(file_size)}(size) {max_file_num}(number)"
+        f"File with the most duplicates: {hash_value}(hash) {file_size}(size) {max_file_num}(number)"
     )
 
     print("\n".join(report))
@@ -593,7 +591,7 @@ def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
     delete_return_size_manager.start(delete_list)
     delete_size = delete_return_size_manager.process_result_dict()
 
-    print(f"\nTotal size of deleted files: {bytes_to_human_readable(delete_size)}")
+    print(f"\nTotal size of deleted files: {delete_size}")
 
 
 def move_identical_files(

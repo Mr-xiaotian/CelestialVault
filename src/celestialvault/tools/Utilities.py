@@ -7,6 +7,7 @@ from time import localtime, strftime
 from types import FunctionType
 from typing import Callable
 
+from ..instances.inst_units import HumanBytes
 
 def get_format_time(now_time=None):
     """
@@ -37,51 +38,7 @@ def functions_are_equal(func1: Callable, func2: Callable) -> bool:
     )
 
 
-def bytes_to_human_readable(size_in_bytes: int) -> str:
-    """
-    将字节大小转换为人类可读的格式
-    :param size_in_bytes:
-    :return: 人类可读格式的大小 (str)，如 "1GB 512MB"
-    """
-    if size_in_bytes <= 0:
-        return "0B"
-
-    units = ["B", "KB", "MB", "GB", "TB"]
-    result = []
-
-    for unit in reversed(units):
-        unit_size = 1024 ** units.index(unit)
-        if size_in_bytes >= unit_size:
-            value = size_in_bytes // unit_size
-            size_in_bytes %= unit_size
-            result.append(f"{value}{unit}")
-
-    return " ".join(result)
-
-
-def human_readable_to_bytes(human_readable: str) -> int:
-    """
-    将人类可读的大小字符串转换为字节数。
-    :param human_readable: 人类可读格式的大小 (str)，如 "1GB 512MB"
-    :return: 字节大小 (int)
-    """
-    units = {"B": 1, "KB": 1024, "MB": 1024**2, "GB": 1024**3, "TB": 1024**4}
-    size_in_bytes = 0
-
-    matches = re.findall(r"(\d+(?:\.\d+)?)([A-Za-z]+)", human_readable)
-    if not matches:
-        raise ValueError(f"无法解析输入: {human_readable}")
-
-    for value, unit in matches:
-        unit = unit.upper()
-        if unit not in units:
-            raise ValueError(f"未知单位: {unit}")
-        size_in_bytes += float(value) * units[unit]
-
-    return int(size_in_bytes)
-
-
-def get_total_size(obj, seen=None) -> int:
+def get_total_size(obj, seen=None) -> HumanBytes:
     """
     递归计算对象及其内部元素的总内存大小。
     :param obj: 任意 Python 对象。
@@ -99,7 +56,7 @@ def get_total_size(obj, seen=None) -> int:
     seen.add(obj_id)
 
     # 基础大小
-    size = sys.getsizeof(obj)
+    size = HumanBytes(sys.getsizeof(obj))
 
     # 如果对象是映射类型（如 dict）
     if isinstance(obj, Mapping):
