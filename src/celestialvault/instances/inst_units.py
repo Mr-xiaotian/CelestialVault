@@ -292,3 +292,4 @@ class HumanTimestamp(float):
     def now(cls, tz=None) -> "HumanTimestamp":
         tz = tz or cls.DEFAULT_TZ
         return cls(datetime.now(tz), tz=tz)
+    

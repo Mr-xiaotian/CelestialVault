@@ -6,8 +6,8 @@ from celestialflow import TaskManager
 from ..constants import FILE_ICONS
 from ..instances.inst_units import HumanBytes, HumanTimestamp
 from ..tools.FileOperations import (
-    get_file_size, get_dir_size, get_file_hash, get_mtime,
-    align_width, delete_file_or_dir, copy_file_or_dir, 
+    get_file_size, get_dir_size, get_file_hash, get_dir_hash, 
+    get_mtime, align_width, delete_file_or_dir, copy_file_or_dir, 
     append_hash_to_filename
 )
 from ..tools.TextTools import format_table
@@ -49,6 +49,7 @@ class FileNode:
     level: int
     children: list["FileNode"] = field(default_factory=list)
     max_name_len: int = 0
+    _hash: str | None = field(default=None, repr=False)
 
     def to_string(self, indent: str = "", prefix: str = "", suffix: str = "") -> str:
         return f"{indent}{self.icon}{prefix} {align_width(self.name, self.max_name_len)}\t{suffix}"
@@ -60,6 +61,18 @@ class FileNode:
             # prefix = f"[{self.mtime}]",
             suffix = f"({self.size})"
         )
+    
+    @property
+    def hash(self) -> str:
+        """惰性计算文件哈希"""
+        if self._hash:
+            return self._hash
+        
+        if self.is_dir:
+            self._hash = get_dir_hash(self.node_path)
+        else:
+            self._hash = get_file_hash(self.node_path)
+        return self._hash
 
 
 @dataclass
@@ -81,16 +94,11 @@ class FileDiff:
         def _print(node: FileNode):
             if node == self.diff_tree.root:
                 pass
-            elif node.is_dir and node.children:
-                print(node.to_string(
-                    indent = "    "*(node.level-1),
-                    suffix = node.size
-                ))
             else:
                 print(node.to_string(
                     indent = "    "*(node.level-1),
-                    prefix = f"[{node.node_path.parent.as_posix()}]",
-                    suffix = node.size
+                    prefix = f"[{node.node_path.parent.as_posix()}]" if node.node_path else "",
+                    suffix = f"({node.size})"
                 ))
             dirs = [c for c in node.children if c.is_dir]
             files = [c for c in node.children if not c.is_dir]
@@ -152,11 +160,11 @@ class FileDiff:
                 file1 = self.left_path / rel_path
                 file2 = self.right_path / rel_path
 
-                new_file1_name = append_hash_to_filename(file1)
-                new_file2_name = append_hash_to_filename(file2)
+                new_file1 = append_hash_to_filename(file1)
+                new_file2 = append_hash_to_filename(file2)
 
-                diff_file_in_dir1.append(new_file1_name)
-                diff_file_in_dir2.append(new_file2_name)
+                diff_file_in_dir1.append(new_file1.relative_to(self.left_path))
+                diff_file_in_dir2.append(new_file2.relative_to(self.right_path))
 
             copy_a_to_b_manager.start(self.only_in_left + diff_file_in_dir1)
             copy_b_to_a_manager.start(self.only_in_right + diff_file_in_dir2)
@@ -266,7 +274,7 @@ class FileTree:
         _print(self.root)
 
     # 对比两棵树
-    def compare_with(self, other: "FileTree") -> "FileDiff":
+    def compare_with(self, other: "FileTree", compare_hash: bool=False) -> "FileDiff":
         diff = FileDiff(
             left_path=self.path,
             right_path=other.path,
@@ -284,6 +292,7 @@ class FileTree:
 
             diff_children = []
             diff_size = HumanBytes(0)
+            mtime = HumanTimestamp(0)
 
             # 左独有
             for name in n1_map.keys() - n2_map.keys():
@@ -305,17 +314,26 @@ class FileTree:
             for name in common:
                 c1, c2 = n1_map[name], n2_map[name]
                 if c1.is_dir and c2.is_dir:
+                    is_equal_size = c1.size == c2.size
+                    is_equal_hash = c1.hash == c2.hash if compare_hash else True
+                    if is_equal_size and is_equal_hash:
+                        continue
+
                     sub_dir = _compare(c1, c2)
                     diff_size += sub_dir.size
                     diff_children.append(sub_dir)
                 elif not c1.is_dir and not c2.is_dir:
-                    if c1.size != c2.size:
-                        diff.different_files.append(c1.node_path.relative_to(self.path))
-                        diff.diff_size_left += c1.size
-                        diff.diff_size_right += c2.size
-                        diff_size += c1.size + c2.size
-                        diff_children.append(c1)
-                        diff_children.append(c2)
+                    is_equal_size = c1.size == c2.size
+                    is_equal_hash = c1.hash == c2.hash if compare_hash else True
+                    if is_equal_size  and is_equal_hash:
+                        continue
+
+                    diff.different_files.append(c1.node_path.relative_to(self.path))
+                    diff.diff_size_left += c1.size
+                    diff.diff_size_right += c2.size
+                    diff_size += c1.size + c2.size
+                    diff_children.append(c1)
+                    diff_children.append(c2)
                 else:
                     # 一方文件一方文件夹
                     diff.only_in_left.append(c1.node_path.relative_to(self.path))
@@ -326,7 +344,7 @@ class FileTree:
                     diff_children.append(c1)
                     diff_children.append(c2)
 
-            return FileNode(f"{n1.name}", Path(), True, diff_size, "📁", n1.level, diff_children)
+            return FileNode(f"{n1.name}", None, True, diff_size, mtime, "📁", n1.level, diff_children)
 
         diff.diff_tree = FileTree(_compare(self.root, other.root), self.path)
         return diff

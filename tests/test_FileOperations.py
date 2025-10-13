@@ -1,12 +1,5 @@
 import pytest, logging
-from celestialvault.tools.FileOperations import print_directory_structure, compress_dir, detect_identical_files, duplicate_files_report
-
-def test_print_directory_structure():
-    # Test with a valid directory
-    exclude_dirs = ['.git', '.pytest_cache', '__pycache__']
-    exclude_exts = ['.pyc', '.pyo']
-    print()
-    print_directory_structure(r'Q:\Project\test', exclude_dirs = exclude_dirs, exclude_exts = exclude_exts)
+from celestialvault.tools.FileOperations import compress_dir, detect_identical_files, duplicate_files_report
 
 def _test_compress_dir():
     # Test with a valid directory

@@ -511,14 +511,14 @@ def detect_identical_files(
         get_file_size,
         execution_mode,
         enable_result_cache=True,
-        progress_desc="Scanning file size",
+        progress_desc="Scanning files size",
         show_progress=True,
     )
     scan_hash_manager = ScanHashManager(
         get_file_hash,
         execution_mode,
         enable_result_cache=True,
-        progress_desc="Calculating file hashes",
+        progress_desc="Calculating files hash",
         show_progress=True,
     )
 
@@ -878,15 +878,16 @@ def align_width(s: str, max_len: int) -> str:
     return f"{s:<{width}}"
 
 
-def append_hash_to_filename(file_path: Path) -> str:
+def append_hash_to_filename(file_path: Path) -> Path:
     """
     在文件名中添加哈希值标识
 
     :param file_path: 文件路径
-    :return: 新文件名
+    :return: 新文件路径
     """
     hash_value = get_file_hash(file_path)
     name, ext = file_path.stem, file_path.suffix
     new_file_path = file_path.with_name(f"{name}({hash_value}){ext}")
     file_path.rename(new_file_path)
-    return new_file_path.name
+
+    return new_file_path
