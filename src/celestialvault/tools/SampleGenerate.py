@@ -1,5 +1,6 @@
 import random
 import string
+import shutil
 from pathlib import Path
 from typing import List, Union
 
@@ -138,3 +139,78 @@ def random_increasing_sequence(length: int, start: int = 0, max_step: int = 10) 
         step = random.randint(1, max_step)  # 随机步长 ≥1 保证递增
         seq.append(seq[-1] + step)
     return seq
+
+
+def generate_test_dirs(base_path: str | Path):
+    """
+    在 base_path 下生成 dirA 和 dirB 两个文件夹，用于测试文件夹对比功能。
+    覆盖四种情况：
+    1. 名称、大小、内容均不同；
+    2. 名称相同但大小、内容不同；
+    3. 名称和大小相同但内容不同；
+    4. 名称、大小、内容完全相同。
+    """
+    base = Path(base_path)
+    dirA = base / "dirA"
+    dirB = base / "dirB"
+
+    # 清理旧目录
+    for d in (dirA, dirB):
+        if d.exists():
+            shutil.rmtree(d)
+        d.mkdir(parents=True)
+
+    # ---------- ① 名称、大小、内容均不同 ----------
+    fileA1 = dirA / "only_in_A.txt"
+    fileB1 = dirB / "only_in_B.txt"
+    fileA1.write_text("AAA" * 10)  # 长度 30
+    fileB1.write_text("BBB" * 20)  # 长度 60
+
+    (dirA / "diff_name_A").mkdir()
+    (dirB / "diff_name_B").mkdir()
+    (dirA / "diff_name_A" / "dataA.txt").write_text("This is A's data.")
+    (dirB / "diff_name_B" / "dataB.txt").write_text("This is B's data.")
+
+    # ---------- ② 名称相同但大小、内容不同 ----------
+    fileA2 = dirA / "same_name_diff_size_content.txt"
+    fileB2 = dirB / "same_name_diff_size_content.txt"
+    fileA2.write_text("short text")       # 长度短
+    fileB2.write_text("a bit longer text")  # 长度不同且内容不同
+
+    subA2 = dirA / "same_name_diff_size_folder"
+    subB2 = dirB / "same_name_diff_size_folder"
+    subA2.mkdir()
+    subB2.mkdir()
+    (subA2 / "data.txt").write_text("A" * 10)
+    (subB2 / "data.txt").write_text("B" * 20)
+
+    # ---------- ③ 名称和大小相同但内容不同 ----------
+    fileA3 = dirA / "same_name_size_diff_content.txt"
+    fileB3 = dirB / "same_name_size_diff_content.txt"
+    textA3 = "ABCDEFGH"  # 长度 8
+    textB3 = "12345678"  # 同样长度 8，但内容不同
+    fileA3.write_text(textA3)
+    fileB3.write_text(textB3)
+
+    subA3 = dirA / "same_name_size_diff_content_folder"
+    subB3 = dirB / "same_name_size_diff_content_folder"
+    subA3.mkdir()
+    subB3.mkdir()
+    (subA3 / "data.txt").write_text("abcdefghij")   # 长度 10
+    (subB3 / "data.txt").write_text("ABCDEFGHIJ")   # 同长度但不同内容
+
+    # ---------- ④ 名称、大小、内容完全相同 ----------
+    fileA4 = dirA / "same_all.txt"
+    fileA4.write_text("identical content")
+    fileB4 = dirB / "same_all.txt"
+    shutil.copy2(fileA4, fileB4)
+
+    subA4 = dirA / "same_all_folder"
+    subB4 = dirB / "same_all_folder"
+    subA4.mkdir()
+    (subA4 / "identical.txt").write_text("completely identical")
+    shutil.copytree(subA4, subB4, dirs_exist_ok=True, copy_function=shutil.copy2)
+
+    print(f"✅ 测试目录已生成:\n{dirA}\n{dirB}")
+    return dirA, dirB
+

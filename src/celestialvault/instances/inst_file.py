@@ -82,8 +82,9 @@ class FileDiff:
     only_in_left: list[Path]
     only_in_right: list[Path]
     different_files: list[Path]
-    diff_size_left: int = 0
-    diff_size_right: int = 0
+    compare_hash: bool
+    diff_size_left: HumanBytes = HumanBytes(0)
+    diff_size_right: HumanBytes = HumanBytes(0)
     diff_tree: "FileTree" = None
 
     def is_identical(self) -> bool:
@@ -98,7 +99,7 @@ class FileDiff:
                 print(node.to_string(
                     indent = "    "*(node.level-1),
                     prefix = f"[{node.node_path.parent.as_posix()}]" if node.node_path else "",
-                    suffix = f"({node.size})"
+                    suffix = f"({node.size}) ({node.hash})" if self.compare_hash and node._hash else f"({node.size})"
                 ))
             dirs = [c for c in node.children if c.is_dir]
             files = [c for c in node.children if not c.is_dir]
@@ -281,8 +282,9 @@ class FileTree:
             only_in_left=[],
             only_in_right=[],
             different_files=[],
-            diff_size_left=0,
-            diff_size_right=0,
+            compare_hash = compare_hash,
+            diff_size_left=HumanBytes(0),
+            diff_size_right=HumanBytes(0),
         )
 
         def _compare(n1: FileNode, n2: FileNode) -> FileNode:
@@ -315,8 +317,9 @@ class FileTree:
                 c1, c2 = n1_map[name], n2_map[name]
                 if c1.is_dir and c2.is_dir:
                     is_equal_size = c1.size == c2.size
-                    is_equal_hash = c1.hash == c2.hash if compare_hash else True
-                    if is_equal_size and is_equal_hash:
+                    if is_equal_size and not compare_hash:
+                        continue
+                    if is_equal_size and compare_hash and c1.hash == c2.hash:
                         continue
 
                     sub_dir = _compare(c1, c2)
@@ -324,8 +327,9 @@ class FileTree:
                     diff_children.append(sub_dir)
                 elif not c1.is_dir and not c2.is_dir:
                     is_equal_size = c1.size == c2.size
-                    is_equal_hash = c1.hash == c2.hash if compare_hash else True
-                    if is_equal_size  and is_equal_hash:
+                    if is_equal_size and not compare_hash:
+                        continue
+                    if is_equal_size and compare_hash and c1.hash == c2.hash:
                         continue
 
                     diff.different_files.append(c1.node_path.relative_to(self.path))
