@@ -79,28 +79,28 @@ def compress_pdf(old_pdf_path: str | Path, new_pdf_path: str | Path):
     shutil.rmtree(temp_img_path)
 
 
-def merge_pdfs_in_order(folder_path: str | Path, special_keywords: dict = None) -> tuple[list[Path], dict[str, int]]:
+def merge_pdfs_in_order(dir_path: str | Path, special_keywords: dict = None) -> tuple[list[Path], dict[str, int]]:
     """
     将指定文件夹及子文件夹中的所有 PDF 文件按顺序合并，
     并在输出 PDF 中用目录层级构建书签结构。
 
-    :param folder_path: 文件夹路径
+    :param dir_path: 文件夹路径
     :param special_keywords: 用于排序的特殊关键字字典
     :return: (pdf_files, bookmark_dict)
     """
-    from .FileOperations import folder_to_file_path, sort_by_number
+    from .FileOperations import dir_to_file_path, sort_by_number
 
-    folder_path = Path(folder_path)
+    dir_path = Path(dir_path)
     special_keywords = special_keywords or {}
 
-    resize_pdfs(folder_path)
+    resize_pdfs(dir_path)
 
-    temp_folder_path = Path(str(folder_path) + "_resized")
-    pdf_path = folder_to_file_path(folder_path, "pdf")
+    temp_dir_path = Path(str(dir_path) + "_resized")
+    pdf_path = dir_to_file_path(dir_path, "pdf")
 
     writer = PyPDF2.PdfWriter()
     pdf_files = sorted(
-        temp_folder_path.rglob("*.pdf"),
+        temp_dir_path.rglob("*.pdf"),
         key=lambda p: sort_by_number(p, special_keywords),
     )
 
@@ -119,7 +119,7 @@ def merge_pdfs_in_order(folder_path: str | Path, special_keywords: dict = None) 
                 writer.add_page(page)
 
             # 构建书签层级
-            rel_parts = pdf_file.relative_to(temp_folder_path).with_suffix("").parts
+            rel_parts = pdf_file.relative_to(temp_dir_path).with_suffix("").parts
             parent = None
             path_so_far = []
 
@@ -148,7 +148,7 @@ def merge_pdfs_in_order(folder_path: str | Path, special_keywords: dict = None) 
     with open(pdf_path, "wb") as fout:
         writer.write(fout)
 
-    shutil.rmtree(temp_folder_path)
+    shutil.rmtree(temp_dir_path)
     return bookmark_dict
 
 
@@ -200,21 +200,21 @@ def resize_pdf_to_max_width(
     return max_width
 
 
-def get_max_pdf_width(folder_path: str | Path) -> float:
+def get_max_pdf_width(dir_path: str | Path) -> float:
     """
     检测指定文件夹中所有 PDF 文件中每一页的最大宽度。
 
-    :param folder_path: 输入的文件夹路径
+    :param dir_path: 输入的文件夹路径
     :return: 所有 PDF 文件中每一页的最大宽度
     """
-    folder_path = Path(folder_path)
-    if not folder_path.is_dir():
-        raise NotADirectoryError(f"错误：'{folder_path}' 不是一个有效的文件夹路径。")
+    dir_path = Path(dir_path)
+    if not dir_path.is_dir():
+        raise NotADirectoryError(f"错误：'{dir_path}' 不是一个有效的文件夹路径。")
 
     max_width = 0.0
 
     # 遍历文件夹中的所有 PDF 文件
-    for pdf_file in folder_path.rglob("*.pdf"):
+    for pdf_file in dir_path.rglob("*.pdf"):
         try:
             with fitz.open(pdf_file) as doc:
                 for page in doc:
@@ -225,7 +225,7 @@ def get_max_pdf_width(folder_path: str | Path) -> float:
     return max_width
 
 
-def resize_pdfs(folder_path: Path, execution_mode: str = "serial"):
+def resize_pdfs(dir_path: Path, execution_mode: str = "serial"):
     def resize_pdf(pdf_path: Path, output_path: Path) -> Path:
         return resize_pdf_to_max_width(pdf_path, output_path, max_pdf_width)
 
@@ -234,14 +234,14 @@ def resize_pdfs(folder_path: Path, execution_mode: str = "serial"):
         new_name = f"{name}_resized.pdf"
         return file_path.with_name(new_name)
 
-    from .FileOperations import handle_folder_files
+    from .FileOperations import handle_dir_files
 
-    max_pdf_width = get_max_pdf_width(folder_path)
+    max_pdf_width = get_max_pdf_width(dir_path)
     rules = {".pdf": (resize_pdf, lambda x: x, {})}
-    return handle_folder_files(
-        folder_path,
+    return handle_dir_files(
+        dir_path,
         rules,
         execution_mode,
         progress_desc="Resize PDFs",
-        folder_name_suffix="_resized",
+        dir_name_suffix="_resized",
     )

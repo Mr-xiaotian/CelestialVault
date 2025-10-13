@@ -54,12 +54,12 @@ def combine_imgs_to_pdf(
     :return: None
     """
     from ..constants import IMG_SUFFIXES
-    from .FileOperations import folder_to_file_path, sort_by_number
+    from .FileOperations import dir_to_file_path, sort_by_number
 
     # 转换路径为 Path 对象
     root_path = Path(root_path)
     pdf_path = (
-        folder_to_file_path(root_path, "pdf") if pdf_path is None else Path(pdf_path)
+        dir_to_file_path(root_path, "pdf") if pdf_path is None else Path(pdf_path)
     )
     special_keywords = special_keywords or {}
 
@@ -103,27 +103,27 @@ def combine_imgs_to_pdf(
     first_image.save(pdf_path, save_all=True, append_images=list(resized_images))
 
 
-def combine_imgs_folder(folder_path: Path, special_keywords: dict = None):
+def combine_imgs_dir(dir_path: Path, special_keywords: dict = None):
     """
     将指定文件夹中的JPEG图片组合成单个PDF文件。
 
-    :param folder_path: 包含JPEG图片的文件夹路径。
+    :param dir_path: 包含JPEG图片的文件夹路径。
     :param special_keywords: 特殊关键词，用于排序图片。eg: {'番外': 1, '特典': 1, '原画': 2}
     :return: None
     """
     def rename_pdf(file_path: Path) -> Path:
-        return folder_to_file_path(file_path, "pdf")
+        return dir_to_file_path(file_path, "pdf")
 
-    from .FileOperations import folder_to_file_path, handle_subfolders
+    from .FileOperations import dir_to_file_path, handle_subdirs
 
     rules = {
-        "folder": (combine_imgs_to_pdf, rename_pdf, {"special_keywords": special_keywords}),
+        "dir": (combine_imgs_to_pdf, rename_pdf, {"special_keywords": special_keywords}),
     }
 
-    return handle_subfolders(folder_path, rules, 
+    return handle_subdirs(dir_path, rules, 
                              execution_mode="serial", 
                              progress_desc="Combine Img Folders", 
-                             folder_name_suffix="_img2pdf"
+                             dir_name_suffix="_img2pdf"
                             )
 
 
@@ -371,27 +371,27 @@ def extract_pixels_as_gif(image: Image.Image, frame_size=200, duration=100, loop
     return gif_io
 
 
-def compare_images_by_ssim(folder1: Path | str, folder2: Path | str) -> pd.DataFrame:
+def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
     """
     比较两个文件夹中的图像，计算它们的 SSIM 值，并返回一个包含文件名和 SSIM 值的 DataFrame。
 
-    :param folder1: 第一个文件夹的路径。
-    :param folder2: 第二个文件夹的路径。
+    :param dir1: 第一个文件夹的路径。
+    :param dir2: 第二个文件夹的路径。
     :return: 包含文件名和 SSIM 值的 DataFrame。
     """
     data = []
-    folder1 = Path(folder1)
-    folder2 = Path(folder2)
+    dir1 = Path(dir1)
+    dir2 = Path(dir2)
 
     file_path_list = [
         file_path
-        for file_path in folder1.glob("**/*")
+        for file_path in dir1.glob("**/*")
         if file_path.is_file() and file_path.suffix.lower() in [".jpg", ".jpeg", ".png"]
     ]
 
-    # 遍历 folder1 文件夹中的所有文件
+    # 遍历 dir1 文件夹中的所有文件
     for file1 in tqdm(file_path_list, desc="Comparing Images:"):
-        file2 = folder2 / file1.name  # 获取对应文件夹中的同名文件
+        file2 = dir2 / file1.name  # 获取对应文件夹中的同名文件
         if not file2.exists() or not file2.is_file():  # 如果文件存在且是文件
             continue
 

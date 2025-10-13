@@ -456,12 +456,12 @@ def safe_open_txt(file_path: str | Path) -> str:
     return book_text
 
 
-def combine_txt_files(source_folder: str | Path, target_file: str | Path):
+def combine_txt_files(source_dir: str | Path, target_file: str | Path):
     """
     将指定文件夹内的所有txt文件按文件名中的数字排序，合并为一个新的txt文件。
     合并时每个文件的内容前面加入该文件的名字，合并文件名为文件夹名。
 
-    :param source_folder: 包含txt文件的文件夹路径。
+    :param source_dir: 包含txt文件的文件夹路径。
     :param target_file: 合并后的txt文件路径。
     """
 
@@ -473,16 +473,16 @@ def combine_txt_files(source_folder: str | Path, target_file: str | Path):
         return int("".join(matches)) if matches else float("inf")
 
     # 转换路径为 Path 对象
-    source_folder = Path(source_folder)
+    source_dir = Path(source_dir)
 
-    if not source_folder.is_dir():
-        raise ValueError(f"The provided path {source_folder} is not a directory.")
+    if not source_dir.is_dir():
+        raise ValueError(f"The provided path {source_dir} is not a directory.")
 
     # 获取所有txt文件路径，并按文件名中的数字排序
-    txt_files = sorted(source_folder.glob("*.txt"), key=extract_number)
+    txt_files = sorted(source_dir.glob("*.txt"), key=extract_number)
 
     if not txt_files:
-        raise ValueError(f"No txt files found in {source_folder}.")
+        raise ValueError(f"No txt files found in {source_dir}.")
 
     # 合并文件
     with open(target_file, "w", encoding="utf-8") as outfile:

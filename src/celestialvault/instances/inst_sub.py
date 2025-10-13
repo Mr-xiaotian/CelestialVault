@@ -3,7 +3,7 @@ from html import unescape
 from pathlib import Path
 from urllib.parse import unquote
 
-from ..tools.FileOperations import handle_folder_files
+from ..tools.FileOperations import handle_dir_files
 from ..tools.TextTools import pro_slash, safe_open_txt
 
 
@@ -76,13 +76,13 @@ class Suber:
             ("\n", "")
         ]
 
-    def clear_book_folder(
-        self, folder_path: Path | str, execution_mode: str = "thread"
+    def clear_book_dir(
+        self, dir_path: Path | str, execution_mode: str = "thread"
     ):
         rules = {".txt": (self.clear_book, lambda a: a, {})}
 
-        return handle_folder_files(
-            folder_path, rules, execution_mode, progress_desc="Clearing book folder"
+        return handle_dir_files(
+            dir_path, rules, execution_mode, progress_desc="Clearing book dir"
         )
 
     def clear_book(self, book_path: Path, new_path: Path):

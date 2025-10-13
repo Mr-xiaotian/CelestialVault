@@ -22,8 +22,8 @@ class HandleFileManager(TaskManager):
     def __init__(
         self,
         func: Callable,
-        folder_path: Path,
-        new_folder_path: Path,
+        dir_path: Path,
+        new_dir_path: Path,
         rules: Dict[str, Tuple[Callable, Callable]],
         execution_mode: str,
         progress_desc: str,
@@ -37,13 +37,13 @@ class HandleFileManager(TaskManager):
             progress_desc=progress_desc,
             show_progress=True,
         )
-        self.folder_path = folder_path
-        self.new_folder_path = new_folder_path
+        self.dir_path = dir_path
+        self.new_dir_path = new_dir_path
         self.rules = rules
 
     def get_args(self, file_path: Path):
-        rel_path = file_path.relative_to(self.folder_path)
-        new_file_path = self.new_folder_path / rel_path
+        rel_path = file_path.relative_to(self.dir_path)
+        new_file_path = self.new_dir_path / rel_path
 
         file_suffix = file_path.suffix.lower()
         action_func, rename_func, args_extra = self.rules.get(
@@ -60,31 +60,31 @@ class HandleFileManager(TaskManager):
         error_path_dict = defaultdict(list)
 
         for file_path, error in self.get_error_dict().items():
-            rel_path = file_path.relative_to(self.folder_path)
-            new_file_path = self.new_folder_path / rel_path
+            rel_path = file_path.relative_to(self.dir_path)
+            new_file_path = self.new_dir_path / rel_path
             shutil.copy(file_path, new_file_path)
             error_path_dict[(type(error).__name__, str(error))].append(new_file_path)
         return dict(error_path_dict)
     
 
 class HandleSubFolderManager(HandleFileManager):
-    def get_args(self, sub_folder_path: Path):
-        rel_path = sub_folder_path.relative_to(self.folder_path)
-        new_sub_folder_path = self.new_folder_path / rel_path
+    def get_args(self, sub_dir_path: Path):
+        rel_path = sub_dir_path.relative_to(self.dir_path)
+        new_sub_dir_path = self.new_dir_path / rel_path
 
         action_func, rename_func, args_extra = self.rules.get(
-            'folder', (shutil.copy, lambda x: x, {})
+            'dir', (shutil.copy, lambda x: x, {})
         )
 
-        final_path = rename_func(new_sub_folder_path)
-        return (sub_folder_path, final_path, action_func, args_extra)
+        final_path = rename_func(new_sub_dir_path)
+        return (sub_dir_path, final_path, action_func, args_extra)
     
     def handle_error_dict(self):
         error_path_dict = defaultdict(list)
 
         for file_path, error in self.get_error_dict().items():
-            rel_path = file_path.relative_to(self.folder_path)
-            new_file_path = self.new_folder_path / rel_path
+            rel_path = file_path.relative_to(self.dir_path)
+            new_file_path = self.new_dir_path / rel_path
             # shutil.copy(file_path, new_file_path)
             error_path_dict[(type(error).__name__, str(error))].append(new_file_path)
         return dict(error_path_dict)
@@ -128,7 +128,7 @@ class DeleteReturnSizeManager(TaskManager):
         return HumanBytes(delete_size)
 
 
-def create_folder(path: str | Path) -> Path:
+def create_dir(path: str | Path) -> Path:
     """
     判断系统是否存在该路径,没有则创建。
 
@@ -171,89 +171,89 @@ def handle_item(source: Path, destination: Path, action: Callable[[Path, Path, A
     return action_result
 
 
-def handle_folder_files(
-    folder_path: str | Path,
+def handle_dir_files(
+    dir_path: str | Path,
     rules: Dict[str, Tuple[Callable[[Path, Path, Dict], None], Callable[[Path], Path]]],
     execution_mode: str = "serial",
     progress_desc: str = "Processing files",
-    folder_name_suffix: str = "_re",
+    dir_name_suffix: str = "_re",
 ) -> Dict[Tuple[str, str], List[Path]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行处理，并将处理后的文件存储到新的目录中。
     不属于指定后缀的文件将被直接复制到新目录中。处理后的文件会保持原始的目录结构。
     如果目标文件已存在，则会跳过处理。处理过程中遇到的任何错误都会被记录并返回。
 
-    :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
+    :param dir_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
     :param rules: 一个字典，键为文件后缀，值为处理该类型文件的函数和重命名函数的元组。
     :param execution_mode: 执行模式，可以是 'serial' 或 'thread' 'process'。默认为 'serial'。
     :param progress_desc: 进度条描述。
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
-    folder_path = Path(folder_path)
-    new_folder_path = folder_path.parent / (folder_path.name + folder_name_suffix)
+    dir_path = Path(dir_path)
+    new_dir_path = dir_path.parent / (dir_path.name + dir_name_suffix)
 
     handlefile_manager = HandleFileManager(
         func=handle_item,
-        folder_path=folder_path,
-        new_folder_path=new_folder_path,
+        dir_path=dir_path,
+        new_dir_path=new_dir_path,
         rules=rules,
         execution_mode=execution_mode,
         progress_desc=progress_desc,
     )
 
     file_path_iter = (
-        file_path for file_path in folder_path.glob("**/*") if file_path.is_file()
+        file_path for file_path in dir_path.glob("**/*") if file_path.is_file()
     )
     handlefile_manager.start(file_path_iter)
 
     error_path_dict = handlefile_manager.handle_error_dict()
     return error_path_dict
 
-def handle_subfolders(
-    folder_path: str | Path,
+def handle_subdirs(
+    dir_path: str | Path,
     rules: Dict[str, Tuple[Callable[[Path, Path, Dict], None], Callable[[Path], Path]]],
     execution_mode: str = "serial",
-    progress_desc: str = "Processing folders",
-    folder_name_suffix: str = "_re",
+    progress_desc: str = "Processing dirs",
+    dir_name_suffix: str = "_re",
 ) -> Dict[Tuple[str, str], List[Path]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行处理，并将处理后的文件存储到新的目录中。
     不属于指定后缀的文件将被直接复制到新目录中。处理后的文件会保持原始的目录结构。
     如果目标文件已存在，则会跳过处理。处理过程中遇到的任何错误都会被记录并返回。
 
-    :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
+    :param dir_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
     :param rules: 一个字典，键为文件后缀，值为处理该类型文件的函数和重命名函数的元组。
     :param execution_mode: 执行模式，可以是 'serial' 或 'thread' 'process'。默认为 'serial'。
     :param progress_desc: 进度条描述。
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
-    folder_path = Path(folder_path)
-    new_folder_path = folder_path.parent / (folder_path.name + folder_name_suffix)
+    dir_path = Path(dir_path)
+    new_dir_path = dir_path.parent / (dir_path.name + dir_name_suffix)
 
     handlefile_manager = HandleSubFolderManager(
         func=handle_item,
-        folder_path=folder_path,
-        new_folder_path=new_folder_path,
+        dir_path=dir_path,
+        new_dir_path=new_dir_path,
         rules=rules,
         execution_mode=execution_mode,
         progress_desc=progress_desc,
     )
 
-    sub_folder_list = find_pure_folders(folder_path, True)
-    handlefile_manager.start(sub_folder_list)
+    sub_dir_list = find_pure_dirs(dir_path, True)
+    handlefile_manager.start(sub_dir_list)
 
     error_path_dict = handlefile_manager.handle_error_dict()
     return error_path_dict
 
-def compress_folder(
-    folder_path: str | Path, execution_mode: str = "thread"
+def compress_dir(
+    dir_path: str | Path, execution_mode: str = "thread"
 ) -> List[Tuple[Path, Exception]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行压缩处理，并将处理后的文件存储到新的目录中。
     支持的文件类型包括图片、视频和PDF。不属于这三种类型的文件将被直接复制到新目录中。
     压缩后的文件会保持原始的目录结构。如果目标文件已存在，则会跳过处理。处理过程中遇到的任何错误都会被记录并返回。
 
-    :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
+    :param dir_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
     :param execution_mode: 执行模式，可以是 'serial' 或 'thread' 'process'。默认为 'thread'。
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
@@ -277,8 +277,8 @@ def compress_folder(
     rules.update({suffix: (compress_video, rename_mp4, {}) for suffix in VIDEO_SUFFIXES})
     # rules.update({'.pdf': (compress_pdf,rename_pdf, {})})
 
-    return handle_folder_files(
-        folder_path, rules, execution_mode, progress_desc="Compressing Folder"
+    return handle_dir_files(
+        dir_path, rules, execution_mode, progress_desc="Compressing Folder"
     )
 
 
@@ -357,11 +357,11 @@ def unzip_7z_file(seven_zip_file: Path, destination: Path):
         raise ValueError(f"{seven_zip_file} 受密码保护，无法解压缩")
 
 
-def unzip_folder(folder_path: str | Path):
+def unzip_dir(dir_path: str | Path):
     """
     遍历指定文件夹，解压缩所有支持的压缩文件。支持的文件类型包括 zip 和 rar。
 
-    :param folder_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
+    :param dir_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
     """
 
     def rename_unzip(file_path: Path) -> Path:
@@ -377,10 +377,10 @@ def unzip_folder(folder_path: str | Path):
         ".7z": (unzip_7z_file, rename_unzip, {})
     }
 
-    return handle_folder_files(folder_path, rules, progress_desc="Unziping folder")
+    return handle_dir_files(dir_path, rules, progress_desc="Unziping dir")
 
 
-def delete_file_or_folder(path: Path) -> None:
+def delete_file_or_dir(path: Path) -> None:
     """
     删除文件或文件夹。
 
@@ -392,7 +392,7 @@ def delete_file_or_folder(path: Path) -> None:
         shutil.rmtree(path)
 
 
-def copy_file_or_folder(source: Path, target: Path) -> None:
+def copy_file_or_dir(source: Path, target: Path) -> None:
     """
     复制文件或文件夹。
 
@@ -412,20 +412,21 @@ def get_file_size(file_path: Path) -> HumanBytes:
     :param file_path: 文件路径。
     :return: 文件大小（HumanBytes）。
     """
+    file_path = Path(file_path)
     return HumanBytes(file_path.stat().st_size)
 
 
-def get_folder_size(folder_path: Path) -> HumanBytes:
+def get_dir_size(dir_path: Path) -> HumanBytes:
     """
     计算文件夹的大小。
     遍历指定文件夹中的所有文件和子目录，并计算它们的大小总和。
 
-    :param folder_path: 文件夹的路径。
+    :param dir_path: 文件夹的路径。
     :return: 文件夹的总大小（HumanBytes）。
     """
     total_size = 0
-    folder = Path(folder_path)
-    for file in folder.rglob("*"): 
+    dir = Path(dir_path)
+    for file in dir.rglob("*"): 
         if file.is_file():
             total_size += file.stat().st_size  # 获取文件大小
     return HumanBytes(total_size)
@@ -446,6 +447,46 @@ def get_file_hash(file_path: Path, chunk_size: int = 65536) -> str:
     return hash_algo.hexdigest()
 
 
+def get_dir_hash(
+    dir_path: Path,
+    exclude_dirs: list[str] | None = None,
+    exclude_exts: list[str] | None = None,
+) -> str:
+    """
+    计算整个文件夹的哈希值（递归包含子文件）。
+    排除指定目录或扩展名的文件。
+
+    :param dir_path: 文件夹路径。
+    :param exclude_dirs: 要排除的目录名（不含路径）。
+    :param exclude_exts: 要排除的文件扩展名（含点，例如 ".tmp"）。
+    :return: 文件夹的哈希字符串。
+    """
+    exclude_dirs = set(exclude_dirs or [])
+    exclude_exts = set(exclude_exts or [])
+
+    hash_algo = hashlib.sha256()
+
+    for path in sorted(dir_path.rglob("*")):
+        # 跳过被排除的目录及其内容
+        if any(part in exclude_dirs for part in path.parts):
+            continue
+
+        if path.is_dir():
+            continue  # 目录名不参与hash，只hash文件
+
+        if path.suffix in exclude_exts:
+            continue
+
+        rel_path = path.relative_to(dir_path).as_posix()
+        file_hash = get_file_hash(path)
+
+        # 把相对路径与文件hash合并
+        hash_algo.update(rel_path.encode("utf-8"))
+        hash_algo.update(file_hash.encode("utf-8"))
+
+    return hash_algo.hexdigest()
+
+
 def get_mtime(path: Path) -> HumanTimestamp:
     """
     获取文件或文件夹的最后修改时间 (mtime)
@@ -454,22 +495,16 @@ def get_mtime(path: Path) -> HumanTimestamp:
     :return: 修改时间戳(HumanTimestamp)
     """
     path = Path(path)
-    try:
-        mtime = HumanTimestamp(path.stat().st_mtime)  # 返回 float（UNIX 时间戳）
-        return mtime
-    except FileNotFoundError:
-        raise FileNotFoundError(f"路径不存在: {path}")
-    except PermissionError:
-        raise PermissionError(f"无法访问: {path}")
+    return HumanTimestamp(path.stat().st_mtime)
 
 
 def detect_identical_files(
-    folder_list: List[Path], execution_mode: str = "thread"
+    dir_list: List[Path], execution_mode: str = "thread"
 ) -> Dict[Tuple[str, int], List[Path]]:
     """
     检测文件夹中是否存在相同内容的文件，并在文件名后添加文件大小。
 
-    :param folder_list: 文件夹路径列表。
+    :param dir_list: 文件夹路径列表。
     :return: 相同文件的字典，键为文件大小和哈希值，值为文件路径列表。
     """
     scan_size_manager = ScanSizeManager(
@@ -490,8 +525,8 @@ def detect_identical_files(
     # 根据文件大小进行初步筛选
     file_path_iter = (
         path
-        for folder_path in folder_list
-        for path in Path(folder_path).rglob("*")
+        for dir_path in dir_list
+        for path in Path(dir_path).rglob("*")
         if path.is_file()
     )
     scan_size_manager.start(file_path_iter)
@@ -588,32 +623,32 @@ def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
 
 def move_identical_files(
     identical_dict: Dict[Tuple[str, int], List[Path]],
-    target_folder: str | Path,
+    target_dir: str | Path,
     size_threshold: int = None,
 ):
     """
     将相同内容的文件移动到指定的目标文件夹。
 
     :param identical_dict: 相同文件的字典，由 detect_identical_files 函数返回。
-    :param target_folder: 目标文件夹路径。
+    :param target_dir: 目标文件夹路径。
     :param size_threshold: 文件大小阈值，只有大于此阈值的文件会被移动。如果为 None，则不限制文件大小。
     :return: 移动的文件列表。
     """
-    target_folder = Path(target_folder)
+    target_dir = Path(target_dir)
     moved_files = {}
     report = []
 
     for (hash_value, file_size), file_list in tqdm(identical_dict.items()):
-        target_subfolder = target_folder / f"{hash_value}({file_size})"
-        if not target_subfolder.exists():
-            target_subfolder.mkdir(parents=True)
+        target_subdir = target_dir / f"{hash_value}({file_size})"
+        if not target_subdir.exists():
+            target_subdir.mkdir(parents=True)
 
         moved_files[hash_value] = []
 
         for file in file_list:
             if size_threshold is not None and file_size <= size_threshold:
                 continue
-            target_path = target_subfolder / file.name
+            target_path = target_subdir / file.name
 
             # 如果文件已经在目标路径，跳过
             if file.resolve() == target_path.resolve():
@@ -638,46 +673,46 @@ def move_identical_files(
     return moved_files
 
 
-def folder_to_file_path(
-    folder_path: Path, file_extension: str, parent_dir: Path = None
+def dir_to_file_path(
+    dir_path: Path, file_extension: str, parent_dir: Path = None
 ) -> Path:
     """
     将文件夹路径转换为与文件夹同名的文件路径。
-    例如，给定文件夹路径 '/home/user/folder1' 和文件扩展名 'txt'，函数会返回文件路径 '/home/user/folder1.txt'。
+    例如，给定文件夹路径 '/home/user/dir1' 和文件扩展名 'txt'，函数会返回文件路径 '/home/user/dir1.txt'。
 
-    :param folder_path: 文件夹的路径。
+    :param dir_path: 文件夹的路径。
     :param file_extension: 文件扩展名。
     :param parent_dir: 文件夹的父目录路径，如果为 None，则使用文件夹的父目录。
     :return: 与文件夹同名的文件路径。
     """
-    folder_path = Path(folder_path)
-    if folder_path.is_file():
-        raise ValueError("The provided path is a file, not a folder.")
+    dir_path = Path(dir_path)
+    if dir_path.is_file():
+        raise ValueError("The provided path is a file, not a dir.")
 
     # 获取文件夹的父目录和文件夹名称
-    folder_path = Path(folder_path)
-    folder_name = folder_path.name  # 获取文件夹名称，不带路径
-    parent_dir = parent_dir or folder_path.parent  # 获取文件夹的父目录路径
+    dir_path = Path(dir_path)
+    dir_name = dir_path.name  # 获取文件夹名称，不带路径
+    parent_dir = parent_dir or dir_path.parent  # 获取文件夹的父目录路径
 
     # 生成与文件夹同名的文件路径
-    file_name = f"{folder_name}.{file_extension}"
+    file_name = f"{dir_name}.{file_extension}"
     file_path = parent_dir / file_name
 
     return file_path
 
 
-def replace_filenames(folder_path: Path | str, pattern: str, replacement: str):
+def replace_filenames(dir_path: Path | str, pattern: str, replacement: str):
     """
     使用正则表达式替换文件夹中所有文件名中的匹配部分。
     遍历指定文件夹，将其中每个文件的文件名中的匹配内容替换为 `replacement`。
 
-    :param folder_path: 文件夹的路径。
+    :param dir_path: 文件夹的路径。
     :param pattern: 用于匹配文件名的正则表达式。
     :param replacement: 替换后的新内容。
     """
-    folder_path = Path(folder_path)  # 将传入的路径转换为Path对象
+    dir_path = Path(dir_path)  # 将传入的路径转换为Path对象
     file_path_list = [
-        file_path for file_path in folder_path.glob("**/*") if file_path.is_file()
+        file_path for file_path in dir_path.glob("**/*") if file_path.is_file()
     ]  # 使用glob('**/*')遍历目录中的文件和子目录
 
     for file in tqdm(file_path_list, desc="Replacing filenames"):
@@ -719,16 +754,16 @@ def sort_by_number(file_path: Path, special_keywords: dict) -> tuple:
     return (dir_key, keyword_priority, *numbers)
 
 
-def move_files_with_keyword(source_folder: Path | str, target_folder: Path | str, keyword: str = None):
+def move_files_with_keyword(source_dir: Path | str, target_dir: Path | str, keyword: str = None):
     """
-    将 source_folder 中所有文件名包含 keyword 的文件移动到 target_folder。
+    将 source_dir 中所有文件名包含 keyword 的文件移动到 target_dir。
 
-    :param source_folder: 源文件夹路径（str 或 Path）
-    :param target_folder: 目标文件夹路径（str 或 Path）
+    :param source_dir: 源文件夹路径（str 或 Path）
+    :param target_dir: 目标文件夹路径（str 或 Path）
     :param keyword: 需要匹配的关键词（str）
     """
-    source = Path(source_folder).resolve()
-    target = Path(target_folder).resolve()
+    source = Path(source_dir).resolve()
+    target = Path(target_dir).resolve()
     keyword = keyword or ""
 
     # 源路径检查
@@ -762,19 +797,19 @@ def move_files_with_keyword(source_folder: Path | str, target_folder: Path | str
     print(f"\n📦 完成：移动 {count_moved} 个文件，跳过 {count_skipped} 个同名文件。")
 
 
-def extract_folder_numbers(folder_path: Path | str) -> set:
+def extract_dir_numbers(dir_path: Path | str) -> set:
     """
     遍历给定文件夹，提取所有文件夹名称中匹配*(\d+)的数字部分，返回字典 {文件夹名: 数字(str)}。
 
-    :param folder_path: 文件夹路径（str 或 Path）
+    :param dir_path: 文件夹路径（str 或 Path）
     :return: 字典，包含文件夹名称和对应的数字部分。
     """
     num_set = set()
     pattern = re.compile("\((\d+)\)")
     
-    path = Path(folder_path)
+    path = Path(dir_path)
     path_list = list(path.iterdir())
-    for item in tqdm(path_list, desc="extract_folder_numbers"):
+    for item in tqdm(path_list, desc="extract_dir_numbers"):
         if item.is_dir():
             match = pattern.search(item.name)
             if match:
@@ -783,18 +818,18 @@ def extract_folder_numbers(folder_path: Path | str) -> set:
     return num_set
 
 
-def extract_file_numbers(folder_path: Path | str, suffix: str) -> set:
+def extract_file_numbers(dir_path: Path | str, suffix: str) -> set:
     """
     遍历给定文件夹，提取所有文件名中匹配*(\d+)的数字部分，返回字典 {文件夹名: 数字(str)}。
 
-    :param folder_path: 文件夹路径（str 或 Path）
+    :param dir_path: 文件夹路径（str 或 Path）
     :param suffix: 文件后缀名
     :return: 字典，包含文件夹名称和对应的数字部分。
     """
     num_set = set()
     pattern = re.compile("\((\d+)\)")
     
-    path = Path(folder_path)
+    path = Path(dir_path)
     path_list = list(path.iterdir())
     for item in tqdm(path_list, desc="extract_txt_numbers"):
         if item.is_file() and item.suffix == suffix:
@@ -805,7 +840,7 @@ def extract_file_numbers(folder_path: Path | str, suffix: str) -> set:
     return num_set
 
 
-def find_pure_folders(root: str | Path, only_nonempty: bool = False) -> list[Path]:
+def find_pure_dirs(root: str | Path, only_nonempty: bool = False) -> list[Path]:
     """
     查找指定路径下所有的“纯粹文件夹”，即只包含文件而不包含子文件夹的文件夹。
 
@@ -814,20 +849,20 @@ def find_pure_folders(root: str | Path, only_nonempty: bool = False) -> list[Pat
     :return: 纯粹文件夹的 Path 列表
     """
     root = Path(root)
-    pure_folders = []
+    pure_dirs = []
 
-    for folder in root.rglob("*"):
-        if folder.is_dir():
-            subdirs = [p for p in folder.iterdir() if p.is_dir()]
+    for dir in root.rglob("*"):
+        if dir.is_dir():
+            subdirs = [p for p in dir.iterdir() if p.is_dir()]
             if not subdirs:  # 没有子文件夹
-                files = [p for p in folder.iterdir() if p.is_file()]
+                files = [p for p in dir.iterdir() if p.is_file()]
                 if only_nonempty:
                     if files:
-                        pure_folders.append(folder)
+                        pure_dirs.append(dir)
                 else:
-                    pure_folders.append(folder)
+                    pure_dirs.append(dir)
 
-    return pure_folders
+    return pure_dirs
 
 
 def align_width(s: str, max_len: int) -> str:

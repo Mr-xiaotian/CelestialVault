@@ -163,11 +163,11 @@ def transfer_gif_to_video(gif_path, output_path):
     subprocess.run(command, check=True)
 
 
-def transfer_gif_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]:
+def transfer_gif_dir(dir_path: str | Path) -> List[Tuple[Path, Exception]]:
     """
     将文件夹中的所有GIF文件转换为MP4视频文件
 
-    :param folder_path: 文件夹路径
+    :param dir_path: 文件夹路径
     :return: 转换结果列表，每个元素是一个元组，包含输出文件路径和可能的异常
     """
 
@@ -176,10 +176,10 @@ def transfer_gif_folder(folder_path: str | Path) -> List[Tuple[Path, Exception]]
         parent = file_path.parent
         return parent / Path(name + "_compressed.mp4")
 
-    from .FileOperations import handle_folder_files
+    from .FileOperations import handle_dir_files
 
     rules = {".gif": (transfer_gif_to_video, rename_mp4, {})}
-    return handle_folder_files(folder_path, rules)
+    return handle_dir_files(dir_path, rules)
 
 
 def rotate_video(video_path: str | Path, output_path, angle: int) -> Path:
@@ -221,13 +221,13 @@ def rotate_video(video_path: str | Path, output_path, angle: int) -> Path:
     return output_path
 
 
-def rotate_video_folder(
-    folder_path: str | Path, angle: int
+def rotate_video_dir(
+    dir_path: str | Path, angle: int
 ) -> List[Tuple[Path, Exception]]:
     """
     旋转文件夹中的所有视频文件。
 
-    :param folder_path: 文件夹路径（str 或 Path 对象）
+    :param dir_path: 文件夹路径（str 或 Path 对象）
     :param angle: 旋转角度（仅支持 0, 90, 180, 270）
     :return: 转换结果列表，每个元素是一个元组，包含输出文件路径和可能的异常
     """
@@ -237,7 +237,7 @@ def rotate_video_folder(
         parent = file_path.parent
         return parent / Path(name + f"_rotated({angle}).mp4")
 
-    from .FileOperations import handle_folder_files
+    from .FileOperations import handle_dir_files
 
     if angle in [90, 180, 270]:
         rules = {
@@ -252,8 +252,8 @@ def rotate_video_folder(
     else:
         raise ValueError(f"不支持的旋转角度: {angle}，仅支持 0, 90, 180, 270")
     
-    return handle_folder_files(
-        folder_path,
+    return handle_dir_files(
+        dir_path,
         rules,
         "serial",
         progress_desc=f"Rotating videos by {angle} degrees",
@@ -275,19 +275,19 @@ def get_video_codec(video_path: Path) -> str:
 
 
 def get_videos_codec(
-    folder_path: Path, exclude_codecs: list[str] = ["h264"]
+    dir_path: Path, exclude_codecs: list[str] = ["h264"]
 ) -> dict[str, list[Path]]:
     """
     获取文件夹中所有视频文件的编码格式。
 
-    :param folder_path: 文件夹路径
+    :param dir_path: 文件夹路径
     :param exclude_codecs: 需要排除的编码格式列表
     :return: 编码格式字典
     """
     # 确保传入的是一个文件夹路径
-    folder_path = Path(folder_path)
-    if not folder_path.is_dir():
-        raise ValueError(f"{folder_path} 不是有效的文件夹路径")
+    dir_path = Path(dir_path)
+    if not dir_path.is_dir():
+        raise ValueError(f"{dir_path} 不是有效的文件夹路径")
 
     get_codec_manager = GetCodecManager(
         get_video_codec,
@@ -298,7 +298,7 @@ def get_videos_codec(
     )
 
     file_path_iter = (
-        file_path for file_path in folder_path.rglob("*.mp4") if file_path.is_file()
+        file_path for file_path in dir_path.rglob("*.mp4") if file_path.is_file()
     )  # 使用glob('**/*')遍历目录中的文件和子目录
     get_codec_manager.start(file_path_iter)
 

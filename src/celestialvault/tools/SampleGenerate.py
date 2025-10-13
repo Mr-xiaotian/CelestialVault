@@ -8,23 +8,23 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 def generate_test_images(
-    root_dir: str | Path, num_folders: int = 3, images_per_folder: int = 5
+    root_dir: str | Path, num_dirs: int = 3, images_per_dir: int = 5
 ):
     """
     在指定路径下生成多个子文件夹，每个文件夹中包含若干张大小随机、颜色不同的测试图片。
 
     :param root_dir: 根目录路径，将在其下创建子文件夹和图片
-    :param num_folders: 子文件夹数量
-    :param images_per_folder: 每个子文件夹中生成的图片数量
+    :param num_dirs: 子文件夹数量
+    :param images_per_dir: 每个子文件夹中生成的图片数量
     """
     root_dir = Path(root_dir)
     root_dir.mkdir(parents=True, exist_ok=True)
 
-    for folder_idx in range(1, num_folders + 1):
-        folder = root_dir / f"folder_{folder_idx}"
-        folder.mkdir(exist_ok=True)
+    for dir_idx in range(1, num_dirs + 1):
+        dir = root_dir / f"dir_{dir_idx}"
+        dir.mkdir(exist_ok=True)
 
-        for img_idx in range(1, images_per_folder + 1):
+        for img_idx in range(1, images_per_dir + 1):
             width = random.randint(300, 800)
             height = random.randint(300, 1000)
             color = tuple(random.randint(0, 255) for _ in range(3))
@@ -32,17 +32,17 @@ def generate_test_images(
             img = Image.new("RGB", (width, height), color=color)
             draw = ImageDraw.Draw(img)
 
-            text = f"{folder.name}_{img_idx}\n{width}x{height}"
+            text = f"{dir.name}_{img_idx}\n{width}x{height}"
             try:
                 font = ImageFont.truetype("arial.ttf", size=24)
             except:
                 font = ImageFont.load_default()
             draw.text((10, 10), text, fill="white", font=font)
 
-            img.save(folder / f"img_{img_idx:02d}.jpg")
+            img.save(dir / f"img_{img_idx:02d}.jpg")
 
     print(
-        f"✅ 成功生成 {num_folders} 个子文件夹，每个包含 {images_per_folder} 张测试图片。"
+        f"✅ 成功生成 {num_dirs} 个子文件夹，每个包含 {images_per_dir} 张测试图片。"
     )
 
 

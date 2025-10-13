@@ -9,7 +9,7 @@
 ## tools
 
 [tools readme](./tools/README.md)
-(更新了handle_folder_files与compress_folder)
+(更新了handle_dir_files与compress_dir)
 
 ## constants
 
