@@ -1,5 +1,6 @@
 import math
 from itertools import product
+from pathlib import Path
 from PIL import Image
 from tqdm import tqdm
 from typing import Dict
@@ -45,9 +46,15 @@ class BaseCodec:
         raise NotImplementedError
     
     def encode_text_file(self, file_path: str) -> Image.Image:
+        file_path = Path(file_path)
+
         target_text = safe_open_txt(file_path)
         img = self.encode(target_text)
-        img.save(file_path.replace(".txt", f"({self.mode_name}).png"))
+
+        new_name = f"{file_path.stem}({self.mode_name}).png"
+        output_path = file_path.with_name(new_name)
+
+        img.save(output_path)
 
         return img
     
