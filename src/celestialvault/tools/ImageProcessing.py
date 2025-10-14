@@ -312,18 +312,35 @@ def expand_image(image: Image.Image, n: int = 50) -> Image.Image:
     return expanded_image
 
 
-def restore_expanded_image(expanded_image: Image.Image, n: int) -> Image.Image:
+def restore_expanded_image(expanded_image: Image.Image, n: int = 50) -> Image.Image:
     """
     将扩展后的图像恢复为原始大小
     """
     if n <= 0:
         raise ValueError("n must be a positive integer")
+    if expanded_image.width % n != 0 or expanded_image.height % n != 0:
+        raise ValueError("Expanded image dimensions must be divisible by n.")
 
-    width = expanded_image.width // n
-    height = expanded_image.height // n
+    arr = np.array(expanded_image)
+    h, w = arr.shape[:2]
+    new_h, new_w = h // n, w // n
 
-    # 使用resize方法还原图像
-    restored_image = expanded_image.resize((width, height), Image.NEAREST)
+    if arr.ndim == 3:
+        restored = np.zeros((new_h, new_w, arr.shape[2]), dtype=arr.dtype)
+    else:
+        restored = np.zeros((new_h, new_w), dtype=arr.dtype)
+
+    for i in range(new_h):
+        for j in range(new_w):
+            block = arr[i*n:(i+1)*n, j*n:(j+1)*n]
+            # 统计最多出现的颜色（即众数）
+            flat_block = block.reshape(-1, block.shape[-1] if block.ndim == 3 else 1)
+            pixels, counts = np.unique(flat_block, axis=0, return_counts=True)
+            restored[i, j] = pixels[counts.argmax()]
+
+    restored_image = Image.fromarray(restored.squeeze().astype(np.uint8))
+    restored_image = restored_image.convert(expanded_image.mode)
+    restored_image.putpalette(expanded_image.getpalette()) if expanded_image.mode == "P" else None
 
     return restored_image
 

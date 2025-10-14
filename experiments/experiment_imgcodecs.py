@@ -133,6 +133,7 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
     plt.tight_layout()
     plt.show()
 
+
 if __name__ == "__main__":
     codec = CODEC_REGISTRY["morandi_rs"] # morandi_rs rgba_redundancy
     codec.show_progress = False
