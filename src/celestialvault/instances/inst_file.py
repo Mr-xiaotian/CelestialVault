@@ -185,7 +185,6 @@ class FileDiff:
         }
 
 
-
 class FileTree:
     def __init__(self, root: FileNode, path: Path):
         self.root = root
