@@ -1,3 +1,4 @@
+import hashlib
 from pathlib import Path
 from wcwidth import wcswidth
 from dataclasses import dataclass, field
@@ -6,7 +7,7 @@ from celestialflow import TaskManager
 from ..constants import FILE_ICONS
 from ..instances.inst_units import HumanBytes, HumanTimestamp
 from ..tools.FileOperations import (
-    get_file_size, get_dir_size, get_file_hash, get_dir_hash, 
+    get_file_size, get_dir_size, get_file_hash, 
     get_mtime, align_width, delete_file_or_dir, copy_file_or_dir, 
     append_hash_to_filename
 )
@@ -59,7 +60,7 @@ class FileNode:
             indent = "    "*self.level,
             # prefix = f"[{self.node_path.parent.as_posix()}]",
             # prefix = f"[{self.mtime}]",
-            suffix = f"({self.size})"
+            suffix = f"({self.size}) ({self._hash})"
         )
     
     @property
@@ -68,11 +69,41 @@ class FileNode:
         if self._hash:
             return self._hash
         
-        if self.is_dir:
-            self._hash = get_dir_hash(self.node_path)
-        else:
+        # 跳过排除类节点
+        if self.name.startswith("[") and self.name.endswith("]"):
+            self._hash = ""
+            return self._hash
+
+        # 文件节点：直接计算文件内容
+        if not self.is_dir:
             self._hash = get_file_hash(self.node_path)
+            return self._hash
+
+        # 文件夹节点：递归组合子节点哈希
+        self._hash = self._compute_dir_hash()
         return self._hash
+    
+    # === 目录节点的哈希组合逻辑 ===
+    def _compute_dir_hash(self, algo: str = "sha256") -> str:
+        def _hash_bytes(data: bytes) -> str:
+            return hashlib.new(algo, data).hexdigest()
+
+        child_hashes = []
+        for child in sorted(self.children, key=lambda c: (not c.is_dir, c.name)):
+            h = child.hash
+            if not h:
+                continue
+            # 将类型标记 + 名称 + hash 拼起来（防止哈希碰撞）
+            tag = "D" if child.is_dir else "F"
+            entry = f"{tag}:{child.name}:{h}".encode("utf-8")
+            child_hashes.append(entry)
+
+        if not child_hashes:
+            combined = b"[EMPTY]"
+        else:
+            combined = b"".join(child_hashes)
+
+        return _hash_bytes(combined)
 
 
 @dataclass
@@ -351,3 +382,4 @@ class FileTree:
 
         diff.diff_tree = FileTree(_compare(self.root, other.root), self.path)
         return diff
+    

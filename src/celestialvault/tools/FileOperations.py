@@ -432,18 +432,21 @@ def get_dir_size(dir_path: Path) -> HumanBytes:
     return HumanBytes(total_size)
 
 
-def get_file_hash(file_path: Path, chunk_size: int = 65536) -> str:
+def get_file_hash(file_path: Path, algo: str = "sha256", chunk_size: int = 65536) -> str:
     """
     计算文件的哈希值。
 
     :param file_path: 文件路径。
-    :param chunk_size: 读取文件块的大小。
-    :return: 文件的哈希值。
+    :param algo: 哈希算法名称（如 'md5', 'sha1', 'sha256', 'sha512', 'blake2b' 等）。
+    :param chunk_size: 每次读取的文件块大小。
+    :return: 文件哈希字符串（十六进制）
     """
-    hash_algo = hashlib.sha256()
+    hash_algo = hashlib.new(algo)
+
     with open(file_path, "rb") as f:
         for chunk in iter(lambda: f.read(chunk_size), b""):
             hash_algo.update(chunk)
+
     return hash_algo.hexdigest()
 
 
@@ -451,40 +454,58 @@ def get_dir_hash(
     dir_path: Path,
     exclude_dirs: list[str] | None = None,
     exclude_exts: list[str] | None = None,
+    algo: str = "sha256",
 ) -> str:
     """
     计算整个文件夹的哈希值（递归包含子文件）。
-    排除指定目录或扩展名的文件。
+    算法规则与 FileNode.hash 一致（目录哈希来自子节点哈希的组合）。
 
     :param dir_path: 文件夹路径。
     :param exclude_dirs: 要排除的目录名（不含路径）。
     :param exclude_exts: 要排除的文件扩展名（含点，例如 ".tmp"）。
+    :param algo: 哈希算法名称，例如 'sha256', 'blake2b' 等。
     :return: 文件夹的哈希字符串。
     """
     exclude_dirs = set(exclude_dirs or [])
-    exclude_exts = set(exclude_exts or [])
+    exclude_exts = set(ext.lower() for ext in (exclude_exts or []))
 
-    hash_algo = hashlib.sha256()
+    def _hash_bytes(data: bytes) -> str:
+        return hashlib.new(algo, data).hexdigest()
 
-    for path in sorted(dir_path.rglob("*")):
-        # 跳过被排除的目录及其内容
+    def _compute(path: Path) -> str:
+        """递归计算目录或文件的哈希"""
+        # --- 排除目录 ---
         if any(part in exclude_dirs for part in path.parts):
-            continue
+            return ""
 
-        if path.is_dir():
-            continue  # 目录名不参与hash，只hash文件
+        # --- 文件 ---
+        if path.is_file():
+            if path.suffix.lower() in exclude_exts:
+                return ""
+            return get_file_hash(path, algo=algo)
 
-        if path.suffix in exclude_exts:
-            continue
+        # --- 非存在路径或空目录 ---
+        if not path.exists():
+            return _hash_bytes(b"[MISSING]")
 
-        rel_path = path.relative_to(dir_path).as_posix()
-        file_hash = get_file_hash(path)
+        # --- 目录：递归计算子项哈希 ---
+        child_hashes = []
+        for child in sorted(path.iterdir(), key=lambda c: (not c.is_dir(), c.name)):
+            h = _compute(child)
+            if not h:
+                continue
+            tag = "D" if child.is_dir() else "F"
+            entry = f"{tag}:{child.name}:{h}".encode("utf-8")
+            child_hashes.append(entry)
 
-        # 把相对路径与文件hash合并
-        hash_algo.update(rel_path.encode("utf-8"))
-        hash_algo.update(file_hash.encode("utf-8"))
+        if not child_hashes:
+            combined = b"[EMPTY]"
+        else:
+            combined = b"".join(child_hashes)
 
-    return hash_algo.hexdigest()
+        return _hash_bytes(combined)
+
+    return _compute(Path(dir_path))
 
 
 def get_mtime(path: Path) -> HumanTimestamp:
