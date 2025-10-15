@@ -321,9 +321,9 @@ class ChannelCodec(BaseCodec):
     
 
 class PaletteCodec(BaseCodec):
-    def __init__(self, style: str):
-        self.mode_name = style  # 用 style 名称作为 mode
-        self.palette = generate_palette(256, style=style)
+    def __init__(self, palette_style: str, palatte_mode: str = "random"):
+        self.mode_name = palette_style  # 用 palette_style 名称作为 mode
+        self.palette = generate_palette(256, style=palette_style, mode=palatte_mode)
 
     def _encode_core(self, text: str) -> Image.Image:
         compressed_binary = compress_text_to_bytes(text)
@@ -359,9 +359,9 @@ class PaletteCodec(BaseCodec):
 
 
 class PaletteWithRsCodec(BaseCodec):
-    def __init__(self, style: str, threshold: float = 0.7):
-        self.mode_name = style + "_rs"  # 用 style 名称作为 mode
-        self.palette = generate_palette(256, style=style)
+    def __init__(self, palette_style: str, palatte_mode: str = "random", threshold: float = 0.7):
+        self.mode_name = palette_style + "_rs"  # 用 style 名称作为 mode
+        self.palette = generate_palette(256, style=palette_style, mode=palatte_mode)
         self.threshold = threshold
 
     def _encode_core(self, text: str) -> Image.Image:
@@ -515,5 +515,5 @@ for mode, params in image_mode_params.items():
 
 # 从 style_params 动态生成
 for style in style_params:
-    CODEC_REGISTRY[style] = PaletteCodec(style=style)
-    CODEC_REGISTRY[style + "_rs"] = PaletteWithRsCodec(style=style)
+    CODEC_REGISTRY[style] = PaletteCodec(palette_style=style)
+    CODEC_REGISTRY[style + "_rs"] = PaletteWithRsCodec(palette_style=style)
