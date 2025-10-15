@@ -6,8 +6,9 @@ from celestialvault.tools.ImageProcessing import (
     expand_image,
     simulate_random_damage,
     restore_expanded_image,
+    generate_palette, 
+    palette_to_image
 )
-from celestialvault.instances.inst_imgcodecs import PaletteWithRsCodec
 
 
 def evaluate_restore_effectiveness(
@@ -145,29 +146,15 @@ def evaluate_restore_curve(
     return results
 
 
-text = """
-这两个函数的逻辑非常清晰、对称，核心思路也完全正确 👍。不过我可以帮你指出几个可以优化与潜在问题点，主要是为了更健壮、更高效。下面是详细分析与改进建议：
-
-✅ 你现在的设计优点：
-
-使用 Image.NEAREST（最近邻插值）来放大与还原，保证像素块边界不被模糊，非常适合离散像素操作（例如调试或可视化矩阵）。
-
-expand_image() 与 restore_expanded_image() 对称，语义清晰。
-
-参数检查（n <= 0）合适。
-"""
-
-
 if __name__ == "__main__":
-    codec = PaletteWithRsCodec("coral_reef")
-
-    encode_img = codec.encode(text)
+    palette = generate_palette(64, "morandi", "spiral")
+    palette_img = palette_to_image(palette, 4)
 
     # === 评估 ===
-    result_0 = evaluate_restore_effectiveness(encode_img, 20, 0.3, True)
+    result_0 = evaluate_restore_effectiveness(palette_img, 10, 0.3, True)
     result_1 = evaluate_restore_curve(
-        encode_img,
-        n=20,
+        palette_img,
+        n=10,
         damage_ratios=np.arange(0.0, 1.1, 0.1),
         show=True
     )

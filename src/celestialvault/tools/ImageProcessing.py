@@ -254,57 +254,46 @@ def generate_palette(color_num: int=256, style: str="morandi", mode: str="random
     return [value for color in colors for value in color]
 
 
-def display_palette(palette: List[int], block_size: int=1):
+def palette_to_image(palette, block_size=50):
     """
-    展示调色板。
+    根据颜色列表生成调色板图像。
 
-    :param palette: 一个包含 RGB 颜色的平铺列表或元组，形如 [r, g, b, r, g, b, ...]
-    :param block_size: 每个颜色块的大小，默认为1
+    :param palette: 一个包含 RGB 颜色的平铺列表或元组，例如 [r, g, b, r, g, b, ...]
+    :param block_size: 每个颜色块的像素大小，默认 50
     """
-
-    def rgb_to_hex(r, g, b):
-        return "#%02x%02x%02x" % (r, g, b)
-
-    total_colors = len(palette) // 3  # 计算颜色的数量
+    total_colors = len(palette) // 3  # 颜色数量
 
     n_cols = math.ceil(math.sqrt(total_colors))
     n_rows = math.ceil(total_colors / n_cols)
 
-    # 调整图像大小以适应颜色块
-    fig, ax = plt.subplots(figsize=(n_cols * block_size, n_rows * block_size))
-
-    # 设置坐标轴的范围与颜色块的数量完全匹配
-    ax.set_xlim(0, n_cols)
-    ax.set_ylim(0, n_rows)
-
-    # 关闭坐标轴
-    ax.axis("off")
+    # 创建图像
+    logical_img = Image.new("RGB", (n_cols, n_rows))
+    pixels = logical_img.load()
 
     for i in range(total_colors):
         r, g, b = palette[3 * i], palette[3 * i + 1], palette[3 * i + 2]
-        hex_color = rgb_to_hex(r, g, b)
-        ax.add_patch(
-            plt.Rectangle(
-                (i % n_cols, n_rows - 1 - i // n_cols),
-                block_size,
-                block_size,
-                color=hex_color,
-                linewidth=0,
-            )
-        )
+        col = i % n_cols
+        row = i // n_cols
 
-    plt.show()
+        pixels[col, row] = (r, g, b)
+
+    return expand_image(logical_img, block_size)  
 
 
-def expand_image(image: Image.Image, n: int = 50) -> Image.Image:
+def expand_image(image: Image.Image, expand_factor: int = 50) -> Image.Image:
     """
     将图像中的每个像素点扩大为n x n的块
-    """
-    if n <= 0:
-        raise ValueError("n must be a positive integer")
 
-    new_width = image.width * n
-    new_height = image.height * n
+    :param image: 要处理的图像。如果是调色板图像（P模式），将其转换为RGB模式。
+    :param block_size: 扩展因子，默认 50
+    """
+    if expand_factor <= 0:
+        raise ValueError("n must be a positive integer")
+    elif expand_factor == 1:
+        return image
+
+    new_width = image.width * expand_factor
+    new_height = image.height * expand_factor
 
     # 直接使用resize方法来扩展图像
     expanded_image = image.resize((new_width, new_height), Image.NEAREST)
@@ -312,18 +301,24 @@ def expand_image(image: Image.Image, n: int = 50) -> Image.Image:
     return expanded_image
 
 
-def restore_expanded_image(expanded_image: Image.Image, n: int = 50) -> Image.Image:
+def restore_expanded_image(expanded_image: Image.Image, expand_factor: int = 50) -> Image.Image:
     """
     将扩展后的图像恢复为原始大小
+
+    :param expanded_image: 要恢复的扩展图像
+    :param expand_factor: 扩展因子，默认为50
     """
-    if n <= 0:
-        raise ValueError("n must be a positive integer")
-    if expanded_image.width % n != 0 or expanded_image.height % n != 0:
+    if expand_factor <= 0:
+        raise ValueError("expand_factor must be a positive integer")
+    elif expand_factor == 1:
+        return expanded_image
+    
+    if expanded_image.width % expand_factor != 0 or expanded_image.height % expand_factor != 0:
         raise ValueError("Expanded image dimensions must be divisible by n.")
 
     arr = np.array(expanded_image)
     h, w = arr.shape[:2]
-    new_h, new_w = h // n, w // n
+    new_h, new_w = h // expand_factor, w // expand_factor
 
     if arr.ndim == 3:
         restored = np.zeros((new_h, new_w, arr.shape[2]), dtype=arr.dtype)
@@ -332,7 +327,7 @@ def restore_expanded_image(expanded_image: Image.Image, n: int = 50) -> Image.Im
 
     for i in range(new_h):
         for j in range(new_w):
-            block = arr[i*n:(i+1)*n, j*n:(j+1)*n]
+            block = arr[i*expand_factor:(i+1)*expand_factor, j*expand_factor:(j+1)*expand_factor]
             # 统计最多出现的颜色（即众数）
             flat_block = block.reshape(-1, block.shape[-1] if block.ndim == 3 else 1)
             pixels, counts = np.unique(flat_block, axis=0, return_counts=True)
@@ -468,7 +463,7 @@ def is_image_valid(data: str|Path|io.BytesIO) -> bool:
         return False
 
 
-def is_image_valid_bytes(byte_data: bytes) -> bool:
+def is_image_bytes_valid(byte_data: bytes) -> bool:
     """
     检测二进制图片数据是否有效
     :param byte_data: 图片的二进制内容
