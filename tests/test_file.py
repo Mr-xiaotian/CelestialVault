@@ -14,3 +14,4 @@ def test_print_tree():
     file_tree.print_tree()
 
     assert file_tree.root.hash == get_dir_hash(r'.', exclude_dirs = exclude_dirs, exclude_exts = exclude_exts)
+    print("\nPass hash test.")

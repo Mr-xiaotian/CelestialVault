@@ -3,7 +3,6 @@ from loguru import logger
 import logging
 
 
-
 def test_log():
     logger.remove()
     logger.add(sys.stderr, level="INFO")

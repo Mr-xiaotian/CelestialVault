@@ -6,6 +6,6 @@ def _test_compress_dir():
     # compress_dir(r'C:\Users\27342\OneDrive\Videos\compress_temp')
     pass
 
-def _test_detect_identical_files():
-    identical_dict = detect_identical_files(r"Q:\Project\test")
+def test_detect_identical_files():
+    identical_dict = detect_identical_files(r".")
     duplicate_files_report(identical_dict)

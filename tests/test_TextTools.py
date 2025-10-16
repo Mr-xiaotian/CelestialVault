@@ -48,7 +48,6 @@ def test_str_to_dict():
     logging.info(f"{'Actual output':<15}: {result_dict_1}")
 
 def _test_language_fingerprint():
-    return
     with open(r'G:\Project\test\寻找走丢的舰娘(34653).txt', 'r', encoding = 'utf-8') as f:
         text = f.read()
     fingerprint = language_fingerprint(text)

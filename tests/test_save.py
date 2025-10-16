@@ -4,33 +4,9 @@ from celestialvault.instances.inst_save import Saver
 
 def test_saver():
     li = [
-        'https://ttzytp.com/dongman/xvhu6d.jpg',
+        'https://th.bing.com/th/id/OSK.3f6a54105e902fae371a5bb4883d3c2c?w=102&h=102&c=7&o=6&cb=12&pid=SANGAM',
         'dfgdfgdfgdfg',
-        'https://ttzytp.com/dongman/xvjq0t.jpg',
-        'https://ttzytp.com/dongman/xvlwc7.jpg',
-        'https://ttzytp.com/dongman/xvoi5z.jpg',
-        # 'https://ttzytp.com/dongman/xvznus.jpg',
-        # 'https://ttzytp.com/dongman/xw2j01.jpg',
-        # 'https://ttzytp.com/dongman/xw4svq.jpg',
-        # 'https://ttzytp.com/dongman/xw6sif.jpg',
-        # 'https://ttzytp.com/dongman/xw9d0e.jpg',
-        # 'https://ttzytp.com/dongman/xwkvsc.jpg',
-        # 'https://ttzytp.com/dongman/xwne5w.jpg',
-        # 'https://ttzytp.com/dongman/xwq5ud.jpg',
-        # 'https://ttzytp.com/dongman/xwst1v.jpg',
-        # 'https://ttzytp.com/dongman/xwv52q.jpg',
-        # 'https://ttzytp.com/dongman/xx6sjn.jpg',
-        # 'https://ttzytp.com/dongman/xx8ty1.jpg',
-        # 'https://ttzytp.com/dongman/xxc8h6.jpg',
-        # 'https://ttzytp.com/dongman/xxeni2.jpg',
-        # 'https://ttzytp.com/dongman/xxgmgl.jpg',
-        # 'https://ttzytp.com/dongman/xxrabi.jpg',
-        # 'https://ttzytp.com/dongman/xxtftc.jpg',
-        # 'https://ttzytp.com/dongman/xxvkih.jpg',
-        # 'https://ttzytp.com/dongman/xxy5gf.jpg',
-        # 'https://ttzytp.com/dongman/xy0965.jpg',
-        # 'https://ttzytp.com/dongman/xy26a8.jpg',
-        # 'https://ttzytp.com/dongman/xyd87f.jpg'
+        'https://th.bing.com/th/id/OIP.AmHF-jb62qAKtIX8ATelMQHaEs?w=80&h=80&c=1&bgcl=18953f&r=0&o=7&cb=12&pid=ImgRC&rm=3',
     ]
 
     saver = Saver(r'../test')

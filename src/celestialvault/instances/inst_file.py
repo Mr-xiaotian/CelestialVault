@@ -7,8 +7,8 @@ from celestialflow import TaskManager
 from ..constants import FILE_ICONS
 from ..instances.inst_units import HumanBytes, HumanTimestamp
 from ..tools.FileOperations import (
-    get_file_size, get_dir_size, get_file_hash, 
-    get_mtime, align_width, delete_file_or_dir, copy_file_or_dir, 
+    get_file_size, get_dir_size, get_file_hash, get_file_mtime, get_dir_mtime,
+    align_width, delete_file_or_dir, copy_file_or_dir, 
     append_hash_to_filename
 )
 from ..tools.TextTools import format_table
@@ -61,7 +61,7 @@ class FileNode:
             indent = "    "*self.level,
             # prefix = f"[{self.node_path.parent.as_posix()}]",
             # prefix = f"[{self.mtime}]",
-            suffix = f"({self.size}) ({self.hash})"
+            suffix = f"({self.size})"
         )
     
     @property
@@ -77,7 +77,7 @@ class FileNode:
             return self._hash
         
         # 检查是否需要重新计算
-        new_mtime = get_mtime(self.node_path)
+        new_mtime = get_dir_mtime(self.node_path) if self.is_dir else get_file_mtime(self.node_path)
         if self._hash is not None and self.mtime == new_mtime:
             return self._hash
         
@@ -237,7 +237,7 @@ class FileTree:
             if not node_path.exists():
                 return FileNode("(空目录)", node_path, True, 0, HumanTimestamp(0), "📁", level)
             
-            mtime = HumanTimestamp(get_mtime(node_path))
+            mtime = get_dir_mtime(node_path) if node_path.is_dir() else get_file_mtime(node_path)
             if node_path.is_file():
                 size = get_file_size(node_path)
                 icon = FILE_ICONS.get(node_path.suffix, FILE_ICONS["default"])

@@ -508,15 +508,43 @@ def get_dir_hash(
     return _compute(Path(dir_path))
 
 
-def get_mtime(path: Path) -> HumanTimestamp:
+def get_file_mtime(file_path: Path) -> HumanTimestamp:
     """
-    获取文件或文件夹的最后修改时间 (mtime)
+    获取文件的最后修改时间 (mtime)
 
-    :param path: 文件或目录的 Path 对象
-    :return: 修改时间戳(HumanTimestamp)
+    :param file_path: 文件路径
+    :return: 文件的修改时间戳 (HumanTimestamp)
     """
-    path = Path(path)
-    return HumanTimestamp(path.stat().st_mtime)
+    file_path = Path(file_path)
+    if not file_path.exists():
+        return HumanTimestamp(0)
+    return HumanTimestamp(file_path.stat().st_mtime)
+
+
+def get_dir_mtime(dir_path: Path) -> HumanTimestamp:
+    """
+    获取整个目录及其子项的最大修改时间 (递归)
+    即：取目录中所有文件与子目录的 mtime 最大值。
+
+    :param dir_path: 目录路径
+    :return: 目录内最新修改时间戳 (HumanTimestamp)
+    """
+    dir_path = Path(dir_path)
+    if not dir_path.exists():
+        return HumanTimestamp(0)
+
+    max_mtime = dir_path.stat().st_mtime  # 目录本身的修改时间
+
+    for subpath in dir_path.rglob("*"):
+        try:
+            stat = subpath.stat()
+            if stat.st_mtime > max_mtime:
+                max_mtime = stat.st_mtime
+        except (PermissionError, FileNotFoundError):
+            # 避免因权限或符号链接问题中断
+            continue
+
+    return HumanTimestamp(max_mtime)
 
 
 def detect_identical_files(
