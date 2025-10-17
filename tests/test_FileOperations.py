@@ -1,5 +1,5 @@
 import pytest, logging
-from celestialvault.tools.FileOperations import compress_dir, detect_identical_files, duplicate_files_report
+from celestialvault.tools.FileOperations import detect_identical_files, duplicate_files_report
 
 def _test_compress_dir():
     # Test with a valid directory

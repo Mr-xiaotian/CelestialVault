@@ -21,6 +21,7 @@ from ..tools.TextTools import (
 )
 from ..tools.NumberUtils import choose_square_container, redundancy_from_container
 
+
 # ========== 公共基类 ==========
 class BaseCodec:
     """所有编码器的基类"""

@@ -356,6 +356,7 @@ def generate_magic_squares_by_random(num):
 def is_probable_prime(n: int, k: int = 10) -> bool:
     """
     Miller-Rabin 素数判定
+
     :param n: 要检测的整数
     :param k: 测试轮数 (轮数越多，错误率越低)
     :return: True 表示可能是素数，False 表示合数
@@ -391,6 +392,7 @@ def is_probable_prime(n: int, k: int = 10) -> bool:
 def generate_large_prime(bits=512) -> int:
     """
     生成一个大素数，位数由 bits 参数指定。
+
     :param bits: 素数的位数
     :return: 大素数
     """
@@ -404,8 +406,10 @@ def generate_large_prime(bits=512) -> int:
 def choose_square_container(n: int, threshold: float = 0.7):
     """
     给定原始数据长度 n，选择一个平方数容器。
-    threshold 控制最大允许的填充率（0~1）。
-    返回: (容器边长, 最大可用数据长度, 冗余长度)
+
+    :param n 原始数据长度
+    :param threshold 控制最大允许的填充率（0~1）。
+    :return (容器边长, 最大可用数据长度, 冗余长度)
     """
     # 从理论下限 sqrt((n+4)/threshold) 开始
     s = math.ceil(math.sqrt((n + 4) / threshold))
@@ -420,10 +424,33 @@ def choose_square_container(n: int, threshold: float = 0.7):
 def redundancy_from_container(container: int, threshold: float = 0.7) -> int:
     """
     已知容器长度（平方数），计算对应冗余长度。
-    threshold 控制最大允许的填充率（0~1）。
-    返回: 冗余长度
+
+    :param container 容器长度（平方数）
+    :param threshold 控制最大允许的填充率（0~1）。
+    :return 冗余长度
     """
     if int(math.isqrt(container)) ** 2 != container:
         raise ValueError("container 必须是一个平方数")
     max_payload = math.floor(threshold * container)
     return container - max_payload
+
+
+def layered_coordinates(size):
+    """
+    生成一个大小为 size 的螺旋矩阵的坐标列表。
+
+    :param size: 矩阵的大小
+    :return: 坐标列表
+    """
+    coords = []
+    for s in range(0, 2 * size - 1):  # 层号 s = x + y
+        x_min = max(0, s - (size - 1))
+        x_max = min(size - 1, s)
+        for x in range(x_min, x_max + 1):
+            y = s - x
+            if s%2 == 0:
+                coords.append((x, y))
+            else:
+                coords.append((y, x))
+
+    return coords

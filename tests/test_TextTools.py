@@ -133,9 +133,9 @@ def test_rs_encode_decode():
 
     # 2. 编码
     encoded = rs_encode(data, nsym)
-    print(f"原始长度:{len(data)}, 编码后长度:{len(encoded)}")
+    logging.info(f"原始长度:{len(data)}, 编码后长度:{len(encoded)}")
     assert len(encoded) == len(data) + nsym
-    print("✅ 编码成功，数据一致！")
+    logging.info("✅ 编码成功，数据一致！")
 
     # 3. 人为损坏一些字节
     encoded_list = bytearray(encoded)
@@ -149,33 +149,33 @@ def test_rs_encode_decode():
 
     # 5. 验证
     assert decoded == data
-    print("✅ 解码成功，数据一致！")
+    logging.info("✅ 解码成功，数据一致！")
 
 def test_rs_workflow():
     raw = b"Hello, Reed-Solomon with container!"
-    print("原始数据长度:", len(raw))
+    logging.info("原始数据长度:", len(raw))
 
     # 1. 选择容器
     side_length, max_payload, nsym = choose_square_container(len(raw), 0.7)
-    print("容器大小:", side_length**2, "最大有效载荷:", max_payload, "冗余长度:", nsym)
+    logging.info("容器大小:", side_length**2, "最大有效载荷:", max_payload, "冗余长度:", nsym)
 
     # 2. 补位到容器
     padded = pad_bytes(raw, max_payload)
-    print("总长度:", len(padded))
+    logging.info("总长度:", len(padded))
 
     # 3. RS 编码
     encoded = rs_encode(padded, nsym)
-    print("编码后:", encoded)
-    print("编码后长度:", len(encoded))
+    logging.info("编码后:", encoded)
+    logging.info("编码后长度:", len(encoded))
 
     # 4. RS 解码
     decode_nsym = redundancy_from_container(side_length**2, 0.7)
     decoded = rs_decode(encoded, decode_nsym)
-    print("解码后:", decoded)
+    logging.info("解码后:", decoded)
 
     # 5. 去除补位
     unpadded = unpad_bytes(decoded)
-    print("去补位后:", unpadded)
+    logging.info("去补位后:", unpadded)
 
     if unpadded == raw:
-        print("数据完整，无错误")
+        logging.info("数据完整，无错误")

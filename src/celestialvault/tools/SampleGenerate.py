@@ -214,3 +214,18 @@ def generate_test_dirs(base_path: str | Path):
     print(f"✅ 测试目录已生成:\n{dirA}\n{dirB}")
     return dirA, dirB
 
+
+def generate_random_matrix(size, min_val=1, max_val=9):
+    """
+    生成一个方形二维数组（矩阵），元素为随机正整数。
+
+    :param size: 矩阵大小（行数 = 列数）
+    :param min_val: 元素最小值
+    :param max_val: 元素最大值
+    :return: 二维数组
+    """
+    matrix = [
+        [random.randint(min_val, max_val) for _ in range(size)]
+        for _ in range(size)
+    ]
+    return matrix
