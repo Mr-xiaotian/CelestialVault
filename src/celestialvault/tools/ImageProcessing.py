@@ -166,35 +166,14 @@ def img_to_base64(img: Image.Image) -> str:
 
 def generate_palette(color_num: int=256, style: str="morandi", mode: str="random", random_seed: int=0) -> List[int]:
     """
-    生成调色板，支持均匀和螺旋两种模式，并确保颜色唯一或规律分布。
+    生成调色板，支持随机 均匀和螺旋三种模式，并确保颜色唯一或规律分布。
 
     :param color_num: 要生成的颜色数量
-    :param style: 调色板风格，可选 'morandi', 'grey', 'hawaiian', 'deepsea', 'twilight', 'sunrise', 'cyberpunk', 'autumn'，默认为 'morandi'
+    :param style: 调色板风格，可选 'morandi', 'grey', 'hawaiian', 'deepsea', 'twilight', 'sunrise', 'cyberpunk', 'autumn'等
     :param mode: 颜色生成模式，可选 'random' 'uniform', 'spiral'
     :param random_seed: 随机种子，用于生成可重复的随机颜色
     :return: 返回生成的颜色列表
     """
-
-    def select_random_range(range_tuple):
-        """
-        根据输入的范围元组返回一个随机选择的范围。
-        如果元组的长度为2的倍数，随机选择其中的一个二元区间。
-
-        :param range_tuple: 任意长度为2的倍数的元组。
-        :return: 返回选中的二元元组。
-        """
-        # 确保元组长度为2的倍数
-        if len(range_tuple) % 2 != 0:
-            raise ValueError("Input tuple length must be a multiple of 2.")
-
-        # 将元组分解为多个二元组
-        ranges = [
-            (range_tuple[i], range_tuple[i + 1]) for i in range(0, len(range_tuple), 2)
-        ]
-
-        # 随机选择一个二元组并返回
-        selected_range = ranges[np.random.randint(0, len(ranges))]
-        return selected_range
 
     def random_mode(hue_range, saturation_range, value_range, index):
         # 实现随机模式
@@ -226,29 +205,32 @@ def generate_palette(color_num: int=256, style: str="morandi", mode: str="random
 
     from ..constants import style_params
 
+    mode_dict = {"random": random_mode, "uniform": uniform_mode, "spiral": spiral_mode}
+
     if style not in style_params:
         raise ValueError("Unsupported style")
     if mode not in ["random", "uniform", "spiral"]:
         raise ValueError("Unsupported mode")
 
-    params = style_params[style]
     np.random.seed(random_seed)
-
-    get_hsv = None
-    mode_dict = {"random": random_mode, "uniform": uniform_mode, "spiral": spiral_mode}
     get_hsv = mode_dict[mode]
+
+    regions = style_params[style]
+    if not isinstance(regions, list):
+        raise TypeError(f"Style '{style}' should be a list of color region dicts.")
 
     colors = []
     used_hsv = set()
     for i in range(color_num):
-        hue_range = select_random_range(params["hue_range"])
-        saturation_range = select_random_range(params["saturation_range"])
-        value_range = select_random_range(params["value_range"])
+        # 随机选一个色域
+        region = random.choices(regions, weights=[r.get("weight", 1) for r in regions])[0]
+        hue_range = region["hue_range"]
+        sat_range = region["saturation_range"]
+        val_range = region["value_range"]
 
-        h, s, v = get_hsv(hue_range, saturation_range, value_range, i)
+        h, s, v = get_hsv(hue_range, sat_range, val_range, i)
         r, g, b = hsv_to_rgb(h, s, v)
-        color = (int(r * 255), int(g * 255), int(b * 255))
-        colors.append(color)
+        colors.append((int(r * 255), int(g * 255), int(b * 255)))
 
     return [value for color in colors for value in color]
 

@@ -70,7 +70,7 @@ class FileNode:
     def hash(self) -> str:
         """惰性计算文件哈希"""
         # 排除统计节点
-        if self.name.startswith("[") and self.name.endswith("]"):
+        if self.name.startswith("[") and (self.name.endswith("排除的目录]") or self.name.endswith("排除的文件]")):
             self._hash = ""
             return self._hash
         
@@ -246,7 +246,7 @@ class FileTree:
                 return FileNode(node_path.name, node_path, False, size, mtime, icon, level)
             elif level >= max_depth:
                 size = get_dir_size(node_path)
-                return FileNode(node_path.name, node_path, True, size, mtime, "📁", level)
+                return FileNode(node_path.name + "[已折叠]", node_path, True, size, mtime, "📁", level)
             
             try:
                 entries = list(node_path.iterdir())
@@ -356,20 +356,18 @@ class FileTree:
                 c1, c2 = n1_map[name], n2_map[name]
                 if c1.is_dir and c2.is_dir:
                     is_equal_size = c1.size == c2.size
-                    if is_equal_size and not compare_hash:
-                        continue
-                    if is_equal_size and compare_hash and c1.hash == c2.hash:
-                        continue
+                    if is_equal_size:
+                        if not compare_hash or c1.hash == c2.hash:
+                            continue
 
                     sub_dir = _compare(c1, c2)
                     diff_size += sub_dir.size
                     diff_children.append(sub_dir)
                 elif not c1.is_dir and not c2.is_dir:
                     is_equal_size = c1.size == c2.size
-                    if is_equal_size and not compare_hash:
-                        continue
-                    if is_equal_size and compare_hash and c1.hash == c2.hash:
-                        continue
+                    if is_equal_size:
+                        if not compare_hash or c1.hash == c2.hash:
+                            continue
 
                     diff.different_files.append(c1.node_path.relative_to(self.path))
                     diff.diff_size_left += c1.size
