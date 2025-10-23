@@ -18,6 +18,9 @@ from tqdm import tqdm
 ImageFile.LOAD_TRUNCATED_IMAGES = True  # 允许加载截断的图片
 
 def compress_img(old_img_path: str | Path, new_img_path: str | Path):
+    """
+    压缩图片
+    """
     register_heif_opener()
     Image.LOAD_TRUNCATED_IMAGES = True
     Image.MAX_IMAGE_PIXELS = None
@@ -29,16 +32,18 @@ def compress_img(old_img_path: str | Path, new_img_path: str | Path):
 
 def safe_open_image(path: Path) -> tuple[Image.Image | None, bool]:
     """
-    尝试安全地打开一张图片。
-    :param path: 图片路径
-    :return: (Image对象或None, 是否成功打开的bool)
+    安全地打开一张图片并返回Image对象。
     """
     try:
+        # 第一次只验证，不保留句柄
         with Image.open(path) as img:
-            img.verify()  # 基础完整性检查
-        return Image.open(path), True  # 再次真正打开
+            img.verify()
+
+        # 再打开一次时立即加载进内存，然后关闭底层文件句柄
+        img = Image.open(path)
+        img.load()  # ✅ 读取进内存后不再依赖文件句柄
+        return img, True
     except Exception as e:
-        print(f"跳过损坏图片 {path}: {e}")
         return None, False
 
 
@@ -66,17 +71,20 @@ def combine_imgs_to_pdf(
         raise ValueError(f"The provided image path {root_path} is not a directory.")
 
     # 使用 rglob 查找所有图片路径
-    image_paths = [p for p in root_path.rglob("*") if p.suffix in IMG_SUFFIXES]
+    image_paths = [p for p in root_path.glob("*") if p.suffix in IMG_SUFFIXES]
     image_paths = sorted(
         image_paths, key=lambda path: sort_by_number(path, special_keywords)
     )  # 按文件名中的数字排序
 
     # 安全打开图片，过滤掉损坏的
     valid_images: list[Image.Image] = []
+    damage_images: list[Path] = []
     for p in image_paths:
         img, ok = safe_open_image(p)
         if ok:
             valid_images.append(img)
+        else:
+            damage_images.append(p)
 
     if not valid_images:
         raise ValueError(
@@ -100,6 +108,9 @@ def combine_imgs_to_pdf(
 
     # 保存PDF
     first_image.save(pdf_path, save_all=True, append_images=list(resized_images))
+
+    if damage_images:
+        raise ValueError(f"Some images are damaged: {damage_images}")
 
 
 def combine_imgs_dir(dir_path: Path, special_keywords: dict = None):

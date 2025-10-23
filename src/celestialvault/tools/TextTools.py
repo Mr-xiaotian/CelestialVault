@@ -386,7 +386,10 @@ def pad_to_align(data: bytes, align: int) -> bytes:
     if align <= 1:
         return data
     pad = (align - (len(data) % align)) % align
-    return data + (b"\0" * pad)
+    pad_pattern = (0xEC, 0x11)
+    padding = bytes(pad_pattern[i % 2] for i in range(pad))
+
+    return data + padding
 
 
 def compress_to_base64(text: str) -> str:

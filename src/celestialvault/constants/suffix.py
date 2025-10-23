@@ -39,6 +39,8 @@ VIDEO_SUFFIXES = [
     ".mts",
     ".m2t",
     ".f4v",
+    ".m4a",
+    ".ogg",
     ".MP4",
     ".AVI",
     ".MOV",
@@ -60,6 +62,8 @@ VIDEO_SUFFIXES = [
     ".MTS",
     ".M2T",
     ".F4V",
+    ".M4A",
+    ".OGG",
 ]
 
 AUDIO_SUFFIXES = [
