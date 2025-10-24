@@ -229,3 +229,37 @@ def generate_random_matrix(size, min_val=1, max_val=9):
         for _ in range(size)
     ]
     return matrix
+
+
+def length_series_general(n: int, digits: str = "0123456789") -> str:
+    """
+    生成一个“长度数”序列。
+
+    :param n: 目标长度（1 <= n < 100），输出字符串的总长度。
+    :param digits: 用来填充的字符序列，如 "0123456789" 或 "零一二三四五六七八九"。
+                   默认值为 "0123456789"。
+    :return: 一个长度恰好为 n 的字符串。
+    """
+    if not (1 <= n < 100):
+        raise ValueError("n 必须在 1 到 99 之间")
+
+    res = []
+    need = n
+    first_block = digits[1:]  # 去掉首字符，从第二个字符开始
+    take = min(need, len(first_block))
+    res.append(first_block[:take])
+    need -= take
+
+    # 后续块
+    t = 1
+    tail = digits[1:]
+    while need > 0:
+        # 当前块前缀为 digits[t]，若超出范围则循环使用
+        prefix = digits[t % len(digits)]
+        block = prefix + tail
+        take = min(need, len(block))
+        res.append(block[:take])
+        need -= take
+        t += 1
+
+    return ''.join(res)
