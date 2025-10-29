@@ -631,13 +631,30 @@ def format_table(
     格式化并打印表格。
 
     :param data: 表格数据，二维列表，每行代表一行数据
-    :param column_names: 列名，列表，每列的名称
-    :param row_names: 自定义的行号，列表，如果为None则使用默认行号（0, 1, 2, 3...）
+    :param column_names: 自定义的列名，如果为None则使用默认列名（"A", "B", "C", ...）
+    :param row_names: 自定义的行号，如果为None则使用默认行号（0, 1, 2, 3...）
     :param index_header: 左上角的名称，默认为 "#"
     :param fill_value: 当数据为空时填充的值
     :param align: 对齐方式，默认为 "left"
     :return: 格式化后的表格字符串
     """
+    def _generate_excel_column_names(n: int, start_index: int = 0) -> list[str]:
+        """
+        生成 Excel 风格列名（A, B, ..., Z, AA, AB, ...）
+        支持从指定起始索引开始生成。
+        """
+        names = []
+        for i in range(start_index, start_index + n):
+            name = ""
+            x = i
+            while True:
+                name = chr(ord('A') + (x % 26)) + name
+                x = x // 26 - 1
+                if x < 0:
+                    break
+            names.append(name)
+        return names
+    
     if not data:
         return "表格数据为空！"
 
@@ -646,17 +663,18 @@ def format_table(
 
     # 生成列名
     if column_names is None:
-        column_names = [f"Column {i+1}" for i in range(max_cols)]
+        column_names = _generate_excel_column_names(max_cols)
     elif len(column_names) < max_cols:
+        start = len(column_names)  # 从当前列名数量继续命名
         column_names.extend(
-            [f"Column {i+1}" for i in range(len(column_names), max_cols)]
+            _generate_excel_column_names(max_cols - len(column_names), start)
         )
 
     # 生成行名
     if row_names is None:
         row_names = range(len(data))
     elif len(row_names) < len(data):
-        row_names.extend([f"Row {i+1}" for i in range(len(row_names), len(data))])
+        row_names.extend([i for i in range(len(row_names), len(data))])
 
     # 添加行号列
     column_names = [index_header] + column_names

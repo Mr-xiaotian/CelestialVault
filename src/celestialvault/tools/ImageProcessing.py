@@ -563,3 +563,80 @@ def simulate_random_damage(img: Image.Image, damage_ratio: float) -> Image.Image
         pixels[x, y] = zero_val
 
     return damaged
+
+
+def ensure_capacity(ref_img: Image.Image, required_bytes: int, *, min_able: bool = True, min_size: int = 1) -> Image.Image:
+    """
+    自动调整图像尺寸，使其容量刚好匹配存储需求。
+    - 当容量不足时放大；
+    - 当容量过剩时缩小；
+    - 保留视觉结构尽量不失真。
+    
+    :param ref_img: 参考图像 (RGBA)
+    :param required_bytes: 需要存储的字节数
+    :param min_size: 图像的最小宽高限制
+    :return: 调整后的图像 (RGBA)
+    """
+    width, height = ref_img.size
+    current_capacity = width * height
+
+    # 避免 0 或负值
+    required_bytes = max(1, required_bytes)
+    if required_bytes == current_capacity:
+        return ref_img
+    elif not min_able and required_bytes < current_capacity:
+        return ref_img
+
+    # 计算缩放因子（平方根是因为容量 ~ 面积）
+    scale_factor = math.sqrt(required_bytes / current_capacity)
+
+    new_width = max(min_size, math.ceil(width * scale_factor))
+    new_height = max(min_size, math.ceil(height * scale_factor))
+
+    # 如果尺寸没有变化，直接返回原图
+    if (new_width, new_height) == (width, height):
+        return ref_img
+
+    # 当放大时使用平滑插值，当缩小时使用高质量下采样
+    resample_mode = Image.BICUBIC if scale_factor > 1 else Image.LANCZOS
+    return ref_img.resize((new_width, new_height), resample_mode)
+
+
+def compare_random_pixels(ref_img: Image.Image, encode_img: Image.Image, sample_num: int = 20):
+    """
+    在随机点位比较两张图的像素差异。
+    打印每个点位的 RGB(A) 值差异，以及整体平均差。
+    """
+    from .TextTools import format_table
+
+    width, height = encode_img.size
+    ref_img = ensure_capacity(ref_img, width*height)
+    ref_img = ref_img.convert("RGBA")
+
+    pixels_ref = ref_img.load()
+    pixels_enc = encode_img.load()
+
+    diffs = []
+    data = []
+    print(f"\n🎯 随机抽样 {sample_num} 个像素比较：\n")
+
+    for _ in range(sample_num):
+        x = random.randint(0, width - 1)
+        y = random.randint(0, height - 1)
+
+        p_ref = np.array(pixels_ref[x, y])
+        p_enc = np.array(pixels_enc[x, y])
+        diff = np.abs(p_enc - p_ref)
+
+        diffs.append(diff)
+        data.append([x, y, tuple(p_ref), tuple(p_enc), tuple(diff)])
+
+    diffs = np.array(diffs)
+    mean_diff = diffs.mean(axis=0)
+    max_diff = diffs.max(axis=0)
+
+    print(format_table(data, column_names=["X", "Y", "ref", "enc", "Δ"]))
+
+    print("\n📊 平均差异 (每通道):", tuple(mean_diff.round(2)))
+    print("📈 最大差异 (每通道):", tuple(max_diff))
+    print(f"🌈 平均总差值 ≈ {mean_diff.mean():.3f} (在 0~255 范围内几乎不可见)")

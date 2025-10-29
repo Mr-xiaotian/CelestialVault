@@ -1,12 +1,13 @@
 import math
+import numpy as np
 from itertools import product
 from pathlib import Path
 from PIL import Image
 from tqdm import tqdm
-from typing import Dict
+from typing import Dict, Union
 
 from ..constants import image_mode_params, style_params
-from ..tools.ImageProcessing import generate_palette
+from ..tools.ImageProcessing import generate_palette, ensure_capacity
 from ..tools.TextTools import (
     crc_encode,
     crc_decode,
@@ -318,6 +319,86 @@ class ChannelCodec(BaseCodec):
         progress_bar.close()
         crc_text = decompress_text_from_bytes(bytes(bytes_list))
 
+        return crc_text
+    
+
+class RefRGBALSBCodec(BaseCodec):
+    """
+    RGBA-LSB 通道编码器：
+    - RGBA 每个通道的低 2 bit 存储数据；
+    - 每像素可嵌入 1 字节；
+    - 视觉效果几乎无变化。
+    """
+
+    def __init__(self, ref_image: Union[str, Path, Image.Image]):
+        super().__init__()
+        if isinstance(ref_image, (str, Path)):
+            ref_image = Image.open(ref_image).convert("RGBA")
+        else:
+            ref_image = ref_image.convert("RGBA")
+
+        self.mode_name = "RGBA-LSB"
+        self.ref_image = ref_image
+
+    # ========== 编码 ==========
+    def _encode_core(self, text: str) -> Image.Image:
+        compressed_binary = compress_text_to_bytes(text)
+        total_len = len(compressed_binary)
+
+        # 每像素 1 字节容量
+        ref = ensure_capacity(self.ref_image, total_len)
+        width, height = ref.size
+        capacity = width * height
+
+        # 载入为 numpy 数组
+        arr = np.array(ref, dtype=np.uint8)
+        h, w, _ = arr.shape
+        flat = arr.reshape(-1, 4)  # 每行 RGBA
+
+        progress = tqdm(total=total_len, desc="Encoding to RGBA-LSB", disable=not self.show_progress)
+
+        for i in range(total_len):
+            byte_val = compressed_binary[i]
+            # 分成四个 2bit 段
+            segs = [
+                (byte_val >> 0) & 0b11,
+                (byte_val >> 2) & 0b11,
+                (byte_val >> 4) & 0b11,
+                (byte_val >> 6) & 0b11,
+            ]
+            # 清除低2位并写入
+            flat[i, 0] = (flat[i, 0] & 0b11111100) | segs[0]
+            flat[i, 1] = (flat[i, 1] & 0b11111100) | segs[1]
+            flat[i, 2] = (flat[i, 2] & 0b11111100) | segs[2]
+            flat[i, 3] = (flat[i, 3] & 0b11111100) | segs[3]
+            progress.update(1)
+
+        progress.close()
+
+        out_img = Image.fromarray(flat.reshape(h, w, 4), mode="RGBA")
+        return out_img
+
+    # ========== 解码 ==========
+    def _decode_core(self, img: Image.Image) -> str:
+        img = img.convert("RGBA")
+        arr = np.array(img, dtype=np.uint8)
+        h, w, _ = arr.shape
+        flat = arr.reshape(-1, 4)
+
+        total_pixels = h * w
+        progress = tqdm(total=total_pixels, desc="Decoding RGBA-LSB", disable=not self.show_progress)
+
+        bytes_list = bytearray()
+
+        for i in range(total_pixels):
+            r, g, b, a = flat[i]
+            byte_val = ((r & 0b11) << 0) | ((g & 0b11) << 2) | ((b & 0b11) << 4) | ((a & 0b11) << 6)
+            bytes_list.append(byte_val)
+            progress.update(1)
+
+        progress.close()
+
+        crc_text = decompress_text_from_bytes(bytes(bytes_list))
         return crc_text
     
 
