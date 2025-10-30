@@ -881,7 +881,7 @@ def extract_file_numbers(dir_path: Path | str, suffix: str) -> set:
     path = Path(dir_path)
     path_list = list(path.iterdir())
     for item in tqdm(path_list, desc="extract_txt_numbers"):
-        if item.is_file() and item.suffix == suffix:
+        if item.is_file() and item.suffix.lower() == suffix.lower():
             match = pattern.search(item.name)
             if match:
                 num_set.add(match.group(1))

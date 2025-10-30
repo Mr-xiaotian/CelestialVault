@@ -7,14 +7,6 @@ IMG_SUFFIXES = [
     ".tiff",
     ".webp",
     ".svg",
-    ".JPG",
-    ".PNG",
-    ".JPEG",
-    ".HEIC",
-    ".BMP",
-    ".TIFF",
-    ".WEBP",
-    ".SVG",
 ]
 
 VIDEO_SUFFIXES = [
@@ -41,29 +33,6 @@ VIDEO_SUFFIXES = [
     ".f4v",
     ".m4a",
     ".ogg",
-    ".MP4",
-    ".AVI",
-    ".MOV",
-    ".MKV",
-    ".DIVX",
-    ".MPG",
-    ".FLV",
-    ".RM",
-    ".RMVB",
-    ".MPEG",
-    ".WMV",
-    ".3GP",
-    ".VOB",
-    ".OGM",
-    ".OGV",
-    ".ASF",
-    ".TS",
-    ".WEBM",
-    ".MTS",
-    ".M2T",
-    ".F4V",
-    ".M4A",
-    ".OGG",
 ]
 
 AUDIO_SUFFIXES = [
@@ -77,16 +46,6 @@ AUDIO_SUFFIXES = [
     ".alac",
     ".aiff",
     ".opus",
-    ".MP3",
-    ".WAV",
-    ".AAC",
-    ".FLAC",
-    ".OGG",
-    ".WMA",
-    ".M4A",
-    ".ALAC",
-    ".AIFF",
-    ".OPUS",
 ]
 
 ZIP_SUFFIXES = [
@@ -99,15 +58,6 @@ ZIP_SUFFIXES = [
     ".xz",
     ".zipx",
     ".tar.gz",
-    ".ZIP",
-    ".RAR",
-    ".TAR",
-    ".7Z",
-    ".GZ",
-    ".BZ2",
-    ".XZ",
-    ".ZIPX",
-    ".TAR.GZ",
 ]
 
 TEXT_SUFFIXES = [
@@ -125,20 +75,6 @@ TEXT_SUFFIXES = [
     ".properties",
     ".prop",
     ".props",
-    ".TXT",
-    ".MD",
-    ".JSON",
-    ".XML",
-    ".CSV",
-    ".TSV",
-    ".YAML",
-    ".YML",
-    ".INI",
-    ".CONF",
-    ".CONFIG",
-    ".PROPERTIES",
-    ".PROP",
-    ".PROPS",
 ]
 
 FILE_ICONS = {}

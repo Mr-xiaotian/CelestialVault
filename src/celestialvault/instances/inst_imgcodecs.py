@@ -47,25 +47,27 @@ class BaseCodec:
     def _decode_core(self, img: Image.Image) -> str:
         raise NotImplementedError
     
-    def encode_text_file(self, file_path: str) -> Image.Image:
+    def encode_text_file(self, file_path: str, save_img: bool = False) -> Image.Image:
         file_path = Path(file_path)
 
         target_text = safe_open_txt(file_path)
         img = self.encode(target_text)
 
-        new_name = f"{file_path.stem}({self.mode_name}).png"
-        output_path = file_path.with_name(new_name)
+        if save_img:
+            new_name = f"{file_path.stem}({self.mode_name}).png"
+            output_path = file_path.with_name(new_name)
 
-        img.save(output_path)
+            img.save(output_path)
 
         return img
     
-    def decode_image_file(self, img_path: str) -> str:
+    def decode_image_file(self, img_path: str, save_text: bool = False) -> str:
         img = Image.open(img_path)
         actual_text = self.decode(img)
 
-        with open(img_path.replace(f".png", ".txt"), "w", encoding="utf-8") as f:
-            f.write(actual_text)
+        if save_text:
+            with open(img_path.replace(f".png", ".txt"), "w", encoding="utf-8") as f:
+                f.write(actual_text)
 
         return actual_text
 
@@ -347,8 +349,6 @@ class RefRGBALSBCodec(BaseCodec):
 
         # 每像素 1 字节容量
         ref = ensure_capacity(self.ref_image, total_len)
-        width, height = ref.size
-        capacity = width * height
 
         # 载入为 numpy 数组
         arr = np.array(ref, dtype=np.uint8)

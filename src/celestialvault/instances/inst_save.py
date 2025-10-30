@@ -37,13 +37,13 @@ class Saver(object):
     def set_add_path(self, add_path):
         self.add_path = Path(add_path)
 
-    def get_path(self, file_name, suffix_name):
+    def get_path(self, file_name, file_suffix):
         middle_path = self.base_path / self.add_path  # 拼接路径
         middle_path.mkdir(parents=True, exist_ok=True)  # 确保目录存在
 
         path: Path = middle_path / str(file_name)  # 拼接文件路径
-        if path.suffix != suffix_name:         
-            path = path.with_suffix(suffix_name)   # 添加后缀
+        if path.suffix.lower() != file_suffix.lower():         
+            path = path.with_suffix(file_suffix)   # 添加后缀
         return path
 
     def can_overwrite(self, path):
@@ -51,8 +51,8 @@ class Saver(object):
             return False
         return True
 
-    def save_text(self, text, file_name, encoding="utf-8", suffix_name=".txt"):
-        path = self.get_path(file_name, suffix_name)
+    def save_text(self, text, file_name, encoding="utf-8", file_suffix=".txt"):
+        path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(path):
             return path
 
@@ -60,8 +60,8 @@ class Saver(object):
         path.write_text(text, encoding=encoding, errors="ignore")
         return path
 
-    def add_text(self, text, file_name, encoding="utf-8", suffix_name=".txt"):
-        path = self.get_path(file_name, suffix_name)
+    def add_text(self, text, file_name, encoding="utf-8", file_suffix=".txt"):
+        path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(path):
             return path
 
@@ -69,8 +69,8 @@ class Saver(object):
             f.write(text.encode(encoding, "ignore").decode(encoding, "ignore"))
         return path
 
-    def save_content(self, content, file_name, suffix_name=".dat"):
-        path = self.get_path(file_name, suffix_name)
+    def save_content(self, content, file_name, file_suffix=".dat"):
+        path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(path):
             return path
 
@@ -79,16 +79,16 @@ class Saver(object):
         return path
 
     def save_dataframe(
-        self, dataframe: pd.DataFrame, file_name: str, suffix_name=".csv"
+        self, dataframe: pd.DataFrame, file_name: str, file_suffix=".csv"
     ):
-        path = self.get_path(file_name, suffix_name)
+        path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(path):
             return path
 
         dataframe.to_csv(path, index=False, sep=",", encoding="utf-8-sig")
 
-    def save_pickle(self, obj, file_name, suffix_name=".pkl"):
-        path = self.get_path(file_name, suffix_name)
+    def save_pickle(self, obj, file_name, file_suffix=".pkl"):
+        path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(path):
             return path
 
@@ -96,8 +96,8 @@ class Saver(object):
             pickle.dump(obj, f)
         return path
 
-    def save_json(self, data, file_name, suffix_name=".json", encoding="utf-8"):
-        path = self.get_path(file_name, suffix_name)
+    def save_json(self, data, file_name, file_suffix=".json", encoding="utf-8"):
+        path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(path):
             return path
 
@@ -105,8 +105,8 @@ class Saver(object):
             json.dump(data, f, ensure_ascii=False, indent=4)
         return path
 
-    def download_url(self, url, file_name, suffix_name=".dat"):
-        path = self.get_path(file_name, suffix_name)
+    def download_url(self, url, file_name, file_suffix=".dat"):
+        path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(path):
             return path
 
@@ -162,8 +162,8 @@ class Saver(object):
         # await self.fetcher.close_session()
         pass
 
-    def download_m3u8(self, m3u8_url, file_name, suffix_name=".mp4", timeout=3600):
-        m3u8_path = self.get_path(file_name, suffix_name)
+    def download_m3u8(self, m3u8_url, file_name, file_suffix=".mp4", timeout=3600):
+        m3u8_path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(m3u8_path):
             return m3u8_path
 

@@ -242,7 +242,7 @@ class FileTree:
             mtime = get_dir_mtime(node_path) if node_path.is_dir() else get_file_mtime(node_path)
             if node_path.is_file():
                 size = get_file_size(node_path)
-                icon = FILE_ICONS.get(node_path.suffix, FILE_ICONS["default"])
+                icon = FILE_ICONS.get(node_path.suffix.lower(), FILE_ICONS["default"])
                 return FileNode(node_path.name, node_path, False, size, mtime, icon, level)
             elif level >= max_depth:
                 size = get_dir_size(node_path)
