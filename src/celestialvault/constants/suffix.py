@@ -7,14 +7,6 @@ IMG_SUFFIXES = [
     ".tiff",
     ".webp",
     ".svg",
-    ".JPG",
-    ".PNG",
-    ".JPEG",
-    ".HEIC",
-    ".BMP",
-    ".TIFF",
-    ".WEBP",
-    ".SVG",
 ]
 
 VIDEO_SUFFIXES = [
@@ -58,16 +50,6 @@ AUDIO_SUFFIXES = [
     ".alac",
     ".aiff",
     ".opus",
-    ".MP3",
-    ".WAV",
-    ".AAC",
-    ".FLAC",
-    ".OGG",
-    ".WMA",
-    ".M4A",
-    ".ALAC",
-    ".AIFF",
-    ".OPUS",
 ]
 
 ZIP_SUFFIXES = [
@@ -80,15 +62,6 @@ ZIP_SUFFIXES = [
     ".xz",
     ".zipx",
     ".tar.gz",
-    ".ZIP",
-    ".RAR",
-    ".TAR",
-    ".7Z",
-    ".GZ",
-    ".BZ2",
-    ".XZ",
-    ".ZIPX",
-    ".TAR.GZ",
 ]
 
 TEXT_SUFFIXES = [
@@ -106,20 +79,6 @@ TEXT_SUFFIXES = [
     ".properties",
     ".prop",
     ".props",
-    ".TXT",
-    ".MD",
-    ".JSON",
-    ".XML",
-    ".CSV",
-    ".TSV",
-    ".YAML",
-    ".YML",
-    ".INI",
-    ".CONF",
-    ".CONFIG",
-    ".PROPERTIES",
-    ".PROP",
-    ".PROPS",
 ]
 
 FILE_ICONS = {}

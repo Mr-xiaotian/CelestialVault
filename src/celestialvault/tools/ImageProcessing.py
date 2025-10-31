@@ -9,6 +9,7 @@ from typing import List
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from PIL import Image, PngImagePlugin, ImageFile
 from pillow_heif import register_heif_opener
 from skimage.metrics import structural_similarity as compare_ssim
@@ -71,7 +72,7 @@ def combine_imgs_to_pdf(
         raise ValueError(f"The provided image path {root_path} is not a directory.")
 
     # 使用 rglob 查找所有图片路径
-    image_paths = [p for p in root_path.glob("*") if p.suffix in IMG_SUFFIXES]
+    image_paths = [p for p in root_path.glob("*") if p.suffix.lower() in IMG_SUFFIXES]
     image_paths = sorted(
         image_paths, key=lambda path: sort_by_number(path, special_keywords)
     )  # 按文件名中的数字排序
@@ -429,6 +430,7 @@ def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
 def is_image_valid(data: str|Path|io.BytesIO) -> bool:
     """
     检测图片是否有效
+    
     :param data: 图片的路径、文件对象或二进制数据
     :return: True 表示正常，False 表示损坏或格式不符
     """
@@ -458,6 +460,7 @@ def is_image_valid(data: str|Path|io.BytesIO) -> bool:
 def is_image_bytes_valid(byte_data: bytes) -> bool:
     """
     检测二进制图片数据是否有效
+
     :param byte_data: 图片的二进制内容
     :return: True 表示正常，False 表示损坏或格式不符
     """
@@ -602,19 +605,19 @@ def ensure_capacity(ref_img: Image.Image, required_bytes: int, *, min_able: bool
     return ref_img.resize((new_width, new_height), resample_mode)
 
 
-def compare_random_pixels(ref_img: Image.Image, encode_img: Image.Image, sample_num: int = 20):
+def compare_random_pixels(ref_img: Image.Image, enc_img: Image.Image, sample_num: int = 20):
     """
     在随机点位比较两张图的像素差异。
     打印每个点位的 RGB(A) 值差异，以及整体平均差。
     """
     from .TextTools import format_table
 
-    width, height = encode_img.size
+    width, height = enc_img.size
     ref_img = ensure_capacity(ref_img, width*height)
     ref_img = ref_img.convert("RGBA")
 
     pixels_ref = ref_img.load()
-    pixels_enc = encode_img.load()
+    pixels_enc = enc_img.load()
 
     diffs = []
     data = []
@@ -640,3 +643,49 @@ def compare_random_pixels(ref_img: Image.Image, encode_img: Image.Image, sample_
     print("\n📊 平均差异 (每通道):", tuple(mean_diff.round(2)))
     print("📈 最大差异 (每通道):", tuple(max_diff))
     print(f"🌈 平均总差值 ≈ {mean_diff.mean():.3f} (在 0~255 范围内几乎不可见)")
+
+
+def show_diff_heatmap(ref_img: Image.Image, enc_img: Image.Image, save_path: str = None, show: bool = True):
+    """
+    生成两张图像的像素差异热力图。
+    :param ref_img: 原图 (PIL.Image)
+    :param enc_img: 编码图 (PIL.Image)
+    :param save_path: 保存路径（可选）
+    :param show: 是否显示结果
+    """
+    width, height = enc_img.size
+    ref_img = ensure_capacity(ref_img, width*height)
+
+    # 转 RGBA 保证通道一致
+    ref = np.array(ref_img.convert("RGBA"), dtype=np.int16)
+    enc = np.array(enc_img.convert("RGBA"), dtype=np.int16)
+
+    # 差异矩阵 (取绝对值)
+    diff = np.abs(ref - enc)
+
+    # 计算每像素的平均差异强度（0~255）
+    diff_intensity = diff.mean(axis=2)
+
+    # 归一化到 [0, 1]
+    diff_norm = diff_intensity / diff_intensity.max() if diff_intensity.max() > 0 else diff_intensity
+
+    plt.figure(figsize=(8, 8))
+    plt.title("Difference Heatmap")
+    plt.imshow(diff_norm, cmap="inferno")  # inferno / hot / magma 都不错
+    plt.axis("off")
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches="tight", pad_inches=0)
+        print(f"✅ 热力图已保存到: {save_path}")
+    if show:
+        plt.show()
+
+    # 返回统计信息
+    mean_diff = diff_intensity.mean()
+    max_diff = diff_intensity.max()
+    print(f"📊 平均像素差异: {mean_diff:.3f}")
+    print(f"📈 最大像素差异: {max_diff:.1f}")
+    print(f"🌈 改动比例约: {(diff_intensity > 0).sum() / diff_intensity.size * 100:.2f}% 像素点有变化")
+
+    return diff_intensity
+

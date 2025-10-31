@@ -8,7 +8,8 @@ import fitz  # PyMuPDF
 from PIL import Image, ImageDraw, ImageFont
 
 
-def generate_test_images(
+# ==== 文件操作工具函数 ====
+def make_image_tree(
     root_dir: str | Path, num_dirs: int = 3, images_per_dir: int = 5
 ):
     """
@@ -22,8 +23,8 @@ def generate_test_images(
     root_dir.mkdir(parents=True, exist_ok=True)
 
     for dir_idx in range(1, num_dirs + 1):
-        dir = root_dir / f"dir_{dir_idx}"
-        dir.mkdir(exist_ok=True)
+        sub_dir = root_dir / f"dir_{dir_idx}"
+        sub_dir.mkdir(exist_ok=True)
 
         for img_idx in range(1, images_per_dir + 1):
             width = random.randint(300, 800)
@@ -33,21 +34,21 @@ def generate_test_images(
             img = Image.new("RGB", (width, height), color=color)
             draw = ImageDraw.Draw(img)
 
-            text = f"{dir.name}_{img_idx}\n{width}x{height}"
+            text = f"{sub_dir.name}_{img_idx}\n{width}x{height}"
             try:
                 font = ImageFont.truetype("arial.ttf", size=24)
             except:
                 font = ImageFont.load_default()
             draw.text((10, 10), text, fill="white", font=font)
 
-            img.save(dir / f"img_{img_idx:02d}.jpg")
+            img.save(sub_dir / f"img_{img_idx:02d}.jpg")
 
     print(
         f"✅ 成功生成 {num_dirs} 个子文件夹，每个包含 {images_per_dir} 张测试图片。"
     )
 
 
-def create_sample_pdf(file_path: str | Path):
+def make_multisize_pdf(file_path: str | Path):
     """
     创建一个包含不同尺寸页面的示例 PDF 文件。
 
@@ -81,67 +82,7 @@ def create_sample_pdf(file_path: str | Path):
     print(f"✅ 成功创建示例 PDF 文件：{file_path}")
 
 
-def generate_test_data(length: int, data_types: Union[str, List[str]] = None):
-    """
-    生成测试数据
-    :param length: 数据数量
-    :param data_types: 数据类型，可以是字符串（'str', 'int', 'float', 'bool', 'none', 'list', 'dict', 'bytes', 'choice'）
-                       或列表（支持多选）。如果为 None，则默认全选所有类型。
-    :return: 随机数据列表
-    """
-    all_types = ["str", "int", "float", "bool", "none", "list", "dict", "bytes", "choice"]
-
-    # 统一成列表形式
-    if data_types is None:
-        data_types = all_types
-    elif isinstance(data_types, str):
-        data_types = [data_types]
-    else:
-        # 过滤无效类型
-        data_types = [t for t in data_types if t in all_types]
-        if not data_types:
-            raise ValueError(f"不支持的数据类型: {data_types}")
-
-    def random_item(dtype: str):
-        if dtype == "str":
-            return ''.join(random.choices(string.ascii_lowercase, k=random.randint(5, 10)))
-        elif dtype == "int":
-            return random.randint(-1000, 1000)
-        elif dtype == "float":
-            return round(random.uniform(-100, 100), 2)
-        elif dtype == "bool":
-            return random.choice([True, False])
-        elif dtype == "none":
-            return None
-        elif dtype == "list":
-            return [random_item(random.choice(data_types)) for _ in range(random.randint(2, 5))]
-        elif dtype == "dict":
-            return {f"k{i}": random_item(random.choice(data_types)) for i in range(random.randint(1, 3))}
-        elif dtype == "bytes":
-            return bytes(random.getrandbits(8) for _ in range(random.randint(4, 8)))
-        elif dtype == "choice":
-            return random.choice(["apple", "banana", "cherry", "dog", "cat"])
-        else:
-            raise ValueError(f"不支持的数据类型: {dtype}")
-
-    return [random_item(random.choice(data_types)) for _ in range(length)]
-
-
-def random_increasing_sequence(length: int, start: int = 0, max_step: int = 10) -> list[int]:
-    """
-    生成一个随机递增整数序列
-    :param length: 序列长度
-    :param start: 起始值
-    :param max_step: 每次递增的最大步长（至少 1）
-    """
-    seq = [start]
-    for _ in range(length - 1):
-        step = random.randint(1, max_step)  # 随机步长 ≥1 保证递增
-        seq.append(seq[-1] + step)
-    return seq
-
-
-def generate_test_dirs(base_path: str | Path):
+def make_dirpair_fixture(base_path: str | Path):
     """
     在 base_path 下生成 dirA 和 dirB 两个文件夹，用于测试文件夹对比功能。
     覆盖四种情况：
@@ -149,6 +90,8 @@ def generate_test_dirs(base_path: str | Path):
     2. 名称相同但大小、内容不同；
     3. 名称和大小相同但内容不同；
     4. 名称、大小、内容完全相同。
+
+    :param base_path: 基础路径
     """
     base = Path(base_path)
     dirA = base / "dirA"
@@ -215,7 +158,70 @@ def generate_test_dirs(base_path: str | Path):
     return dirA, dirB
 
 
-def generate_random_matrix(size, min_val=1, max_val=9):
+# ==== 测试数据生成函数 ====
+def random_values(length: int, data_types: Union[str, List[str]] = None) -> List:
+    """
+    生成测试数据
+
+    :param length: 数据数量
+    :param data_types: 数据类型，可以是字符串（'str', 'int', 'float', 'bool', 'none', 'list', 'dict', 'bytes', 'choice'）
+                       或列表（支持多选）。如果为 None，则默认全选所有类型。
+    :return: 随机数据列表
+    """
+    all_types = ["str", "int", "float", "bool", "none", "list", "dict", "bytes", "choice"]
+
+    # 统一成列表形式
+    if data_types is None:
+        data_types = all_types
+    elif isinstance(data_types, str):
+        data_types = [data_types]
+    else:
+        # 过滤无效类型
+        data_types = [t for t in data_types if t in all_types]
+        if not data_types:
+            raise ValueError(f"不支持的数据类型: {data_types}")
+
+    def random_item(dtype: str):
+        if dtype == "str":
+            return ''.join(random.choices(string.ascii_lowercase, k=random.randint(5, 10)))
+        elif dtype == "int":
+            return random.randint(-1000, 1000)
+        elif dtype == "float":
+            return round(random.uniform(-100, 100), 2)
+        elif dtype == "bool":
+            return random.choice([True, False])
+        elif dtype == "none":
+            return None
+        elif dtype == "list":
+            return [random_item(random.choice(data_types)) for _ in range(random.randint(2, 5))]
+        elif dtype == "dict":
+            return {f"k{i}": random_item(random.choice(data_types)) for i in range(random.randint(1, 3))}
+        elif dtype == "bytes":
+            return bytes(random.getrandbits(8) for _ in range(random.randint(4, 8)))
+        elif dtype == "choice":
+            return random.choice(["apple", "banana", "cherry", "dog", "cat"])
+        else:
+            raise ValueError(f"不支持的数据类型: {dtype}")
+
+    return [random_item(random.choice(data_types)) for _ in range(length)]
+
+
+def rand_strict_increasing_ints(length: int, start: int = 0, max_step: int = 10) -> list[int]:
+    """
+    生成一个随机递增整数序列
+
+    :param length: 序列长度
+    :param start: 起始值
+    :param max_step: 每次递增的最大步长（至少 1）
+    """
+    seq = [start]
+    for _ in range(length - 1):
+        step = random.randint(1, max_step)  # 随机步长 ≥1 保证递增
+        seq.append(seq[-1] + step)
+    return seq
+
+
+def rand_int_matrix(size, min_val=1, max_val=9):
     """
     生成一个方形二维数组（矩阵），元素为随机正整数。
 
@@ -231,7 +237,7 @@ def generate_random_matrix(size, min_val=1, max_val=9):
     return matrix
 
 
-def length_series_general(n: int, digits: str = "0123456789") -> str:
+def fixed_length_series(n: int, digits: str = "0123456789") -> str:
     """
     生成一个“长度数”序列。
 
@@ -263,3 +269,19 @@ def length_series_general(n: int, digits: str = "0123456789") -> str:
         t += 1
 
     return ''.join(res)
+
+
+def gapped_range_tuples(length: int, tuple_size: int):
+    """
+    生成指定数量和元组长度的递增数列元组列表
+
+    :param length: 元组数量
+    :param tuple_size: 每个元组的长度
+    """
+    result = []
+    current = 0
+    for _ in range(length):
+        tup = tuple(rand_strict_increasing_ints(tuple_size, current))
+        result.append(tup)
+        current += tuple_size + 1  # 每组间隔 1
+    return result

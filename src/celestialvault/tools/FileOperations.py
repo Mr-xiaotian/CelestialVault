@@ -53,9 +53,6 @@ class HandleFileManager(TaskManager):
         final_path = rename_func(new_file_path)
         return (file_path, final_path, action_func, args_extra)
 
-    def process_result(self, file_path: Path, result):
-        return
-
     def handle_error_dict(self):
         error_path_dict = defaultdict(list)
 
@@ -881,7 +878,7 @@ def extract_file_numbers(dir_path: Path | str, suffix: str) -> set:
     path = Path(dir_path)
     path_list = list(path.iterdir())
     for item in tqdm(path_list, desc="extract_txt_numbers"):
-        if item.is_file() and item.suffix == suffix:
+        if item.is_file() and item.suffix.lower() == suffix.lower():
             match = pattern.search(item.name)
             if match:
                 num_set.add(match.group(1))
