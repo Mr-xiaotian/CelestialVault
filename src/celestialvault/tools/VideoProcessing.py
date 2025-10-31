@@ -255,7 +255,7 @@ def rotate_video_dir(
     return handle_dir_files(
         dir_path,
         rules,
-        "serial",
+        "thread",
         progress_desc=f"Rotating videos by {angle} degrees",
     )
 
