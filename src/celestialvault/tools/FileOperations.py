@@ -53,9 +53,6 @@ class HandleFileManager(TaskManager):
         final_path = rename_func(new_file_path)
         return (file_path, final_path, action_func, args_extra)
 
-    def process_result(self, file_path: Path, result):
-        return
-
     def handle_error_dict(self):
         error_path_dict = defaultdict(list)
 
