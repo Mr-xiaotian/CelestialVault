@@ -17,7 +17,8 @@ class SymmetricMap(Generic[T]):
         self._allow_self = allow_self
 
     def __contains__(self, x: T) -> bool:
-        return x in self.pairs or x in self.reverse
+        d = self.pairs
+        return x in d or x in self.reverse
 
     def __len__(self) -> int:
         return len(self.pairs)
@@ -61,6 +62,18 @@ class SymmetricMap(Generic[T]):
             del self.pairs[y]
             return
         raise KeyError(f"{x!r} not found")
+    
+    def pop(self, x: T) -> T:
+        """移除并返回与 x 绑定的伙伴。"""
+        if x in self.pairs:
+            y = self.pairs.pop(x)
+            del self.reverse[y]
+            return y
+        if x in self.reverse:
+            y = self.reverse.pop(x)
+            del self.pairs[y]
+            return y
+        raise KeyError(f"{x!r} not found")
 
     # —— 视图/便捷方法 ——
     def get(self, x: T, default: Optional[T] = None) -> Optional[T]:
@@ -87,10 +100,34 @@ class SymmetricMap(Generic[T]):
         self.reverse.clear()
 
     def __repr__(self) -> str:
-        # 稳定、可读的输出
+        """稳定、可读的输出"""
         pairs_sorted = sorted(self.pairs.items(), key=lambda kv: (repr(kv[0]), repr(kv[1])))
         body = ", ".join(f"{a!r} <-> {b!r}" for a, b in pairs_sorted)
         return f"SymmetricMap({body})"
+    
+    def __str__(self) -> str:
+        """
+        人类友好的输出版本，比 __repr__ 更简洁。
+        """
+        if not self.pairs:
+            return "SymmetricMap()"
+        return "{" + ", ".join(f"{a} <-> {b}" for a, b in self.pairs.items()) + "}"
+
+    # —— 工厂方法 —— 
+    @classmethod
+    def from_dict(cls, d: Dict[T, T], allow_self: bool = False) -> "SymmetricMap[T]":
+        """
+        从普通字典构建一个 SymmetricMap。
+        注意：若输入字典包含重复或冲突配对（如 a->b 与 b->c），
+        后者将覆盖前者，以保证一对一关系。
+
+        :param d: 一个普通字典，键值对将被视为对称映射的配对。
+        :param allow_self: 是否允许 a <-> a 自配对。
+        """
+        m = cls(allow_self=allow_self)
+        for a, b in d.items():
+            m[a] = b
+        return m
 
     # —— 调试工具 ——
     def _check_invariants(self) -> None:

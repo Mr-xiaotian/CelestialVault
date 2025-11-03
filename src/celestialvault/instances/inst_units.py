@@ -252,15 +252,13 @@ class HumanTimestamp(float):
 
     # 减：时间戳 - 秒数 -> 新时间戳；时间戳 - 时间戳 -> 相差秒数(float)
     def __sub__(self, other):
-        if isinstance(other, (int, float, HumanTime)):
-            return HumanTime(float(self) - float(other))
-        if isinstance(other, HumanTimestamp):
-            return HumanTime(float(self) - float(other))  # 返回间隔秒数
+        if isinstance(other, (int, float, HumanTime, HumanTimestamp)):
+            return HumanTime(float(self) - float(other)) # 返回间隔秒数
         return NotImplemented
 
     def __rsub__(self, other):
-        if isinstance(other, (int, float, HumanTime)):
-            return HumanTime(float(other) - float(self))
+        if isinstance(other, (int, float, HumanTime, HumanTimestamp)):
+            return -self.__sub__(other)
         return NotImplemented
 
     # 乘/除：通常不常见，但保留为数值操作（结果仍为时间戳）

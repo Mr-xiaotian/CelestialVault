@@ -7,9 +7,9 @@ from IPython.display import clear_output, display
 
 
 class MultiplicationQuiz:
-    def __init__(self, digit_num, modes: list = ["random"]):
+    def __init__(self, digit_num, modes: list = None):
         self.digit_num = max(1, digit_num)
-        self.modes: List[str] = modes
+        self.modes: List[str] = modes or ["random"]
 
         self.num1, self.num2 = self.generate_problem()
         self.score = 0
@@ -23,6 +23,19 @@ class MultiplicationQuiz:
         self.check_button = widgets.Button(description="提交答案")
         self.next_button = widgets.Button(description="下一题", disabled=True)
         self.exit_button = widgets.Button(description="结束练习")
+
+        def handle_enter(event):
+            if event["name"] != "value":
+                return
+
+            # 如果还没判题，就执行判题
+            if not self.check_button.disabled:
+                self.check_answer(None)
+            # 如果已经判题完，可以进入下一题
+            elif not self.next_button.disabled:
+                self.next_question(None)
+
+        self.answer_input.observe(handle_enter, names="value")
 
         # 绑定事件
         self.check_button.on_click(self.check_answer)
@@ -41,29 +54,35 @@ class MultiplicationQuiz:
 
     def generate_problem(self):
         """根据模式生成不同的乘法题目"""
+        mode_funcs = {
+            "square": self.generate_square,
+            "square_with_5": self.generate_square_with_5,
+            "varied_digit_sum_10": self.generate_varied_digit_sum_10,
+            "fixed_digit_sum_10": self.generate_fixed_digit_sum_10,
+            "repeated_number_9": self.generate_repeated_number_times_9,
+            "random": self.generate_random_problem,
+        }
+
         problem_list = []
         for mode in self.modes:
             if mode.startswith("multiply"):
                 multiplicand = int(re.search(r"\d+", mode).group())
                 problem_list.append(self.generate_multiply_num(multiplicand))
             elif mode.startswith("nearby"):
-                near_num = near_num = int(re.search(r"\d+", mode).group())
+                near_num = int(re.search(r"\d+", mode).group())
                 problem_list.append(self.generate_nearby(near_num))
             elif mode.startswith("square_difference"):
                 end_num = int(re.search(r"\d+", mode).group())
                 problem_list.append(self.generate_square_difference(end_num))
+            elif mode.startswith("range_"):
+                match = re.findall(r"\d+", mode)
+                if len(match) == 2:
+                    start, end = map(int, match)
+                    problem_list.append(self.generate_range_problem(start, end))
+            elif mode in mode_funcs:
+                problem_list.append(mode_funcs[mode]())
 
-        if "square" in self.modes:
-            problem_list.append(self.generate_square())
-        if "square_with_5" in self.modes:
-            problem_list.append(self.generate_square_with_5())
-        if "varied_digit_sum_10" in self.modes:
-            problem_list.append(self.generate_varied_digit_sum_10())
-        if "fixed_digit_sum_10" in self.modes:
-            problem_list.append(self.generate_fixed_digit_sum_10())
-        if "repeated_number_9" in self.modes:
-            problem_list.append(self.generate_repeated_number_times_9())
-        if "random" in self.modes or not problem_list:
+        if not problem_list:
             problem_list.append(self.generate_random_problem())
 
         return random.choice(problem_list)
@@ -167,6 +186,14 @@ class MultiplicationQuiz:
         """生成随机乘法题目"""
         num1 = random.randint(1, 10**self.digit_num - 1)
         num2 = random.randint(1, 10**self.digit_num - 1)
+        return num1, num2
+    
+    def generate_range_problem(self, start: int, end: int) -> tuple[int, int]:
+        """生成指定范围内的随机乘法题目"""
+        if start > end:
+            start, end = end, start  # 自动纠正输入顺序
+        num1 = random.randint(start, end)
+        num2 = random.randint(start, end)
         return num1, num2
 
     def check_answer(self, _):
