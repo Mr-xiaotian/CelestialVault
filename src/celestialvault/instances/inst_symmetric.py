@@ -1,3 +1,4 @@
+import random
 from typing import Dict, Iterator, Iterable, Tuple, Optional, Generic, TypeVar
 
 T = TypeVar("T")
@@ -74,6 +75,11 @@ class SymmetricMap(Generic[T]):
             del self.pairs[y]
             return y
         raise KeyError(f"{x!r} not found")
+    
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SymmetricMap):
+            return NotImplemented
+        return self.pairs == other.pairs or self.pairs == other.reverse
 
     # —— 视图/便捷方法 ——
     def get(self, x: T, default: Optional[T] = None) -> Optional[T]:
@@ -98,6 +104,13 @@ class SymmetricMap(Generic[T]):
     def clear(self) -> None:
         self.pairs.clear()
         self.reverse.clear()
+
+    def random_pair(self) -> T:
+        if not self.pairs:
+            raise IndexError("Cannot choose from an empty SymmetricMap")
+        all_items = list(self.pairs.keys()) + list(self.pairs.values())
+        random_item = random.choice(all_items)
+        return random_item, self[random_item]
 
     def __repr__(self) -> str:
         """稳定、可读的输出"""
@@ -126,6 +139,13 @@ class SymmetricMap(Generic[T]):
         """
         m = cls(allow_self=allow_self)
         for a, b in d.items():
+            m[a] = b
+        return m
+    
+    @classmethod
+    def from_pairs(cls, iterable: Iterable[Tuple[T, T]], allow_self: bool = False):
+        m = cls(allow_self=allow_self)
+        for a, b in iterable:
             m[a] = b
         return m
 
