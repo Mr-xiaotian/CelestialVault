@@ -105,12 +105,21 @@ class SymmetricMap(Generic[T]):
         self.pairs.clear()
         self.reverse.clear()
 
-    def random_pair(self) -> T:
+    def random_pair(self, mode: str = "any") -> Tuple[T, T]:
         if not self.pairs:
             raise IndexError("Cannot choose from an empty SymmetricMap")
-        all_items = list(self.pairs.keys()) + list(self.pairs.values())
-        random_item = random.choice(all_items)
-        return random_item, self[random_item]
+
+        if mode == "forward":
+            return random.choice(list(self.pairs.items()))
+        elif mode == "backward":
+            return random.choice(list(self.reverse.items()))
+        elif mode == "any":
+            # 从所有元素中随机选取一个作为起点
+            all_items = list(self.pairs.keys()) + list(self.pairs.values())
+            random_item = random.choice(all_items)
+            return random_item, self[random_item]
+        else:
+            raise ValueError(f"Invalid mode: {mode!r} (expected 'forward' | 'backward' | 'any')")
 
     def __repr__(self) -> str:
         """稳定、可读的输出"""
@@ -131,11 +140,6 @@ class SymmetricMap(Generic[T]):
     def from_dict(cls, d: Dict[T, T], allow_self: bool = False) -> "SymmetricMap[T]":
         """
         从普通字典构建一个 SymmetricMap。
-        注意：若输入字典包含重复或冲突配对（如 a->b 与 b->c），
-        后者将覆盖前者，以保证一对一关系。
-
-        :param d: 一个普通字典，键值对将被视为对称映射的配对。
-        :param allow_self: 是否允许 a <-> a 自配对。
         """
         m = cls(allow_self=allow_self)
         for a, b in d.items():
@@ -144,6 +148,9 @@ class SymmetricMap(Generic[T]):
     
     @classmethod
     def from_pairs(cls, iterable: Iterable[Tuple[T, T]], allow_self: bool = False):
+        """
+        从可迭代对象构建一个 SymmetricMap。
+        """
         m = cls(allow_self=allow_self)
         for a, b in iterable:
             m[a] = b

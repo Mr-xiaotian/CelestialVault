@@ -285,13 +285,14 @@ class MultiplicationQuiz(QuizBase):
 
     
 class DictationQuiz(QuizBase):
-    def __init__(self, word_map: SymmetricMap):
+    def __init__(self, word_map: SymmetricMap, random_mode: str = "any"):
         self.word_map = word_map
+        self.random_mode = random_mode
 
         super().__init__(title="单词听写", input_type="text")
 
     def generate_problem(self):
-        self.problem, self.correct_answer = self.word_map.random_pair()
+        self.problem, self.correct_answer = self.word_map.random_pair(self.random_mode)
 
     def question_text(self):
         return f"{self.problem} -> ?"
