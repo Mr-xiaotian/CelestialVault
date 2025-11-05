@@ -13,9 +13,7 @@ class Suber:
         self.both_check_chars = "#|◆|\*|＊|=|＝|…|_|～|—|－"
 
         # Characters that need only lookahead checks
-        self.lookahead_only_chars = (
-            '章节[^\s]+|作者：[^\s]+|字数：\d+|20\d+[^\s]+|第[^\s]+|\]|』|」|】|》|\)|）|\}|\!|！|\?|？|\||”|"|\.|。|章|：|:|日'
-        )
+        self.lookahead_only_chars = '章节[^\s]+|作者：[^\s]+|字数：\d+|20\d+[^\s]+|第[^\s]+|\]|』|」|】|》|\)|）|\}|\!|！|\?|？|\||”|"|\.|。|章|：|:|日'
 
         # Characters that need only lookbehind checks
         self.lookbehind_only_chars = "章节|作者|字数|20|第|（|\(|\{|「|\[|【|<"
@@ -35,7 +33,7 @@ class Suber:
             ),  # 移除制表符、回车符、换页符、垂直制表符、空字符、全角空格和特殊符号
             ("\~", "-"),  # 将波浪号替换为连字符
             # ("(?<!章)[ \t]+", ""),  # 🟢 新增：不在章后面的空格或制表符
-            ("( ){2,}", " ")
+            ("( ){2,}", " "),
         ]
 
         self.newline_handling = [
@@ -55,7 +53,11 @@ class Suber:
             ("```(?!\n)", "```\n"),  # 确保 Markdown 代码块标记前后有换行符
         ]
 
-        self.sub_text_list = self.special_character_removal + self.regex_remove_unwanted_newlines + self.newline_handling
+        self.sub_text_list = (
+            self.special_character_removal
+            + self.regex_remove_unwanted_newlines
+            + self.newline_handling
+        )
 
         self.sub_name_list = [
             ("：", "_"),
@@ -73,12 +75,10 @@ class Suber:
             ("\.+", "_"),
             ("<", "_"),
             (">", "_"),
-            ("\n", "")
+            ("\n", ""),
         ]
 
-    def clear_book_dir(
-        self, dir_path: Path | str, execution_mode: str = "thread"
-    ):
+    def clear_book_dir(self, dir_path: Path | str, execution_mode: str = "thread"):
         rules = {".txt": (self.clear_book, lambda a: a, {})}
 
         return handle_dir_files(

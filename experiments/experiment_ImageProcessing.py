@@ -6,8 +6,8 @@ from celestialvault.tools.ImageProcessing import (
     expand_image,
     simulate_random_damage,
     restore_expanded_image,
-    generate_palette, 
-    palette_to_image
+    generate_palette,
+    palette_to_image,
 )
 
 
@@ -46,7 +46,9 @@ def evaluate_restore_effectiveness(
     arr_restored = np.array(restored.convert("RGB"))
 
     # 对齐尺寸（防止某些模式不同导致尺寸略差）
-    h, w = min(arr_original.shape[0], arr_restored.shape[0]), min(arr_original.shape[1], arr_restored.shape[1])
+    h, w = min(arr_original.shape[0], arr_restored.shape[0]), min(
+        arr_original.shape[1], arr_restored.shape[1]
+    )
     arr_original, arr_restored = arr_original[:h, :w], arr_restored[:h, :w]
 
     # === 计算像素准确率 ===
@@ -77,6 +79,7 @@ def evaluate_restore_effectiveness(
         "n": n,
     }
 
+
 def evaluate_restore_curve(
     image: Image.Image,
     n: int = 20,
@@ -102,7 +105,9 @@ def evaluate_restore_curve(
         restored = restore_expanded_image(damaged, n)
 
         arr_restored = np.array(restored.convert("RGB"))
-        h, w = min(arr_original.shape[0], arr_restored.shape[0]), min(arr_original.shape[1], arr_restored.shape[1])
+        h, w = min(arr_original.shape[0], arr_restored.shape[0]), min(
+            arr_original.shape[1], arr_restored.shape[1]
+        )
         arr_o, arr_r = arr_original[:h, :w], arr_restored[:h, :w]
 
         same_pixels = np.all(arr_o == arr_r, axis=-1)
@@ -121,8 +126,15 @@ def evaluate_restore_curve(
 
         # 上方修复曲线
         ax_curve = plt.subplot2grid((2, n_ratios), (0, 0), colspan=n_ratios)
-        ax_curve.plot(results["ratios"], np.array(results["accuracy"]) * 100, 'o-', label="Accuracy (%)")
-        ax_curve.plot(results["ratios"], results["mae"], 's--', color='orange', label="MAE")
+        ax_curve.plot(
+            results["ratios"],
+            np.array(results["accuracy"]) * 100,
+            "o-",
+            label="Accuracy (%)",
+        )
+        ax_curve.plot(
+            results["ratios"], results["mae"], "s--", color="orange", label="MAE"
+        )
         ax_curve.set_xlabel("Damage Ratio")
         ax_curve.set_ylabel("Accuracy (%) / MAE")
         ax_curve.set_title(f"Restore Effectiveness (n={n})")
@@ -130,12 +142,18 @@ def evaluate_restore_curve(
         ax_curve.grid(True, linestyle="--", alpha=0.4)
 
         # 下方展示图像
-        for i, (damage_ratio, damaged, restored) in enumerate(results["restored_images"]):
+        for i, (damage_ratio, damaged, restored) in enumerate(
+            results["restored_images"]
+        ):
             ax_dmg = plt.subplot2grid((2, n_ratios), (1, i))
-            ax_dmg.imshow(np.hstack([
-                np.array(damaged.resize(image.size, Image.NEAREST)),
-                np.array(restored.resize(image.size, Image.NEAREST))
-            ]))
+            ax_dmg.imshow(
+                np.hstack(
+                    [
+                        np.array(damaged.resize(image.size, Image.NEAREST)),
+                        np.array(restored.resize(image.size, Image.NEAREST)),
+                    ]
+                )
+            )
             acc = results["accuracy"][i] * 100
             ax_dmg.set_title(f"Damage {damage_ratio*100:.1f}%\nAcc={acc:.2f}%")
             ax_dmg.axis("off")
@@ -153,10 +171,7 @@ if __name__ == "__main__":
     # === 评估 ===
     result_0 = evaluate_restore_effectiveness(palette_img, 10, 0.3, True)
     result_1 = evaluate_restore_curve(
-        palette_img,
-        n=10,
-        damage_ratios=np.arange(0.0, 1.1, 0.1),
-        show=True
+        palette_img, n=10, damage_ratios=np.arange(0.0, 1.1, 0.1), show=True
     )
 
     print(result_0)

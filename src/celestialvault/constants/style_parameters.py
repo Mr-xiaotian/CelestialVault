@@ -137,7 +137,7 @@ style_params = {
             "saturation_range": (0.4, 0.7),
             "value_range": (0.3, 0.5),
             "weight": 1,  # 辅色域
-        }
+        },
     ],
     "coral_reef": [
         {
@@ -155,7 +155,7 @@ style_params = {
             "saturation_range": (0.7, 1.0),
             "value_range": (0.7, 1.0),
             "weight": 1,  # 主色域
-        }
+        },
     ],
     "midnight_sky": [
         {
@@ -171,7 +171,7 @@ style_params = {
             "hue_range": (0.6, 0.75),
             "saturation_range": (0.2, 0.5),
             "value_range": (0.8, 1.0),  # 高亮度部分（星光）
-        }
+        },
     ],
     "candyland": [
         {
@@ -189,7 +189,7 @@ style_params = {
             "saturation_range": (0.8, 1.0),
             "value_range": (0.8, 1.0),
             "weight": 2,  # 辅色域
-        }
+        },
     ],
     "volcanic_lava": [
         {
@@ -207,7 +207,7 @@ style_params = {
             "saturation_range": (0.8, 1.0),
             "value_range": (0.7, 0.9),  # 高亮度，模拟熔岩的光芒
             "weight": 1,  # 辅色域
-        }
+        },
     ],
     "frozen_wonderland": [
         {
@@ -253,7 +253,7 @@ style_params = {
             "saturation_range": (0.8, 1.0),
             "value_range": (0.8, 1.0),
             "weight": 1,  # 辅色光晕
-        }
+        },
     ],
     "wave_sky": [
         {
@@ -262,7 +262,7 @@ style_params = {
             "saturation_range": (0.7, 1.0),
             "value_range": (0.7, 1.0),
         }
-    ]
+    ],
 }
 
 # 图片模式参数

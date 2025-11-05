@@ -62,7 +62,7 @@ class HandleFileManager(TaskManager):
             shutil.copy(file_path, new_file_path)
             error_path_dict[(type(error).__name__, str(error))].append(new_file_path)
         return dict(error_path_dict)
-    
+
 
 class HandleSubFolderManager(HandleFileManager):
     def get_args(self, sub_dir_path: Path):
@@ -70,12 +70,12 @@ class HandleSubFolderManager(HandleFileManager):
         new_sub_dir_path = self.new_dir_path / rel_path
 
         action_func, rename_func, args_extra = self.rules.get(
-            'dir', (shutil.copy, lambda x: x, {})
+            "dir", (shutil.copy, lambda x: x, {})
         )
 
         final_path = rename_func(new_sub_dir_path)
         return (sub_dir_path, final_path, action_func, args_extra)
-    
+
     def handle_error_dict(self):
         error_path_dict = defaultdict(list)
 
@@ -147,7 +147,12 @@ def create_dir(path: str | Path) -> Path:
     return path
 
 
-def handle_item(source: Path, destination: Path, action: Callable[[Path, Path, Any], Any], extra: dict):
+def handle_item(
+    source: Path,
+    destination: Path,
+    action: Callable[[Path, Path, Any], Any],
+    extra: dict,
+):
     """
     处理文件，如果目标文件不存在则执行指定的操作。
 
@@ -206,6 +211,7 @@ def handle_dir_files(
     error_path_dict = handlefile_manager.handle_error_dict()
     return error_path_dict
 
+
 def handle_subdirs(
     dir_path: str | Path,
     rules: Dict[str, Tuple[Callable[[Path, Path, Dict], None], Callable[[Path], Path]]],
@@ -242,6 +248,7 @@ def handle_subdirs(
     error_path_dict = handlefile_manager.handle_error_dict()
     return error_path_dict
 
+
 def compress_dir(
     dir_path: str | Path, execution_mode: str = "thread"
 ) -> List[Tuple[Path, Exception]]:
@@ -268,10 +275,13 @@ def compress_dir(
 
     from .ImageProcessing import compress_img
     from .VideoProcessing import compress_video
+
     # from .DocumentConversion import compress_pdf
 
     rules = {suffix: (compress_img, lambda x: x, {}) for suffix in IMG_SUFFIXES}
-    rules.update({suffix: (compress_video, rename_mp4, {}) for suffix in VIDEO_SUFFIXES})
+    rules.update(
+        {suffix: (compress_video, rename_mp4, {}) for suffix in VIDEO_SUFFIXES}
+    )
     # rules.update({'.pdf': (compress_pdf,rename_pdf, {})})
 
     return handle_dir_files(
@@ -369,9 +379,9 @@ def unzip_dir(dir_path: str | Path):
 
     rules = {
         ".zip": (unzip_zip_file, rename_unzip, {}),
-        ".rar": (unzip_rar_file, rename_unzip, {}), 
-        ".tar": (unzip_tar_file, rename_unzip, {}), 
-        ".7z": (unzip_7z_file, rename_unzip, {})
+        ".rar": (unzip_rar_file, rename_unzip, {}),
+        ".tar": (unzip_tar_file, rename_unzip, {}),
+        ".7z": (unzip_7z_file, rename_unzip, {}),
     }
 
     return handle_dir_files(dir_path, rules, progress_desc="Unziping dir")
@@ -423,13 +433,15 @@ def get_dir_size(dir_path: Path) -> HumanBytes:
     """
     total_size = 0
     dir = Path(dir_path)
-    for file in dir.rglob("*"): 
+    for file in dir.rglob("*"):
         if file.is_file():
             total_size += file.stat().st_size  # 获取文件大小
     return HumanBytes(total_size)
 
 
-def get_file_hash(file_path: Path, algo: str = "sha256", chunk_size: int = 65536) -> str:
+def get_file_hash(
+    file_path: Path, algo: str = "sha256", chunk_size: int = 65536
+) -> str:
     """
     计算文件的哈希值。
 
@@ -627,12 +639,8 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, HumanBytes], List[Pat
         index += 1
 
     hash_value, file_size = max_file_key
-    report.append(
-        f"Total size of duplicate files: {total_size}"
-    )
-    report.append(
-        f"Total number of duplicate files: {total_file_num}"
-    )
+    report.append(f"Total size of duplicate files: {total_size}")
+    report.append(f"Total number of duplicate files: {total_file_num}")
     report.append(
         f"File with the most duplicates: {hash_value}(hash) {file_size}(size) {max_file_num}(number)"
     )
@@ -657,9 +665,7 @@ def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
         delete_list.extend([(file_path, file_size) for file_path in file_list])
 
     delete_return_size_manager = DeleteReturnSizeManager(
-        delete_and_return_size, 
-        unpack_task_args=True,
-        enable_result_cache=True
+        delete_and_return_size, unpack_task_args=True, enable_result_cache=True
     )
     delete_return_size_manager.start(delete_list)
     delete_size = delete_return_size_manager.process_result_dict()
@@ -781,7 +787,7 @@ def sort_by_number(file_path: Path, special_keywords: dict) -> tuple:
     3. 最后按文件名中的数字
     """
     file_name = file_path.name
-    dir_key = file_path.parent.as_posix()   # 用字符串，避免混入 int
+    dir_key = file_path.parent.as_posix()  # 用字符串，避免混入 int
 
     # 关键字优先级（越小越靠前）
     keyword_priority = min(
@@ -800,7 +806,9 @@ def sort_by_number(file_path: Path, special_keywords: dict) -> tuple:
     return (dir_key, keyword_priority, *numbers)
 
 
-def move_files_with_keyword(source_dir: Path | str, target_dir: Path | str, keyword: str = None):
+def move_files_with_keyword(
+    source_dir: Path | str, target_dir: Path | str, keyword: str = None
+):
     """
     将 source_dir 中所有文件名包含 keyword 的文件移动到 target_dir。
 
@@ -852,7 +860,7 @@ def extract_dir_numbers(dir_path: Path | str) -> set:
     """
     num_set = set()
     pattern = re.compile("\((\d+)\)")
-    
+
     path = Path(dir_path)
     path_list = list(path.iterdir())
     for item in tqdm(path_list, desc="extract_dir_numbers"):
@@ -860,7 +868,7 @@ def extract_dir_numbers(dir_path: Path | str) -> set:
             match = pattern.search(item.name)
             if match:
                 num_set.add(match.group(1))
-    
+
     return num_set
 
 
@@ -874,7 +882,7 @@ def extract_file_numbers(dir_path: Path | str, suffix: str) -> set:
     """
     num_set = set()
     pattern = re.compile("\((\d+)\)")
-    
+
     path = Path(dir_path)
     path_list = list(path.iterdir())
     for item in tqdm(path_list, desc="extract_txt_numbers"):
@@ -882,7 +890,7 @@ def extract_file_numbers(dir_path: Path | str, suffix: str) -> set:
             match = pattern.search(item.name)
             if match:
                 num_set.add(match.group(1))
-    
+
     return num_set
 
 

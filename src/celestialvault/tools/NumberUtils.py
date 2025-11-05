@@ -401,7 +401,7 @@ def generate_large_prime(bits=512) -> int:
         candidate |= 1  # 保证奇数
         if is_probable_prime(candidate, 20):
             return candidate
-        
+
 
 def choose_square_container(n: int, threshold: float = 0.7):
     """
@@ -448,7 +448,7 @@ def layered_coordinates(size):
         x_max = min(size - 1, s)
         for x in range(x_min, x_max + 1):
             y = s - x
-            if s%2 == 0:
+            if s % 2 == 0:
                 coords.append((x, y))
             else:
                 coords.append((y, x))

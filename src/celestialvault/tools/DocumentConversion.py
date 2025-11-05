@@ -79,7 +79,9 @@ def compress_pdf(old_pdf_path: str | Path, new_pdf_path: str | Path):
     shutil.rmtree(temp_img_path)
 
 
-def merge_pdfs_in_order(dir_path: str | Path, special_keywords: dict = None) -> tuple[list[Path], dict[str, int]]:
+def merge_pdfs_in_order(
+    dir_path: str | Path, special_keywords: dict = None
+) -> tuple[list[Path], dict[str, int]]:
     """
     将指定文件夹及子文件夹中的所有 PDF 文件按顺序合并，
     并在输出 PDF 中用目录层级构建书签结构。

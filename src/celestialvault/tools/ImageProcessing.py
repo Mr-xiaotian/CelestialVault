@@ -18,6 +18,7 @@ from tqdm import tqdm
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True  # 允许加载截断的图片
 
+
 def compress_img(old_img_path: str | Path, new_img_path: str | Path):
     """
     压缩图片
@@ -88,11 +89,9 @@ def combine_imgs_to_pdf(
             damage_images.append(p)
 
     if not valid_images:
-        raise ValueError(
-            f"No valid images could be opened in {root_path}."
-        )
+        raise ValueError(f"No valid images could be opened in {root_path}.")
 
-     # 找到最大宽度
+    # 找到最大宽度
     max_width = max(img.size[0] for img in valid_images)
 
     def generate_resized_images():
@@ -122,20 +121,27 @@ def combine_imgs_dir(dir_path: Path, special_keywords: dict = None):
     :param special_keywords: 特殊关键词，用于排序图片。eg: {'番外': 1, '特典': 1, '原画': 2}
     :return: None
     """
+
     def rename_pdf(file_path: Path) -> Path:
         return dir_to_file_path(file_path, "pdf")
 
     from .FileOperations import dir_to_file_path, handle_subdirs
 
     rules = {
-        "dir": (combine_imgs_to_pdf, rename_pdf, {"special_keywords": special_keywords}),
+        "dir": (
+            combine_imgs_to_pdf,
+            rename_pdf,
+            {"special_keywords": special_keywords},
+        ),
     }
 
-    return handle_subdirs(dir_path, rules, 
-                             execution_mode="serial", 
-                             progress_desc="Combine Img Folders", 
-                             dir_name_suffix="_img2pdf"
-                            )
+    return handle_subdirs(
+        dir_path,
+        rules,
+        execution_mode="serial",
+        progress_desc="Combine Img Folders",
+        dir_name_suffix="_img2pdf",
+    )
 
 
 def img_to_binary(img: Image.Image) -> bytes:
@@ -176,7 +182,12 @@ def img_to_base64(img: Image.Image) -> str:
     return encoded_text
 
 
-def generate_palette(color_num: int=256, style: str="morandi", mode: str="random", random_seed: int=0) -> List[int]:
+def generate_palette(
+    color_num: int = 256,
+    style: str = "morandi",
+    mode: str = "random",
+    random_seed: int = 0,
+) -> List[int]:
     """
     生成调色板，支持随机 均匀和螺旋三种模式，并确保颜色唯一或规律分布。
 
@@ -235,7 +246,9 @@ def generate_palette(color_num: int=256, style: str="morandi", mode: str="random
     used_hsv = set()
     for i in range(color_num):
         # 随机选一个色域
-        region = random.choices(regions, weights=[r.get("weight", 1) for r in regions])[0]
+        region = random.choices(regions, weights=[r.get("weight", 1) for r in regions])[
+            0
+        ]
         hue_range = region["hue_range"]
         sat_range = region["saturation_range"]
         val_range = region["value_range"]
@@ -270,7 +283,7 @@ def palette_to_image(palette, block_size=50):
 
         pixels[col, row] = (r, g, b)
 
-    return expand_image(logical_img, block_size)  
+    return expand_image(logical_img, block_size)
 
 
 def expand_image(image: Image.Image, expand_factor: int = 50) -> Image.Image:
@@ -294,7 +307,9 @@ def expand_image(image: Image.Image, expand_factor: int = 50) -> Image.Image:
     return expanded_image
 
 
-def restore_expanded_image(expanded_image: Image.Image, expand_factor: int = 50) -> Image.Image:
+def restore_expanded_image(
+    expanded_image: Image.Image, expand_factor: int = 50
+) -> Image.Image:
     """
     将扩展后的图像恢复为原始大小
 
@@ -305,8 +320,11 @@ def restore_expanded_image(expanded_image: Image.Image, expand_factor: int = 50)
         raise ValueError("expand_factor must be a positive integer")
     elif expand_factor == 1:
         return expanded_image
-    
-    if expanded_image.width % expand_factor != 0 or expanded_image.height % expand_factor != 0:
+
+    if (
+        expanded_image.width % expand_factor != 0
+        or expanded_image.height % expand_factor != 0
+    ):
         raise ValueError("Expanded image dimensions must be divisible by n.")
 
     arr = np.array(expanded_image)
@@ -320,7 +338,10 @@ def restore_expanded_image(expanded_image: Image.Image, expand_factor: int = 50)
 
     for i in range(new_h):
         for j in range(new_w):
-            block = arr[i*expand_factor:(i+1)*expand_factor, j*expand_factor:(j+1)*expand_factor]
+            block = arr[
+                i * expand_factor : (i + 1) * expand_factor,
+                j * expand_factor : (j + 1) * expand_factor,
+            ]
             # 统计最多出现的颜色（即众数）
             flat_block = block.reshape(-1, block.shape[-1] if block.ndim == 3 else 1)
             pixels, counts = np.unique(flat_block, axis=0, return_counts=True)
@@ -328,7 +349,11 @@ def restore_expanded_image(expanded_image: Image.Image, expand_factor: int = 50)
 
     restored_image = Image.fromarray(restored.squeeze().astype(np.uint8))
     restored_image = restored_image.convert(expanded_image.mode)
-    restored_image.putpalette(expanded_image.getpalette()) if expanded_image.mode == "P" else None
+    (
+        restored_image.putpalette(expanded_image.getpalette())
+        if expanded_image.mode == "P"
+        else None
+    )
 
     return restored_image
 
@@ -427,10 +452,10 @@ def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
     return df
 
 
-def is_image_valid(data: str|Path|io.BytesIO) -> bool:
+def is_image_valid(data: str | Path | io.BytesIO) -> bool:
     """
     检测图片是否有效
-    
+
     :param data: 图片的路径、文件对象或二进制数据
     :return: True 表示正常，False 表示损坏或格式不符
     """
@@ -467,7 +492,9 @@ def is_image_bytes_valid(byte_data: bytes) -> bool:
     return is_image_valid(io.BytesIO(byte_data))
 
 
-def create_image_with_text_chunk(img: Image.Image, output_path: str, messages: dict[str, str]):
+def create_image_with_text_chunk(
+    img: Image.Image, output_path: str, messages: dict[str, str]
+):
     """
     将文本字典写入 PNG 文件的 tEXt chunk 中
 
@@ -497,7 +524,9 @@ def read_text_chunks(img_path: str) -> dict[str, str]:
         return dict(info)
 
 
-def simulate_rectangle_damage(img: Image.Image, x0: int, y0: int, w: int, h: int) -> Image.Image:
+def simulate_rectangle_damage(
+    img: Image.Image, x0: int, y0: int, w: int, h: int
+) -> Image.Image:
     """
     在图像上指定位置生成一个 w×h 的损坏矩形（置零）。
 
@@ -521,7 +550,7 @@ def simulate_rectangle_damage(img: Image.Image, x0: int, y0: int, w: int, h: int
         zero_val = 0
     else:
         raise ValueError(f"Unsupported mode: {img.mode}")
-    
+
     for y in range(y0, min(y0 + h, img.height)):
         for x in range(x0, min(x0 + w, img.width)):
             pixels[x, y] = zero_val
@@ -531,7 +560,7 @@ def simulate_rectangle_damage(img: Image.Image, x0: int, y0: int, w: int, h: int
 def simulate_random_damage(img: Image.Image, damage_ratio: float) -> Image.Image:
     """
     随机损坏图像的一部分像素（置零）。
-    
+
     :param img: 原始图像 (RGBA)
     :param damage_ratio: 损坏比例 (0~1)，表示要损坏的像素数占总像素的比例
     :return: 损坏后的图像
@@ -559,7 +588,9 @@ def simulate_random_damage(img: Image.Image, damage_ratio: float) -> Image.Image
     num_damaged = int(total_pixels * damage_ratio)
 
     # 随机选出像素坐标
-    damaged_coords = random.sample([(x, y) for y in range(height) for x in range(width)], num_damaged)
+    damaged_coords = random.sample(
+        [(x, y) for y in range(height) for x in range(width)], num_damaged
+    )
 
     # 把这些像素置零
     for x, y in damaged_coords:
@@ -568,13 +599,19 @@ def simulate_random_damage(img: Image.Image, damage_ratio: float) -> Image.Image
     return damaged
 
 
-def ensure_capacity(ref_img: Image.Image, required_bytes: int, *, min_able: bool = True, min_size: int = 1) -> Image.Image:
+def ensure_capacity(
+    ref_img: Image.Image,
+    required_bytes: int,
+    *,
+    min_able: bool = True,
+    min_size: int = 1,
+) -> Image.Image:
     """
     自动调整图像尺寸，使其容量刚好匹配存储需求。
     - 当容量不足时放大；
     - 当容量过剩时缩小；
     - 保留视觉结构尽量不失真。
-    
+
     :param ref_img: 参考图像 (RGBA)
     :param required_bytes: 需要存储的字节数
     :param min_size: 图像的最小宽高限制
@@ -605,7 +642,9 @@ def ensure_capacity(ref_img: Image.Image, required_bytes: int, *, min_able: bool
     return ref_img.resize((new_width, new_height), resample_mode)
 
 
-def compare_random_pixels(ref_img: Image.Image, enc_img: Image.Image, sample_num: int = 20):
+def compare_random_pixels(
+    ref_img: Image.Image, enc_img: Image.Image, sample_num: int = 20
+):
     """
     在随机点位比较两张图的像素差异。
     打印每个点位的 RGB(A) 值差异，以及整体平均差。
@@ -613,7 +652,7 @@ def compare_random_pixels(ref_img: Image.Image, enc_img: Image.Image, sample_num
     from .TextTools import format_table
 
     width, height = enc_img.size
-    ref_img = ensure_capacity(ref_img, width*height)
+    ref_img = ensure_capacity(ref_img, width * height)
     ref_img = ref_img.convert("RGBA")
 
     pixels_ref = ref_img.load()
@@ -645,7 +684,9 @@ def compare_random_pixels(ref_img: Image.Image, enc_img: Image.Image, sample_num
     print(f"🌈 平均总差值 ≈ {mean_diff.mean():.3f} (在 0~255 范围内几乎不可见)")
 
 
-def show_diff_heatmap(ref_img: Image.Image, enc_img: Image.Image, save_path: str = None, show: bool = True):
+def show_diff_heatmap(
+    ref_img: Image.Image, enc_img: Image.Image, save_path: str = None, show: bool = True
+):
     """
     生成两张图像的像素差异热力图。
     :param ref_img: 原图 (PIL.Image)
@@ -654,7 +695,7 @@ def show_diff_heatmap(ref_img: Image.Image, enc_img: Image.Image, save_path: str
     :param show: 是否显示结果
     """
     width, height = enc_img.size
-    ref_img = ensure_capacity(ref_img, width*height)
+    ref_img = ensure_capacity(ref_img, width * height)
 
     # 转 RGBA 保证通道一致
     ref = np.array(ref_img.convert("RGBA"), dtype=np.int16)
@@ -667,7 +708,11 @@ def show_diff_heatmap(ref_img: Image.Image, enc_img: Image.Image, save_path: str
     diff_intensity = diff.mean(axis=2)
 
     # 归一化到 [0, 1]
-    diff_norm = diff_intensity / diff_intensity.max() if diff_intensity.max() > 0 else diff_intensity
+    diff_norm = (
+        diff_intensity / diff_intensity.max()
+        if diff_intensity.max() > 0
+        else diff_intensity
+    )
 
     plt.figure(figsize=(8, 8))
     plt.title("Difference Heatmap")
@@ -685,7 +730,8 @@ def show_diff_heatmap(ref_img: Image.Image, enc_img: Image.Image, save_path: str
     max_diff = diff_intensity.max()
     print(f"📊 平均像素差异: {mean_diff:.3f}")
     print(f"📈 最大像素差异: {max_diff:.1f}")
-    print(f"🌈 改动比例约: {(diff_intensity > 0).sum() / diff_intensity.size * 100:.2f}% 像素点有变化")
+    print(
+        f"🌈 改动比例约: {(diff_intensity > 0).sum() / diff_intensity.size * 100:.2f}% 像素点有变化"
+    )
 
     return diff_intensity
-

@@ -3,6 +3,7 @@ from zoneinfo import ZoneInfo
 
 from celestialvault.instances.inst_units import HumanBytes, HumanTime, HumanTimestamp
 
+
 def test_human_types():
     print("=== 🧮 HumanBytes 测试 ===")
     b1 = HumanBytes(123456789)
@@ -34,7 +35,7 @@ def test_human_types():
     print("ts1 + 60 =", ts1 + 60)
     print("repr(ts1) =", repr(ts1))
     print("ISO 格式:", ts1.to_iso())
-    print("切换到 UTC:", ts1.with_tz(ZoneInfo('UTC')))
+    print("切换到 UTC:", ts1.with_tz(ZoneInfo("UTC")))
     print()
 
     print("✅ 所有测试执行完毕。")

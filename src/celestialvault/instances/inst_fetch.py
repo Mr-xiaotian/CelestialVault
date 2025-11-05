@@ -27,10 +27,14 @@ class Fetcher:
         self.verify = verify
         self.use_proxy = use_proxy  # 🟢 保存是否使用代理的开关
         self.clash_api = clash_api
-        self.proxies = {
-            "http://": f"http://127.0.0.1:{clash_proxy_port}",
-            "https://": f"http://127.0.0.1:{clash_proxy_port}",
-        } if use_proxy else None  # 🟢 不使用代理则为 None
+        self.proxies = (
+            {
+                "http://": f"http://127.0.0.1:{clash_proxy_port}",
+                "https://": f"http://127.0.0.1:{clash_proxy_port}",
+            }
+            if use_proxy
+            else None
+        )  # 🟢 不使用代理则为 None
 
         self.show_info = False
 
@@ -44,7 +48,14 @@ class Fetcher:
         resp = requests.get(f"{self.clash_api}/proxies")
         proxies_info = resp.json().get("proxies", {})
         global_proxy_names = proxies_info.get("GLOBAL", {}).get("all", [])
-        exclude = {"DIRECT", "REJECT", "GLOBAL", "Proxy", "节点选择", "自动选择"}  # 需要排除的一些特殊节点
+        exclude = {
+            "DIRECT",
+            "REJECT",
+            "GLOBAL",
+            "Proxy",
+            "节点选择",
+            "自动选择",
+        }  # 需要排除的一些特殊节点
 
         # 收集每个代理的延迟（如果有的话）
         proxy_delays = []
@@ -54,7 +65,9 @@ class Fetcher:
             proxy_info = proxies_info.get(name, {})
             delay = 99999  # 默认延迟大值
             try:
-                delay = proxy_info["extra"]["http://www.gstatic.com/generate_204"]["history"][0]["delay"]
+                delay = proxy_info["extra"]["http://www.gstatic.com/generate_204"][
+                    "history"
+                ][0]["delay"]
             except (KeyError, IndexError, TypeError):
                 pass  # 该节点没有延迟信息，默认99999
             proxy_delays.append((name, delay))
@@ -81,11 +94,17 @@ class Fetcher:
         next_proxy = random.choice(available_proxies)
         self.proxy_index = self.proxy_list.index(next_proxy)
         print(f"⚡️ 随机切换到节点: {next_proxy}") if self.show_info else None
-        resp = requests.put(f"{self.clash_api}/proxies/GLOBAL", json={"name": next_proxy})
+        resp = requests.put(
+            f"{self.clash_api}/proxies/GLOBAL", json={"name": next_proxy}
+        )
         if resp.status_code == 204:
             print("✅ 切换成功!") if self.show_info else None
         else:
-            print("❌ 切换失败:", resp.status_code, resp.text) if self.show_info else None
+            (
+                print("❌ 切换失败:", resp.status_code, resp.text)
+                if self.show_info
+                else None
+            )
         time.sleep(1)
 
     def init_client(self):
@@ -94,11 +113,11 @@ class Fetcher:
                 headers=self.headers,
                 timeout=self._wait_time,
                 verify=self.verify,
-                proxies=self.proxies  # 🟢 如果不使用代理，proxies=None
+                proxies=self.proxies,  # 🟢 如果不使用代理，proxies=None
             )
 
     def obtainText(self, func: object, *args, **kwargs) -> Tuple[int, Any, str]:
-        response: httpx.Response  = func(*args, **kwargs)
+        response: httpx.Response = func(*args, **kwargs)
         response_text = response.content.decode(self._text_encoding, "ignore")
         response_text = unquote(unescape(response_text))
         return response.status_code, response_text
@@ -112,12 +131,20 @@ class Fetcher:
 
     def getContent(self, url: str, *args, **kwargs) -> bytes:
         return self._auto_request(self.obtainContent, "GET", url, *args, **kwargs)[1]
-    
-    def postText(self, url: str, data: Any = None, json: Any = None, *args, **kwargs) -> str:
-        return self._auto_request(self.obtainText, "POST", url, data=data, json=json, *args, **kwargs)[1]
 
-    def postContent(self, url: str, data: Any = None, json: Any = None, *args, **kwargs) -> bytes:
-        return self._auto_request(self.obtainContent, "POST", url, data=data, json=json, *args, **kwargs)[1]
+    def postText(
+        self, url: str, data: Any = None, json: Any = None, *args, **kwargs
+    ) -> str:
+        return self._auto_request(
+            self.obtainText, "POST", url, data=data, json=json, *args, **kwargs
+        )[1]
+
+    def postContent(
+        self, url: str, data: Any = None, json: Any = None, *args, **kwargs
+    ) -> bytes:
+        return self._auto_request(
+            self.obtainContent, "POST", url, data=data, json=json, *args, **kwargs
+        )[1]
 
     def _auto_request(self, method, request_mode, *method_args, **method_kwargs):
         if not self.use_proxy:
@@ -134,7 +161,9 @@ class Fetcher:
             try:
                 self.init_client()
                 if request_mode == "POST":
-                    status, content = method(self.cl.post, *method_args, **method_kwargs)
+                    status, content = method(
+                        self.cl.post, *method_args, **method_kwargs
+                    )
                 else:
                     status, content = method(self.cl.get, *method_args, **method_kwargs)
 
@@ -150,5 +179,3 @@ class Fetcher:
                 tried_proxies.add(self.proxy_list[self.proxy_index])
                 self._switch_proxy(tried_proxies)
         raise RuntimeError("🚫 所有节点均请求失败！")
-
-

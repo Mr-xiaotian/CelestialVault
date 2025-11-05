@@ -63,11 +63,12 @@ def value_dispatch(func):
         def wrap(func):
             if value in registry:
                 raise ValueError(
-                    f'@value_dispatch: there is already a handler '
-                    f'registered for {value!r}'
+                    f"@value_dispatch: there is already a handler "
+                    f"registered for {value!r}"
                 )
             registry[value] = func
             return func
+
         return wrap
 
     def register_for_all(values):
@@ -75,11 +76,12 @@ def value_dispatch(func):
             for value in values:
                 if value in registry:
                     raise ValueError(
-                        f'@value_dispatch: there is already a handler '
-                        f'registered for {value!r}'
+                        f"@value_dispatch: there is already a handler "
+                        f"registered for {value!r}"
                     )
                 registry[value] = func
             return func
+
         return wrap
 
     wrapper.register = register
@@ -87,16 +89,17 @@ def value_dispatch(func):
     return wrapper
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     @value_dispatch
     def eat(fruit):
         return f"I don't want a {fruit}..."
 
-    @eat.register('apple')
+    @eat.register("apple")
     def _eat_apple(fruit):
         return "I love apples!"
 
-    @eat.register('eggplant')
-    @eat.register('squash')
+    @eat.register("eggplant")
+    @eat.register("squash")
     def _eat_what(fruit):
         return f"I didn't know {fruit} is a fruit!"

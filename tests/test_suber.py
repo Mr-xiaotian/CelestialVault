@@ -2,8 +2,9 @@ import pytest, logging
 from time import time
 from celestialvault.instances.inst_sub import Suber
 
+
 def test_suber():
-    test_text_0 = '''# 测试文本开始
+    test_text_0 = """# 测试文本开始
     这是一段普通的文本。它应该被处理。
     这是第二段文本，包含多个换行符
 
@@ -33,7 +34,7 @@ def test_suber():
 
     # 末尾注释
     # 这应该在新的一行。
-    '''
+    """
 
     test_text_1 = """
     作者：张三
@@ -62,6 +63,6 @@ def test_suber():
     # logging.info(f"Sun Text 1:\n{sub_text_1}")
     # print(list(sub_text_1))
 
-if __name__ == '__main__':
-    test_suber()
 
+if __name__ == "__main__":
+    test_suber()

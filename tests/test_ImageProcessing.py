@@ -1,7 +1,10 @@
 import pytest, logging
 from PIL import Image
 
-from celestialvault.tools.ImageProcessing import create_image_with_text_chunk, read_text_chunks
+from celestialvault.tools.ImageProcessing import (
+    create_image_with_text_chunk,
+    read_text_chunks,
+)
 
 
 def test_create_image_with_text_chunk():
