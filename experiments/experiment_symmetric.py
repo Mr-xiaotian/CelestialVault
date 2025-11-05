@@ -7,8 +7,8 @@ from celestialvault.instances.inst_symmetric import SymmetricMap
 def compare_symmetric_map():
     # === 测试数据 ===
     N = 1_000_000  # 可调大些看趋势
-    keys = [f'k{i}' for i in range(N)]
-    values = [f'v{i}' for i in range(N)]
+    keys = [f"k{i}" for i in range(N)]
+    values = [f"v{i}" for i in range(N)]
 
     # --- SymmetricMap ---
     start = time.time()
@@ -68,7 +68,9 @@ def compare_symmetric_map():
     print(f"dict 反向查找: {time.time() - start:.3f} 秒")
 
 
-def benchmark_collections(N: int = 100_000, target: Optional[str] = None, verbose: bool = True) -> None:
+def benchmark_collections(
+    N: int = 100_000, target: Optional[str] = None, verbose: bool = True
+) -> None:
     """
     基准测试：比较 list、tuple、set、dict、SymmetricMap 与 bidict 的查找性能。
 
@@ -111,14 +113,20 @@ def benchmark_collections(N: int = 100_000, target: Optional[str] = None, verbos
     results["tuple"] = bench("tuple 查找", lambda: target in data_tuple)
     results["set"] = bench("set 查找", lambda: target in data_set)
     results["dict_key"] = bench("dict key 查找", lambda: target in data_dict)
-    results["dict_value"] = bench("dict value 查找", lambda: int(target) in data_dict.values())
+    results["dict_value"] = bench(
+        "dict value 查找", lambda: int(target) in data_dict.values()
+    )
 
     results["sym_key"] = bench("SymmetricMap key 查找", lambda: target in sym_map.pairs)
-    results["sym_value"] = bench("SymmetricMap value 查找", lambda: int(target) in sym_map.reverse)
+    results["sym_value"] = bench(
+        "SymmetricMap value 查找", lambda: int(target) in sym_map.reverse
+    )
     results["sym_contains"] = bench("SymmetricMap 双向查找", lambda: target in sym_map)
 
     results["bidict_key"] = bench("bidict key 查找", lambda: target in bi_map)
-    results["bidict_value"] = bench("bidict value 查找", lambda: int(target) in bi_map.inv)
+    results["bidict_value"] = bench(
+        "bidict value 查找", lambda: int(target) in bi_map.inv
+    )
 
     # ---------- 汇总结果 ----------
     if verbose:
@@ -129,6 +137,6 @@ def benchmark_collections(N: int = 100_000, target: Optional[str] = None, verbos
     return results
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     compare_symmetric_map()
     benchmark_collections()

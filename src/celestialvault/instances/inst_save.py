@@ -42,8 +42,8 @@ class Saver(object):
         middle_path.mkdir(parents=True, exist_ok=True)  # 确保目录存在
 
         path: Path = middle_path / str(file_name)  # 拼接文件路径
-        if path.suffix.lower() != file_suffix.lower():         
-            path = path.with_suffix(file_suffix)   # 添加后缀
+        if path.suffix.lower() != file_suffix.lower():
+            path = path.with_suffix(file_suffix)  # 添加后缀
         return path
 
     def can_overwrite(self, path):
@@ -147,14 +147,12 @@ class Saver(object):
             execution_mode="serial",
             progress_desc="urlsSaveProcess",
             show_progress=show_progress,
-            unpack_task_args=True
+            unpack_task_args=True,
         )
 
         # 创建 TaskChain 来管理 Fetch 和 Save 两个阶段的任务处理
         chain = TaskChain([fetch_manager, save_manager], chain_mode)
-        chain.start_chain({
-            fetch_manager.get_stage_tag(): task_list
-        })  # 开始任务树
+        chain.start_chain({fetch_manager.get_stage_tag(): task_list})  # 开始任务树
 
     async def download_urls_async(self, task_list: list[tuple[str, str, str]]):
         # await self.fetcher.start_session()

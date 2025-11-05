@@ -221,9 +221,7 @@ def rotate_video(video_path: str | Path, output_path, angle: int) -> Path:
     return output_path
 
 
-def rotate_video_dir(
-    dir_path: str | Path, angle: int
-) -> List[Tuple[Path, Exception]]:
+def rotate_video_dir(dir_path: str | Path, angle: int) -> List[Tuple[Path, Exception]]:
     """
     旋转文件夹中的所有视频文件。
 
@@ -246,12 +244,12 @@ def rotate_video_dir(
                     video_path, output_path, angle
                 ),
                 lambda file_path: rename_mp4(file_path, angle),
-                {}
+                {},
             )
         }
     else:
         raise ValueError(f"不支持的旋转角度: {angle}，仅支持 0, 90, 180, 270")
-    
+
     return handle_dir_files(
         dir_path,
         rules,

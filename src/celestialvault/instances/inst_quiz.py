@@ -10,6 +10,7 @@ from .inst_symmetric import SymmetricMap
 
 class QuizBase:
     """通用测验UI框架"""
+
     def __init__(self, title="测验", input_type="text"):
         self.title = title
         self.score = 0
@@ -21,7 +22,8 @@ class QuizBase:
         # 组件
         self.question_label = widgets.Label(value=self.question_text())
         self.answer_input = (
-            widgets.IntText(placeholder="输入答案") if input_type == "int"
+            widgets.IntText(placeholder="输入答案")
+            if input_type == "int"
             else widgets.Text(placeholder="输入答案")
         )
         self.check_button = widgets.Button(description="提交答案")
@@ -46,7 +48,7 @@ class QuizBase:
 
     def question_text(self) -> str:
         raise NotImplementedError("子类必须实现此方法")
-    
+
     def generate_problem(self):
         raise NotImplementedError("子类必须实现此方法")
 
@@ -64,9 +66,7 @@ class QuizBase:
             self.score += 1
 
         self.total_questions += 1
-        self.history.append(
-            (self.question_text(), self.correct_answer, is_correct)
-        )
+        self.history.append((self.question_text(), self.correct_answer, is_correct))
 
         with self.output:
             clear_output(wait=True)
@@ -83,7 +83,9 @@ class QuizBase:
         self.output.clear_output()
         self.generate_problem()
         self.question_label.value = self.question_text()
-        self.answer_input.value = "" if isinstance(self.answer_input, widgets.Text) else 0
+        self.answer_input.value = (
+            "" if isinstance(self.answer_input, widgets.Text) else 0
+        )
         self.next_button.disabled = True
         self.check_button.disabled = False
 
@@ -119,7 +121,9 @@ class QuizBase:
             w.disabled = True
 
     def _summary(self):
-        accuracy = (self.score / self.total_questions * 100) if self.total_questions else 0
+        accuracy = (
+            (self.score / self.total_questions * 100) if self.total_questions else 0
+        )
         return {
             "score": self.score,
             "total": self.total_questions,
@@ -275,7 +279,7 @@ class MultiplicationQuiz(QuizBase):
         num1 = random.randint(1, 10**self.digit_num - 1)
         num2 = random.randint(1, 10**self.digit_num - 1)
         return num1, num2
-    
+
     def generate_range_problem(self, start: int, end: int) -> tuple[int, int]:
         """生成指定范围内的随机乘法题目"""
         if start > end:
@@ -284,7 +288,7 @@ class MultiplicationQuiz(QuizBase):
         num2 = random.randint(start, end)
         return num1, num2
 
-    
+
 class DictationQuiz(QuizBase):
     def __init__(self, word_map: SymmetricMap, random_mode: str = "any"):
         self.word_map = word_map

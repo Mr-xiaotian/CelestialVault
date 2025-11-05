@@ -2,6 +2,7 @@ import pytest, logging
 from bs4 import BeautifulSoup
 from celestialvault.instances.inst_parse import HTMLContentParser
 
+
 def test_html_content_parser():
     # 示例HTML片段，包含文本、图片和视频配置
     html_content = """
@@ -26,4 +27,3 @@ def test_html_content_parser():
     logging.info(f"Markdown List: {parser.md_list}")
     logging.info(f"Video List: {parser.video_list}")
     logging.info(f"Image List: {parser.img_list}")
-

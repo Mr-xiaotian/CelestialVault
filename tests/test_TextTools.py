@@ -2,19 +2,26 @@ import pytest
 import logging
 import os, random
 from celestialvault.tools.TextTools import (
-    pro_slash, str_to_dict, language_fingerprint, 
-    calculate_valid_chinese_text, calculate_valid_text, 
-    format_table, string_split,
-    rs_encode, rs_decode,
-    pad_bytes, unpad_bytes,
+    pro_slash,
+    str_to_dict,
+    language_fingerprint,
+    calculate_valid_chinese_text,
+    calculate_valid_text,
+    format_table,
+    string_split,
+    rs_encode,
+    rs_decode,
+    pad_bytes,
+    unpad_bytes,
 )
 from celestialvault.tools.NumberUtils import (
     choose_square_container,
     redundancy_from_container,
 )
 
+
 def test_pro_slash():
-    string_a = '(W//R\S/H\\U)'
+    string_a = "(W//R\S/H\\U)"
     string_b = "https:\/\/m10.music.126.net\/20211221203525\/cb633fbb6fd0423417ef492e2225ba45\/ymusic\/7dbe\/b17e\/1937\/9982bb924f5c3adc6f85679fcf221418.mp3"
     string_c = r"this\\is\a\\test\\\\string"
     slash_a = pro_slash(string_a)
@@ -26,12 +33,15 @@ def test_pro_slash():
     logging.info(f"{'Actual output0':<16}: {slash_a}")
 
     logging.info(f"{'Test input1':<16}: {string_b}")
-    logging.info(f"{'Expected output1':<16}: https://m10.music.126.net/20211221203525/cb633fbb6fd0423417ef492e2225ba45/ymusic/7dbe/b17e/1937/9982bb924f5c3adc6f85679fcf221418.mp3")
+    logging.info(
+        f"{'Expected output1':<16}: https://m10.music.126.net/20211221203525/cb633fbb6fd0423417ef492e2225ba45/ymusic/7dbe/b17e/1937/9982bb924f5c3adc6f85679fcf221418.mp3"
+    )
     logging.info(f"{'Actual output1':<16}: {slash_b}")
 
     logging.info(f"{'Test input2':<16}: {string_c}")
     logging.info(f"{'Expected output2':<16}: this\\is\\a\\test\\\\string")
     logging.info(f"{'Actual output2':<16}: {slash_c}")
+
 
 def test_str_to_dict():
     test_str_0 = "key1:value1\nkey2:value2\n\n:key3:value3"
@@ -39,19 +49,25 @@ def test_str_to_dict():
 
     result_dict_0 = str_to_dict(test_str_0)
     logging.info(f"{'Test 0 input':<15}:\n{test_str_0}")
-    logging.info(f"{'Expected output':<15}: {{'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}}")
+    logging.info(
+        f"{'Expected output':<15}: {{'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}}"
+    )
     logging.info(f"{'Actual output':<15}: {result_dict_0}\n")
-    
-    result_dict_1 = str_to_dict(test_str_1, line_delimiter=';', key_value_delimiter='=')
+
+    result_dict_1 = str_to_dict(test_str_1, line_delimiter=";", key_value_delimiter="=")
     logging.info(f"{'Test 1 input':<15}:\n{test_str_1}")
-    logging.info(f"{'Expected output':<15}: {{'key1': 'value1', 'key2': 'value2', 'key3': '', 'key4': 'value4'}}")
+    logging.info(
+        f"{'Expected output':<15}: {{'key1': 'value1', 'key2': 'value2', 'key3': '', 'key4': 'value4'}}"
+    )
     logging.info(f"{'Actual output':<15}: {result_dict_1}")
 
+
 def _test_language_fingerprint():
-    with open(r'G:\Project\test\寻找走丢的舰娘(34653).txt', 'r', encoding = 'utf-8') as f:
+    with open(r"G:\Project\test\寻找走丢的舰娘(34653).txt", "r", encoding="utf-8") as f:
         text = f.read()
     fingerprint = language_fingerprint(text)
     logging.info(f"{'fingerprint':<15}:\n{fingerprint}")
+
 
 def test_calculate_valid_text():
     text = """
@@ -105,31 +121,36 @@ def test_calculate_valid_text():
     logging.info(f"{'Valid chinese rate':<18}: {valid_chinese_rate}")
     logging.info(f"{'Valid rate':<18}: {valid_rate}")
 
+
 def test_format_table():
     data = [
         ["Alice", 24, "Engineer"],
         ["Bob", 27],
         ["Charlie", 22, "设计师", "Berlin"],
-        ["大卫", 30, "Doctor", "New York", "USA"]
+        ["大卫", 30, "Doctor", "New York", "USA"],
     ]
 
     column_names = ["Name", "Age", "Job", "City"]
     row_names = ["row 0", "row 1", "row 2"]
 
-    table_text = format_table(data, column_names, row_names, index_header = r"行数\属性", align="center")
+    table_text = format_table(
+        data, column_names, row_names, index_header=r"行数\属性", align="center"
+    )
     logging.info(f"{'Test data':<11}: {data}")
     logging.info(f"{'Test output':<11}:\n{table_text}")
 
+
 def test_string_split():
-    input_string = ('dfg4354df6g654dfg585d8gd87fg56df132e1rg8df87f56g4d3s1dg45431', '3')
+    input_string = ("dfg4354df6g654dfg585d8gd87fg56df132e1rg8df87f56g4d3s1dg45431", "3")
     result = string_split(*input_string)
 
     logging.info(result)
 
+
 def test_rs_encode_decode():
     # 1. 造一段随机数据
     data = os.urandom(1024)  # 1KB 随机数据
-    nsym = 600               # 故意设很大，触发分块逻辑
+    nsym = 600  # 故意设很大，触发分块逻辑
 
     # 2. 编码
     encoded = rs_encode(data, nsym)
@@ -151,13 +172,16 @@ def test_rs_encode_decode():
     assert decoded == data
     logging.info("✅ 解码成功，数据一致！")
 
+
 def test_rs_workflow():
     raw = b"Hello, Reed-Solomon with container!"
     logging.info(f"原始数据长度: {len(raw)}")
 
     # 1. 选择容器
     side_length, max_payload, nsym = choose_square_container(len(raw), 0.7)
-    logging.info(f"容器大小: {side_length**2}, 最大有效载荷: {max_payload}, 冗余长度: {nsym}")
+    logging.info(
+        f"容器大小: {side_length**2}, 最大有效载荷: {max_payload}, 冗余长度: {nsym}"
+    )
 
     # 2. 补位到容器
     padded = pad_bytes(raw, max_payload)
@@ -181,4 +205,3 @@ def test_rs_workflow():
         logging.info("数据完整，无错误")
     else:
         logging.error("数据不匹配，存在错误！")
-

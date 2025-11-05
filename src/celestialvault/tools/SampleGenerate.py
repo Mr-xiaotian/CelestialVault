@@ -9,9 +9,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 # ==== 文件操作工具函数 ====
-def make_image_tree(
-    root_dir: str | Path, num_dirs: int = 3, images_per_dir: int = 5
-):
+def make_image_tree(root_dir: str | Path, num_dirs: int = 3, images_per_dir: int = 5):
     """
     在指定路径下生成多个子文件夹，每个文件夹中包含若干张大小随机、颜色不同的测试图片。
 
@@ -43,9 +41,7 @@ def make_image_tree(
 
             img.save(sub_dir / f"img_{img_idx:02d}.jpg")
 
-    print(
-        f"✅ 成功生成 {num_dirs} 个子文件夹，每个包含 {images_per_dir} 张测试图片。"
-    )
+    print(f"✅ 成功生成 {num_dirs} 个子文件夹，每个包含 {images_per_dir} 张测试图片。")
 
 
 def make_multisize_pdf(file_path: str | Path):
@@ -117,7 +113,7 @@ def make_dirpair_fixture(base_path: str | Path):
     # ---------- ② 名称相同但大小、内容不同 ----------
     fileA2 = dirA / "same_name_diff_size_content.txt"
     fileB2 = dirB / "same_name_diff_size_content.txt"
-    fileA2.write_text("short text")       # 长度短
+    fileA2.write_text("short text")  # 长度短
     fileB2.write_text("a bit longer text")  # 长度不同且内容不同
 
     subA2 = dirA / "same_name_diff_size_folder"
@@ -139,8 +135,8 @@ def make_dirpair_fixture(base_path: str | Path):
     subB3 = dirB / "same_name_size_diff_content_folder"
     subA3.mkdir()
     subB3.mkdir()
-    (subA3 / "data.txt").write_text("abcdefghij")   # 长度 10
-    (subB3 / "data.txt").write_text("ABCDEFGHIJ")   # 同长度但不同内容
+    (subA3 / "data.txt").write_text("abcdefghij")  # 长度 10
+    (subB3 / "data.txt").write_text("ABCDEFGHIJ")  # 同长度但不同内容
 
     # ---------- ④ 名称、大小、内容完全相同 ----------
     fileA4 = dirA / "same_all.txt"
@@ -168,7 +164,17 @@ def random_values(length: int, data_types: Union[str, List[str]] = None) -> List
                        或列表（支持多选）。如果为 None，则默认全选所有类型。
     :return: 随机数据列表
     """
-    all_types = ["str", "int", "float", "bool", "none", "list", "dict", "bytes", "choice"]
+    all_types = [
+        "str",
+        "int",
+        "float",
+        "bool",
+        "none",
+        "list",
+        "dict",
+        "bytes",
+        "choice",
+    ]
 
     # 统一成列表形式
     if data_types is None:
@@ -183,7 +189,9 @@ def random_values(length: int, data_types: Union[str, List[str]] = None) -> List
 
     def random_item(dtype: str):
         if dtype == "str":
-            return ''.join(random.choices(string.ascii_lowercase, k=random.randint(5, 10)))
+            return "".join(
+                random.choices(string.ascii_lowercase, k=random.randint(5, 10))
+            )
         elif dtype == "int":
             return random.randint(-1000, 1000)
         elif dtype == "float":
@@ -193,9 +201,15 @@ def random_values(length: int, data_types: Union[str, List[str]] = None) -> List
         elif dtype == "none":
             return None
         elif dtype == "list":
-            return [random_item(random.choice(data_types)) for _ in range(random.randint(2, 5))]
+            return [
+                random_item(random.choice(data_types))
+                for _ in range(random.randint(2, 5))
+            ]
         elif dtype == "dict":
-            return {f"k{i}": random_item(random.choice(data_types)) for i in range(random.randint(1, 3))}
+            return {
+                f"k{i}": random_item(random.choice(data_types))
+                for i in range(random.randint(1, 3))
+            }
         elif dtype == "bytes":
             return bytes(random.getrandbits(8) for _ in range(random.randint(4, 8)))
         elif dtype == "choice":
@@ -206,7 +220,9 @@ def random_values(length: int, data_types: Union[str, List[str]] = None) -> List
     return [random_item(random.choice(data_types)) for _ in range(length)]
 
 
-def rand_strict_increasing_ints(length: int, start: int = 0, max_step: int = 10) -> list[int]:
+def rand_strict_increasing_ints(
+    length: int, start: int = 0, max_step: int = 10
+) -> list[int]:
     """
     生成一个随机递增整数序列
 
@@ -231,8 +247,7 @@ def rand_int_matrix(size, min_val=1, max_val=9):
     :return: 二维数组
     """
     matrix = [
-        [random.randint(min_val, max_val) for _ in range(size)]
-        for _ in range(size)
+        [random.randint(min_val, max_val) for _ in range(size)] for _ in range(size)
     ]
     return matrix
 
@@ -268,7 +283,7 @@ def fixed_length_series(n: int, digits: str = "0123456789") -> str:
         need -= take
         t += 1
 
-    return ''.join(res)
+    return "".join(res)
 
 
 def gapped_range_tuples(length: int, tuple_size: int):

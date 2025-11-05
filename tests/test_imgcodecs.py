@@ -27,6 +27,7 @@ def test_codecs_text():
             print("     Original:", repr(sample_text))
             print("     Decoded :", repr(decoded_text))
 
+
 def _test_codecs_file():
     """
     测试所有注册的 codec 是否能正确进行 文件编码 -> 文件解码
@@ -41,6 +42,6 @@ def _test_codecs_file():
         print(f"  Encoded image size: {img.size}, mode: {img.mode}")
 
         # 2. 解码
-        image_path = sample_text_path.replace('.txt', f'({codec.mode_name}).png')
+        image_path = sample_text_path.replace(".txt", f"({codec.mode_name}).png")
         decoded_text = codec.decode_image_file(image_path)
         print(f"  Decoded text length: {len(decoded_text)}")

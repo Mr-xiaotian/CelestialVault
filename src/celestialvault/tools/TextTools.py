@@ -264,7 +264,7 @@ def decompress_text_from_bytes(compressed_data: bytes) -> str:
     if len(compressed_data) < 4 + true_len:
         raise ValueError("数据不完整或损坏，无法解压")
 
-    compressed_part = compressed_data[4:4 + true_len]
+    compressed_part = compressed_data[4 : 4 + true_len]
 
     return zlib.decompress(compressed_part).decode("utf-8")
 
@@ -295,9 +295,9 @@ def rs_encode(data: bytes, nsym: int) -> bytes:
     for i in range(n):
         block_size = q_dat + (1 if i < r_dat else 0)
         nsym_block = q_sym + (1 if i < r_sym else 0)
-        chunk = data[start:start + block_size]
+        chunk = data[start : start + block_size]
         start += block_size
-        
+
         rs = reedsolo.RSCodec(nsym_block)
         encoded_blocks.append(rs.encode(chunk))
 
@@ -337,7 +337,7 @@ def rs_decode(encoded: bytes, nsym: int) -> bytes:
         block_size = q_dat + (1 if i < r_dat else 0)
         nsym_block = q_sym + (1 if i < r_sym else 0)
         encoded_block_size = block_size + nsym_block
-        block = encoded[start:start + encoded_block_size]
+        block = encoded[start : start + encoded_block_size]
         start += encoded_block_size
 
         rs = reedsolo.RSCodec(nsym_block)
@@ -371,7 +371,7 @@ def unpad_bytes(data: bytes) -> bytes:
         raise ValueError("数据太短，缺少长度头")
 
     orig_len = int.from_bytes(data[:4], "big")
-    raw = data[4:4 + orig_len]
+    raw = data[4 : 4 + orig_len]
 
     if len(raw) != orig_len:
         raise ValueError("数据长度不匹配，可能损坏")
@@ -638,6 +638,7 @@ def format_table(
     :param align: 对齐方式，默认为 "left"
     :return: 格式化后的表格字符串
     """
+
     def _generate_excel_column_names(n: int, start_index: int = 0) -> list[str]:
         """
         生成 Excel 风格列名（A, B, ..., Z, AA, AB, ...）
@@ -648,13 +649,13 @@ def format_table(
             name = ""
             x = i
             while True:
-                name = chr(ord('A') + (x % 26)) + name
+                name = chr(ord("A") + (x % 26)) + name
                 x = x // 26 - 1
                 if x < 0:
                     break
             names.append(name)
         return names
-    
+
     if not data:
         return "表格数据为空！"
 

@@ -26,6 +26,7 @@ from ..tools.NumberUtils import choose_square_container, redundancy_from_contain
 # ========== 公共基类 ==========
 class BaseCodec:
     """所有编码器的基类"""
+
     mode_name: str = ""
     show_progress: bool = True  # 默认开启进度条
 
@@ -46,7 +47,7 @@ class BaseCodec:
 
     def _decode_core(self, img: Image.Image) -> str:
         raise NotImplementedError
-    
+
     def encode_text_file(self, file_path: str, save_img: bool = False) -> Image.Image:
         file_path = Path(file_path)
 
@@ -60,7 +61,7 @@ class BaseCodec:
             img.save(output_path)
 
         return img
-    
+
     def decode_image_file(self, img_path: str, save_text: bool = False) -> str:
         img = Image.open(img_path)
         actual_text = self.decode(img)
@@ -95,7 +96,12 @@ class GreyCodec(BaseCodec):
         img = Image.new("L", (width, height), 0)
 
         x, y = 0, 0
-        for i in tqdm(text, desc="Encoding text(grey):", mininterval=0.5, disable=not self.show_progress):
+        for i in tqdm(
+            text,
+            desc="Encoding text(grey):",
+            mininterval=0.5,
+            disable=not self.show_progress,
+        ):
             index = ord(i)
             high, low = divmod(index, 256)
 
@@ -113,7 +119,12 @@ class GreyCodec(BaseCodec):
         chars = []
 
         progress_len = (height * width) // 2
-        progress_bar = tqdm(total=progress_len, desc="Decoding img(grey):", mininterval=0.5, disable=not self.show_progress)
+        progress_bar = tqdm(
+            total=progress_len,
+            desc="Decoding img(grey):",
+            mininterval=0.5,
+            disable=not self.show_progress,
+        )
         for i in range(0, progress_len * 2, 2):
             high = pixels[i % width, i // width]
             low = pixels[(i + 1) % width, (i + 1) // width]
@@ -132,7 +143,7 @@ class RGBCodec(BaseCodec):
     def _encode_core(self, text: str) -> Image.Image:
         if not text:
             raise ValueError("Input text cannot be empty")
-        
+
         str_len = len(text)
         total_pixels_needed = math.ceil(str_len * 2 / 3)
         width = math.ceil(math.sqrt(total_pixels_needed))
@@ -141,7 +152,12 @@ class RGBCodec(BaseCodec):
         img = Image.new("RGB", (width, height), (0, 0, 0))
 
         x, y = 0, 0
-        for i in tqdm(range(0, str_len, 3), desc="Encoding text(rgb):", mininterval=0.5, disable=not self.show_progress):
+        for i in tqdm(
+            range(0, str_len, 3),
+            desc="Encoding text(rgb):",
+            mininterval=0.5,
+            disable=not self.show_progress,
+        ):
             index1 = ord(text[i])
             index2 = ord(text[i + 1]) if i + 1 < str_len else 0
             index3 = ord(text[i + 2]) if i + 2 < str_len else 0
@@ -162,14 +178,25 @@ class RGBCodec(BaseCodec):
         chars = []
 
         progress_len = (height * width) // 2
-        progress_bar = tqdm(total=progress_len, desc="Decoding img(rgb):", mininterval=0.5, disable=not self.show_progress)
+        progress_bar = tqdm(
+            total=progress_len,
+            desc="Decoding img(rgb):",
+            mininterval=0.5,
+            disable=not self.show_progress,
+        )
         for i in range(0, progress_len * 2, 2):
             rgb_0 = pixels[i % width, i // width]
             rgb_1 = pixels[(i + 1) % width, (i + 1) // width]
 
-            char1 = chr((rgb_0[0] << 8) + rgb_0[1]) if (rgb_0[0] << 8) + rgb_0[1] else ""
-            char2 = chr((rgb_0[2] << 8) + rgb_1[0]) if (rgb_0[2] << 8) + rgb_1[0] else ""
-            char3 = chr((rgb_1[1] << 8) + rgb_1[2]) if (rgb_1[1] << 8) + rgb_1[2] else ""
+            char1 = (
+                chr((rgb_0[0] << 8) + rgb_0[1]) if (rgb_0[0] << 8) + rgb_0[1] else ""
+            )
+            char2 = (
+                chr((rgb_0[2] << 8) + rgb_1[0]) if (rgb_0[2] << 8) + rgb_1[0] else ""
+            )
+            char3 = (
+                chr((rgb_1[1] << 8) + rgb_1[2]) if (rgb_1[1] << 8) + rgb_1[2] else ""
+            )
             chars.extend([char1, char2, char3])
             progress_bar.update(1)
 
@@ -184,7 +211,7 @@ class RGBACodec(BaseCodec):
     def _encode_core(self, text: str) -> Image.Image:
         if not text:
             raise ValueError("Input text cannot be empty")
-        
+
         str_len = len(text)
         total_pixels_needed = math.ceil(str_len / 2)
         width = math.ceil(math.sqrt(total_pixels_needed))
@@ -193,7 +220,12 @@ class RGBACodec(BaseCodec):
         img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
 
         x, y = 0, 0
-        for i in tqdm(range(0, str_len, 2), desc="Encoding text(rgba):", mininterval=0.5, disable=not self.show_progress):
+        for i in tqdm(
+            range(0, str_len, 2),
+            desc="Encoding text(rgba):",
+            mininterval=0.5,
+            disable=not self.show_progress,
+        ):
             index1 = ord(text[i])
             index2 = ord(text[i + 1]) if i + 1 < str_len else 0
             rgba = (index1 >> 8, index1 & 0xFF, index2 >> 8, index2 & 0xFF)
@@ -207,7 +239,12 @@ class RGBACodec(BaseCodec):
         pixels = img.load()
         chars = []
 
-        progress_bar = tqdm(total=height * width, desc="Decoding img(rgba):", mininterval=0.5, disable=not self.show_progress)
+        progress_bar = tqdm(
+            total=height * width,
+            desc="Decoding img(rgba):",
+            mininterval=0.5,
+            disable=not self.show_progress,
+        )
         for y, x in product(range(height), range(width)):
             rgba = pixels[x, y]
             char1 = chr((rgba[0] << 8) + rgba[1]) if (rgba[0] << 8) + rgba[1] else ""
@@ -237,7 +274,12 @@ class OneBitCodec(BaseCodec):
         img = Image.new("1", (width, height), 0)  # 黑白图像
 
         x, y = 0, 0
-        for byte in tqdm(compressed_binary, desc="Encoding text(1bit-binary):", mininterval=0.5, disable=not self.show_progress):
+        for byte in tqdm(
+            compressed_binary,
+            desc="Encoding text(1bit-binary):",
+            mininterval=0.5,
+            disable=not self.show_progress,
+        ):
             for bit in range(8):
                 pixel_value = (byte >> (7 - bit)) & 1
                 img.putpixel((x, y), pixel_value)
@@ -254,7 +296,12 @@ class OneBitCodec(BaseCodec):
 
         bytes_list = []
         progress_len = (height * width) // 8
-        progress_bar = tqdm(total=progress_len, desc="Decoding img(1bit-binary):", mininterval=0.5, disable=not self.show_progress)
+        progress_bar = tqdm(
+            total=progress_len,
+            desc="Decoding img(1bit-binary):",
+            mininterval=0.5,
+            disable=not self.show_progress,
+        )
 
         for i in range(0, progress_len * 8, 8):
             current_byte = 0
@@ -264,7 +311,7 @@ class OneBitCodec(BaseCodec):
                 # Pillow在"1"模式下返回的是 0 或 255，需要转成 0/1
                 bit_value = 1 if bit_value == 255 else bit_value
 
-                current_byte |= (bit_value << (7 - index))
+                current_byte |= bit_value << (7 - index)
 
             bytes_list.append(current_byte)
             progress_bar.update(1)
@@ -293,7 +340,12 @@ class ChannelCodec(BaseCodec):
         img = Image.new(self.mode_name, (width, height), (0,) * self.channels)
 
         x, y = 0, 0
-        for i in tqdm(range(0, str_len, self.channels), desc=f"Encoding text({self.mode_name}-binary):", mininterval=0.5, disable=not self.show_progress):
+        for i in tqdm(
+            range(0, str_len, self.channels),
+            desc=f"Encoding text({self.mode_name}-binary):",
+            mininterval=0.5,
+            disable=not self.show_progress,
+        ):
             chars = pad_binary[i : i + self.channels]
             img.putpixel((x, y), tuple(chars))
             x, y = self.get_new_xy(x, y, width)
@@ -307,7 +359,12 @@ class ChannelCodec(BaseCodec):
 
         bytes_list = []
         desc = f"Decoding img({channels}-channel-binary):"
-        progress_bar = tqdm(total=height * width, desc=desc, mininterval=0.5, disable=not self.show_progress)
+        progress_bar = tqdm(
+            total=height * width,
+            desc=desc,
+            mininterval=0.5,
+            disable=not self.show_progress,
+        )
 
         for y in range(height):
             for x in range(width):
@@ -322,7 +379,7 @@ class ChannelCodec(BaseCodec):
         crc_text = decompress_text_from_bytes(bytes(bytes_list))
 
         return crc_text
-    
+
 
 class RefRGBALSBCodec(BaseCodec):
     """
@@ -355,7 +412,9 @@ class RefRGBALSBCodec(BaseCodec):
         h, w, _ = arr.shape
         flat = arr.reshape(-1, 4)  # 每行 RGBA
 
-        progress = tqdm(total=total_len, desc="Encoding to RGBA-LSB", disable=not self.show_progress)
+        progress = tqdm(
+            total=total_len, desc="Encoding to RGBA-LSB", disable=not self.show_progress
+        )
 
         for i in range(total_len):
             byte_val = compressed_binary[i]
@@ -386,13 +445,20 @@ class RefRGBALSBCodec(BaseCodec):
         flat = arr.reshape(-1, 4)
 
         total_pixels = h * w
-        progress = tqdm(total=total_pixels, desc="Decoding RGBA-LSB", disable=not self.show_progress)
+        progress = tqdm(
+            total=total_pixels, desc="Decoding RGBA-LSB", disable=not self.show_progress
+        )
 
         bytes_list = bytearray()
 
         for i in range(total_pixels):
             r, g, b, a = flat[i]
-            byte_val = ((r & 0b11) << 0) | ((g & 0b11) << 2) | ((b & 0b11) << 4) | ((a & 0b11) << 6)
+            byte_val = (
+                ((r & 0b11) << 0)
+                | ((g & 0b11) << 2)
+                | ((b & 0b11) << 4)
+                | ((a & 0b11) << 6)
+            )
             bytes_list.append(byte_val)
             progress.update(1)
 
@@ -400,7 +466,7 @@ class RefRGBALSBCodec(BaseCodec):
 
         crc_text = decompress_text_from_bytes(bytes(bytes_list))
         return crc_text
-    
+
 
 class PaletteCodec(BaseCodec):
     def __init__(self, palette_style: str, palatte_mode: str = "random"):
@@ -418,7 +484,11 @@ class PaletteCodec(BaseCodec):
         img.putpalette(self.palette)
 
         x, y = 0, 0
-        for byte in tqdm(compressed_binary, desc=f"Encoding text(Palette-{self.mode_name})", disable=not self.show_progress):
+        for byte in tqdm(
+            compressed_binary,
+            desc=f"Encoding text(Palette-{self.mode_name})",
+            disable=not self.show_progress,
+        ):
             img.putpixel((x, y), byte)
             x, y = self.get_new_xy(x, y, width)
 
@@ -429,7 +499,11 @@ class PaletteCodec(BaseCodec):
         pixels = img.load()
 
         bytes_list = []
-        progress_bar = tqdm(total=height * width, desc=f"Decoding img(Palette-{self.mode_name})", disable=not self.show_progress)
+        progress_bar = tqdm(
+            total=height * width,
+            desc=f"Decoding img(Palette-{self.mode_name})",
+            disable=not self.show_progress,
+        )
         for y in range(height):
             for x in range(width):
                 bytes_list.append(pixels[x, y])
@@ -441,14 +515,18 @@ class PaletteCodec(BaseCodec):
 
 
 class PaletteWithRsCodec(BaseCodec):
-    def __init__(self, palette_style: str, palatte_mode: str = "random", threshold: float = 0.7):
+    def __init__(
+        self, palette_style: str, palatte_mode: str = "random", threshold: float = 0.7
+    ):
         self.mode_name = palette_style + "_rs"  # 用 style 名称作为 mode
         self.palette = generate_palette(256, style=palette_style, mode=palatte_mode)
         self.threshold = threshold
 
     def _encode_core(self, text: str) -> Image.Image:
         compressed_binary = compress_text_to_bytes(text)
-        side_len, max_payload, nsym = choose_square_container(len(compressed_binary), self.threshold)
+        side_len, max_payload, nsym = choose_square_container(
+            len(compressed_binary), self.threshold
+        )
         pad_binary = pad_bytes(compressed_binary, max_payload)
         rs_binary = rs_encode(pad_binary, nsym)
 
@@ -456,7 +534,11 @@ class PaletteWithRsCodec(BaseCodec):
         img.putpalette(self.palette)
 
         x, y = 0, 0
-        for byte in tqdm(rs_binary, desc=f"Encoding text(Palette-{self.mode_name})", disable=not self.show_progress):
+        for byte in tqdm(
+            rs_binary,
+            desc=f"Encoding text(Palette-{self.mode_name})",
+            disable=not self.show_progress,
+        ):
             img.putpixel((x, y), byte)
             x, y = self.get_new_xy(x, y, side_len)
 
@@ -467,7 +549,11 @@ class PaletteWithRsCodec(BaseCodec):
         pixels = img.load()
 
         bytes_list = []
-        progress_bar = tqdm(total=side_len * side_len, desc=f"Decoding img(Palette-{self.mode_name})", disable=not self.show_progress)
+        progress_bar = tqdm(
+            total=side_len * side_len,
+            desc=f"Decoding img(Palette-{self.mode_name})",
+            disable=not self.show_progress,
+        )
         for y in range(side_len):
             for x in range(side_len):
                 bytes_list.append(pixels[x, y])
@@ -475,7 +561,7 @@ class PaletteWithRsCodec(BaseCodec):
 
         progress_bar.close()
 
-        nsym = redundancy_from_container(side_len*side_len, self.threshold)
+        nsym = redundancy_from_container(side_len * side_len, self.threshold)
         ders_binary = rs_decode(bytes(bytes_list), nsym)
         unpad_binary = unpad_bytes(ders_binary)
         crc_text = decompress_text_from_bytes(unpad_binary)
@@ -489,7 +575,7 @@ class RedundancyCodec(BaseCodec):
         channels: 通道数
         """
         self.mode_name = mode_name.lower() + "_redundancy"  # 注册名
-        self.base_mode = mode_name.upper()                  # Pillow 图像模式
+        self.base_mode = mode_name.upper()  # Pillow 图像模式
         self.channels = channels
 
     def _encode_core(self, text: str) -> Image.Image:
@@ -507,15 +593,26 @@ class RedundancyCodec(BaseCodec):
         # 索引表
         r_indices = [edge * y + x for y in range(edge) for x in range(edge)]
         g_indices = [edge * x + edge - 1 - y for y in range(edge) for x in range(edge)]
-        b_indices = [edge * (edge - 1 - y) + edge - 1 - x for y in range(edge) for x in range(edge)]
-        a_indices = [edge * (edge - 1 - x) + y for y in range(edge) for x in range(edge)]
+        b_indices = [
+            edge * (edge - 1 - y) + edge - 1 - x
+            for y in range(edge)
+            for x in range(edge)
+        ]
+        a_indices = [
+            edge * (edge - 1 - x) + y for y in range(edge) for x in range(edge)
+        ]
 
-        for idx in tqdm(range(total_pixels), desc=f"Encoding text({self.mode_name})", mininterval=0.5, disable=not self.show_progress):
+        for idx in tqdm(
+            range(total_pixels),
+            desc=f"Encoding text({self.mode_name})",
+            mininterval=0.5,
+            disable=not self.show_progress,
+        ):
             r = binary_str[r_indices[idx]] if self.channels > 0 else 0
             g = binary_str[g_indices[idx]] if self.channels > 1 else 0
             b = binary_str[b_indices[idx]] if self.channels > 2 else 0
             a = binary_str[a_indices[idx]] if self.channels > 3 else 0
-            pixel_value = (r, g, b, a)[:self.channels]
+            pixel_value = (r, g, b, a)[: self.channels]
             img.putpixel((idx % edge, idx // edge), pixel_value)
 
         return img
@@ -554,7 +651,12 @@ class RedundancyCodec(BaseCodec):
         bytes_list = []
 
         desc = f"Decoding img(channel {channel_index}-redundancy):"
-        progress_bar = tqdm(total=height * width, desc=desc, mininterval=0.5, disable=not self.show_progress)
+        progress_bar = tqdm(
+            total=height * width,
+            desc=desc,
+            mininterval=0.5,
+            disable=not self.show_progress,
+        )
 
         for y in range(height):
             for x in range(width):
@@ -573,26 +675,26 @@ class RedundancyCodec(BaseCodec):
 
 CODEC_REGISTRY: Dict[str, BaseCodec] = {}
 
-CODEC_REGISTRY.update({
-    GreyCodec.mode_name: GreyCodec(),
-    RGBCodec.mode_name: RGBCodec(),
-    RGBACodec.mode_name: RGBACodec(),
-    OneBitCodec.mode_name: OneBitCodec(),
-})
+CODEC_REGISTRY.update(
+    {
+        GreyCodec.mode_name: GreyCodec(),
+        RGBCodec.mode_name: RGBCodec(),
+        RGBACodec.mode_name: RGBACodec(),
+        OneBitCodec.mode_name: OneBitCodec(),
+    }
+)
 
 # 从 image_mode_params 动态生成
 for mode, params in image_mode_params.items():
     # 普通模式
     CODEC_REGISTRY[mode] = ChannelCodec(
-        mode_name=params["mode_name"],
-        channels=params["channels"]
+        mode_name=params["mode_name"], channels=params["channels"]
     )
 
     # 冗余模式
     redundancy_mode = mode + "_redundancy"
     CODEC_REGISTRY[redundancy_mode] = RedundancyCodec(
-        mode_name=params["mode_name"],
-        channels=params["channels"]
+        mode_name=params["mode_name"], channels=params["channels"]
     )
 
 # 从 style_params 动态生成

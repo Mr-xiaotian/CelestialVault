@@ -11,6 +11,7 @@ def test_log():
     print("print success")
     logging.info("logging success")
 
+
 def test_logger():
     # 定义控制台输出的格式
     console_format = (

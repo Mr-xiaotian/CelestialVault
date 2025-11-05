@@ -1,10 +1,15 @@
 import pytest, logging
-from celestialvault.tools.FileOperations import detect_identical_files, duplicate_files_report
+from celestialvault.tools.FileOperations import (
+    detect_identical_files,
+    duplicate_files_report,
+)
+
 
 def _test_compress_dir():
     # Test with a valid directory
     # compress_dir(r'C:\Users\27342\OneDrive\Videos\compress_temp')
     pass
+
 
 def test_detect_identical_files():
     identical_dict = detect_identical_files(r".")

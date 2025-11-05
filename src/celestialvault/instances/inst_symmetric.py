@@ -3,6 +3,7 @@ from typing import Dict, Iterator, Iterable, Tuple, Optional, Generic, TypeVar
 
 T = TypeVar("T")
 
+
 class SymmetricMap(Generic[T]):
     """
     一对一双向映射：元素出现在映射中意味着它与唯一的伙伴绑定。
@@ -10,11 +11,12 @@ class SymmetricMap(Generic[T]):
     - 迭代/keys() 仅遍历“代表键”（pairs 的键），每对只出现一次。
     - x in m 表示 x 在任意一侧出现。
     """
+
     __slots__ = ("pairs", "reverse", "_allow_self")
 
     def __init__(self, allow_self: bool = False):
-        self.pairs: Dict[T, T] = {}     # a -> b （代表键）
-        self.reverse: Dict[T, T] = {}   # b -> a
+        self.pairs: Dict[T, T] = {}  # a -> b （代表键）
+        self.reverse: Dict[T, T] = {}  # b -> a
         self._allow_self = allow_self
 
     def __contains__(self, x: T) -> bool:
@@ -63,7 +65,7 @@ class SymmetricMap(Generic[T]):
             del self.pairs[y]
             return
         raise KeyError(f"{x!r} not found")
-    
+
     def pop(self, x: T) -> T:
         """移除并返回与 x 绑定的伙伴。"""
         if x in self.pairs:
@@ -75,7 +77,7 @@ class SymmetricMap(Generic[T]):
             del self.pairs[y]
             return y
         raise KeyError(f"{x!r} not found")
-    
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, SymmetricMap):
             return NotImplemented
@@ -119,14 +121,18 @@ class SymmetricMap(Generic[T]):
             random_item = random.choice(all_items)
             return random_item, self[random_item]
         else:
-            raise ValueError(f"Invalid mode: {mode!r} (expected 'forward' | 'backward' | 'any')")
+            raise ValueError(
+                f"Invalid mode: {mode!r} (expected 'forward' | 'backward' | 'any')"
+            )
 
     def __repr__(self) -> str:
         """稳定、可读的输出"""
-        pairs_sorted = sorted(self.pairs.items(), key=lambda kv: (repr(kv[0]), repr(kv[1])))
+        pairs_sorted = sorted(
+            self.pairs.items(), key=lambda kv: (repr(kv[0]), repr(kv[1]))
+        )
         body = ", ".join(f"{a!r} <-> {b!r}" for a, b in pairs_sorted)
         return f"SymmetricMap({body})"
-    
+
     def __str__(self) -> str:
         """
         人类友好的输出版本，比 __repr__ 更简洁。
@@ -135,7 +141,7 @@ class SymmetricMap(Generic[T]):
             return "SymmetricMap()"
         return "{" + ", ".join(f"{a} <-> {b}" for a, b in self.pairs.items()) + "}"
 
-    # —— 工厂方法 —— 
+    # —— 工厂方法 ——
     @classmethod
     def from_dict(cls, d: Dict[T, T], allow_self: bool = False) -> "SymmetricMap[T]":
         """
@@ -145,7 +151,7 @@ class SymmetricMap(Generic[T]):
         for a, b in d.items():
             m[a] = b
         return m
-    
+
     @classmethod
     def from_pairs(cls, iterable: Iterable[Tuple[T, T]], allow_self: bool = False):
         """

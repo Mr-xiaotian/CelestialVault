@@ -10,7 +10,7 @@ class HumanBytes(int):
     """一个基于 int 的类，自动以人类可读格式显示字节大小"""
 
     _units = ["B", "KB", "MB", "GB", "TB"]
-    _unit_map = {u: 1024 ** i for i, u in enumerate(_units)}
+    _unit_map = {u: 1024**i for i, u in enumerate(_units)}
 
     def __new__(cls, value):
         """允许用数字或字符串初始化"""
@@ -69,12 +69,23 @@ class HumanBytes(int):
     def _wrap(self, result):
         return HumanBytes(result)
 
-    def __add__(self, other): return self._wrap(super().__add__(other))
-    def __sub__(self, other): return self._wrap(super().__sub__(other))
-    def __mul__(self, other): return self._wrap(super().__mul__(other))
-    def __floordiv__(self, other): return self._wrap(super().__floordiv__(other))
-    def __truediv__(self, other): return self._wrap(super().__truediv__(other))
-    def __mod__(self, other): return self._wrap(super().__mod__(other))
+    def __add__(self, other):
+        return self._wrap(super().__add__(other))
+
+    def __sub__(self, other):
+        return self._wrap(super().__sub__(other))
+
+    def __mul__(self, other):
+        return self._wrap(super().__mul__(other))
+
+    def __floordiv__(self, other):
+        return self._wrap(super().__floordiv__(other))
+
+    def __truediv__(self, other):
+        return self._wrap(super().__truediv__(other))
+
+    def __mod__(self, other):
+        return self._wrap(super().__mod__(other))
 
 
 class HumanTime(float):
@@ -154,14 +165,29 @@ class HumanTime(float):
     def _wrap(self, result):
         return HumanTime(result)
 
-    def __add__(self, other): return self._wrap(super().__add__(other))
-    def __sub__(self, other): return self._wrap(super().__sub__(other))
-    def __mul__(self, other): return self._wrap(super().__mul__(other))
-    def __truediv__(self, other): return self._wrap(super().__truediv__(other))
-    def __floordiv__(self, other): return self._wrap(super().__floordiv__(other))
-    def __radd__(self, other): return self._wrap(super().__radd__(other))
-    def __rsub__(self, other): return self._wrap(super().__rsub__(other))
-    def __rmul__(self, other): return self._wrap(super().__rmul__(other))
+    def __add__(self, other):
+        return self._wrap(super().__add__(other))
+
+    def __sub__(self, other):
+        return self._wrap(super().__sub__(other))
+
+    def __mul__(self, other):
+        return self._wrap(super().__mul__(other))
+
+    def __truediv__(self, other):
+        return self._wrap(super().__truediv__(other))
+
+    def __floordiv__(self, other):
+        return self._wrap(super().__floordiv__(other))
+
+    def __radd__(self, other):
+        return self._wrap(super().__radd__(other))
+
+    def __rsub__(self, other):
+        return self._wrap(super().__rsub__(other))
+
+    def __rmul__(self, other):
+        return self._wrap(super().__rmul__(other))
 
 
 class HumanTimestamp(float):
@@ -232,7 +258,9 @@ class HumanTimestamp(float):
         return f"{iso} ({name})" if name else iso
 
     def __repr__(self):
-        tz_label = getattr(self._tz, "key", None) or (self._tz.tzname(None) if hasattr(self._tz, "tzname") else "tz")
+        tz_label = getattr(self._tz, "key", None) or (
+            self._tz.tzname(None) if hasattr(self._tz, "tzname") else "tz"
+        )
         return f"HumanTimestamp({float(self):.6f}, tz='{tz_label}') -> {self.to_iso()}"
 
     # ---------- 运算（尽量保持语义） ----------
@@ -244,7 +272,9 @@ class HumanTimestamp(float):
         if isinstance(other, (int, float, HumanTime)):
             return self._wrap(float(self) + float(other))
         if isinstance(other, HumanTimestamp):
-            raise TypeError("时间戳与时间戳相加没有语义：请加/减『秒数』或做差得到『间隔秒数』。")
+            raise TypeError(
+                "时间戳与时间戳相加没有语义：请加/减『秒数』或做差得到『间隔秒数』。"
+            )
         return NotImplemented
 
     def __radd__(self, other):
@@ -253,7 +283,7 @@ class HumanTimestamp(float):
     # 减：时间戳 - 秒数 -> 新时间戳；时间戳 - 时间戳 -> 相差秒数(float)
     def __sub__(self, other):
         if isinstance(other, (int, float, HumanTime, HumanTimestamp)):
-            return HumanTime(float(self) - float(other)) # 返回间隔秒数
+            return HumanTime(float(self) - float(other))  # 返回间隔秒数
         return NotImplemented
 
     def __rsub__(self, other):
@@ -290,4 +320,3 @@ class HumanTimestamp(float):
     def now(cls, tz=None) -> "HumanTimestamp":
         tz = tz or cls.DEFAULT_TZ
         return cls(datetime.now(tz), tz=tz)
-    
