@@ -7,6 +7,7 @@ from IPython.display import clear_output, display
 
 from .inst_symmetric import SymmetricMap
 
+
 class QuizBase:
     """通用测验UI框架"""
     def __init__(self, title="测验", input_type="text"):

@@ -133,11 +133,57 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
     plt.tight_layout()
     plt.show()
 
+# 递归绘制分段
+def draw_segments_ratio(ax, segments, y=0, x_start=0, x_end=1):
+    total_ratio = sum(r for _, r, _ in segments)
+    cur_x = x_start
+    for label, ratio, subseg in segments:
+        width = (x_end - x_start) * (ratio / total_ratio)
+        ax.add_patch(plt.Rectangle((cur_x, y), width, 0.1,
+                                   facecolor="#c8e6c9", edgecolor="black"))
+        ax.text(cur_x + width/2, y + 0.05, label, ha="center", va="center", fontsize=9)
+        if subseg:
+            draw_segments_ratio(ax, subseg, y - 0.15, cur_x, cur_x + width)
+        cur_x += width
+
+def plot_segments_ratio():
+    # 按比例绘制（pad_binary : rs冗余 = 70% : 30%）
+    segments_ratio = [
+        ("pad_binary ~70%", 0.7, [
+            ("原始长度头(4B)", 0.05, None),
+            ("compressed_binary", 0.75, [
+                ("压缩长度头(4B)", 0.1, None),
+                ("zlib压缩数据", 0.9, [
+                    ("crc_text", 1.0, [
+                        ("CRC32(4B)", 0.1, None),
+                        ("原始数据", 0.9, None)
+                    ])
+                ])
+            ]),
+            ("填充(0xEC,0x11...)", 0.2, None)
+        ]),
+        ("RS冗余码(nsym) ~30%", 0.3, None)
+    ]
+    # 设置字体为SimHei（黑体）
+    plt.rcParams['font.sans-serif'] = ['SimHei']
+    # 解决坐标轴负号显示问题
+    plt.rcParams['axes.unicode_minus'] = False
+
+    fig, ax = plt.subplots(figsize=(60, 5))
+    draw_segments_ratio(ax, segments_ratio, y=0, x_start=0, x_end=1)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(-0.8, 0.3)
+    ax.axis("off")
+    # plt.show()
+
+    # 保存图片
+    plt.savefig("img/rs_binary_segments_ratio.png", bbox_inches="tight", pad_inches=0.05)
 
 if __name__ == "__main__":
     codec = CODEC_REGISTRY["morandi_rs"] # morandi_rs rgba_redundancy
     codec.show_progress = False
     text = "Hello World! " * int(1e3)  # 足够长的测试文本(1e3, 4e5)
 
-    redundancy_heatmap(codec, text)
+    # redundancy_heatmap(codec, text)
+    plot_segments_ratio()
     
