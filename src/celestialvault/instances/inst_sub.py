@@ -104,7 +104,7 @@ class Suber:
 
         return text.strip()
 
-    def sub_name(self, name: str) -> str:
+    def sub_name(self, name: str, max_len: int = 100) -> str:
         name = name.strip()
 
         # 替换非法字符
@@ -112,9 +112,7 @@ class Suber:
             name = re.sub(sub[0], sub[1], name)
 
         # 平台文件名最大长度限制
-        # 通常 Windows 为 255，Linux/Mac 也类似；更严谨可以写个平台判断
-        max_len = 50
-
+        # 通常 Windows 为 255，Linux/Mac 也类似
         # 如果超过最大长度，按 2/4 和 1/4 拼接
         if len(name) > max_len:
             front_len = (max_len * 2) // 4
