@@ -1,26 +1,20 @@
 # 忽略日志
 logs/
-*.log
 
+*.log
 
 # 忽略Byte编译的文件
 __pycache__/
-constants/__pycache__/
-instances/__pycache__/
-tools/__pycache__/
-tests/__pycache__/
 
 *.py[cod]
 *$py.class
 
 # 忽略IDE文件
 .vscode/
-result.json
-_preview.ipynb
-temp.py
 
 # 忽略临时文件
+.pytest_cache
 profile/
 fallback/
 CelestialVault.egg-info/
-.pytest_cache
+examples/
