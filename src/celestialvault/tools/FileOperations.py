@@ -175,7 +175,7 @@ def handle_item(
 
 def handle_dir_files(
     dir_path: str | Path,
-    rules: Dict[str, Tuple[Callable[[Path, Path, Dict], None], Callable[[Path], Path]]],
+    rules: Dict[str, Tuple[Callable[[Path, Path, Dict], None], Callable[[Path], Path], Dict]],
     execution_mode: str = "serial",
     progress_desc: str = "Processing files",
     dir_name_suffix: str = "_re",
@@ -214,7 +214,7 @@ def handle_dir_files(
 
 def handle_subdirs(
     dir_path: str | Path,
-    rules: Dict[str, Tuple[Callable[[Path, Path, Dict], None], Callable[[Path], Path]]],
+    rules: Dict[str, Tuple[Callable[[Path, Path, Dict], None], Callable[[Path], Path], Dict]],
     execution_mode: str = "serial",
     progress_desc: str = "Processing dirs",
     dir_name_suffix: str = "_re",
