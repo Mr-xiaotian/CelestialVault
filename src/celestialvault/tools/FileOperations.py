@@ -779,31 +779,55 @@ def replace_filenames(dir_path: Path | str, pattern: str, replacement: str):
         file.rename(new_file_path)  # 重命名文件
 
 
-def sort_by_number(file_path: Path, special_keywords: dict) -> tuple:
+def split_text_and_number(s: str, special_keywords: Dict[str, int]) -> Tuple:
+    """
+    将路径部分中的文本与数字交替提取，同时根据关键词设置优先级。
+    例如，"a1bbb2ccc3" -> (keyword_priority, "a", 1, "bbb", 2, "ccc", 3)
+
+    :param s: 要处理的字符串。
+    :param special_keywords: 关键词与其优先级的字典。
+    :return: 包含关键词优先级、文本和数字交替的元组。
+    """
+    # 提取文本和数字部分
+    parts = re.findall(r'([a-zA-Z]+|\d+)', s)
+    result = []
+    
+    # 提取关键字优先级
+    keyword_priority = min(
+        (special_keywords[keyword] for keyword in special_keywords if keyword in s),
+        default=float('inf')  # 默认无关键词时优先级为无穷大
+    )
+    
+    result.append(keyword_priority)
+    
+    # 将文本和数字交替放入结果列表
+    for part in parts:
+        if part.isdigit():
+            result.append(int(part))  # 如果是数字部分，转换为整数
+        else:
+            result.append(part)  # 如果是文本部分，直接保留文本
+    
+    return tuple(result)
+
+
+def sort_by_number(file_path: Path, special_keywords: Dict[str, int]) -> Tuple:
     """
     文件排序规则：
-    1. 按父目录路径进行分组（保证同目录下的文件排在一起）
-    2. 再按关键字优先级
-    3. 最后按文件名中的数字
+    1. 按路径中的每一层（包括文件名）进行文本与数字交替排序，同时考虑关键词优先级。
+    2. 文件名中按关键字优先级和数字进行排序。
+
+    :param file_path: 要排序的文件路径。
+    :param special_keywords: 关键词与其优先级的字典。
+    :return: 用于排序的元组。
     """
+    # 处理路径中的每一层（包括文件名）
+    path_parts = [split_text_and_number(part, special_keywords) for part in file_path.parts]
+    
+    # 处理文件名部分：最后一个部分是文件名
     file_name = file_path.name
-    dir_key = file_path.parent.as_posix()  # 用字符串，避免混入 int
-
-    # 关键字优先级（越小越靠前）
-    keyword_priority = min(
-        (
-            special_keywords[keyword]
-            for keyword in special_keywords
-            if keyword in file_name
-        ),
-        default=0,
-    )
-
-    # 数字提取
-    matches = re.findall(r"\d+", file_name)
-    numbers = [int(num) for num in matches] if matches else [float("inf")]
-
-    return (dir_key, keyword_priority, *numbers)
+    file_name_parts = split_text_and_number(file_name, special_keywords)
+    
+    return (*path_parts, *file_name_parts)
 
 
 def move_files_with_keyword(
