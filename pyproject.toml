@@ -1,0 +1,57 @@
+[project]
+name = "CelestialVault"
+version = "1.0.1"
+description = "A Python package for managing celestial data."
+long_description = {file = "README.md", encoding = "utf-8"}
+long_description_content_type = "text/markdown"
+authors = [
+    {name = "Mr.Xiaotian", email = "mingxiaomingtian@gmail.com"}
+]
+url = "https://github.com/Mr-xiaotian/CelestialVault"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+python_requires = ">=3.10"
+
+[tool.poetry.dependencies]
+python = ">=3.10"
+numpy = ">=1.26"
+pandas = ">=2.2"
+mpmath = ">=1.3"
+regex = ">=2023.0"
+bidict = ">=0.22"
+reedsolo = ">=1.7"
+charset-normalizer = ">=3.3"
+jieba = ">=0.42"
+pillow = ">=10.0"
+pillow-heif = ">=0.15"
+rarfile = ">=4.1"
+py7zr = ">=0.20"
+httpx = ">=0.27"
+requests = ">=2.32"
+tqdm = ">=4.66"
+loguru = ">=0.7"
+networkx = ">=3.2"
+beautifulsoup4 = ">=4.12"
+matplotlib = ">=3.9"
+
+[tool.poetry.dev-dependencies]
+# Uncomment if needed
+# scikit-image = ">=0.24"  # Python 3.14 不兼容
+
+[tool.poetry.scripts]
+# Define command line tools here if needed
+# Example:
+# celestial-vault = "celestialvault.cli:main"
+
+[tool.setuptools]
+packages = ["src"]
+package_dir = {"" = "src"}
+
+[tool.poetry.include]
+# If needed, include package data files here
+# Include data files if needed
+# Example:
+# celestialvault = ["data/*.txt"]
