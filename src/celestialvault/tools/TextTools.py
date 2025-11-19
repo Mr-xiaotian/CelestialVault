@@ -214,7 +214,7 @@ def is_valid_text(text: str, threshold: int = 0.8):
     return calculate_valid_text(text) > threshold
 
 
-def crc_encode(actual_text: str) -> str:
+def crc_encode_text(actual_text: str) -> str:
     """
     在文本开头添加CRC32校验和。
     """
@@ -228,7 +228,7 @@ def crc_encode(actual_text: str) -> str:
     return crc_text
 
 
-def crc_decode(crc_text: str) -> str:
+def crc_decode_text(crc_text: str) -> str:
     """
     从文本中提取CRC32校验和并验证。
     """
@@ -242,6 +242,111 @@ def crc_decode(crc_text: str) -> str:
         raise ValueError("校验和验证失败！")
 
     return actual_text
+
+
+def crc_encode_bytes(data: bytes) -> bytes:
+    """
+    在字节串前附加 4 字节 big-endian CRC32。
+    """
+    crc = zlib.crc32(data)
+    crc_bytes = crc.to_bytes(4, "big")
+    return crc_bytes + data
+
+
+def crc_decode_bytes(crc_data: bytes) -> bytes:
+    """
+    分离并验证前置 CRC32，返回原始字节。
+    """
+    if len(crc_data) < 4:
+        raise ValueError("数据长度不足，没有包含 CRC32。")
+
+    crc_received = int.from_bytes(crc_data[:4], "big")
+    actual_data = crc_data[4:]
+
+    crc_calculated = zlib.crc32(actual_data)
+    if crc_received != crc_calculated:
+        raise ValueError("CRC32 校验失败。")
+
+    return actual_data
+
+
+def add_length_header_to_text(text: str) -> str:
+    """
+    将文本前加 4 字节长度头（注意：长度为“UTF-8字节长度”），并返回 str。
+    头部使用 latin1 解码，保证无损保留二进制。
+    """
+    raw = text.encode("utf-8")
+    length_prefix = struct.pack(">I", len(raw))  # 必须是 UTF-8 字节长度
+    return length_prefix.decode("latin1") + text
+
+
+def restore_text_from_length_header(data: str) -> str:
+    """
+    从带长度头的文本恢复原始 UTF-8 文本。
+    """
+    data_bytes = data.encode("latin1")  # 先无损转回 bytes
+
+    if len(data_bytes) < 4:
+        raise ValueError("数据不足 4 字节，缺少长度头")
+
+    true_len = struct.unpack(">I", data_bytes[:4])[0]
+
+    if len(data_bytes) < 4 + true_len:
+        raise ValueError("数据不完整，无法按长度头读取")
+
+    raw = data_bytes[4 : 4 + true_len]
+    return raw.decode("utf-8")
+
+
+def add_length_header_to_bytes(raw: bytes) -> bytes:
+    """
+    为 bytes 加上 4 字节长度头（big-endian）。
+    返回值为： [4字节长度] + [原始bytes]
+    """
+    length_prefix = struct.pack(">I", len(raw))
+    return length_prefix + raw
+
+
+def restore_bytes_from_length_header(data: bytes) -> bytes:
+    """
+    从带长度头的字节串中恢复原始 bytes。
+    """
+    if len(data) < 4:
+        raise ValueError("数据不足 4 字节，缺少长度头")
+
+    true_len = struct.unpack(">I", data[:4])[0]
+
+    if len(data) < 4 + true_len:
+        raise ValueError("数据不完整，无法按长度头读取")
+
+    return data[4 : 4 + true_len]
+
+
+def encode_bytes_to_base64(data: bytes) -> str:
+    """
+    将字节串编码为 Base64 文本，并在前方加上 4 字节长度头（真实二进制长度）。
+    返回值为 UTF-8 文本。
+    """
+    length_prefix = struct.pack(">I", len(data))  # 4 字节长度头
+    payload = length_prefix + data
+    return base64.b64encode(payload).decode("utf-8")
+
+
+def decode_bytes_from_base64(text: str) -> bytes:
+    """
+    从 Base64 文本解码为字节串，解析前 4 字节长度头，截取真实数据。
+    """
+    raw = base64.b64decode(text.encode("utf-8"))
+
+    if len(raw) < 4:
+        raise ValueError("数据不足 4 字节，缺少长度头")
+
+    true_len = struct.unpack(">I", raw[:4])[0]
+
+    if len(raw) < 4 + true_len:
+        raise ValueError("数据不完整或损坏")
+
+    return raw[4 : 4 + true_len]
 
 
 def compress_text_to_bytes(text: str) -> bytes:
