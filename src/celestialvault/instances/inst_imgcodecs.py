@@ -13,8 +13,6 @@ from ..tools.TextTools import (
     crc_decode_text,
     crc_encode_bytes,
     crc_decode_bytes,
-    add_length_header_to_text,
-    restore_text_from_length_header,
     add_length_header_to_bytes,
     restore_bytes_from_length_header,
     encode_bytes_to_base64,
@@ -63,6 +61,7 @@ class BaseCodec:
         crc_bytes = restore_bytes_from_length_header(lh_bytes)
         return crc_decode_bytes(crc_bytes)
 
+    # ======== 文件接口 ========
     def encode_txt_file(self, file_path: str|Path, save_img: bool = False) -> Image.Image:
         file_path = Path(file_path)
 
@@ -75,6 +74,7 @@ class BaseCodec:
             output_path = file_path.with_name(new_name)
 
             img.save(output_path)
+            print(f"  ✅ Encoded image saved to: {output_path}")
 
         return img
 
@@ -83,8 +83,27 @@ class BaseCodec:
         actual_text = self.decode_text(img)
 
         if save_text:
-            with open(img_path.replace(f".png", ".txt"), "w", encoding="utf-8") as f:
+            stem = img_path.stem  # "data(rgb_ori)(bin)"
+            
+            # --- 解析括号 ---
+            # 找到最后一个括号对：(<ext>)
+            last_open = stem.rfind("(")
+            last_close = stem.rfind(")")
+            if last_open == -1 or last_close == -1 or last_close < last_open:
+                raise ValueError("文件名格式错误：无法解析原始扩展名")
+
+            original_ext = stem[last_open + 1:last_close]  # "bin"
+
+            # 去掉最后一个括号部分
+            second_stem = stem[:last_open]  # "data(rgb_ori)"
+
+            # --- 组装最终输出文件路径 ---
+            output_name = f"{second_stem}.{original_ext}"
+            output_path = img_path.with_name(output_name)
+
+            with open(output_path, "w", encoding="utf-8") as f:
                 f.write(actual_text)
+            print(f"  ✅ Decoded text saved to: {img_path.replace(f'.png', '.txt')}")
 
         return actual_text
     
@@ -108,7 +127,9 @@ class BaseCodec:
             original_ext = file_path.suffix[1:]  # e.g. ".bin"
             new_name = f"{file_path.stem}({self.mode_name})({original_ext}).png"
             output_path = file_path.with_name(new_name)
+
             img.save(output_path)
+            print(f"  ✅ Encoded image saved to: {output_path}")
 
         return img
 
@@ -129,7 +150,7 @@ class BaseCodec:
         if save_file:
             stem = img_path.stem  # "data(rgb_ori)(bin)"
             
-            # --- 解析两段括号 ---
+            # --- 解析括号 ---
             # 找到最后一个括号对：(<ext>)
             last_open = stem.rfind("(")
             last_close = stem.rfind(")")
@@ -138,21 +159,16 @@ class BaseCodec:
 
             original_ext = stem[last_open + 1:last_close]  # "bin"
 
-            # 去掉最后一个括号部分，继续解析前一个括号对 (<mode_name>)
+            # 去掉最后一个括号部分
             second_stem = stem[:last_open]  # "data(rgb_ori)"
-            second_open = second_stem.rfind("(")
-            second_close = second_stem.rfind(")")
-            if second_open == -1 or second_close == -1 or second_close < second_open:
-                raise ValueError("文件名格式错误：无法解析原始文件名")
-
-            original_name = second_stem[:second_open]  # "data"
 
             # --- 组装最终输出文件路径 ---
-            output_name = f"{original_name}.{original_ext}"
+            output_name = f"{second_stem}.{original_ext}"
             output_path = img_path.with_name(output_name)
 
             with open(output_path, "wb") as f:
                 f.write(raw_bytes)
+            print(f"  ✅ Decoded binary file saved to: {output_path}")
 
         return raw_bytes
 
