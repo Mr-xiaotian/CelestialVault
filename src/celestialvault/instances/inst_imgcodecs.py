@@ -63,6 +63,17 @@ class BaseCodec:
 
     # ======== 文件接口 ========
     def encode_txt_file(self, file_path: str|Path, save_img: bool = False) -> Image.Image:
+        """
+        Docstring for encode_txt_file
+        
+        :param self: Description
+        :param file_path: Description
+        :type file_path: str | Path
+        :param save_img: Description
+        :type save_img: bool
+        :return: Description
+        :rtype: Image
+        """
         file_path = Path(file_path)
 
         target_text = safe_open_txt(file_path)
@@ -78,7 +89,19 @@ class BaseCodec:
 
         return img
 
-    def decode_txt_image_file(self, img_path: str, save_text: bool = False) -> str:
+    def decode_txt_file(self, img_path: str, save_text: bool = False) -> str:
+        """
+        Docstring for decode_txt_file
+        
+        :param self: Description
+        :param img_path: Description
+        :type img_path: str
+        :param save_text: Description
+        :type save_text: bool
+        :return: Description
+        :rtype: str
+        """
+        img_path = Path(img_path)
         img = Image.open(img_path)
         actual_text = self.decode_text(img)
 
@@ -133,7 +156,7 @@ class BaseCodec:
 
         return img
 
-    def decode_binary_image_file(self, img_path: str | Path, save_file: bool = False) -> bytes:
+    def decode_binary_file(self, img_path: str | Path, save_file: bool = False) -> bytes:
         """
         从图像文件中恢复二进制数据。
         图像文件名格式：
