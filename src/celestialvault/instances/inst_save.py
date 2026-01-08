@@ -6,13 +6,13 @@ import subprocess
 from pathlib import Path
 
 import pandas as pd
-from celestialflow import TaskChain, TaskManager
+from celestialflow import TaskChain, TaskStage
 
 from .inst_error import FFmpegError
 from .inst_fetch import Fetcher
 
 
-class FetchManager(TaskManager):
+class FetchStage(TaskStage):
     def get_args(self, task: object):
         return (task[0],)
 
@@ -20,7 +20,7 @@ class FetchManager(TaskManager):
         return (result, task[1], task[2])
 
 
-class SaveManager(TaskManager):
+class SaveStage(TaskStage):
     pass
 
 
@@ -136,13 +136,13 @@ class Saver(object):
         :return: 一个字典，包含每个任务的最终结果
         """
         fetcher = Fetcher()  # 创建用于获取 URL 内容的 Fetcher 实例
-        fetch_manager = FetchManager(
+        fetch_stage = FetchStage(
             fetcher.getContent,
             execution_mode="thread",
             progress_desc="urlsFetchProcess",
             show_progress=show_progress,
         )
-        save_manager = SaveManager(
+        save_stage = SaveStage(
             self.save_content,
             execution_mode="serial",
             progress_desc="urlsSaveProcess",
@@ -151,8 +151,8 @@ class Saver(object):
         )
 
         # 创建 TaskChain 来管理 Fetch 和 Save 两个阶段的任务处理
-        chain = TaskChain([fetch_manager, save_manager], chain_mode)
-        chain.start_chain({fetch_manager.get_stage_tag(): task_list})  # 开始任务树
+        chain = TaskChain([fetch_stage, save_stage], chain_mode)
+        chain.start_chain({fetch_stage.get_stage_tag(): task_list})  # 开始任务树
 
     async def download_urls_async(self, task_list: list[tuple[str, str, str]]):
         # await self.fetcher.start_session()
