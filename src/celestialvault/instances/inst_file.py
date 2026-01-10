@@ -22,7 +22,7 @@ from ..tools.TextTools import format_table
 
 class DeleteManager(TaskManager):
     def __init__(self, func, parent_dir: Path):
-        super().__init__(func, progress_desc="Delete files/dirs")
+        super().__init__(func, progress_desc="Deleting", show_progress=True)
         self.parent_dir = parent_dir
 
     def get_args(self, rel_path: Path):
@@ -32,7 +32,7 @@ class DeleteManager(TaskManager):
 
 class CopyManager(TaskManager):
     def __init__(self, func, main_dir: Path, minor_dir: Path, copy_mode: str):
-        super().__init__(func, progress_desc=f"Copy files/dirs[{copy_mode}]")
+        super().__init__(func, progress_desc=f"Copying({copy_mode})", show_progress=True)
         self.main_dir = main_dir
         self.minor_dir = minor_dir
 

@@ -74,7 +74,7 @@ class HTMLContentParser:
         处理视频，将视频信息添加到markdown列表和视频列表中。
         """
         self.md_list.append(
-            f'<video controls src="{video_name}.mp4" width="480" height="320">{video_url}</video>'
+            f'<video controls src="{video_name}" width="480" height="320">{video_url}</video>'
         )
         self.video_list.append((video_name, video_url))
 

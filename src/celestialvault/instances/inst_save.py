@@ -42,7 +42,7 @@ class Saver(object):
         middle_path.mkdir(parents=True, exist_ok=True)  # 确保目录存在
 
         path: Path = middle_path / str(file_name)  # 拼接文件路径
-        if path.suffix.lower() != file_suffix.lower():
+        if file_suffix is not None:
             path = path.with_suffix(file_suffix)  # 添加后缀
         return path
 
@@ -69,7 +69,7 @@ class Saver(object):
             f.write(text.encode(encoding, "ignore").decode(encoding, "ignore"))
         return path
 
-    def save_content(self, content, file_name, file_suffix=".dat"):
+    def save_content(self, content, file_name, file_suffix=None):
         path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(path):
             return path
@@ -79,7 +79,7 @@ class Saver(object):
         return path
 
     def save_dataframe(
-        self, dataframe: pd.DataFrame, file_name: str, file_suffix=".csv"
+        self, dataframe: pd.DataFrame, file_name: str, file_suffix=None
     ):
         path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(path):
@@ -160,7 +160,7 @@ class Saver(object):
         # await self.fetcher.close_session()
         pass
 
-    def download_m3u8(self, m3u8_url, file_name, file_suffix=".mp4", timeout=3600):
+    def download_m3u8(self, m3u8_url, file_name, file_suffix=None, timeout=3600):
         m3u8_path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(m3u8_path):
             return m3u8_path
