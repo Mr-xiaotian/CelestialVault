@@ -33,7 +33,7 @@ class HandleFileManager(TaskManager):
             execution_mode=execution_mode,
             worker_limit=6,
             max_info=100,
-            enable_result_cache=True,
+            enable_error_cache=True,
             progress_desc=progress_desc,
             show_progress=True,
         )
@@ -568,14 +568,14 @@ def detect_identical_files(
     scan_size_manager = ScanSizeManager(
         get_file_size,
         execution_mode,
-        enable_result_cache=True,
+        enable_success_cache=True,
         progress_desc="Scanning files size",
         show_progress=True,
     )
     scan_hash_manager = ScanHashManager(
         get_file_hash,
         execution_mode,
-        enable_result_cache=True,
+        enable_success_cache=True,
         progress_desc="Calculating files hash",
         show_progress=True,
     )
@@ -665,7 +665,7 @@ def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
         delete_list.extend([(file_path, file_size) for file_path in file_list])
 
     delete_return_size_manager = DeleteReturnSizeManager(
-        delete_and_return_size, unpack_task_args=True, enable_result_cache=True
+        delete_and_return_size, unpack_task_args=True, enable_success_cache=True
     )
     delete_return_size_manager.start(delete_list)
     delete_size = delete_return_size_manager.process_result_dict()

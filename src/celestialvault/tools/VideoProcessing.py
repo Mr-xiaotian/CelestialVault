@@ -290,7 +290,7 @@ def get_videos_codec(
     get_codec_manager = GetCodecManager(
         get_video_codec,
         execution_mode="thread",
-        enable_result_cache=True,
+        enable_success_cache=True,
         progress_desc="Getting video codec",
         show_progress=True,
     )

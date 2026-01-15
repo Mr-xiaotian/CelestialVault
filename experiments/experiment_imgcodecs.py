@@ -21,7 +21,7 @@ class RectangleDamageManager(TaskManager):
         return self.codec, self.img, self.text, w, h
 
     def process_result_dict(self):
-        return super().process_result_dict()
+        return self.get_success_dict()
 
 
 class RandomDamageManager(TaskManager):
@@ -34,7 +34,7 @@ class RandomDamageManager(TaskManager):
         return self.codec, self.img, self.text, damage_ratio, 100
 
     def process_result_dict(self):
-        return super().process_result_dict()
+        return self.get_success_dict()
 
 
 def success_rate_rectangle_damage_block(
@@ -51,7 +51,7 @@ def success_rate_rectangle_damage_block(
     """
     damaged_img = simulate_rectangle_damage(img, 0, 0, w, h)
     try:
-        decoded_text = codec.decode(damaged_img)
+        decoded_text = codec.decode_text(damaged_img)
         return 1 if decoded_text == text else 0
     except Exception:
         return 0
@@ -76,7 +76,7 @@ def success_rate_random_damage(
             img, damage_ratio
         )  # 之前的 simulate_random_damage 改名
         try:
-            decoded_text = codec.decode(damaged_img)
+            decoded_text = codec.decode_text(damaged_img)
             if decoded_text == text:
                 success_count += 1
         except Exception:
@@ -93,7 +93,7 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
     print(f"原始文本长度: {len(text)}")
 
     # 编码
-    img = codec.encode(text)
+    img = codec.encode_text(text)
     width, height = img.size
     print(f"编码后图像大小: {width}x{height}")
 
@@ -103,8 +103,7 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
     rectangle_damage_manager = RectangleDamageManager(
         success_rate_rectangle_damage_block,
         "serial",
-        5,
-        enable_result_cache=True,
+        enable_success_cache=True,
         show_progress=True,
     )
     rectangle_damage_manager.codec = codec
@@ -113,9 +112,9 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
 
     random_damage_manager = RandomDamageManager(
         success_rate_random_damage,
-        "serial",
+        "process",
         5,
-        enable_result_cache=True,
+        enable_success_cache=True,
         show_progress=True,
     )
     random_damage_manager.codec = codec
@@ -238,5 +237,5 @@ if __name__ == "__main__":
     codec.show_progress = False
     text = "Hello World! " * int(1e3)  # 足够长的测试文本(1e3, 4e5)
 
-    # redundancy_heatmap(codec, text)
-    plot_segments_ratio()
+    redundancy_heatmap(codec, text)
+    # plot_segments_ratio()
