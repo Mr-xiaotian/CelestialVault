@@ -18,7 +18,7 @@ from ..instances.inst_units import HumanBytes, HumanTimestamp
 from .TextTools import format_table
 
 
-class HandleFileManager(TaskExecutor):
+class HandleFileExecutor(TaskExecutor):
     def __init__(
         self,
         func: Callable,
@@ -64,7 +64,7 @@ class HandleFileManager(TaskExecutor):
         return dict(error_path_dict)
 
 
-class HandleSubFolderManager(HandleFileManager):
+class HandleSubFolderExecutor(HandleFileExecutor):
     def get_args(self, sub_dir_path: Path):
         rel_path = sub_dir_path.relative_to(self.dir_path)
         new_sub_dir_path = self.new_dir_path / rel_path
@@ -87,7 +87,7 @@ class HandleSubFolderManager(HandleFileManager):
         return dict(error_path_dict)
 
 
-class ScanSizeManager(TaskExecutor):
+class ScanSizeExecutor(TaskExecutor):
     def process_result_dict(self):
         size_dict = defaultdict(list)
 
@@ -103,7 +103,7 @@ class ScanSizeManager(TaskExecutor):
         return file_size_iter
 
 
-class ScanHashManager(TaskExecutor):
+class ScanHashExecutor(TaskExecutor):
     def get_args(self, task):
         return (task[0],)
 
@@ -117,7 +117,7 @@ class ScanHashManager(TaskExecutor):
         return identical_dict
 
 
-class DeleteReturnSizeManager(TaskExecutor):
+class DeleteReturnSizeExecutor(TaskExecutor):
     def process_result_dict(self):
         delete_size = 0
         for size in self.get_success_dict().values():
@@ -194,7 +194,7 @@ def handle_dir_files(
     dir_path = Path(dir_path)
     new_dir_path = dir_path.parent / (dir_path.name + dir_name_suffix)
 
-    handlefile_manager = HandleFileManager(
+    handlefile_executor = HandleFileExecutor(
         func=handle_item,
         dir_path=dir_path,
         new_dir_path=new_dir_path,
@@ -206,9 +206,9 @@ def handle_dir_files(
     file_path_iter = (
         file_path for file_path in dir_path.glob("**/*") if file_path.is_file()
     )
-    handlefile_manager.start(file_path_iter)
+    handlefile_executor.start(file_path_iter)
 
-    error_path_dict = handlefile_manager.handle_error_dict()
+    error_path_dict = handlefile_executor.handle_error_dict()
     return error_path_dict
 
 
@@ -233,7 +233,7 @@ def handle_subdirs(
     dir_path = Path(dir_path)
     new_dir_path = dir_path.parent / (dir_path.name + dir_name_suffix)
 
-    handlefile_manager = HandleSubFolderManager(
+    handlefile_executor = HandleSubFolderExecutor(
         func=handle_item,
         dir_path=dir_path,
         new_dir_path=new_dir_path,
@@ -243,9 +243,9 @@ def handle_subdirs(
     )
 
     sub_dir_list = find_pure_dirs(dir_path, True)
-    handlefile_manager.start(sub_dir_list)
+    handlefile_executor.start(sub_dir_list)
 
-    error_path_dict = handlefile_manager.handle_error_dict()
+    error_path_dict = handlefile_executor.handle_error_dict()
     return error_path_dict
 
 
@@ -565,14 +565,14 @@ def detect_identical_files(
     :param dir_list: 文件夹路径列表。
     :return: 相同文件的字典，键为文件大小和哈希值，值为文件路径列表。
     """
-    scan_size_manager = ScanSizeManager(
+    scan_size_executor = ScanSizeExecutor(
         get_file_size,
         execution_mode,
         enable_success_cache=True,
         progress_desc="Scanning files size",
         show_progress=True,
     )
-    scan_hash_manager = ScanHashManager(
+    scan_hash_executor = ScanHashExecutor(
         get_file_hash,
         execution_mode,
         enable_success_cache=True,
@@ -587,12 +587,12 @@ def detect_identical_files(
         for path in Path(dir_path).rglob("*")
         if path.is_file()
     )
-    scan_size_manager.start(file_path_iter)
-    file_size_iter = scan_size_manager.process_result_dict()
+    scan_size_executor.start(file_path_iter)
+    file_size_iter = scan_size_executor.process_result_dict()
 
     # 对于相同大小的文件，进一步计算哈希值, 找出哈希值相同的文件
-    scan_hash_manager.start(file_size_iter)
-    identical_dict = scan_hash_manager.process_result_dict()
+    scan_hash_executor.start(file_size_iter)
+    identical_dict = scan_hash_executor.process_result_dict()
 
     return identical_dict
 
@@ -664,11 +664,11 @@ def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
     for (hash_value, file_size), file_list in identical_dict.items():
         delete_list.extend([(file_path, file_size) for file_path in file_list])
 
-    delete_return_size_manager = DeleteReturnSizeManager(
+    delete_return_size_executor = DeleteReturnSizeExecutor(
         delete_and_return_size, unpack_task_args=True, enable_success_cache=True
     )
-    delete_return_size_manager.start(delete_list)
-    delete_size = delete_return_size_manager.process_result_dict()
+    delete_return_size_executor.start(delete_list)
+    delete_size = delete_return_size_executor.process_result_dict()
 
     print(f"\nTotal size of deleted files: {delete_size}")
 

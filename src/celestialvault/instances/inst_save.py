@@ -152,7 +152,7 @@ class Saver(object):
 
         # 创建 TaskChain 来管理 Fetch 和 Save 两个阶段的任务处理
         chain = TaskChain([fetch_stage, save_stage], chain_mode)
-        chain.start_chain({fetch_stage.get_stage_tag(): task_list})  # 开始任务树
+        chain.start_chain({fetch_stage.get_tag(): task_list})  # 开始任务树
 
     async def download_urls_async(self, task_list: list[tuple[str, str, str]]):
         # await self.fetcher.start_session()

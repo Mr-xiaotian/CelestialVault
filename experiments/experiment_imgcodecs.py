@@ -11,7 +11,7 @@ from celestialvault.tools.ImageProcessing import (
 )
 
 
-class RectangleDamageManager(TaskExecutor):
+class RectangleDamageExecutor(TaskExecutor):
     codec: BaseCodec
     img: Image.Image
     text: str
@@ -24,7 +24,7 @@ class RectangleDamageManager(TaskExecutor):
         return self.get_success_dict()
 
 
-class RandomDamageManager(TaskExecutor):
+class RandomDamageExecutor(TaskExecutor):
     codec: BaseCodec
     img: Image.Image
     text: str
@@ -100,33 +100,33 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
     # 结果矩阵
     result = np.zeros((height, width))
 
-    rectangle_damage_manager = RectangleDamageManager(
+    rectangle_damage_executor = RectangleDamageExecutor(
         success_rate_rectangle_damage_block,
         "serial",
         enable_success_cache=True,
         show_progress=True,
     )
-    rectangle_damage_manager.codec = codec
-    rectangle_damage_manager.img = img
-    rectangle_damage_manager.text = text
+    rectangle_damage_executor.codec = codec
+    rectangle_damage_executor.img = img
+    rectangle_damage_executor.text = text
 
-    random_damage_manager = RandomDamageManager(
+    random_damage_executor = RandomDamageExecutor(
         success_rate_random_damage,
         "process",
         5,
         enable_success_cache=True,
         show_progress=True,
     )
-    random_damage_manager.codec = codec
-    random_damage_manager.img = img
-    random_damage_manager.text = text
+    random_damage_executor.codec = codec
+    random_damage_executor.img = img
+    random_damage_executor.text = text
 
-    rectangle_damage_manager.start(product(range(1, width + 1), range(1, height + 1)))
-    rectangle_damage_result_dict = rectangle_damage_manager.process_result_dict()
+    rectangle_damage_executor.start(product(range(1, width + 1), range(1, height + 1)))
+    rectangle_damage_result_dict = rectangle_damage_executor.process_result_dict()
 
     ratios = np.arange(0, 1.01, 0.01)  # 从0到1，步长0.01
-    random_damage_manager.start(ratios)
-    random_damage_result_dict = random_damage_manager.process_result_dict()
+    random_damage_executor.start(ratios)
+    random_damage_result_dict = random_damage_executor.process_result_dict()
     success_rates = [random_damage_result_dict[r] for r in ratios]
 
     for (w, h), success in rectangle_damage_result_dict.items():

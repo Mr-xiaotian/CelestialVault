@@ -20,7 +20,7 @@ from ..tools.FileOperations import (
 from ..tools.TextTools import format_table
 
 
-class DeleteManager(TaskExecutor):
+class DeleteExecutor(TaskExecutor):
     def __init__(self, func, parent_dir: Path):
         super().__init__(func, progress_desc="Deleting", show_progress=True)
         self.parent_dir = parent_dir
@@ -30,7 +30,7 @@ class DeleteManager(TaskExecutor):
         return (target,)
 
 
-class CopyManager(TaskExecutor):
+class CopyExecutor(TaskExecutor):
     def __init__(self, func, main_dir: Path, minor_dir: Path, copy_mode: str):
         super().__init__(func, progress_desc=f"Copying({copy_mode})", show_progress=True)
         self.main_dir = main_dir
@@ -210,19 +210,19 @@ class FileDiff:
             )
             main_dir_diff = main_dir_diff + self.different_files
 
-            delete_manager = DeleteManager(delete_file_or_dir, minor_dir)
-            copy_manager = CopyManager(
+            delete_executor = DeleteExecutor(delete_file_or_dir, minor_dir)
+            copy_executor = CopyExecutor(
                 copy_file_or_dir, main_dir, minor_dir, copy_mode=mode
             )
 
-            delete_manager.start(minor_dir_diff)
-            copy_manager.start(main_dir_diff)
+            delete_executor.start(minor_dir_diff)
+            copy_executor.start(main_dir_diff)
 
         elif mode == "<->":
-            copy_a_to_b_manager = CopyManager(
+            copy_a_to_b_executor = CopyExecutor(
                 copy_file_or_dir, self.left_path, self.right_path, copy_mode="->"
             )
-            copy_b_to_a_manager = CopyManager(
+            copy_b_to_a_executor = CopyExecutor(
                 copy_file_or_dir, self.right_path, self.left_path, copy_mode="<-"
             )
 
@@ -238,8 +238,8 @@ class FileDiff:
                 diff_file_in_dir1.append(new_file1.relative_to(self.left_path))
                 diff_file_in_dir2.append(new_file2.relative_to(self.right_path))
 
-            copy_a_to_b_manager.start(self.only_in_left + diff_file_in_dir1)
-            copy_b_to_a_manager.start(self.only_in_right + diff_file_in_dir2)
+            copy_a_to_b_executor.start(self.only_in_left + diff_file_in_dir1)
+            copy_b_to_a_executor.start(self.only_in_right + diff_file_in_dir2)
 
         else:
             raise ValueError("无效的模式，必须为 '->', '<-' 或 '<->'")

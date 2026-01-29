@@ -10,7 +10,7 @@ from moviepy.editor import CompositeVideoClip, TextClip, VideoFileClip, clips_ar
 from celestialflow import TaskExecutor
 
 
-class GetCodecManager(TaskExecutor):
+class GetCodecExecutor(TaskExecutor):
     def process_result_dict(self):
         codec_dict = defaultdict(list)
         for path, codec in self.get_success_dict().items():
@@ -287,7 +287,7 @@ def get_videos_codec(
     if not dir_path.is_dir():
         raise ValueError(f"{dir_path} 不是有效的文件夹路径")
 
-    get_codec_manager = GetCodecManager(
+    get_codec_executor = GetCodecExecutor(
         get_video_codec,
         execution_mode="thread",
         enable_success_cache=True,
@@ -298,9 +298,9 @@ def get_videos_codec(
     file_path_iter = (
         file_path for file_path in dir_path.rglob("*.mp4") if file_path.is_file()
     )  # 使用glob('**/*')遍历目录中的文件和子目录
-    get_codec_manager.start(file_path_iter)
+    get_codec_executor.start(file_path_iter)
 
-    codec_dict = get_codec_manager.process_result_dict()
+    codec_dict = get_codec_executor.process_result_dict()
     codec_dict = {
         codec: path_list
         for codec, path_list in codec_dict.items()
