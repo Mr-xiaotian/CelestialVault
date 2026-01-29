@@ -11,14 +11,14 @@ import py7zr
 import rarfile
 from tqdm import tqdm
 from wcwidth import wcswidth
-from celestialflow import TaskManager
+from celestialflow import TaskExecutor
 
 from ..constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 from ..instances.inst_units import HumanBytes, HumanTimestamp
 from .TextTools import format_table
 
 
-class HandleFileManager(TaskManager):
+class HandleFileManager(TaskExecutor):
     def __init__(
         self,
         func: Callable,
@@ -87,7 +87,7 @@ class HandleSubFolderManager(HandleFileManager):
         return dict(error_path_dict)
 
 
-class ScanSizeManager(TaskManager):
+class ScanSizeManager(TaskExecutor):
     def process_result_dict(self):
         size_dict = defaultdict(list)
 
@@ -103,7 +103,7 @@ class ScanSizeManager(TaskManager):
         return file_size_iter
 
 
-class ScanHashManager(TaskManager):
+class ScanHashManager(TaskExecutor):
     def get_args(self, task):
         return (task[0],)
 
@@ -117,7 +117,7 @@ class ScanHashManager(TaskManager):
         return identical_dict
 
 
-class DeleteReturnSizeManager(TaskManager):
+class DeleteReturnSizeManager(TaskExecutor):
     def process_result_dict(self):
         delete_size = 0
         for size in self.get_success_dict().values():

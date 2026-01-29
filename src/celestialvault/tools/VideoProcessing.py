@@ -7,10 +7,10 @@ from typing import List, Tuple
 import ffmpeg
 from moviepy.editor import CompositeVideoClip, TextClip, VideoFileClip, clips_array
 
-from celestialflow import TaskManager
+from celestialflow import TaskExecutor
 
 
-class GetCodecManager(TaskManager):
+class GetCodecManager(TaskExecutor):
     def process_result_dict(self):
         codec_dict = defaultdict(list)
         for path, codec in self.get_success_dict().items():

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from itertools import product
 from PIL import Image
 
-from celestialflow import TaskManager
+from celestialflow import TaskExecutor
 from celestialvault.instances.inst_imgcodecs import BaseCodec, CODEC_REGISTRY
 from celestialvault.tools.ImageProcessing import (
     simulate_rectangle_damage,
@@ -11,7 +11,7 @@ from celestialvault.tools.ImageProcessing import (
 )
 
 
-class RectangleDamageManager(TaskManager):
+class RectangleDamageManager(TaskExecutor):
     codec: BaseCodec
     img: Image.Image
     text: str
@@ -24,7 +24,7 @@ class RectangleDamageManager(TaskManager):
         return self.get_success_dict()
 
 
-class RandomDamageManager(TaskManager):
+class RandomDamageManager(TaskExecutor):
     codec: BaseCodec
     img: Image.Image
     text: str

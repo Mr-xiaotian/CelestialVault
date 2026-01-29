@@ -2,7 +2,7 @@ import hashlib
 from pathlib import Path
 from wcwidth import wcswidth
 from dataclasses import dataclass, field
-from celestialflow import TaskManager
+from celestialflow import TaskExecutor
 
 from ..constants import FILE_ICONS
 from ..instances.inst_units import HumanBytes, HumanTimestamp
@@ -20,7 +20,7 @@ from ..tools.FileOperations import (
 from ..tools.TextTools import format_table
 
 
-class DeleteManager(TaskManager):
+class DeleteManager(TaskExecutor):
     def __init__(self, func, parent_dir: Path):
         super().__init__(func, progress_desc="Deleting", show_progress=True)
         self.parent_dir = parent_dir
@@ -30,7 +30,7 @@ class DeleteManager(TaskManager):
         return (target,)
 
 
-class CopyManager(TaskManager):
+class CopyManager(TaskExecutor):
     def __init__(self, func, main_dir: Path, minor_dir: Path, copy_mode: str):
         super().__init__(func, progress_desc=f"Copying({copy_mode})", show_progress=True)
         self.main_dir = main_dir

@@ -51,7 +51,7 @@ class Saver(object):
             return False
         return True
 
-    def save_text(self, text, file_name, encoding="utf-8", file_suffix=".txt"):
+    def save_text(self, text, file_name, encoding="utf-8", file_suffix=None):
         path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(path):
             return path
@@ -60,7 +60,7 @@ class Saver(object):
         path.write_text(text, encoding=encoding, errors="ignore")
         return path
 
-    def add_text(self, text, file_name, encoding="utf-8", file_suffix=".txt"):
+    def add_text(self, text, file_name, encoding="utf-8", file_suffix=None):
         path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(path):
             return path
@@ -87,7 +87,7 @@ class Saver(object):
 
         dataframe.to_csv(path, index=False, sep=",", encoding="utf-8-sig")
 
-    def save_pickle(self, obj, file_name, file_suffix=".pkl"):
+    def save_pickle(self, obj, file_name, file_suffix=None):
         path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(path):
             return path
@@ -96,7 +96,7 @@ class Saver(object):
             pickle.dump(obj, f)
         return path
 
-    def save_json(self, data, file_name, file_suffix=".json", encoding="utf-8"):
+    def save_json(self, data, file_name, file_suffix=None, encoding=None):
         path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(path):
             return path
@@ -105,7 +105,7 @@ class Saver(object):
             json.dump(data, f, ensure_ascii=False, indent=4)
         return path
 
-    def download_url(self, url, file_name, file_suffix=".dat"):
+    def download_url(self, url, file_name, file_suffix=None):
         path = self.get_path(file_name, file_suffix)
         if not self.can_overwrite(path):
             return path
