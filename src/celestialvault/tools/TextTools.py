@@ -13,8 +13,8 @@ from pprint import pprint
 from typing import Dict, List, Tuple, Union
 
 import charset_normalizer
-import jieba
-from jieba import analyse
+# import jieba
+# from jieba import analyse
 from tqdm import tqdm
 from wcwidth import wcswidth
 
@@ -134,6 +134,7 @@ def language_fingerprint(text: str) -> dict:
     """
     根据文本生成语言指纹字典。
     """
+    return
     # 将文本分词
     words = list(jieba.cut(text))
 

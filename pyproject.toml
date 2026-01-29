@@ -1,19 +1,22 @@
-[project]
-name = "CelestialVault"
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "celestialvault"
 version = "1.0.1"
 description = "A Python package for managing celestial data."
-long_description = {file = "README.md", encoding = "utf-8"}
-long_description_content_type = "text/markdown"
-authors = [
-    {name = "Mr.Xiaotian", email = "mingxiaomingtian@gmail.com"}
-]
-url = "https://github.com/Mr-xiaotian/CelestialVault"
+readme = "README.md"
+authors = ["Mr.Xiaotian <mingxiaomingtian@gmail.com>"]
+license = "MIT"
+homepage = "https://github.com/Mr-xiaotian/CelestialVault"
+repository = "https://github.com/Mr-xiaotian/CelestialVault"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent"
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent"
 ]
-python_requires = ">=3.10"
+packages = [{ include = "celestialvault", from = "src" }]
 
 [tool.poetry.dependencies]
 python = ">=3.10"
@@ -24,7 +27,6 @@ regex = ">=2023.0"
 bidict = ">=0.22"
 reedsolo = ">=1.7"
 charset-normalizer = ">=3.3"
-jieba = ">=0.42"
 pillow = ">=10.0"
 pillow-heif = ">=0.15"
 rarfile = ">=4.1"
@@ -35,23 +37,11 @@ tqdm = ">=4.66"
 loguru = ">=0.7"
 networkx = ">=3.2"
 beautifulsoup4 = ">=4.12"
-matplotlib = ">=3.9"
+matplotlib = ">=3.9.1"
 
-[tool.poetry.dev-dependencies]
-# Uncomment if needed
-# scikit-image = ">=0.24"  # Python 3.14 不兼容
+[tool.poetry.group.dev.dependencies]
+# scikit-image = ">=0.24"  # Python 3.14 不兼容（需要时再开）
+pytest = "^8.0"
 
 [tool.poetry.scripts]
-# Define command line tools here if needed
-# Example:
 # celestial-vault = "celestialvault.cli:main"
-
-[tool.setuptools]
-packages = ["src"]
-package_dir = {"" = "src"}
-
-[tool.poetry.include]
-# If needed, include package data files here
-# Include data files if needed
-# Example:
-# celestialvault = ["data/*.txt"]
