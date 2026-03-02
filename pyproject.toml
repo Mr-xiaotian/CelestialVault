@@ -34,14 +34,23 @@ py7zr = ">=0.20"
 httpx = ">=0.27"
 requests = ">=2.32"
 tqdm = ">=4.66"
-loguru = ">=0.7"
-networkx = ">=3.2"
 beautifulsoup4 = ">=4.12"
 matplotlib = ">=3.9.1"
+wcwidth = ">=0.2"
+celestialflow = "*"
+scikit-image = ">=0.24"
+scipy = ">=1.13"
+pydub = ">=0.25"
+moviepy = ">=1.0"
+ffmpeg-python = ">=0.2"
+PyMuPDF = ">=1.24"
+PyPDF2 = ">=3.0"
+ipywidgets = ">=8.1"
+ipython = ">=8.0"
 
 [tool.poetry.group.dev.dependencies]
-# scikit-image = ">=0.24"  # Python 3.14 不兼容（需要时再开）
 pytest = "^8.0"
+loguru = ">=0.7"
 
 [tool.poetry.scripts]
 # celestial-vault = "celestialvault.cli:main"
