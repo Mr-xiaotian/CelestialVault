@@ -2,55 +2,56 @@
 requires = ["poetry-core>=1.9.0"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
+[project]
 name = "celestialvault"
 version = "1.0.1"
 description = "A Python package for managing celestial data."
 readme = "README.md"
-authors = ["Mr.Xiaotian <mingxiaomingtian@gmail.com>"]
-license = "MIT"
-homepage = "https://github.com/Mr-xiaotian/CelestialVault"
-repository = "https://github.com/Mr-xiaotian/CelestialVault"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Mr.Xiaotian", email = "mingxiaomingtian@gmail.com" }]
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent"
 ]
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.2",
+  "mpmath>=1.3",
+  "regex>=2023.0",
+  "bidict>=0.22",
+  "reedsolo>=1.7",
+  "charset-normalizer>=3.3",
+  "pillow>=10.0",
+  "pillow-heif>=0.15",
+  "rarfile>=4.1",
+  "py7zr>=0.20",
+  "httpx>=0.27",
+  "requests>=2.32",
+  "tqdm>=4.66",
+  "beautifulsoup4>=4.12",
+  "matplotlib>=3.9.1",
+  "wcwidth>=0.2",
+  "celestialflow>=3.1.1", # TODO: 换成真实范围/来源
+  "scikit-image>=0.24",
+  "scipy>=1.13",
+  "pydub>=0.25",
+  "moviepy>=1.0",
+  "ffmpeg-python>=0.2",
+  "PyMuPDF>=1.24",
+  "PyPDF2>=3.0",
+  "ipywidgets>=8.1",
+  "ipython>=8.0"
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "loguru>=0.7"]
+
+[project.urls]
+Homepage = "https://github.com/Mr-xiaotian/CelestialVault"
+Repository = "https://github.com/Mr-xiaotian/CelestialVault"
+
+# Poetry-specific：如果你用 src/ 布局并需要显式声明包位置，可以保留这个
+[tool.poetry]
 packages = [{ include = "celestialvault", from = "src" }]
-
-[tool.poetry.dependencies]
-python = ">=3.10"
-numpy = ">=1.26"
-pandas = ">=2.2"
-mpmath = ">=1.3"
-regex = ">=2023.0"
-bidict = ">=0.22"
-reedsolo = ">=1.7"
-charset-normalizer = ">=3.3"
-pillow = ">=10.0"
-pillow-heif = ">=0.15"
-rarfile = ">=4.1"
-py7zr = ">=0.20"
-httpx = ">=0.27"
-requests = ">=2.32"
-tqdm = ">=4.66"
-beautifulsoup4 = ">=4.12"
-matplotlib = ">=3.9.1"
-wcwidth = ">=0.2"
-celestialflow = "*"
-scikit-image = ">=0.24"
-scipy = ">=1.13"
-pydub = ">=0.25"
-moviepy = ">=1.0"
-ffmpeg-python = ">=0.2"
-PyMuPDF = ">=1.24"
-PyPDF2 = ">=3.0"
-ipywidgets = ">=8.1"
-ipython = ">=8.0"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.0"
-loguru = ">=0.7"
-
-[tool.poetry.scripts]
-# celestial-vault = "celestialvault.cli:main"
