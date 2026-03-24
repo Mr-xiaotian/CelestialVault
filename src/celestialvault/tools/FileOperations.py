@@ -31,7 +31,7 @@ class HandleFileExecutor(TaskExecutor):
         super().__init__(
             func=func,
             execution_mode=execution_mode,
-            worker_limit=6,
+            max_workers=6,
             max_info=100,
             enable_error_cache=True,
             progress_desc=progress_desc,
