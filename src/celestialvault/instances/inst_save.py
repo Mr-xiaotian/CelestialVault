@@ -196,3 +196,10 @@ class Saver(object):
             raise FFmpegError(f"Failed to download {m3u8_url}.", stderr=error_msg)
 
         return m3u8_path
+    
+    def delete_file(self, file_name, file_suffix=None):
+        path = self.get_path(file_name, file_suffix)
+        if path.exists():
+            path.unlink()
+            return True
+        return False
