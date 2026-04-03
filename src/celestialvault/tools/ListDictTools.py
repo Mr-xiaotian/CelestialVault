@@ -1,6 +1,7 @@
 from functools import reduce
 from itertools import islice
-from typing import Any, Callable, Iterable, List, Tuple, Type
+from collections.abc import Callable, Iterable
+from typing import Any
 
 
 def list_removes(lists: list, _remove) -> list:
@@ -14,7 +15,7 @@ def list_removes(lists: list, _remove) -> list:
     return [item for item in lists if item != _remove]
 
 
-def all_elements_are_type(elements: List[Any], element_type: Type) -> bool:
+def all_elements_are_type(elements: list[Any], element_type: type) -> bool:
     """
     检查列表中的所有元素是否都是指定类型。
 
@@ -25,7 +26,7 @@ def all_elements_are_type(elements: List[Any], element_type: Type) -> bool:
     return all(isinstance(element, element_type) for element in elements)
 
 
-def all_elements_same_type(elements: List[Any]) -> bool:
+def all_elements_same_type(elements: list[Any]) -> bool:
     """
     检查列表中的所有元素是否具有相同的类型。
 
@@ -38,7 +39,7 @@ def all_elements_same_type(elements: List[Any]) -> bool:
     return len(set(type(element) for element in elements)) == 1
 
 
-def list_replace(lists: List[Any], replace_rules: List[Tuple[Any, Any]]) -> List[Any]:
+def list_replace(lists: list[Any], replace_rules: list[tuple[Any, Any]]) -> list[Any]:
     """
     替换列表中的元素。
 
@@ -48,7 +49,7 @@ def list_replace(lists: List[Any], replace_rules: List[Tuple[Any, Any]]) -> List
     """
     from .Utilities import functions_are_equal
 
-    def replace_element(element: Any, replacement: Tuple[Any, Any]) -> Any:
+    def replace_element(element: Any, replacement: tuple[Any, Any]) -> Any:
         target, replacement_value = replacement
         if not all_elements_same_type([element, target]):
             return element
@@ -73,7 +74,7 @@ def list_replace(lists: List[Any], replace_rules: List[Tuple[Any, Any]]) -> List
 
 def dictkey_mix(
     dict_a: dict, dict_b: dict
-) -> Tuple[List[Any], List[Any], List[Any], List[Any]]:
+) -> tuple[list[Any], list[Any], list[Any], list[Any]]:
     """
     将两个字典的键进行混合，并返回混合后的键列表。
 

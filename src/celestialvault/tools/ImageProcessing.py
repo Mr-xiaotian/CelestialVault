@@ -5,7 +5,6 @@ import random
 from colorsys import hsv_to_rgb
 from itertools import product
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -199,7 +198,7 @@ def generate_palette(
     style: str = "morandi",
     mode: str = "random",
     random_seed: int = 0,
-) -> List[int]:
+) -> list[int]:
     """
     生成调色板，支持随机 均匀和螺旋三种模式，并确保颜色唯一或规律分布。
 

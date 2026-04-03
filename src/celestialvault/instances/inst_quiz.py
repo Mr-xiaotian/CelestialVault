@@ -1,6 +1,5 @@
 import random
 import re
-from typing import Callable, Dict, List, Tuple
 
 import ipywidgets as widgets
 from IPython.display import clear_output, display
@@ -15,7 +14,7 @@ class QuizBase:
         self.title = title
         self.score = 0
         self.total_questions = 0
-        self.history: List[Tuple[str, int, bool]] = []
+        self.history: list[tuple[str, int, bool]] = []
 
         self.generate_problem()
 
@@ -133,7 +132,7 @@ class QuizBase:
 
 
 class MultiplicationQuiz(QuizBase):
-    def __init__(self, digit_num: int, modes: List[str] = None):
+    def __init__(self, digit_num: int, modes: list[str] = None):
         self.digit_num = max(1, digit_num)
         self.modes = modes or ["random"]
 

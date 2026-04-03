@@ -4,7 +4,6 @@ from itertools import product
 from pathlib import Path
 from PIL import Image
 from tqdm import tqdm
-from typing import Dict, Union
 
 from ..constants import image_mode_params, style_params
 from ..tools.ImageProcessing import generate_palette, ensure_capacity
@@ -564,7 +563,7 @@ class RefRGBALSBCodec(BaseCodec):
     - 视觉效果几乎无变化。
     """
 
-    def __init__(self, ref_image: Union[str, Path, Image.Image]):
+    def __init__(self, ref_image: str | Path | Image.Image):
         super().__init__()
         if isinstance(ref_image, (str, Path)):
             ref_image = Image.open(ref_image).convert("RGBA")
@@ -881,7 +880,7 @@ class RedundancyCodec(BaseCodec):
         return bytes(bytes_list)
 
 
-CODEC_REGISTRY: Dict[str, BaseCodec] = {}
+CODEC_REGISTRY: dict[str, BaseCodec] = {}
 
 CODEC_REGISTRY.update(
     {

@@ -1,5 +1,5 @@
 from html import unescape
-from typing import Any, Tuple
+from typing import Any
 from urllib.parse import unquote
 
 import time, random
@@ -129,13 +129,13 @@ class Fetcher:
                 proxies=self.proxies,  # 🟢 如果不使用代理，proxies=None
             )
 
-    def obtainText(self, func: object, *args, **kwargs) -> Tuple[int, Any, str]:
+    def obtainText(self, func: object, *args, **kwargs) -> tuple[int, Any, str]:
         response: httpx.Response = func(*args, **kwargs)
         response_text = response.content.decode(self._text_encoding, "ignore")
         response_text = unquote(unescape(response_text))
         return response.status_code, response_text
 
-    def obtainContent(self, func: object, *args, **kwargs) -> Tuple[int, Any, str]:
+    def obtainContent(self, func: object, *args, **kwargs) -> tuple[int, Any, str]:
         response: httpx.Response = func(*args, **kwargs)
         return response.status_code, response.content
 

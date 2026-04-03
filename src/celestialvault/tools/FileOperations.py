@@ -5,7 +5,8 @@ import tarfile
 import zipfile
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple
+from collections.abc import Callable
+from typing import Any
 
 import py7zr
 import rarfile
@@ -24,7 +25,7 @@ class HandleFileExecutor(TaskExecutor):
         func: Callable,
         dir_path: Path,
         new_dir_path: Path,
-        rules: Dict[str, Tuple[Callable, Callable]],
+        rules: dict[str, tuple[Callable, Callable]],
         execution_mode: str,
         progress_desc: str,
     ):
@@ -175,11 +176,11 @@ def handle_item(
 
 def handle_dir_files(
     dir_path: str | Path,
-    rules: Dict[str, Tuple[Callable[[Path, Path, Dict], None], Callable[[Path], Path], Dict]],
+    rules: dict[str, tuple[Callable[[Path, Path, dict], None], Callable[[Path], Path], dict]],
     execution_mode: str = "serial",
     progress_desc: str = "Processing files",
     dir_name_suffix: str = "_re",
-) -> Dict[Tuple[str, str], List[Path]]:
+) -> dict[tuple[str, str], list[Path]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行处理，并将处理后的文件存储到新的目录中。
     不属于指定后缀的文件将被直接复制到新目录中。处理后的文件会保持原始的目录结构。
@@ -214,11 +215,11 @@ def handle_dir_files(
 
 def handle_subdirs(
     dir_path: str | Path,
-    rules: Dict[str, Tuple[Callable[[Path, Path, Dict], None], Callable[[Path], Path], Dict]],
+    rules: dict[str, tuple[Callable[[Path, Path, dict], None], Callable[[Path], Path], dict]],
     execution_mode: str = "serial",
     progress_desc: str = "Processing dirs",
     dir_name_suffix: str = "_re",
-) -> Dict[Tuple[str, str], List[Path]]:
+) -> dict[tuple[str, str], list[Path]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行处理，并将处理后的文件存储到新的目录中。
     不属于指定后缀的文件将被直接复制到新目录中。处理后的文件会保持原始的目录结构。
@@ -251,7 +252,7 @@ def handle_subdirs(
 
 def compress_dir(
     dir_path: str | Path, execution_mode: str = "thread"
-) -> List[Tuple[Path, Exception]]:
+) -> list[tuple[Path, Exception]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行压缩处理，并将处理后的文件存储到新的目录中。
     支持的文件类型包括图片、视频和PDF。不属于这三种类型的文件将被直接复制到新目录中。
@@ -557,8 +558,8 @@ def get_dir_mtime(dir_path: Path) -> HumanTimestamp:
 
 
 def detect_identical_files(
-    dir_list: List[Path], execution_mode: str = "thread"
-) -> Dict[Tuple[str, int], List[Path]]:
+    dir_list: list[Path], execution_mode: str = "thread"
+) -> dict[tuple[str, int], list[Path]]:
     """
     检测文件夹中是否存在相同内容的文件，并在文件名后添加文件大小。
 
@@ -633,7 +634,7 @@ def detect_identical_dirs(
     return identical_dict
 
 
-def duplicate_files_report(identical_dict: Dict[Tuple[str, HumanBytes], List[Path]]):
+def duplicate_files_report(identical_dict: dict[tuple[str, HumanBytes], list[Path]]):
     """
     生成一个详细报告，列出所有重复的文件及其位置。
 
@@ -684,7 +685,7 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, HumanBytes], List[Pat
     print("\n".join(report))
 
 
-def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
+def delete_identical_files(identical_dict: dict[tuple[str, int], list[Path]]):
     """
     删除文件夹中相同内容的文件。
 
@@ -710,7 +711,7 @@ def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
 
 
 def move_identical_files(
-    identical_dict: Dict[Tuple[str, int], List[Path]],
+    identical_dict: dict[tuple[str, int], list[Path]],
     target_dir: str | Path,
     size_threshold: int = None,
 ):
@@ -815,7 +816,7 @@ def replace_filenames(dir_path: Path | str, pattern: str, replacement: str):
         file.rename(new_file_path)  # 重命名文件
 
 
-def split_text_and_number(s: str, special_keywords: Dict[str, int]) -> Tuple:
+def split_text_and_number(s: str, special_keywords: dict[str, int]) -> tuple:
     """
     将路径部分中的文本与数字交替提取，同时根据关键词设置优先级。
     例如，"a1bbb2ccc3" -> (keyword_priority, "a", 1, "bbb", 2, "ccc", 3)
@@ -846,7 +847,7 @@ def split_text_and_number(s: str, special_keywords: Dict[str, int]) -> Tuple:
     return tuple(result)
 
 
-def sort_by_number(file_path: Path, special_keywords: Dict[str, int]) -> Tuple:
+def sort_by_number(file_path: Path, special_keywords: dict[str, int]) -> tuple:
     """
     文件排序规则：
     1. 按路径中的每一层（包括文件名）进行文本与数字交替排序，同时考虑关键词优先级。

@@ -1,5 +1,6 @@
 import random
-from typing import Dict, Iterator, Iterable, Tuple, Optional, Generic, TypeVar
+from collections.abc import Iterator, Iterable
+from typing import Generic, TypeVar
 
 T = TypeVar("T")
 
@@ -15,8 +16,8 @@ class SymmetricMap(Generic[T]):
     __slots__ = ("pairs", "reverse", "_allow_self")
 
     def __init__(self, allow_self: bool = False):
-        self.pairs: Dict[T, T] = {}  # a -> b （代表键）
-        self.reverse: Dict[T, T] = {}  # b -> a
+        self.pairs: dict[T, T] = {}  # a -> b （代表键）
+        self.reverse: dict[T, T] = {}  # b -> a
         self._allow_self = allow_self
 
     def __contains__(self, x: T) -> bool:
@@ -84,7 +85,7 @@ class SymmetricMap(Generic[T]):
         return self.pairs == other.pairs or self.pairs == other.reverse
 
     # —— 视图/便捷方法 ——
-    def get(self, x: T, default: Optional[T] = None) -> Optional[T]:
+    def get(self, x: T, default: T | None = None) -> T | None:
         if x in self.pairs:
             return self.pairs[x]
         if x in self.reverse:
@@ -97,7 +98,7 @@ class SymmetricMap(Generic[T]):
     def values(self) -> Iterable[T]:
         return self.pairs.values()  # 代表值（对应 keys 的伙伴）
 
-    def items(self) -> Iterable[Tuple[T, T]]:
+    def items(self) -> Iterable[tuple[T, T]]:
         return self.pairs.items()  # 每对一次
 
     def __iter__(self) -> Iterator[T]:
@@ -107,7 +108,7 @@ class SymmetricMap(Generic[T]):
         self.pairs.clear()
         self.reverse.clear()
 
-    def random_pair(self, mode: str = "any") -> Tuple[T, T]:
+    def random_pair(self, mode: str = "any") -> tuple[T, T]:
         if not self.pairs:
             raise IndexError("Cannot choose from an empty SymmetricMap")
 
@@ -143,7 +144,7 @@ class SymmetricMap(Generic[T]):
 
     # —— 工厂方法 ——
     @classmethod
-    def from_dict(cls, d: Dict[T, T], allow_self: bool = False) -> "SymmetricMap[T]":
+    def from_dict(cls, d: dict[T, T], allow_self: bool = False) -> "SymmetricMap[T]":
         """
         从普通字典构建一个 SymmetricMap。
         """
@@ -153,7 +154,7 @@ class SymmetricMap(Generic[T]):
         return m
 
     @classmethod
-    def from_pairs(cls, iterable: Iterable[Tuple[T, T]], allow_self: bool = False):
+    def from_pairs(cls, iterable: Iterable[tuple[T, T]], allow_self: bool = False):
         """
         从可迭代对象构建一个 SymmetricMap。
         """

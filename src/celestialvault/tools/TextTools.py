@@ -10,7 +10,6 @@ import reedsolo
 from itertools import zip_longest
 from pathlib import Path
 from pprint import pprint
-from typing import Dict, List, Tuple, Union
 
 import charset_normalizer
 # import jieba
@@ -55,7 +54,7 @@ def pro_slash(input_str: str) -> str:
 
 def str_to_dict(
     string: str, line_delimiter: str = "\n", key_value_delimiter: str = ":"
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     将字符串转化为字典，每行格式为 `key:value`，以指定的分隔符分隔行。
 
@@ -92,12 +91,12 @@ def str_removes(strs: str, _remove: str) -> str:
     return strs.replace(_remove, "")
 
 
-def str_replaces(strs: str, replace_list: list[Tuple[str, str]]) -> str:
+def str_replaces(strs: str, replace_list: list[tuple[str, str]]) -> str:
     """
     从字符串中替换指定的子串。
 
     :param strs (str): 原始字符串。
-    :param replace_list (list[Tuple[str, str]]): 需要替换的子串列表。
+    :param replace_list (list[tuple[str, str]]): 需要替换的子串列表。
     :return str: 替换指定子串后的新字符串。
     """
     for r in replace_list:
@@ -105,12 +104,12 @@ def str_replaces(strs: str, replace_list: list[Tuple[str, str]]) -> str:
     return strs
 
 
-def iprint(obj: Union[List, Dict], start="", end=""):
+def iprint(obj: list | dict, start="", end=""):
     """
     根据对象的大小选择打印方式。
     如果对象的长度小于16，那么就打印整个对象，否则只打印前10个和后5个元素。
 
-    :param obj (Union[List, Dict]): 需要打印的对象，可以是列表或字典。
+    :param obj (list | dict): 需要打印的对象，可以是列表或字典。
     """
     print(start, end="")
     length = len(obj)
@@ -603,7 +602,7 @@ def combine_txt_files(source_dir: str | Path, target_file: str | Path):
                 outfile.write(content + "\n\n")
 
 
-def character_ratio(target_str: str) -> Dict[str, float]:
+def character_ratio(target_str: str) -> dict[str, float]:
     """
     统计字符串中各个字符的出现比率
 
@@ -622,7 +621,7 @@ def character_ratio(target_str: str) -> Dict[str, float]:
     return ratio
 
 
-def get_lcs(str1: str, str2: str) -> List[str]:
+def get_lcs(str1: str, str2: str) -> list[str]:
     """
     找出两个字符串的最大相似部分。
     返回一个包含最大相似部分的字符串，如 "1-234-6"。

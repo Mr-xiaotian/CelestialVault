@@ -2,7 +2,6 @@ import re
 import subprocess
 from collections import defaultdict
 from pathlib import Path
-from typing import List, Tuple
 
 import ffmpeg
 from moviepy.editor import CompositeVideoClip, TextClip, VideoFileClip, clips_array
@@ -163,7 +162,7 @@ def transfer_gif_to_video(gif_path, output_path):
     subprocess.run(command, check=True)
 
 
-def transfer_gif_dir(dir_path: str | Path) -> List[Tuple[Path, Exception]]:
+def transfer_gif_dir(dir_path: str | Path) -> list[tuple[Path, Exception]]:
     """
     将文件夹中的所有GIF文件转换为MP4视频文件
 
@@ -221,7 +220,7 @@ def rotate_video(video_path: str | Path, output_path, angle: int) -> Path:
     return output_path
 
 
-def rotate_video_dir(dir_path: str | Path, angle: int) -> List[Tuple[Path, Exception]]:
+def rotate_video_dir(dir_path: str | Path, angle: int) -> list[tuple[Path, Exception]]:
     """
     旋转文件夹中的所有视频文件。
 

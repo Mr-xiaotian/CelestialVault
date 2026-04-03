@@ -2,7 +2,6 @@
 # 版本 2.10
 # 作者：晓天
 
-from typing import List
 
 from ..tools.ListDictTools import dictkey_mix
 from ..tools.TextTools import calculate_similarity, get_lcs, string_split
@@ -69,7 +68,7 @@ class Findiffer:
             for key in dif_key_b:
                 print(f"{key}:{dict_b[key]}")
 
-    def compare_strings(self, str1: str, str2: str, lcs_part: List[str] = None) -> None:
+    def compare_strings(self, str1: str, str2: str, lcs_part: list[str] = None) -> None:
         lcs_part = get_lcs(str1, str2, lcs_part) if lcs_part is None else lcs_part
 
         diff_ranges_1 = self.get_diff_ranges(str1, lcs_part[:])
@@ -78,7 +77,7 @@ class Findiffer:
         self.print_diffs(str1, diff_ranges_1)
         self.print_diffs(str2, diff_ranges_2)
 
-    def get_diff_ranges(self, origin_str: str, lcs_part: List[str]) -> List[List[int]]:
+    def get_diff_ranges(self, origin_str: str, lcs_part: list[str]) -> list[list[int]]:
         """
         根据get_lcs返回的相似部分，计算字符串中不同区域的位置
 

@@ -1,4 +1,3 @@
-from typing import List, Tuple
 
 from bs4 import NavigableString, Tag
 
@@ -12,9 +11,9 @@ class HTMLContentParser:
         pass
 
     def init_list(self):
-        self.md_list: List[str] = []
-        self.video_list: List[Tuple[str, str]] = []
-        self.img_list: List[Tuple[str, str]] = []
+        self.md_list: list[str] = []
+        self.video_list: list[tuple[str, str]] = []
+        self.img_list: list[tuple[str, str]] = []
 
     def parse(self, element: Tag):
         """
@@ -78,14 +77,14 @@ class HTMLContentParser:
         )
         self.video_list.append((video_name, video_url))
 
-    def get_image_info(self, img_tag: Tag) -> Tuple[str, str]:
+    def get_image_info(self, img_tag: Tag) -> tuple[str, str]:
         """
         获取图片相关信息的方法，可以在子类中重写。
         返回 (img_name, img_url)
         """
         return "unknown_img_name", "unknown_img_url"
 
-    def get_video_info(self, video_tag: Tag) -> Tuple[str, str]:
+    def get_video_info(self, video_tag: Tag) -> tuple[str, str]:
         """
         获取视频相关信息的方法，可以在子类中重写。
         返回 (video_name, video_url)
