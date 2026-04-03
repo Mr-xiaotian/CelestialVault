@@ -18,3 +18,5 @@ profile/
 fallback/
 CelestialVault.egg-info/
 examples/
+
+build/
