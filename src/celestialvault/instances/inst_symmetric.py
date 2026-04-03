@@ -68,7 +68,12 @@ class SymmetricMap(Generic[T]):
         raise KeyError(f"{x!r} not found")
 
     def pop(self, x: T) -> T:
-        """移除并返回与 x 绑定的伙伴。"""
+        """
+        移除并返回与 x 绑定的伙伴。
+
+        :param x: 要移除的元素。
+        :return: 与 x 绑定的伙伴元素。
+        """
         if x in self.pairs:
             y = self.pairs.pop(x)
             del self.reverse[y]
@@ -86,6 +91,13 @@ class SymmetricMap(Generic[T]):
 
     # —— 视图/便捷方法 ——
     def get(self, x: T, default: T | None = None) -> T | None:
+        """
+        获取与 x 绑定的伙伴，若不存在则返回 default。
+
+        :param x: 要查找的元素。
+        :param default: 未找到时返回的默认值。
+        :return: 与 x 绑定的伙伴，或 default。
+        """
         if x in self.pairs:
             return self.pairs[x]
         if x in self.reverse:
@@ -93,22 +105,46 @@ class SymmetricMap(Generic[T]):
         return default
 
     def keys(self) -> Iterable[T]:
+        """
+        返回所有代表键（每对只出现一次）。
+
+        :return: 代表键的可迭代对象。
+        """
         return self.pairs.keys()  # 代表键
 
     def values(self) -> Iterable[T]:
+        """
+        返回所有代表值（代表键对应的伙伴）。
+
+        :return: 代表值的可迭代对象。
+        """
         return self.pairs.values()  # 代表值（对应 keys 的伙伴）
 
     def items(self) -> Iterable[tuple[T, T]]:
+        """
+        返回所有配对的 (键, 值) 元组，每对只出现一次。
+
+        :return: 配对元组的可迭代对象。
+        """
         return self.pairs.items()  # 每对一次
 
     def __iter__(self) -> Iterator[T]:
         return iter(self.pairs)  # 与 dict 语义一致
 
     def clear(self) -> None:
+        """
+        清空所有配对关系。
+        """
         self.pairs.clear()
         self.reverse.clear()
 
     def random_pair(self, mode: str = "any") -> tuple[T, T]:
+        """
+        随机返回一对配对。
+
+        :param mode: 选择模式，可选 'forward'、'backward' 或 'any'。
+        :return: 随机选出的配对元组 (元素, 伙伴)。
+        """
         if not self.pairs:
             raise IndexError("Cannot choose from an empty SymmetricMap")
 
@@ -147,6 +183,10 @@ class SymmetricMap(Generic[T]):
     def from_dict(cls, d: dict[T, T], allow_self: bool = False) -> "SymmetricMap[T]":
         """
         从普通字典构建一个 SymmetricMap。
+
+        :param d: 包含配对关系的字典。
+        :param allow_self: 是否允许自身配对。
+        :return: 构建的 SymmetricMap 实例。
         """
         m = cls(allow_self=allow_self)
         for a, b in d.items():
@@ -157,6 +197,10 @@ class SymmetricMap(Generic[T]):
     def from_pairs(cls, iterable: Iterable[tuple[T, T]], allow_self: bool = False):
         """
         从可迭代对象构建一个 SymmetricMap。
+
+        :param iterable: 包含 (a, b) 配对元组的可迭代对象。
+        :param allow_self: 是否允许自身配对。
+        :return: 构建的 SymmetricMap 实例。
         """
         m = cls(allow_self=allow_self)
         for a, b in iterable:

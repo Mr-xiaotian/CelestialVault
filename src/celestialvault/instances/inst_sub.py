@@ -79,6 +79,13 @@ class Suber:
         ]
 
     def clear_book_dir(self, dir_path: Path | str, execution_mode: str = "thread"):
+        """
+        批量清理文件夹中所有 txt 文件的文本内容。
+
+        :param dir_path: 目标文件夹路径。
+        :param execution_mode: 执行模式，如 'thread' 或 'serial'。
+        :return: 批量处理的结果。
+        """
         rules = {".txt": (self.clear_book, lambda a: a, {})}
 
         return handle_dir_files(
@@ -86,6 +93,12 @@ class Suber:
         )
 
     def clear_book(self, book_path: Path, new_path: Path):
+        """
+        读取并清理单个 txt 文件的文本内容，保存到新路径。
+
+        :param book_path: 原始文件路径。
+        :param new_path: 清理后保存的目标路径。
+        """
         book_text = safe_open_txt(book_path)
 
         if book_text is None:
@@ -96,6 +109,12 @@ class Suber:
         new_path.write_text(book_text, encoding="utf-8")
 
     def clear_text(self, text):
+        """
+        对文本执行所有预定义的替换规则，返回清理后的文本。
+
+        :param text: 待清理的原始文本。
+        :return: 清理后的文本字符串。
+        """
         text = pro_slash(text)
         text = unquote(unescape(text))
 

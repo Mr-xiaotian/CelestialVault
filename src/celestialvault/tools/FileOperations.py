@@ -20,6 +20,8 @@ from .TextTools import format_table
 
 
 class HandleFileExecutor(TaskExecutor):
+    """文件处理执行器，根据后缀规则对目录中的文件进行批量处理。"""
+
     def __init__(
         self,
         func: Callable,
@@ -43,6 +45,12 @@ class HandleFileExecutor(TaskExecutor):
         self.rules = rules
 
     def get_args(self, file_path: Path):
+        """
+        根据文件后缀匹配处理规则，返回传递给处理函数的参数元组。
+
+        :param file_path: 待处理文件的绝对路径。
+        :return: (源路径, 目标路径, 处理函数, 额外参数) 的元组。
+        """
         rel_path = file_path.relative_to(self.dir_path)
         new_file_path = self.new_dir_path / rel_path
 
@@ -55,6 +63,11 @@ class HandleFileExecutor(TaskExecutor):
         return (file_path, final_path, action_func, args_extra)
 
     def handle_error_dict(self):
+        """
+        处理执行中的错误：将失败文件直接复制到目标目录，并按错误类型分组返回。
+
+        :return: 错误字典，键为 (错误类型名, 错误信息)，值为对应的目标文件路径列表。
+        """
         error_path_dict = defaultdict(list)
 
         for file_path, error in self.get_error_dict().items():
@@ -66,7 +79,15 @@ class HandleFileExecutor(TaskExecutor):
 
 
 class HandleSubFolderExecutor(HandleFileExecutor):
+    """子文件夹处理执行器，继承自 HandleFileExecutor，以子文件夹为单位进行批量处理。"""
+
     def get_args(self, sub_dir_path: Path):
+        """
+        根据子文件夹匹配 'dir' 规则，返回传递给处理函数的参数元组。
+
+        :param sub_dir_path: 待处理子文件夹的绝对路径。
+        :return: (源路径, 目标路径, 处理函数, 额外参数) 的元组。
+        """
         rel_path = sub_dir_path.relative_to(self.dir_path)
         new_sub_dir_path = self.new_dir_path / rel_path
 
@@ -78,6 +99,11 @@ class HandleSubFolderExecutor(HandleFileExecutor):
         return (sub_dir_path, final_path, action_func, args_extra)
 
     def handle_error_dict(self):
+        """
+        处理执行中的错误：按错误类型分组返回失败的子文件夹路径。
+
+        :return: 错误字典，键为 (错误类型名, 错误信息)，值为对应的目标文件夹路径列表。
+        """
         error_path_dict = defaultdict(list)
 
         for file_path, error in self.get_error_dict().items():
@@ -89,7 +115,14 @@ class HandleSubFolderExecutor(HandleFileExecutor):
 
 
 class ScanSizeExecutor(TaskExecutor):
+    """文件大小扫描执行器，按大小分组并筛选出大小相同的文件。"""
+
     def process_result_dict(self):
+        """
+        将扫描结果按文件大小分组，返回具有相同大小的文件迭代器。
+
+        :return: (文件路径, 文件大小) 的迭代器，仅包含大小重复的文件。
+        """
         size_dict = defaultdict(list)
 
         for path, size in self.get_success_dict().items():
@@ -105,10 +138,23 @@ class ScanSizeExecutor(TaskExecutor):
 
 
 class ScanHashExecutor(TaskExecutor):
+    """文件哈希扫描执行器，计算文件哈希值并筛选出哈希相同的文件。"""
+
     def get_args(self, task):
+        """
+        从 (path, size) 元组中提取文件路径作为哈希计算的参数。
+
+        :param task: (文件路径, 文件大小) 元组。
+        :return: 仅包含文件路径的元组。
+        """
         return (task[0],)
 
     def process_result_dict(self):
+        """
+        将扫描结果按哈希值和大小分组，返回具有相同哈希值的文件字典。
+
+        :return: 字典，键为 (哈希值, 文件大小)，值为文件路径列表。
+        """
         identical_dict = defaultdict(list)
 
         for (path, size), hash_value in self.get_success_dict().items():
@@ -119,7 +165,14 @@ class ScanHashExecutor(TaskExecutor):
 
 
 class DeleteReturnSizeExecutor(TaskExecutor):
+    """删除文件执行器，删除文件后累计并返回已删除文件的总大小。"""
+
     def process_result_dict(self):
+        """
+        累计所有已成功删除文件的大小，返回总删除大小。
+
+        :return: 已删除文件的总大小（HumanBytes）。
+        """
         delete_size = 0
         for size in self.get_success_dict().values():
             delete_size += size

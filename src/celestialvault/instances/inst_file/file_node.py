@@ -25,6 +25,14 @@ class FileNode:
     _hash: str | None = field(default=None, repr=False)
 
     def to_string(self, indent: str = "", prefix: str = "", suffix: str = "") -> str:
+        """
+        将节点格式化为带缩进、前缀和后缀的字符串表示。
+
+        :param indent: 缩进字符串。
+        :param prefix: 节点名称前的前缀。
+        :param suffix: 节点名称后的后缀。
+        :return: 格式化后的节点字符串。
+        """
         return f"{indent}{self.icon}{prefix} {align_width(self.name, self.max_name_len)}\t{suffix}"
 
     def __repr__(self):

@@ -19,6 +19,8 @@ from httpx import (
 
 
 class Fetcher:
+    """HTTP 请求封装器，支持自动重试、代理切换和文本/二进制内容获取。"""
+
     def __init__(
         self,
         headers: dict = None,
@@ -56,6 +58,11 @@ class Fetcher:
             self.proxy_index = 0
 
     def _load_proxy_list(self):
+        """
+        从 Clash API 加载代理列表，按延迟排序并取前 40 个最快节点。
+
+        :return: 延迟最低的 40 个代理节点名称列表。
+        """
         resp = requests.get(f"{self.clash_api}/proxies")
         proxies_info = resp.json().get("proxies", {})
         global_proxy_names = proxies_info.get("GLOBAL", {}).get("all", [])
@@ -91,6 +98,11 @@ class Fetcher:
         return top_40
 
     def _switch_proxy(self, tried_proxies=None):
+        """
+        随机切换到一个未尝试过的代理节点，并重新初始化 HTTP 客户端。
+
+        :param tried_proxies: 已尝试过的代理名称集合，用于避免重复选择。
+        """
         if not self.use_proxy:
             return
 
@@ -121,6 +133,9 @@ class Fetcher:
         self.init_client()
 
     def init_client(self):
+        """
+        初始化 httpx 客户端（懒加载），如已存在则跳过。
+        """
         if self.cl is None:
             self.cl = httpx.Client(
                 headers=self.headers,
@@ -130,24 +145,56 @@ class Fetcher:
             )
 
     def obtainText(self, func: object, *args, **kwargs) -> tuple[int, Any, str]:
+        """
+        执行请求函数并返回解码后的文本内容。
+
+        :param func: 要执行的 httpx 请求函数（如 cl.get 或 cl.post）。
+        :return: (状态码, 解码后的文本内容) 元组。
+        """
         response: httpx.Response = func(*args, **kwargs)
         response_text = response.content.decode(self._text_encoding, "ignore")
         response_text = unquote(unescape(response_text))
         return response.status_code, response_text
 
     def obtainContent(self, func: object, *args, **kwargs) -> tuple[int, Any, str]:
+        """
+        执行请求函数并返回原始二进制内容。
+
+        :param func: 要执行的 httpx 请求函数（如 cl.get 或 cl.post）。
+        :return: (状态码, 原始二进制内容) 元组。
+        """
         response: httpx.Response = func(*args, **kwargs)
         return response.status_code, response.content
 
     def getText(self, url: str, *args, **kwargs) -> str:
+        """
+        发送 GET 请求并返回解码后的文本内容。
+
+        :param url: 请求的 URL 地址。
+        :return: 解码后的文本内容。
+        """
         return self._auto_request(self.obtainText, "GET", url, *args, **kwargs)[1]
 
     def getContent(self, url: str, *args, **kwargs) -> bytes:
+        """
+        发送 GET 请求并返回原始二进制内容。
+
+        :param url: 请求的 URL 地址。
+        :return: 原始二进制内容。
+        """
         return self._auto_request(self.obtainContent, "GET", url, *args, **kwargs)[1]
 
     def postText(
         self, url: str, data: Any = None, json: Any = None, *args, **kwargs
     ) -> str:
+        """
+        发送 POST 请求并返回解码后的文本内容。
+
+        :param url: 请求的 URL 地址。
+        :param data: 表单数据。
+        :param json: JSON 数据。
+        :return: 解码后的文本内容。
+        """
         return self._auto_request(
             self.obtainText, "POST", url, data=data, json=json, *args, **kwargs
         )[1]
@@ -155,11 +202,27 @@ class Fetcher:
     def postContent(
         self, url: str, data: Any = None, json: Any = None, *args, **kwargs
     ) -> bytes:
+        """
+        发送 POST 请求并返回原始二进制内容。
+
+        :param url: 请求的 URL 地址。
+        :param data: 表单数据。
+        :param json: JSON 数据。
+        :return: 原始二进制内容。
+        """
         return self._auto_request(
             self.obtainContent, "POST", url, data=data, json=json, *args, **kwargs
         )[1]
 
     def _auto_request(self, method, request_mode, *method_args, **method_kwargs):
+        """
+        自动请求核心方法：支持直连或代理模式，失败时自动重试和切换代理。
+
+        :param method: 获取响应内容的方法（obtainText 或 obtainContent）。
+        :param request_mode: 请求方式，'GET' 或 'POST'。
+        :return: (状态码, 响应内容) 元组。
+        :raises RuntimeError: 所有重试均失败时抛出。
+        """
         if not self.use_proxy:
             self.init_client()
             if request_mode == "POST":

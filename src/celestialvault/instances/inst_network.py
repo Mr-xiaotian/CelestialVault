@@ -9,6 +9,8 @@ from tqdm import tqdm
 
 
 class NeuralNetwork:
+    """三层前馈神经网络（输入层、隐藏层、输出层），使用 sigmoid 激活和反向传播训练。"""
+
     def __init__(self, inputnodes, hiddennodes, outputnodes, learningrate):
         # 定义输入层、隐藏层、输出层的节点数，以及学习率
         self.inodes = inputnodes
@@ -27,6 +29,13 @@ class NeuralNetwork:
         pass
 
     def train(self, input_list, targets_list):
+        """
+        使用反向传播算法对网络进行一次训练。
+
+        :param input_list: 输入数据列表
+        :param targets_list: 目标输出数据列表
+        :return: (最终输出, 输出层误差, 误差更新矩阵)
+        """
         # 将输入列表和目标列表转换为二维数组并转置为列向量
         target = np.array(targets_list, ndmin=2).T
         inputs = np.array(input_list, ndmin=2).T
@@ -63,6 +72,12 @@ class NeuralNetwork:
         return final_outputs, output_errors, e
 
     def query(self, input_list):
+        """
+        使用训练好的网络进行推理，返回预测的类别索引。
+
+        :param input_list: 输入数据列表
+        :return: 输出层中值最大的索引（预测类别）
+        """
         # 将输入列表转换为二维数组并转置为列向量
         inputs = np.array(input_list, ndmin=2).T
 
@@ -79,6 +94,8 @@ class NeuralNetwork:
 
 
 class Layer:
+    """神经网络层的抽象基类，定义前向传播和反向传播接口。"""
+
     def __init__(self):
         self.params = []
 
@@ -92,6 +109,11 @@ class Layer:
         self.output_delta = None
 
     def connect(self, next_layer: Layer):
+        """
+        将当前层与下一层连接，建立双向引用。
+
+        :param next_layer: 要连接的下一层。
+        """
         self.next = next_layer
         next_layer.previous = self
 
@@ -99,6 +121,11 @@ class Layer:
         raise NotImplementedError
 
     def get_forward_input(self):
+        """
+        获取前向传播的输入数据：优先取前一层的输出，否则取自身的输入数据。
+
+        :return: 前向传播的输入数据。
+        """
         if self.previous is not None:
             return self.previous.output_data
         else:
@@ -108,6 +135,11 @@ class Layer:
         raise NotImplementedError
 
     def get_backward_input(self):
+        """
+        获取反向传播的梯度输入：优先取后一层的输出梯度，否则取自身的输入梯度。
+
+        :return: 反向传播的梯度输入。
+        """
         if self.next is not None:
             return self.next.output_delta
         else:
@@ -124,22 +156,48 @@ class Layer:
 
 
 def sigmoid_double(x):
+    """
+    计算标量 x 的 sigmoid 值。
+
+    :param x: 输入标量。
+    :return: sigmoid 值，即 1 / (1 + exp(-x))。
+    """
     return 1.0 / (1.0 + np.exp(-x))
 
 
 def sigmoid(x):
+    """
+    对数组 x 逐元素计算 sigmoid 激活值。
+
+    :param x: 输入数组。
+    :return: 逐元素计算后的 sigmoid 值数组。
+    """
     return np.vectorize(sigmoid_double)(x)
 
 
 def sigmoid_prime_double(x):
+    """
+    计算标量 x 的 sigmoid 导数。
+
+    :param x: 输入标量。
+    :return: sigmoid 导数值，即 sigmoid(x) * (1 - sigmoid(x))。
+    """
     return sigmoid_double(x) * (1 - sigmoid_double(x))
 
 
 def sigmoid_prime(z):
+    """
+    对数组 z 逐元素计算 sigmoid 导数。
+
+    :param z: 输入数组。
+    :return: 逐元素计算后的 sigmoid 导数数组。
+    """
     return np.vectorize(sigmoid_prime_double)(z)
 
 
 class ActivationLayer(Layer):
+    """使用 sigmoid 函数的激活层。"""
+
     def __init__(self, input_dim):
         super(ActivationLayer, self).__init__()
 
@@ -165,6 +223,8 @@ class ActivationLayer(Layer):
 
 
 class DenseLayer(Layer):
+    """全连接层，包含权重矩阵和偏置向量。"""
+
     def __init__(self, input_dim, output_dim):
         super(DenseLayer, self).__init__()
 
@@ -206,6 +266,8 @@ class DenseLayer(Layer):
 
 
 class SequentialNetwork:
+    """顺序神经网络容器，按添加顺序连接各层并支持小批量训练。"""
+
     def __init__(self, loss=None):
         print("Initialize Network...")
         self.layers = []
@@ -213,12 +275,26 @@ class SequentialNetwork:
             self.loss = MSE()
 
     def add(self, layer):
+        """
+        添加一层到网络中，并自动与前一层连接。
+
+        :param layer: 要添加的网络层。
+        """
         self.layers.append(layer)
         layer.describe()
         if len(self.layers) > 1:
             self.layers[-2].connect(self.layers[-1])
 
     def train(self, train_data, epochs, mini_batch_size, learning_rate, test_data=None):
+        """
+        使用小批量随机梯度下降训练网络。
+
+        :param train_data: 训练数据列表，每个元素为 (输入, 目标) 元组
+        :param epochs: 训练轮数
+        :param mini_batch_size: 每个小批量的大小
+        :param learning_rate: 学习率
+        :param test_data: 可选的测试数据，用于评估
+        """
         n = len(train_data)
         for epoch in range(epochs):
             random.shuffle(train_data)
@@ -240,10 +316,22 @@ class SequentialNetwork:
         print(f"{self.evaluate(test_data)} / {n_test}")
 
     def train_batch(self, mini_batch, learning_rate):
+        """
+        对单个小批量执行前向-反向传播和参数更新。
+
+        :param mini_batch: 小批量数据列表，每个元素为 (输入, 目标) 元组。
+        :param learning_rate: 学习率。
+        """
         self.forward_backward(mini_batch)
         self.update(mini_batch, learning_rate)
 
     def update(self, mini_batch, learning_rate):
+        """
+        根据小批量大小归一化学习率，更新所有层的参数并清除梯度。
+
+        :param mini_batch: 小批量数据列表。
+        :param learning_rate: 原始学习率。
+        """
         learning_rate = learning_rate / len(mini_batch)
         for layer in self.layers:
             layer.update_params(learning_rate)
@@ -251,6 +339,11 @@ class SequentialNetwork:
             layer.clear_deltas()
 
     def forward_backward(self, mini_batch):
+        """
+        对小批量中的每个样本执行前向传播和反向传播，累积梯度。
+
+        :param mini_batch: 小批量数据列表，每个元素为 (输入, 目标) 元组。
+        """
         for x, y in mini_batch:
             self.layers[0].input_data = x.reshape(-1, 1)
             for layer in self.layers:
@@ -262,12 +355,24 @@ class SequentialNetwork:
                 layer.backward()
 
     def single_forward(self, x):
+        """
+        对单个输入执行前向传播并返回最终输出。
+
+        :param x: 输入数据。
+        :return: 最终输出层的输出数据。
+        """
         self.layers[0].input_data = x
         for layer in self.layers:
             layer.forward()
         return self.layers[-1].output_data
 
     def evaluate(self, test_data):
+        """
+        在测试数据上评估网络，返回预测正确的样本数。
+
+        :param test_data: 测试数据列表，每个元素为 (输入, 目标) 元组。
+        :return: 预测正确的样本数量。
+        """
         win = 0
         for x, y in tqdm(test_data):
             r_0 = np.argmax(self.single_forward(x))
@@ -277,8 +382,12 @@ class SequentialNetwork:
 
 
 class MSE:
+    """均方误差（Mean Squared Error）损失函数。"""
+
     def loss(self, predicted, actual):
+        """计算预测值与实际值之间的均方误差。"""
         return np.mean((predicted - actual) ** 2)
 
     def loss_derivative(self, predicted, actual):
+        """计算均方误差对预测值的导数。"""
         return 2 * (predicted - actual) / actual.size

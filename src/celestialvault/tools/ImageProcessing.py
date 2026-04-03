@@ -20,7 +20,14 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True  # 允许加载截断的图片
 
 
 class CompareSSIMExecutor(TaskExecutor):
+    """SSIM 比较执行器，批量计算图像对的结构相似性并汇总结果。"""
+
     def process_result_dict(self):
+        """
+        将成功的比较结果转换为 [文件名, SSIM值] 的列表。
+
+        :return: 包含 [文件名, SSIM值] 的二维列表。
+        """
         success_dict = self.get_success_dict()
         data = []
         for (file1, file2), ssim in success_dict.items():
@@ -174,6 +181,12 @@ def binary_to_img(binary_img: bytes) -> Image.Image:
 
 
 def base64_to_img(base64_str: str) -> Image.Image:
+    """
+    将 Base64 编码的字符串解码并转换为 PIL Image 对象。
+
+    :param base64_str: Base64 编码的图片字符串。
+    :return: 解码后的 PIL Image 对象。
+    """
     # 将Base64文本解码回二进制数据
     binary_data = base64.b64decode(base64_str)
 
@@ -184,6 +197,12 @@ def base64_to_img(base64_str: str) -> Image.Image:
 
 
 def img_to_base64(img: Image.Image) -> str:
+    """
+    将 PIL Image 对象转换为 Base64 编码的字符串。
+
+    :param img: PIL Image 对象。
+    :return: Base64 编码的字符串。
+    """
     # 将Image数据转换为二进制数据
     binary_data = img_to_binary(img)
 

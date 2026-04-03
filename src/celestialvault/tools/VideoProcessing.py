@@ -10,7 +10,14 @@ from celestialflow import TaskExecutor
 
 
 class GetCodecExecutor(TaskExecutor):
+    """视频编码格式扫描执行器，批量获取视频编码并按编码类型分组。"""
+
     def process_result_dict(self):
+        """
+        将扫描结果按编码格式分组。
+
+        :return: 字典，键为编码格式名称，值为对应的文件路径列表。
+        """
         codec_dict = defaultdict(list)
         for path, codec in self.get_success_dict().items():
             codec_dict[codec].append(path)

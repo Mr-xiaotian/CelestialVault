@@ -151,6 +151,9 @@ class FileTree:
 
     # 打印树
     def print_tree(self):
+        """
+        递归打印整棵文件树，目录在前、文件在后。
+        """
         def _print(node: FileNode):
             print(node)
             dirs = [c for c in node.children if c.is_dir]
@@ -164,6 +167,13 @@ class FileTree:
 
     # 对比两棵树
     def compare_with(self, other: "FileTree", compare_hash: bool = False) -> "FileDiff":
+        """
+        将当前文件树与另一棵文件树对比，返回包含差异信息的 FileDiff 对象。
+
+        :param other: 要对比的另一棵文件树。
+        :param compare_hash: 是否通过哈希值比较文件内容。
+        :return: 包含两棵树差异信息的 FileDiff 对象。
+        """
         diff = FileDiff(
             left_path=self.path,
             right_path=other.path,

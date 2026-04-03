@@ -17,22 +17,38 @@ if TYPE_CHECKING:
 
 
 class DeleteExecutor(TaskExecutor):
+    """删除执行器，根据相对路径批量删除指定目录下的文件或文件夹。"""
+
     def __init__(self, func, parent_dir: Path):
         super().__init__(func, progress_desc="Deleting", show_progress=True)
         self.parent_dir = parent_dir
 
     def get_args(self, rel_path: Path):
+        """
+        根据相对路径计算要删除的目标绝对路径。
+
+        :param rel_path: 文件的相对路径。
+        :return: 包含目标绝对路径的元组。
+        """
         target = self.parent_dir / rel_path
         return (target,)
 
 
 class CopyExecutor(TaskExecutor):
+    """复制执行器，根据相对路径将文件从主目录批量复制到次目录。"""
+
     def __init__(self, func, main_dir: Path, minor_dir: Path, copy_mode: str):
         super().__init__(func, progress_desc=f"Copying({copy_mode})", show_progress=True)
         self.main_dir = main_dir
         self.minor_dir = minor_dir
 
     def get_args(self, rel_path: Path):
+        """
+        根据相对路径计算源文件和目标文件的绝对路径，并确保目标目录存在。
+
+        :param rel_path: 文件的相对路径。
+        :return: (源文件路径, 目标文件路径) 的元组。
+        """
         source = self.main_dir / rel_path
         target = self.minor_dir / rel_path
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -41,6 +57,8 @@ class CopyExecutor(TaskExecutor):
 
 @dataclass
 class FileDiff:
+    """两个目录的差异比较结果，包含仅存在于单侧的文件和内容不同的文件列表。"""
+
     left_path: Path
     right_path: Path
     only_in_left: list[Path]
@@ -52,10 +70,18 @@ class FileDiff:
     diff_tree: "FileTree" = None
 
     def is_identical(self) -> bool:
+        """
+        判断两个目录是否完全相同（无差异文件）。
+
+        :return: 如果两个目录完全一致返回 True，否则返回 False。
+        """
         return not (self.only_in_left or self.only_in_right or self.different_files)
 
     # 打印树
     def print_diff_tree(self):
+        """
+        以树形结构打印差异文件，并显示两侧目录的差异大小汇总表。
+        """
         def _print(node: FileNode):
             if node == self.diff_tree.root:
                 pass
@@ -160,6 +186,11 @@ class FileDiff:
             raise ValueError("无效的模式，必须为 '->', '<-' 或 '<->'")
 
     def to_dict(self):
+        """
+        将差异结果转换为可序列化的字典。
+
+        :return: 包含差异路径和大小信息的字典。
+        """
         return {
             "left_path": str(self.left_path),
             "right_path": str(self.right_path),
