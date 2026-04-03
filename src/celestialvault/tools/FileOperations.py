@@ -95,12 +95,12 @@ class ScanSizeExecutor(TaskExecutor):
             size_dict[size].append(path)
 
         size_dict = {k: v for k, v in size_dict.items() if len(v) > 1}
-        file_size_iter = (
-            (file_path, size)
+        size_iter = (
+            (path, size)
             for size, files in size_dict.items()
-            for file_path in files
+            for path in files
         )
-        return file_size_iter
+        return size_iter
 
 
 class ScanHashExecutor(TaskExecutor):
@@ -592,6 +592,42 @@ def detect_identical_files(
 
     # 对于相同大小的文件，进一步计算哈希值, 找出哈希值相同的文件
     scan_hash_executor.start(file_size_iter)
+    identical_dict = scan_hash_executor.process_result_dict()
+
+    return identical_dict
+
+
+def detect_identical_dirs(
+    dir_list: list[Path], execution_mode: str = "thread"
+) -> dict[tuple[str, int], list[Path]]:
+    """
+    检测文件夹中是否存在相同内容的文件，并在文件名后添加文件大小。
+
+    :param dir_list: 文件夹路径列表。
+    :return: 相同文件的字典，键为文件大小和哈希值，值为文件路径列表。
+    """
+    scan_size_executor = ScanSizeExecutor(
+        get_dir_size,
+        execution_mode,
+        enable_success_cache=True,
+        progress_desc="Scanning dirs size",
+        show_progress=True,
+    )
+    scan_hash_executor = ScanHashExecutor(
+        get_dir_hash,
+        execution_mode,
+        enable_success_cache=True,
+        progress_desc="Calculating dirs hash",
+        show_progress=True,
+    )
+
+    # 根据文件夹大小进行初步筛选
+    dir_path_list = find_pure_dirs(dir_list)
+    scan_size_executor.start(dir_path_list)
+    dir_size_iter = scan_size_executor.process_result_dict()
+
+    # 对于相同大小的文件夹，进一步计算哈希值, 找出哈希值相同的文件夹
+    scan_hash_executor.start(dir_size_iter)
     identical_dict = scan_hash_executor.process_result_dict()
 
     return identical_dict
