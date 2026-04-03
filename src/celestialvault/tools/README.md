@@ -27,7 +27,7 @@ handle_dir_files 是一个用于遍历文件夹并对其中的文件进行批量
 ## 工作流程
 - **遍历文件夹**：首先，handle_dir_files 遍历指定的文件夹，获取所有文件的路径。文件夹结构会被递归遍历，确保处理所有子文件夹中的文件。
 - **应用规则**：根据文件的后缀，从 rules 中获取对应的处理函数和重命名函数。如果文件后缀不在 rules 中，则默认执行文件复制操作。
-- **任务管理**：handle_dir_files 使用 HandleFileManager 类管理任务执行，HandleFileManager 继承自 TaskExecutor，并根据执行模式选择串行或并行处理文件。
+- **任务管理**：handle_dir_files 使用 HandleFileExecutor 类管理任务执行，HandleFileExecutor 继承自 TaskExecutor，并根据执行模式选择串行或并行处理文件。
 - **目标文件夹管理**：处理后的文件保存在原始文件夹的父文件夹中新建的 "_re" 文件夹中，并保持与原文件相同的目录结构。
 - **错误处理**：处理过程中遇到的错误会被捕捉，并将未能正确处理的文件保存到新文件夹，同时记录在 error_path_dict 中。
 

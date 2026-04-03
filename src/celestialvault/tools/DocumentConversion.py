@@ -1,7 +1,6 @@
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Union
 
 import fitz
 import PyPDF2
@@ -9,7 +8,7 @@ from PIL import Image
 from tqdm import tqdm
 
 
-def md_to_pdf(md_file_path: Union[str, Path], pdf_file_path: Union[str, Path]):
+def md_to_pdf(md_file_path: str | Path, pdf_file_path: str | Path):
     """
     使用pandoc将指定的Markdown文件转换为PDF文件。
 

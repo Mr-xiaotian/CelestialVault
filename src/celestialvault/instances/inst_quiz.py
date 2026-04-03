@@ -1,6 +1,5 @@
 import random
 import re
-from typing import Callable, Dict, List, Tuple
 
 import ipywidgets as widgets
 from IPython.display import clear_output, display
@@ -15,7 +14,7 @@ class QuizBase:
         self.title = title
         self.score = 0
         self.total_questions = 0
-        self.history: List[Tuple[str, int, bool]] = []
+        self.history: list[tuple[str, int, bool]] = []
 
         self.generate_problem()
 
@@ -50,7 +49,9 @@ class QuizBase:
         raise NotImplementedError("子类必须实现此方法")
 
     def generate_problem(self):
-        raise NotImplementedError("子类必须实现此方法")
+        """
+        生成一道新题目，子类必须实现此方法。
+        """
 
     def _on_enter(self):
         if not self.check_button.disabled:
@@ -133,7 +134,7 @@ class QuizBase:
 
 
 class MultiplicationQuiz(QuizBase):
-    def __init__(self, digit_num: int, modes: List[str] = None):
+    def __init__(self, digit_num: int, modes: list[str] = None):
         self.digit_num = max(1, digit_num)
         self.modes = modes or ["random"]
 
@@ -181,21 +182,31 @@ class MultiplicationQuiz(QuizBase):
     # ---------- 各种生成方法 ----------
     def generate_nearby(self, near_num):
         """
-        生成一个接近指定数字的乘法题目
-        example 100:
-            (100+a)(100+b) = 100(100+a+b) + ab
+        生成一个接近指定数字的乘法题目。
+
+        :param near_num: 基准数字。
+        :return: (num1, num2) 乘法题目的两个数字。
         """
         near_0 = random.choice(list(range(-9, 0)) + list(range(1, 10)))
         near_1 = random.choice(list(range(-9, 0)) + list(range(1, 10)))
         return near_num + near_0, near_num + near_1
 
     def generate_multiply_num(self, multiplicand):
-        """生成一个乘数为指定数字的乘法题目"""
+        """
+        生成一个乘数为指定数字的乘法题目。
+
+        :param multiplicand: 指定的乘数。
+        :return: (num, multiplicand) 乘法题目的两个数字。
+        """
         num = random.randint(10 ** (self.digit_num - 1), 10**self.digit_num - 1)
         return num, multiplicand
 
     def generate_square(self):
-        """生成一个数的平方"""
+        """
+        生成一个数的平方题目。
+
+        :return: (num, num) 同一个数字组成的乘法题目。
+        """
         num = (
             random.randint(10 ** (self.digit_num - 1), 10**self.digit_num - 1)
             if self.digit_num > 1
@@ -204,7 +215,11 @@ class MultiplicationQuiz(QuizBase):
         return num, num
 
     def generate_square_with_5(self):
-        """生成一个数的平方，个位数为5"""
+        """
+        生成一个个位数为 5 的数的平方题目。
+
+        :return: (num, num) 个位为 5 的同一个数字组成的乘法题目。
+        """
         ten_place = (
             random.randint(10 ** (self.digit_num - 2), 10 ** (self.digit_num - 1) - 1)
             if self.digit_num > 1
@@ -214,7 +229,11 @@ class MultiplicationQuiz(QuizBase):
         return num, num
 
     def generate_varied_digit_sum_10(self):
-        """生成个位数相加为10的数的乘积题目"""
+        """
+        生成个位数相加为 10 的两个数的乘积题目。
+
+        :return: (num1, num2) 个位数之和为 10 的两个数字。
+        """
         if self.digit_num < 2:
             return self.generate_random_problem()  # 避免个位数情况
 
@@ -229,11 +248,9 @@ class MultiplicationQuiz(QuizBase):
 
     def generate_fixed_digit_sum_10(self):
         """
-        生成十位数相加为10的数的乘积题目
-        example:
-            (10a+c)(10b+c) = 100ab + 10(ac + bc) + c^2
-                           = 100ab + 100c + c^2
-                           = 100(ab+ c) + c^2
+        生成十位数相加为 10、个位数相同的两个数的乘积题目。
+
+        :return: (num1, num2) 十位之和为 10 且个位相同的两个数字。
         """
         if self.digit_num < 2:
             return self.generate_random_problem()
@@ -246,7 +263,12 @@ class MultiplicationQuiz(QuizBase):
         return num1, num2
 
     def generate_square_difference(self, end_num):
-        """生成形如 (a+b)(a-b) 的速算乘法题"""
+        """
+        生成形如 (a+b)(a-b) 的速算乘法题目。
+
+        :param end_num: 基准数字的个位部分。
+        :return: (a+b, a-b) 乘法题目的两个数字。
+        """
         base = (
             random.randint(10 ** (self.digit_num - 2), 10 ** (self.digit_num - 1)) * 10
         )  # 生成 xx0
@@ -259,7 +281,11 @@ class MultiplicationQuiz(QuizBase):
         return base + diff, base - diff
 
     def generate_repeated_number_times_9(self):
-        """生成重复数字乘以 9 的乘法题"""
+        """
+        生成重复数字乘以 9 的乘法题目。
+
+        :return: (num1, num2) 重复数字与 9 组成的乘法题目。
+        """
         if self.digit_num < 2:
             return random.randint(2, 9), 9
 
@@ -275,13 +301,23 @@ class MultiplicationQuiz(QuizBase):
         return random.choice([[repeat_num, 9], [repeat_9, repeat_digit]])
 
     def generate_random_problem(self):
-        """生成随机乘法题目"""
+        """
+        生成随机乘法题目。
+
+        :return: (num1, num2) 随机生成的两个数字。
+        """
         num1 = random.randint(1, 10**self.digit_num - 1)
         num2 = random.randint(1, 10**self.digit_num - 1)
         return num1, num2
 
     def generate_range_problem(self, start: int, end: int) -> tuple[int, int]:
-        """生成指定范围内的随机乘法题目"""
+        """
+        生成指定范围内的随机乘法题目。
+
+        :param start: 范围起始值。
+        :param end: 范围结束值。
+        :return: (num1, num2) 指定范围内随机生成的两个数字。
+        """
         if start > end:
             start, end = end, start  # 自动纠正输入顺序
         num1 = random.randint(start, end)

@@ -1,7 +1,6 @@
 from __future__ import annotations
 import re
 from datetime import datetime
-from typing import Union
 
 from zoneinfo import ZoneInfo
 
@@ -103,7 +102,7 @@ class HumanTime(float):
         ("s", 1),
     ]
 
-    def __new__(cls, value: Union[str, float, int]):
+    def __new__(cls, value: str | float | int):
         if isinstance(value, str):
             value = cls._parse_human(value)
         return super().__new__(cls, float(value))
@@ -200,7 +199,7 @@ class HumanTimestamp(float):
 
     DEFAULT_TZ = ZoneInfo("Asia/Shanghai")
 
-    def __new__(cls, value: Union[float, int, str, datetime], tz=None):
+    def __new__(cls, value: float | int | str | datetime, tz=None):
         tz = tz or cls.DEFAULT_TZ
 
         # ---- 数字类型 ----

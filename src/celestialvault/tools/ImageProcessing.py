@@ -5,7 +5,6 @@ import random
 from colorsys import hsv_to_rgb
 from itertools import product
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -14,9 +13,28 @@ from PIL import Image, PngImagePlugin, ImageFile
 from pillow_heif import register_heif_opener
 from skimage.metrics import structural_similarity as compare_ssim
 from tqdm import tqdm
+from celestialflow import TaskExecutor
 
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True  # 允许加载截断的图片
+
+
+class CompareSSIMExecutor(TaskExecutor):
+    """SSIM 比较执行器，批量计算图像对的结构相似性并汇总结果。"""
+
+    def process_result_dict(self):
+        """
+        将成功的比较结果转换为 [文件名, SSIM值] 的列表。
+
+        :return: 包含 [文件名, SSIM值] 的二维列表。
+        """
+        success_dict = self.get_success_dict()
+        data = []
+        for (file1, file2), ssim in success_dict.items():
+            # 将文件名和 SSIM 值添加到数据列表中
+            data.append([file1.name, ssim])
+        return data
+
 
 
 def compress_img(old_img_path: str | Path, new_img_path: str | Path):
@@ -163,6 +181,12 @@ def binary_to_img(binary_img: bytes) -> Image.Image:
 
 
 def base64_to_img(base64_str: str) -> Image.Image:
+    """
+    将 Base64 编码的字符串解码并转换为 PIL Image 对象。
+
+    :param base64_str: Base64 编码的图片字符串。
+    :return: 解码后的 PIL Image 对象。
+    """
     # 将Base64文本解码回二进制数据
     binary_data = base64.b64decode(base64_str)
 
@@ -173,6 +197,12 @@ def base64_to_img(base64_str: str) -> Image.Image:
 
 
 def img_to_base64(img: Image.Image) -> str:
+    """
+    将 PIL Image 对象转换为 Base64 编码的字符串。
+
+    :param img: PIL Image 对象。
+    :return: Base64 编码的字符串。
+    """
     # 将Image数据转换为二进制数据
     binary_data = img_to_binary(img)
 
@@ -187,7 +217,7 @@ def generate_palette(
     style: str = "morandi",
     mode: str = "random",
     random_seed: int = 0,
-) -> List[int]:
+) -> list[int]:
     """
     生成调色板，支持随机 均匀和螺旋三种模式，并确保颜色唯一或规律分布。
 
@@ -401,6 +431,35 @@ def extract_pixels_as_gif(image: Image.Image, frame_size=200, duration=100, loop
     return gif_io
 
 
+def compare_ssim_by_path(path1: Path | str, path2: Path | str) -> float:
+    """
+    比较两张图像的结构相似性指数（SSIM）。
+    
+    :param path1: 第一张图像的路径。
+    :param path2: 第二张图像的路径。
+    :return: 两张图像的SSIM值，范围在-1到1之间，值越大表示越相似。
+    """
+    img1 = Image.open(path1)
+    img2 = Image.open(path2)
+
+    # 将图像大小调整为 256x256
+    img1 = img1.resize((256, 256))
+    img2 = img2.resize((256, 256))
+
+    # 如果是灰度图像，将其转换为 RGB 图像
+    if img1.mode != "RGB":
+        img1 = img1.convert("RGB")
+    if img2.mode != "RGB":
+        img2 = img2.convert("RGB")
+
+    img1 = np.array(img1)
+    img2 = np.array(img2)
+
+    # 计算 SSIM 值
+    ssim = compare_ssim(img1, img2, multichannel=True, win_size=21, channel_axis=2)
+    return ssim
+
+
 def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
     """
     比较两个文件夹中的图像，计算它们的 SSIM 值，并返回一个包含文件名和 SSIM 值的 DataFrame。
@@ -410,6 +469,7 @@ def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
     :return: 包含文件名和 SSIM 值的 DataFrame。
     """
     data = []
+    tasks = []
     dir1 = Path(dir1)
     dir2 = Path(dir2)
 
@@ -420,32 +480,23 @@ def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
     ]
 
     # 遍历 dir1 文件夹中的所有文件
-    for file1 in tqdm(file_path_list, desc="Comparing Images:"):
+    for file1 in file_path_list:
         file2 = dir2 / file1.name  # 获取对应文件夹中的同名文件
         if not file2.exists() or not file2.is_file():  # 如果文件存在且是文件
             continue
 
-        img1 = Image.open(file1)
-        img2 = Image.open(file2)
+        tasks.append((file1, file2))
 
-        # 将图像大小调整为 256x256
-        img1 = img1.resize((256, 256))
-        img2 = img2.resize((256, 256))
-
-        # 如果是灰度图像，将其转换为 RGB 图像
-        if img1.mode != "RGB":
-            img1 = img1.convert("RGB")
-        if img2.mode != "RGB":
-            img2 = img2.convert("RGB")
-
-        img1 = np.array(img1)
-        img2 = np.array(img2)
-
-        # 计算 SSIM 值
-        ssim = compare_ssim(img1, img2, multichannel=True, win_size=21, channel_axis=2)
-
-        # 将文件名和 SSIM 值添加到数据列表中
-        data.append([file1.name, ssim])
+    compare_executor = CompareSSIMExecutor(
+        compare_ssim_by_path, 
+        execution_mode="thread", 
+        max_workers=8, 
+        enable_success_cache=True, 
+        progress_desc="Comparing Images", 
+        show_progress=True
+    )
+    compare_executor.start(tasks)
+    data = compare_executor.process_result_dict()
 
     # 返回包含图像名称和 SSIM 值的 DataFrame
     df = pd.DataFrame(data, columns=["Image Name", "SSIM"])

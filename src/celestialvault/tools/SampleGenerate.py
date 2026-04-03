@@ -2,7 +2,6 @@ import random
 import string
 import shutil
 from pathlib import Path
-from typing import List, Union
 
 import fitz  # PyMuPDF
 from PIL import Image, ImageDraw, ImageFont
@@ -155,7 +154,7 @@ def make_dirpair_fixture(base_path: str | Path):
 
 
 # ==== 测试数据生成函数 ====
-def random_values(length: int, data_types: Union[str, List[str]] = None) -> List:
+def random_values(length: int, data_types: str | list[str] = None) -> list:
     """
     生成测试数据
 

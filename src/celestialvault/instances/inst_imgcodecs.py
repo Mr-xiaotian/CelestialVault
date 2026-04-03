@@ -4,7 +4,6 @@ from itertools import product
 from pathlib import Path
 from PIL import Image
 from tqdm import tqdm
-from typing import Dict, Union
 
 from ..constants import image_mode_params, style_params
 from ..tools.ImageProcessing import generate_palette, ensure_capacity
@@ -212,6 +211,14 @@ class BaseCodec:
     # --- 内部辅助方法 ---
     @staticmethod
     def get_new_xy(old_x, old_y, width):
+        """
+        计算下一个像素坐标，到达行尾时换行。
+
+        :param old_x: 当前 x 坐标。
+        :param old_y: 当前 y 坐标。
+        :param width: 图像宽度。
+        :return: (新 x 坐标, 新 y 坐标) 元组。
+        """
         if old_x == width - 1:
             return 0, old_y + 1
         else:
@@ -220,6 +227,8 @@ class BaseCodec:
 
 # ========== grey_ori ==========
 class GreyCodec(BaseCodec):
+    """灰度模式编解码器，使用双像素存储一个 Unicode 字符（高8位 + 低8位）。"""
+
     mode_name = "grey_ori"
 
     def _encode_text_core(self, text: str) -> Image.Image:
@@ -284,6 +293,8 @@ class GreyCodec(BaseCodec):
 
 # ========== rgb_ori ==========
 class RGBCodec(BaseCodec):
+    """RGB 模式编解码器，使用双像素（6通道）存储 3 个 Unicode 字符。"""
+
     mode_name = "rgb_ori"
 
     def _encode_text_core(self, text: str) -> Image.Image:
@@ -360,6 +371,8 @@ class RGBCodec(BaseCodec):
 
 # ========== rgba_ori ==========
 class RGBACodec(BaseCodec):
+    """RGBA 模式编解码器，使用单像素（4通道）存储 2 个 Unicode 字符。"""
+
     mode_name = "rgba_ori"
 
     def _encode_text_core(self, text: str) -> Image.Image:
@@ -420,6 +433,8 @@ class RGBACodec(BaseCodec):
 
 # ========== 1bit ==========
 class OneBitCodec(BaseCodec):
+    """1-bit 黑白模式编解码器，每个像素存储 1 bit 数据。"""
+
     mode_name = "1bit"
 
     def _encode_text_core(self, text: str) -> Image.Image:
@@ -491,6 +506,8 @@ class OneBitCodec(BaseCodec):
 
 
 class ChannelCodec(BaseCodec):
+    """通用多通道编解码器，每个像素的各通道各存储 1 字节数据。"""
+
     def __init__(self, mode_name: str, channels: int):
         self.mode_name = mode_name
         self.channels = channels
@@ -564,7 +581,7 @@ class RefRGBALSBCodec(BaseCodec):
     - 视觉效果几乎无变化。
     """
 
-    def __init__(self, ref_image: Union[str, Path, Image.Image]):
+    def __init__(self, ref_image: str | Path | Image.Image):
         super().__init__()
         if isinstance(ref_image, (str, Path)):
             ref_image = Image.open(ref_image).convert("RGBA")
@@ -652,6 +669,8 @@ class RefRGBALSBCodec(BaseCodec):
 
 
 class PaletteCodec(BaseCodec):
+    """调色板模式编解码器，使用 256 色调色板，每个像素存储 1 字节数据。"""
+
     def __init__(self, palette_style: str, palatte_mode: str = "random"):
         self.mode_name = palette_style  # 用 palette_style 名称作为 mode
         self.palette = generate_palette(256, style=palette_style, mode=palatte_mode)
@@ -706,6 +725,8 @@ class PaletteCodec(BaseCodec):
 
 
 class PaletteWithRsCodec(BaseCodec):
+    """带 Reed-Solomon 纠错的调色板编解码器，可容忍一定比例的像素损坏。"""
+
     def __init__(
         self, palette_style: str, palatte_mode: str = "random", threshold: float = 0.7
     ):
@@ -854,6 +875,13 @@ class RedundancyCodec(BaseCodec):
         return merged_bytes
 
     def _decode_one_channel(self, img: Image.Image, channel_index: int) -> bytes:
+        """
+        从图像中解码指定通道的数据。
+
+        :param img: 要解码的图像对象。
+        :param channel_index: 通道索引（0=R, 1=G, 2=B, 3=A）。
+        :return: 该通道的字节数据。
+        """
         width, height = img.size
         pixels = img.load()
         bytes_list = []
@@ -881,7 +909,7 @@ class RedundancyCodec(BaseCodec):
         return bytes(bytes_list)
 
 
-CODEC_REGISTRY: Dict[str, BaseCodec] = {}
+CODEC_REGISTRY: dict[str, BaseCodec] = {}
 
 CODEC_REGISTRY.update(
     {

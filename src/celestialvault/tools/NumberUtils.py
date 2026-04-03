@@ -1,7 +1,6 @@
 import math
 import random
 from itertools import permutations
-from typing import Dict, List, Tuple, Union
 
 import mpmath
 from tqdm import tqdm
@@ -35,7 +34,7 @@ def get_pi_digits(start: int, end: int) -> str:
     return "".join(digits)
 
 
-def get_pi_digits_from_ranges(position_list: List[Tuple[int, int]]) -> str:
+def get_pi_digits_from_ranges(position_list: list[tuple[int, int]]) -> str:
     """
     获取π的指定位置的小数位
 
@@ -192,7 +191,7 @@ def greedy_search_in_pi(target: str) -> dict:
     return position_results
 
 
-def generate_random_numbers(num_digits: int, count: int = 1) -> List[str]:
+def generate_random_numbers(num_digits: int, count: int = 1) -> list[str]:
     """
     生成指定位数的随机数
 
@@ -229,7 +228,7 @@ def find_all_combinations_ratio(target_sequence: str, digit_length: int) -> floa
     return found_count / (end - start)
 
 
-def digit_frequency(target_str: str) -> Dict[str, float]:
+def digit_frequency(target_str: str) -> dict[str, float]:
     """
     统计字符串中各个数字的出现比率
 

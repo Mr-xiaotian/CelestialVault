@@ -2,13 +2,14 @@
 # 版本 2.10
 # 作者：晓天
 
-from typing import List
 
 from ..tools.ListDictTools import dictkey_mix
 from ..tools.TextTools import calculate_similarity, get_lcs, string_split
 
 
 class Findiffer:
+    """字符串和字典差异比较工具，高亮显示两段文本之间的不同部分。"""
+
     def __init__(
         self, norm_end: str = "[", diff_end: str = "]", split_part_str: str = "[]"
     ) -> None:
@@ -22,6 +23,13 @@ class Findiffer:
         self.split_part_str = split_part_str
 
     def fd_str(self, string_a: str, string_b: str, split_str: str = None):
+        """
+        比较两个字符串的差异，按分隔符分段后逐段高亮不同部分并输出相似度。
+
+        :param string_a: 第一个字符串。
+        :param string_b: 第二个字符串。
+        :param split_str: 分隔符，用于将字符串分段比较；为 None 时不分段。
+        """
         # 以split_str为分割符将a和b分割
         list_a = string_split(string_a, split_str=split_str)
         list_b = string_split(string_b, split_str=split_str)
@@ -44,6 +52,12 @@ class Findiffer:
                 print(f"(相似度：{similarity})\n")
 
     def fd_dict(self, dict_a: dict, dict_b: dict):
+        """
+        比较两个字典，对共有键的值进行差异对比，并列出各自特有的键。
+
+        :param dict_a: 第一个字典。
+        :param dict_b: 第二个字典。
+        """
         _, key_min, dif_key_a, dif_key_b = dictkey_mix(dict_a, dict_b)
 
         print("a b的共有标签值为:")
@@ -69,7 +83,14 @@ class Findiffer:
             for key in dif_key_b:
                 print(f"{key}:{dict_b[key]}")
 
-    def compare_strings(self, str1: str, str2: str, lcs_part: List[str] = None) -> None:
+    def compare_strings(self, str1: str, str2: str, lcs_part: list[str] = None) -> None:
+        """
+        基于最长公共子序列高亮打印两个字符串的差异部分。
+
+        :param str1: 第一个字符串。
+        :param str2: 第二个字符串。
+        :param lcs_part: 预计算的最长公共子序列部分列表；为 None 时自动计算。
+        """
         lcs_part = get_lcs(str1, str2, lcs_part) if lcs_part is None else lcs_part
 
         diff_ranges_1 = self.get_diff_ranges(str1, lcs_part[:])
@@ -78,7 +99,7 @@ class Findiffer:
         self.print_diffs(str1, diff_ranges_1)
         self.print_diffs(str2, diff_ranges_2)
 
-    def get_diff_ranges(self, origin_str: str, lcs_part: List[str]) -> List[List[int]]:
+    def get_diff_ranges(self, origin_str: str, lcs_part: list[str]) -> list[list[int]]:
         """
         根据get_lcs返回的相似部分，计算字符串中不同区域的位置
 

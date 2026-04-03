@@ -5,7 +5,8 @@ import tarfile
 import zipfile
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple
+from collections.abc import Callable
+from typing import Any
 
 import py7zr
 import rarfile
@@ -18,20 +19,22 @@ from ..instances.inst_units import HumanBytes, HumanTimestamp
 from .TextTools import format_table
 
 
-class HandleFileManager(TaskExecutor):
+class HandleFileExecutor(TaskExecutor):
+    """文件处理执行器，根据后缀规则对目录中的文件进行批量处理。"""
+
     def __init__(
         self,
         func: Callable,
         dir_path: Path,
         new_dir_path: Path,
-        rules: Dict[str, Tuple[Callable, Callable]],
+        rules: dict[str, tuple[Callable, Callable]],
         execution_mode: str,
         progress_desc: str,
     ):
         super().__init__(
             func=func,
             execution_mode=execution_mode,
-            worker_limit=6,
+            max_workers=6,
             max_info=100,
             enable_error_cache=True,
             progress_desc=progress_desc,
@@ -42,6 +45,12 @@ class HandleFileManager(TaskExecutor):
         self.rules = rules
 
     def get_args(self, file_path: Path):
+        """
+        根据文件后缀匹配处理规则，返回传递给处理函数的参数元组。
+
+        :param file_path: 待处理文件的绝对路径。
+        :return: (源路径, 目标路径, 处理函数, 额外参数) 的元组。
+        """
         rel_path = file_path.relative_to(self.dir_path)
         new_file_path = self.new_dir_path / rel_path
 
@@ -54,6 +63,11 @@ class HandleFileManager(TaskExecutor):
         return (file_path, final_path, action_func, args_extra)
 
     def handle_error_dict(self):
+        """
+        处理执行中的错误：将失败文件直接复制到目标目录，并按错误类型分组返回。
+
+        :return: 错误字典，键为 (错误类型名, 错误信息)，值为对应的目标文件路径列表。
+        """
         error_path_dict = defaultdict(list)
 
         for file_path, error in self.get_error_dict().items():
@@ -64,8 +78,16 @@ class HandleFileManager(TaskExecutor):
         return dict(error_path_dict)
 
 
-class HandleSubFolderManager(HandleFileManager):
+class HandleSubFolderExecutor(HandleFileExecutor):
+    """子文件夹处理执行器，继承自 HandleFileExecutor，以子文件夹为单位进行批量处理。"""
+
     def get_args(self, sub_dir_path: Path):
+        """
+        根据子文件夹匹配 'dir' 规则，返回传递给处理函数的参数元组。
+
+        :param sub_dir_path: 待处理子文件夹的绝对路径。
+        :return: (源路径, 目标路径, 处理函数, 额外参数) 的元组。
+        """
         rel_path = sub_dir_path.relative_to(self.dir_path)
         new_sub_dir_path = self.new_dir_path / rel_path
 
@@ -77,6 +99,11 @@ class HandleSubFolderManager(HandleFileManager):
         return (sub_dir_path, final_path, action_func, args_extra)
 
     def handle_error_dict(self):
+        """
+        处理执行中的错误：按错误类型分组返回失败的子文件夹路径。
+
+        :return: 错误字典，键为 (错误类型名, 错误信息)，值为对应的目标文件夹路径列表。
+        """
         error_path_dict = defaultdict(list)
 
         for file_path, error in self.get_error_dict().items():
@@ -87,27 +114,47 @@ class HandleSubFolderManager(HandleFileManager):
         return dict(error_path_dict)
 
 
-class ScanSizeManager(TaskExecutor):
+class ScanSizeExecutor(TaskExecutor):
+    """文件大小扫描执行器，按大小分组并筛选出大小相同的文件。"""
+
     def process_result_dict(self):
+        """
+        将扫描结果按文件大小分组，返回具有相同大小的文件迭代器。
+
+        :return: (文件路径, 文件大小) 的迭代器，仅包含大小重复的文件。
+        """
         size_dict = defaultdict(list)
 
         for path, size in self.get_success_dict().items():
             size_dict[size].append(path)
 
         size_dict = {k: v for k, v in size_dict.items() if len(v) > 1}
-        file_size_iter = (
-            (file_path, size)
+        size_iter = (
+            (path, size)
             for size, files in size_dict.items()
-            for file_path in files
+            for path in files
         )
-        return file_size_iter
+        return size_iter
 
 
-class ScanHashManager(TaskExecutor):
+class ScanHashExecutor(TaskExecutor):
+    """文件哈希扫描执行器，计算文件哈希值并筛选出哈希相同的文件。"""
+
     def get_args(self, task):
+        """
+        从 (path, size) 元组中提取文件路径作为哈希计算的参数。
+
+        :param task: (文件路径, 文件大小) 元组。
+        :return: 仅包含文件路径的元组。
+        """
         return (task[0],)
 
     def process_result_dict(self):
+        """
+        将扫描结果按哈希值和大小分组，返回具有相同哈希值的文件字典。
+
+        :return: 字典，键为 (哈希值, 文件大小)，值为文件路径列表。
+        """
         identical_dict = defaultdict(list)
 
         for (path, size), hash_value in self.get_success_dict().items():
@@ -117,8 +164,15 @@ class ScanHashManager(TaskExecutor):
         return identical_dict
 
 
-class DeleteReturnSizeManager(TaskExecutor):
+class DeleteReturnSizeExecutor(TaskExecutor):
+    """删除文件执行器，删除文件后累计并返回已删除文件的总大小。"""
+
     def process_result_dict(self):
+        """
+        累计所有已成功删除文件的大小，返回总删除大小。
+
+        :return: 已删除文件的总大小（HumanBytes）。
+        """
         delete_size = 0
         for size in self.get_success_dict().values():
             delete_size += size
@@ -175,11 +229,11 @@ def handle_item(
 
 def handle_dir_files(
     dir_path: str | Path,
-    rules: Dict[str, Tuple[Callable[[Path, Path, Dict], None], Callable[[Path], Path], Dict]],
+    rules: dict[str, tuple[Callable[[Path, Path, dict], None], Callable[[Path], Path], dict]],
     execution_mode: str = "serial",
     progress_desc: str = "Processing files",
     dir_name_suffix: str = "_re",
-) -> Dict[Tuple[str, str], List[Path]]:
+) -> dict[tuple[str, str], list[Path]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行处理，并将处理后的文件存储到新的目录中。
     不属于指定后缀的文件将被直接复制到新目录中。处理后的文件会保持原始的目录结构。
@@ -194,7 +248,7 @@ def handle_dir_files(
     dir_path = Path(dir_path)
     new_dir_path = dir_path.parent / (dir_path.name + dir_name_suffix)
 
-    handlefile_manager = HandleFileManager(
+    handlefile_executor = HandleFileExecutor(
         func=handle_item,
         dir_path=dir_path,
         new_dir_path=new_dir_path,
@@ -206,19 +260,19 @@ def handle_dir_files(
     file_path_iter = (
         file_path for file_path in dir_path.glob("**/*") if file_path.is_file()
     )
-    handlefile_manager.start(file_path_iter)
+    handlefile_executor.start(file_path_iter)
 
-    error_path_dict = handlefile_manager.handle_error_dict()
+    error_path_dict = handlefile_executor.handle_error_dict()
     return error_path_dict
 
 
 def handle_subdirs(
     dir_path: str | Path,
-    rules: Dict[str, Tuple[Callable[[Path, Path, Dict], None], Callable[[Path], Path], Dict]],
+    rules: dict[str, tuple[Callable[[Path, Path, dict], None], Callable[[Path], Path], dict]],
     execution_mode: str = "serial",
     progress_desc: str = "Processing dirs",
     dir_name_suffix: str = "_re",
-) -> Dict[Tuple[str, str], List[Path]]:
+) -> dict[tuple[str, str], list[Path]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行处理，并将处理后的文件存储到新的目录中。
     不属于指定后缀的文件将被直接复制到新目录中。处理后的文件会保持原始的目录结构。
@@ -233,7 +287,7 @@ def handle_subdirs(
     dir_path = Path(dir_path)
     new_dir_path = dir_path.parent / (dir_path.name + dir_name_suffix)
 
-    handlefile_manager = HandleSubFolderManager(
+    handlefile_executor = HandleSubFolderExecutor(
         func=handle_item,
         dir_path=dir_path,
         new_dir_path=new_dir_path,
@@ -243,15 +297,15 @@ def handle_subdirs(
     )
 
     sub_dir_list = find_pure_dirs(dir_path, True)
-    handlefile_manager.start(sub_dir_list)
+    handlefile_executor.start(sub_dir_list)
 
-    error_path_dict = handlefile_manager.handle_error_dict()
+    error_path_dict = handlefile_executor.handle_error_dict()
     return error_path_dict
 
 
 def compress_dir(
     dir_path: str | Path, execution_mode: str = "thread"
-) -> List[Tuple[Path, Exception]]:
+) -> list[tuple[Path, Exception]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行压缩处理，并将处理后的文件存储到新的目录中。
     支持的文件类型包括图片、视频和PDF。不属于这三种类型的文件将被直接复制到新目录中。
@@ -557,22 +611,22 @@ def get_dir_mtime(dir_path: Path) -> HumanTimestamp:
 
 
 def detect_identical_files(
-    dir_list: List[Path], execution_mode: str = "thread"
-) -> Dict[Tuple[str, int], List[Path]]:
+    dir_list: list[Path], execution_mode: str = "thread"
+) -> dict[tuple[str, int], list[Path]]:
     """
     检测文件夹中是否存在相同内容的文件，并在文件名后添加文件大小。
 
     :param dir_list: 文件夹路径列表。
     :return: 相同文件的字典，键为文件大小和哈希值，值为文件路径列表。
     """
-    scan_size_manager = ScanSizeManager(
+    scan_size_executor = ScanSizeExecutor(
         get_file_size,
         execution_mode,
         enable_success_cache=True,
         progress_desc="Scanning files size",
         show_progress=True,
     )
-    scan_hash_manager = ScanHashManager(
+    scan_hash_executor = ScanHashExecutor(
         get_file_hash,
         execution_mode,
         enable_success_cache=True,
@@ -587,17 +641,53 @@ def detect_identical_files(
         for path in Path(dir_path).rglob("*")
         if path.is_file()
     )
-    scan_size_manager.start(file_path_iter)
-    file_size_iter = scan_size_manager.process_result_dict()
+    scan_size_executor.start(file_path_iter)
+    file_size_iter = scan_size_executor.process_result_dict()
 
     # 对于相同大小的文件，进一步计算哈希值, 找出哈希值相同的文件
-    scan_hash_manager.start(file_size_iter)
-    identical_dict = scan_hash_manager.process_result_dict()
+    scan_hash_executor.start(file_size_iter)
+    identical_dict = scan_hash_executor.process_result_dict()
 
     return identical_dict
 
 
-def duplicate_files_report(identical_dict: Dict[Tuple[str, HumanBytes], List[Path]]):
+def detect_identical_dirs(
+    dir_list: list[Path], execution_mode: str = "thread"
+) -> dict[tuple[str, int], list[Path]]:
+    """
+    检测文件夹中是否存在相同内容的文件，并在文件名后添加文件大小。
+
+    :param dir_list: 文件夹路径列表。
+    :return: 相同文件的字典，键为文件大小和哈希值，值为文件路径列表。
+    """
+    scan_size_executor = ScanSizeExecutor(
+        get_dir_size,
+        execution_mode,
+        enable_success_cache=True,
+        progress_desc="Scanning dirs size",
+        show_progress=True,
+    )
+    scan_hash_executor = ScanHashExecutor(
+        get_dir_hash,
+        execution_mode,
+        enable_success_cache=True,
+        progress_desc="Calculating dirs hash",
+        show_progress=True,
+    )
+
+    # 根据文件夹大小进行初步筛选
+    dir_path_list = find_pure_dirs(dir_list)
+    scan_size_executor.start(dir_path_list)
+    dir_size_iter = scan_size_executor.process_result_dict()
+
+    # 对于相同大小的文件夹，进一步计算哈希值, 找出哈希值相同的文件夹
+    scan_hash_executor.start(dir_size_iter)
+    identical_dict = scan_hash_executor.process_result_dict()
+
+    return identical_dict
+
+
+def duplicate_files_report(identical_dict: dict[tuple[str, HumanBytes], list[Path]]):
     """
     生成一个详细报告，列出所有重复的文件及其位置。
 
@@ -648,7 +738,7 @@ def duplicate_files_report(identical_dict: Dict[Tuple[str, HumanBytes], List[Pat
     print("\n".join(report))
 
 
-def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
+def delete_identical_files(identical_dict: dict[tuple[str, int], list[Path]]):
     """
     删除文件夹中相同内容的文件。
 
@@ -664,17 +754,17 @@ def delete_identical_files(identical_dict: Dict[Tuple[str, int], List[Path]]):
     for (hash_value, file_size), file_list in identical_dict.items():
         delete_list.extend([(file_path, file_size) for file_path in file_list])
 
-    delete_return_size_manager = DeleteReturnSizeManager(
+    delete_return_size_executor = DeleteReturnSizeExecutor(
         delete_and_return_size, unpack_task_args=True, enable_success_cache=True
     )
-    delete_return_size_manager.start(delete_list)
-    delete_size = delete_return_size_manager.process_result_dict()
+    delete_return_size_executor.start(delete_list)
+    delete_size = delete_return_size_executor.process_result_dict()
 
     print(f"\nTotal size of deleted files: {delete_size}")
 
 
 def move_identical_files(
-    identical_dict: Dict[Tuple[str, int], List[Path]],
+    identical_dict: dict[tuple[str, int], list[Path]],
     target_dir: str | Path,
     size_threshold: int = None,
 ):
@@ -779,7 +869,7 @@ def replace_filenames(dir_path: Path | str, pattern: str, replacement: str):
         file.rename(new_file_path)  # 重命名文件
 
 
-def split_text_and_number(s: str, special_keywords: Dict[str, int]) -> Tuple:
+def split_text_and_number(s: str, special_keywords: dict[str, int]) -> tuple:
     """
     将路径部分中的文本与数字交替提取，同时根据关键词设置优先级。
     例如，"a1bbb2ccc3" -> (keyword_priority, "a", 1, "bbb", 2, "ccc", 3)
@@ -810,7 +900,7 @@ def split_text_and_number(s: str, special_keywords: Dict[str, int]) -> Tuple:
     return tuple(result)
 
 
-def sort_by_number(file_path: Path, special_keywords: Dict[str, int]) -> Tuple:
+def sort_by_number(file_path: Path, special_keywords: dict[str, int]) -> tuple:
     """
     文件排序规则：
     1. 按路径中的每一层（包括文件名）进行文本与数字交替排序，同时考虑关键词优先级。

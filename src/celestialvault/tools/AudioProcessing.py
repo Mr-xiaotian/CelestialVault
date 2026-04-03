@@ -1,6 +1,5 @@
 from pathlib import Path
 from pydub import AudioSegment
-from typing import Dict, List, Tuple
 
 
 def convert_mp3_to_wav(mp3_path: Path, wav_path: Path):
@@ -21,7 +20,7 @@ def convert_mp3_to_wav(mp3_path: Path, wav_path: Path):
     )
 
 
-def convert_mp3_dir(dir_path: Path) -> Dict[Tuple[str, str], List[Path]]:
+def convert_mp3_dir(dir_path: Path) -> dict[tuple[str, str], list[Path]]:
     """
     将指定目录下的所有 mp3 文件转换为 wav 文件
 

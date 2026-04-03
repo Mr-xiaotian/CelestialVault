@@ -1,10 +1,9 @@
 import sys
 import time
-from collections.abc import Container, Mapping
+from collections.abc import Callable, Container, Mapping
 from functools import wraps
 from time import localtime, strftime
 from types import FunctionType
-from typing import Callable
 
 from ..instances.inst_units import HumanBytes
 
