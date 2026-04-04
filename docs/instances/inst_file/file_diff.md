@@ -11,10 +11,10 @@
 - `from dataclasses import dataclass`
 - `from celestialflow import TaskExecutor`
 - `from typing import TYPE_CHECKING`
-- `from ...instances.inst_units import HumanBytes`
+- `from ...instances.inst_units import HumanBytes, HumanTimestamp`
 - `from ...tools.FileOperations import delete_file_or_dir, copy_file_or_dir, append_hash_to_filename`
 - `from ...tools.TextTools import format_table`
-- `from .file_node import FileNode`
+- `from .file_node import FileNode, DirNode`
 
 ## 模块常量
 - 无
@@ -45,3 +45,7 @@
   - `def print_diff_tree(self)`
   - `def sync_dirs(self, mode: str = '->')`
   - `def to_dict(self)`
+
+## 节点判断
+- `inst_file` 中的节点模型以 `BaseNode.is_dir` 表示目录/文件类型。
+- 本文档描述中，凡是涉及“节点是否为目录”的判断，统一按 `.is_dir` 理解。
