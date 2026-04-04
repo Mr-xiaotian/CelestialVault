@@ -1,7 +1,7 @@
 import pytest, logging
 from celestialvault.tools.FileOperations import (
     detect_identical_files,
-    duplicate_files_report,
+    duplicate_report,
 )
 
 
@@ -13,4 +13,4 @@ def _test_compress_dir():
 
 def test_detect_identical_files():
     identical_dict = detect_identical_files(r".")
-    duplicate_files_report(identical_dict)
+    duplicate_report(identical_dict)

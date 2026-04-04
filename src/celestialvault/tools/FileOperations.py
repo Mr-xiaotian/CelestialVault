@@ -625,6 +625,7 @@ def detect_identical_files(
         enable_success_cache=True,
         progress_desc="Scanning files size",
         show_progress=True,
+        log_level="INFO",
     )
     scan_hash_executor = ScanHashExecutor(
         get_file_hash,
@@ -632,6 +633,7 @@ def detect_identical_files(
         enable_success_cache=True,
         progress_desc="Calculating files hash",
         show_progress=True,
+        log_level="INFO",
     )
 
     # 根据文件大小进行初步筛选
@@ -653,12 +655,12 @@ def detect_identical_files(
 
 def detect_identical_dirs(
     dir_list: list[Path], execution_mode: str = "thread"
-) -> dict[tuple[str, int], list[Path]]:
+) -> dict[tuple[str, HumanBytes], list[Path]]:
     """
-    检测文件夹中是否存在相同内容的文件，并在文件名后添加文件大小。
+    检测文件夹中是否存在相同内容的文件夹，并在文件夹名后添加文件夹大小。
 
     :param dir_list: 文件夹路径列表。
-    :return: 相同文件的字典，键为文件大小和哈希值，值为文件路径列表。
+    :return: 相同文件夹的字典，键为文件夹大小和哈希值，值为文件夹路径列表。
     """
     scan_size_executor = ScanSizeExecutor(
         get_dir_size,
@@ -666,6 +668,7 @@ def detect_identical_dirs(
         enable_success_cache=True,
         progress_desc="Scanning dirs size",
         show_progress=True,
+        log_level="INFO",
     )
     scan_hash_executor = ScanHashExecutor(
         get_dir_hash,
@@ -673,10 +676,11 @@ def detect_identical_dirs(
         enable_success_cache=True,
         progress_desc="Calculating dirs hash",
         show_progress=True,
+        log_level="INFO",
     )
 
     # 根据文件夹大小进行初步筛选
-    dir_path_list = find_pure_dirs(dir_list)
+    dir_path_list = [pure_path for path in dir_list for pure_path in find_pure_dirs(path)]
     scan_size_executor.start(dir_path_list)
     dir_size_iter = scan_size_executor.process_result_dict()
 
@@ -687,20 +691,21 @@ def detect_identical_dirs(
     return identical_dict
 
 
-def duplicate_files_report(identical_dict: dict[tuple[str, HumanBytes], list[Path]]):
+def duplicate_report(identical_dict: dict[tuple[str, HumanBytes], list[Path]]) -> str:
     """
-    生成一个详细报告，列出所有重复的文件及其位置。
+    生成一个详细报告，列出所有重复的文件/文件夹及其位置。
 
-    :param identical_dict: 相同文件的字典，由 detect_identical_files 函数返回。
+    :param identical_dict: 相同文件的字典，由 detect_identical_files/detect_identical_dirs 函数返回。
+    :return: 详细报告。
     """
     if not identical_dict:
-        print("\nNo identical files found.")
-        return
+        print("\nNo identical items found.")
+        return ""
 
     report = []
     total_size = HumanBytes(0)
-    total_file_num = 0
-    max_file_num = 0
+    total_item_num = 0
+    max_item_num = 0
     index = 0
     sort_identical_dict = dict(
         sorted(
@@ -710,49 +715,50 @@ def duplicate_files_report(identical_dict: dict[tuple[str, HumanBytes], list[Pat
         )
     )
 
-    report.append("\nIdentical files found:\n")
-    for (hash_value, file_size), file_list in sort_identical_dict.items():
-        file_num = len(file_list)
-        total_size += file_size * file_num
-        total_file_num += file_num
+    report.append("\nIdentical items found:\n")
+    for (hash_value, item_size), item_list in sort_identical_dict.items():
+        item_num = len(item_list)
+        total_size += item_size * item_num
+        total_item_num += item_num
 
-        if file_num > max_file_num:
-            max_file_num = file_num
-            max_file_key = (hash_value, file_size)
+        if item_num > max_item_num:
+            max_item_num = item_num
+            max_item_key = (hash_value, item_size)
 
-        files_size = file_size * file_num
-        data = [(str(file), file_size) for file in file_list]
-        table_text = format_table(data, column_names=["File", "Size"])
+        items_size = item_size * item_num
+        data = [(str(item), item_size) for item in item_list]
+        table_text = format_table(data, column_names=["Item", "Size"])
 
-        report.append(f"{index}.Hash: {hash_value} (Size: {files_size})")
+        report.append(f"{index}.Hash: {hash_value} (Size: {items_size})")
         report.append(table_text + "\n")
         index += 1
 
-    hash_value, file_size = max_file_key
-    report.append(f"Total size of duplicate files: {total_size}")
-    report.append(f"Total number of duplicate files: {total_file_num}")
+    hash_value, item_size = max_item_key
+    report.append(f"Total size of duplicate items: {total_size}")
+    report.append(f"Total number of duplicate items: {total_item_num}")
     report.append(
-        f"File with the most duplicates: {hash_value}(hash) {file_size}(size) {max_file_num}(number)"
+        f"Item with the most duplicates: {hash_value}(hash) {item_size}(size) {max_item_num}(number)"
     )
 
-    print("\n".join(report))
+    report_text = "\n".join(report)
+    return report_text
 
 
-def delete_identical_files(identical_dict: dict[tuple[str, int], list[Path]]):
+def delete_identical(identical_dict: dict[tuple[str, HumanBytes], list[Path]]):
     """
     删除文件夹中相同内容的文件。
 
-    :param identical_dict: 相同文件的字典，由 detect_identical_files 函数返回。
+    :param identical_dict: 相同文件的字典，由 detect_identical_files/detect_identical_dirs 函数返回。
     :return: 删除的文件列表。
     """
 
-    def delete_and_return_size(path: Path, size: int):
+    def delete_and_return_size(path: Path, size: HumanBytes):
         path.unlink()
         return size
 
     delete_list = []
-    for (hash_value, file_size), file_list in identical_dict.items():
-        delete_list.extend([(file_path, file_size) for file_path in file_list])
+    for (hash_value, item_size), item_list in identical_dict.items():
+        delete_list.extend([(item_path, item_size) for item_path in item_list])
 
     delete_return_size_executor = DeleteReturnSizeExecutor(
         delete_and_return_size, unpack_task_args=True, enable_success_cache=True
@@ -763,15 +769,15 @@ def delete_identical_files(identical_dict: dict[tuple[str, int], list[Path]]):
     print(f"\nTotal size of deleted files: {delete_size}")
 
 
-def move_identical_files(
-    identical_dict: dict[tuple[str, int], list[Path]],
+def move_identical(
+    identical_dict: dict[tuple[str, HumanBytes], list[Path]],
     target_dir: str | Path,
-    size_threshold: int = None,
+    size_threshold: HumanBytes = None,
 ):
     """
     将相同内容的文件移动到指定的目标文件夹。
 
-    :param identical_dict: 相同文件的字典，由 detect_identical_files 函数返回。
+    :param identical_dict: 相同文件的字典，由 detect_identical_files/detect_identical_dirs 函数返回。
     :param target_dir: 目标文件夹路径。
     :param size_threshold: 文件大小阈值，只有大于此阈值的文件会被移动。如果为 None，则不限制文件大小。
     :return: 移动的文件列表。
@@ -780,15 +786,15 @@ def move_identical_files(
     moved_files = {}
     report = []
 
-    for (hash_value, file_size), file_list in tqdm(identical_dict.items()):
-        target_subdir = target_dir / f"{hash_value}({file_size})"
+    for (hash_value, item_size), item_list in tqdm(identical_dict.items()):
+        target_subdir = target_dir / f"{hash_value}({item_size})"
         if not target_subdir.exists():
             target_subdir.mkdir(parents=True)
 
         moved_files[hash_value] = []
 
-        for file in file_list:
-            if size_threshold is not None and file_size <= size_threshold:
+        for file in item_list:
+            if size_threshold is not None and item_size <= size_threshold:
                 continue
             target_path = target_subdir / file.name
 
@@ -973,7 +979,7 @@ def extract_dir_numbers(dir_path: Path | str) -> set:
     :return: 字典，包含文件夹名称和对应的数字部分。
     """
     num_set = set()
-    pattern = re.compile("\((\d+)\)")
+    pattern = re.compile(r"\((\d+)\)")
 
     path = Path(dir_path)
     path_list = list(path.iterdir())
@@ -995,7 +1001,7 @@ def extract_file_numbers(dir_path: Path | str, suffix: str) -> set:
     :return: 字典，包含文件夹名称和对应的数字部分。
     """
     num_set = set()
-    pattern = re.compile("\((\d+)\)")
+    pattern = re.compile(r"\((\d+)\)")
 
     path = Path(dir_path)
     path_list = list(path.iterdir())
@@ -1020,15 +1026,20 @@ def find_pure_dirs(root: str | Path, only_nonempty: bool = False) -> list[Path]:
     pure_dirs = []
 
     for dir in root.rglob("*"):
-        if dir.is_dir():
-            subdirs = [p for p in dir.iterdir() if p.is_dir()]
-            if not subdirs:  # 没有子文件夹
-                files = [p for p in dir.iterdir() if p.is_file()]
-                if only_nonempty:
-                    if files:
-                        pure_dirs.append(dir)
-                else:
-                    pure_dirs.append(dir)
+        if not dir.is_dir():
+            # 不可为文件
+            continue
+        subdirs = [p for p in dir.iterdir() if p.is_dir()]
+        if subdirs: 
+            # 不可有子文件夹
+            continue
+
+        files = [p for p in dir.iterdir() if p.is_file()]
+        if only_nonempty:
+            if files:
+                pure_dirs.append(dir)
+        else:
+            pure_dirs.append(dir)
 
     return pure_dirs
 

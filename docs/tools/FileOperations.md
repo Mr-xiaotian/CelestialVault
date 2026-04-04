@@ -190,21 +190,21 @@
 :param dir_list: 文件夹路径列表。
 :return: 相同文件的字典，键为文件大小和哈希值，值为文件路径列表。
 
-### `duplicate_files_report`
-- 签名: `def duplicate_files_report(identical_dict: dict[tuple[str, HumanBytes], list[Path]])`
+### `duplicate_report`
+- 签名: `def duplicate_report(identical_dict: dict[tuple[str, HumanBytes], list[Path]])`
 - 说明: 生成一个详细报告，列出所有重复的文件及其位置。
 
 :param identical_dict: 相同文件的字典，由 detect_identical_files 函数返回。
 
-### `delete_identical_files`
-- 签名: `def delete_identical_files(identical_dict: dict[tuple[str, int], list[Path]])`
+### `delete_identical`
+- 签名: `def delete_identical(identical_dict: dict[tuple[str, int], list[Path]])`
 - 说明: 删除文件夹中相同内容的文件。
 
 :param identical_dict: 相同文件的字典，由 detect_identical_files 函数返回。
 :return: 删除的文件列表。
 
-### `move_identical_files`
-- 签名: `def move_identical_files(identical_dict: dict[tuple[str, int], list[Path]], target_dir: str | Path, size_threshold: int = None)`
+### `move_identical`
+- 签名: `def move_identical(identical_dict: dict[tuple[str, int], list[Path]], target_dir: str | Path, size_threshold: int = None)`
 - 说明: 将相同内容的文件移动到指定的目标文件夹。
 
 :param identical_dict: 相同文件的字典，由 detect_identical_files 函数返回。
