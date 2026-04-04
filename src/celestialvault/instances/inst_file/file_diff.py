@@ -4,6 +4,7 @@ from celestialflow import TaskExecutor
 from typing import TYPE_CHECKING
 
 from ...instances.inst_units import HumanBytes
+from ...instances.inst_units import HumanBytes, HumanTimestamp
 from ...tools.FileOperations import (
     delete_file_or_dir,
     copy_file_or_dir,
@@ -200,3 +201,98 @@ class FileDiff:
             "diff_size_left": self.diff_size_left,
             "diff_size_right": self.diff_size_right,
         }
+
+
+# 对比两棵树
+def compare_trees(tree1: FileTree, tree2: FileTree, compare_hash: bool = False) -> "FileDiff":
+    """
+    将当前文件树与另一棵文件树对比，返回包含差异信息的 FileDiff 对象。
+
+    :param tree2: 要对比的另一棵文件树。
+    :param compare_hash: 是否通过哈希值比较文件内容。
+    :return: 包含两棵树差异信息的 FileDiff 对象。
+    """
+    diff = FileDiff(
+        left_path=tree1.path,
+        right_path=tree2.path,
+        only_in_left=[],
+        only_in_right=[],
+        different_files=[],
+        compare_hash=compare_hash,
+        diff_size_left=HumanBytes(0),
+        diff_size_right=HumanBytes(0),
+    )
+
+    def _compare(n1: FileNode, n2: FileNode) -> FileNode:
+        n1_map = {c.name: c for c in n1.children}
+        n2_map = {c.name: c for c in n2.children}
+        common = n1_map.keys() & n2_map.keys()
+
+        diff_children = []
+        diff_size = HumanBytes(0)
+        mtime = HumanTimestamp(0)
+
+        # 左独有
+        for name in n1_map.keys() - n2_map.keys():
+            node = n1_map[name]
+            diff.only_in_left.append(node.node_path.relative_to(tree1.path))
+            diff.diff_size_left += node.size
+            diff_size += node.size
+            diff_children.append(node)
+
+        # 右独有
+        for name in n2_map.keys() - n1_map.keys():
+            node = n2_map[name]
+            diff.only_in_right.append(node.node_path.relative_to(tree2.path))
+            diff.diff_size_right += node.size
+            diff_size += node.size
+            diff_children.append(node)
+
+        # 公共项
+        for name in common:
+            c1, c2 = n1_map[name], n2_map[name]
+            if c1.is_dir and c2.is_dir:
+                is_equal_size = c1.size == c2.size
+                if is_equal_size:
+                    if not compare_hash or c1.hash == c2.hash:
+                        continue
+
+                sub_dir = _compare(c1, c2)
+                diff_size += sub_dir.size
+                diff_children.append(sub_dir)
+            elif not c1.is_dir and not c2.is_dir:
+                is_equal_size = c1.size == c2.size
+                if is_equal_size:
+                    if not compare_hash or c1.hash == c2.hash:
+                        continue
+
+                diff.different_files.append(c1.node_path.relative_to(tree1.path))
+                diff.diff_size_left += c1.size
+                diff.diff_size_right += c2.size
+                diff_size += c1.size + c2.size
+                diff_children.append(c1)
+                diff_children.append(c2)
+            else:
+                # 一方文件一方文件夹
+                diff.only_in_left.append(c1.node_path.relative_to(tree1.path))
+                diff.only_in_right.append(c2.node_path.relative_to(tree2.path))
+                diff.diff_size_left += c1.size
+                diff.diff_size_right += c2.size
+                diff_size += c1.size + c2.size
+                diff_children.append(c1)
+                diff_children.append(c2)
+
+        return FileNode(
+            f"{n1.name}",
+            None,
+            True,
+            diff_size,
+            mtime,
+            "📁",
+            n1.level,
+            diff_children,
+        )
+
+    diff.diff_tree = FileTree(_compare(tree1.root, tree2.root), tree1.path)
+    return diff
+

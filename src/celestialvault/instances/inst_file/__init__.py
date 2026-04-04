@@ -1,10 +1,9 @@
-from .file_node import FileNode
 from .file_tree import FileTree
-from .file_diff import FileDiff
+from .file_diff import FileDiff, compare_trees
 
 
 __all__ = [
-    FileNode,   
     FileTree,
     FileDiff,
+    compare_trees,
 ]
