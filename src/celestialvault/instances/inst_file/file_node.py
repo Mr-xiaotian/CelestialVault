@@ -11,19 +11,20 @@ from .file_util import to_string
 
 
 class BaseNode:
-    def __init__(self, name: str, node_path: Path, size: HumanBytes, mtime: HumanTimestamp, icon: str, level: int):
+    def __init__(self, name: str, node_path: Path, size: HumanBytes, mtime: HumanTimestamp, icon: str, level: int, is_dir: bool):
         self.name = name
         self.node_path = node_path
         self.size = size
         self.mtime = mtime
         self.icon = icon
         self.level = level
+        self.is_dir = is_dir
 
         self._hash: str | None = None
 
-    def print(self, prefix: str = None, name: str = None, suffix: str = None, max_name_len: int = None):
+    def print(self, level: int = None, prefix: str = None, name: str = None, suffix: str = None, max_name_len: int = None):
         print(to_string(
-            indent="    " * self.level,
+            indent="    " * level if level is not None else "    " * self.level,
             icon=self.icon,
             prefix=prefix or "", # f"[{self.node_path.parent.as_posix()}]"
             name=name or self.name,
@@ -35,7 +36,7 @@ class BaseNode:
 @dataclass
 class FileNode(BaseNode):
     def __init__(self, name: str, suffix: str, node_path: Path, size: HumanBytes, mtime: HumanTimestamp, icon: str, level: int):
-        super().__init__(name, node_path, size, mtime, icon, level)
+        super().__init__(name, node_path, size, mtime, icon, level, False)
         self.suffix = suffix
 
     @property
@@ -60,9 +61,9 @@ class FileNode(BaseNode):
 
 @dataclass
 class DirNode(BaseNode):
-    def __init__(self, name: str, node_path: Path, size: HumanBytes, mtime: HumanTimestamp, icon: str, level: int, children: list["DirNode"]):
-        super().__init__(name, node_path, size, mtime, icon, level)
-        self.children: list["DirNode"] = children
+    def __init__(self, name: str, node_path: Path, size: HumanBytes, mtime: HumanTimestamp, level: int, children: list["BaseNode"]):
+        super().__init__(name, node_path, size, mtime, "📁", level, True)
+        self.children: list["BaseNode"] = children
 
     @property
     def hash(self) -> str:
@@ -92,12 +93,11 @@ class DirNode(BaseNode):
             return hashlib.new(algo, data).hexdigest()
 
         child_hashes = []
-        for child in sorted(self.children, key=lambda c: (not isinstance(c, DirNode), c.name)):
+        for child in sorted(self.children, key=lambda c: (not c.is_dir, c.name)):
             h = child.hash
             if not h:
                 continue
-            # 将类型标记 + 名称 + hash 拼起来（防止哈希碰撞）
-            tag = "D" if isinstance(child, DirNode) else "F"
+            tag = "D" if child.is_dir else "F"
             entry = f"{tag}:{child.name}:{h}".encode("utf-8")
             child_hashes.append(entry)
 

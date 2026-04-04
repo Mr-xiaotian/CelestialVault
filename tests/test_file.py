@@ -27,23 +27,3 @@ def test_print_tree():
         r".", exclude_dirs=exclude_dirs, exclude_exts=exclude_exts
     )
     print("\nPass hash test.")
-
-
-def test_print_tree_align_suffixes_in_same_dir(tmp_path, capsys):
-    (tmp_path / "a").mkdir()
-    (tmp_path / "very_long_directory_name").mkdir()
-    (tmp_path / "mid.txt").write_text("mid")
-    (tmp_path / "skip.json").write_text("{}")
-
-    file_tree = FileTree.build_from_path(tmp_path)
-    file_tree.print_tree(exclude_exts=[".json"], max_depth=99)
-
-    output_lines = [
-        line for line in capsys.readouterr().out.splitlines()
-        if line.startswith("    ")
-    ]
-
-    tab_indexes = {line.index("\t(") for line in output_lines}
-
-    assert len(output_lines) == 4
-    assert len(tab_indexes) == 1

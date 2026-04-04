@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from celestialflow import TaskExecutor
 from typing import TYPE_CHECKING
 
-from ...instances.inst_units import HumanBytes
 from ...instances.inst_units import HumanBytes, HumanTimestamp
 from ...tools.FileOperations import (
     delete_file_or_dir,
@@ -11,10 +10,8 @@ from ...tools.FileOperations import (
     append_hash_to_filename,
 )
 from ...tools.TextTools import format_table
-from .file_node import FileNode
-
-if TYPE_CHECKING:
-    from .file_tree import FileTree
+from .file_node import BaseNode, DirNode
+from .file_tree import FileTree
 
 
 class DeleteExecutor(TaskExecutor):
@@ -83,37 +80,38 @@ class FileDiff:
         """
         以树形结构打印差异文件，并显示两侧目录的差异大小汇总表。
         """
-        def _print(node: FileNode):
-            if node == self.diff_tree.root:
-                pass
-            else:
-                print(
-                    node.to_string(
-                        indent="    " * (node.level - 1),
-                        prefix=(
-                            f"[{node.node_path.parent.as_posix()}]"
-                            if node.node_path
-                            else ""
-                        ),
-                        suffix=(
-                            f"({node.size}) ({node.hash})"
-                            if self.compare_hash and node._hash
-                            else f"({node.size})"
-                        ),
-                    )
-                )
-            dirs = [c for c in node.children if c.is_dir]
-            files = [c for c in node.children if not c.is_dir]
-            for d in dirs:
-                _print(d)
-            for f in files:
-                _print(f)
+        def _print(node: BaseNode):
+            node.print(
+                level=node.level-1,
+                prefix=(
+                    f"[{node.node_path.parent.as_posix()}]"
+                    if node.node_path
+                    else ""
+                ),
+                suffix=(
+                    f"({node.size}) ({node.hash})"
+                    if self.compare_hash and node._hash
+                    else f"({node.size})"
+                ),
+            )
+            if node.is_dir:
+                dirs = [c for c in node.children if c.is_dir]
+                files = [c for c in node.children if not c.is_dir]
+                for d in dirs:
+                    _print(d)
+                for f in files:
+                    _print(f)
 
         if self.is_identical():
             print("No different files found.")
             return
-
-        _print(self.diff_tree.root)
+        
+        dirs = [c for c in self.diff_tree.root.children if c.is_dir]
+        files = [c for c in self.diff_tree.root.children if not c.is_dir]
+        for d in dirs:
+            _print(d)
+        for f in files:
+            _print(f)
         print()
         print(
             format_table(
@@ -223,7 +221,7 @@ def compare_trees(tree1: FileTree, tree2: FileTree, compare_hash: bool = False) 
         diff_size_right=HumanBytes(0),
     )
 
-    def _compare(n1: FileNode, n2: FileNode) -> FileNode:
+    def _compare(n1: DirNode, n2: DirNode) -> DirNode:
         n1_map = {c.name: c for c in n1.children}
         n2_map = {c.name: c for c in n2.children}
         common = n1_map.keys() & n2_map.keys()
@@ -252,6 +250,7 @@ def compare_trees(tree1: FileTree, tree2: FileTree, compare_hash: bool = False) 
         for name in common:
             c1, c2 = n1_map[name], n2_map[name]
             if c1.is_dir and c2.is_dir:
+                # 双方都是文件夹
                 is_equal_size = c1.size == c2.size
                 if is_equal_size:
                     if not compare_hash or c1.hash == c2.hash:
@@ -259,8 +258,10 @@ def compare_trees(tree1: FileTree, tree2: FileTree, compare_hash: bool = False) 
 
                 sub_dir = _compare(c1, c2)
                 diff_size += sub_dir.size
+                mtime = max(mtime, sub_dir.mtime)
                 diff_children.append(sub_dir)
             elif not c1.is_dir and not c2.is_dir:
+                # 双方都是文件  
                 is_equal_size = c1.size == c2.size
                 if is_equal_size:
                     if not compare_hash or c1.hash == c2.hash:
@@ -270,6 +271,7 @@ def compare_trees(tree1: FileTree, tree2: FileTree, compare_hash: bool = False) 
                 diff.diff_size_left += c1.size
                 diff.diff_size_right += c2.size
                 diff_size += c1.size + c2.size
+                mtime = max(mtime, c1.mtime, c2.mtime)
                 diff_children.append(c1)
                 diff_children.append(c2)
             else:
@@ -279,16 +281,15 @@ def compare_trees(tree1: FileTree, tree2: FileTree, compare_hash: bool = False) 
                 diff.diff_size_left += c1.size
                 diff.diff_size_right += c2.size
                 diff_size += c1.size + c2.size
+                mtime = max(mtime, c1.mtime, c2.mtime)
                 diff_children.append(c1)
                 diff_children.append(c2)
 
-        return FileNode(
-            f"{n1.name}",
-            None,
-            True,
+        return DirNode(
+            "DiffTree",
+            n1.node_path,
             diff_size,
             mtime,
-            "📁",
             n1.level,
             diff_children,
         )
