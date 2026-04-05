@@ -4,15 +4,15 @@ import shutil
 import tarfile
 import zipfile
 from collections import defaultdict
-from pathlib import Path
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import py7zr
 import rarfile
+from celestialflow import TaskExecutor
 from tqdm import tqdm
 from wcwidth import wcswidth
-from celestialflow import TaskExecutor
 
 from ..constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 from ..instances.inst_units import HumanBytes, HumanTimestamp
@@ -130,9 +130,7 @@ class ScanSizeExecutor(TaskExecutor):
 
         size_dict = {k: v for k, v in size_dict.items() if len(v) > 1}
         size_iter = (
-            (path, size)
-            for size, files in size_dict.items()
-            for path in files
+            (path, size) for size, files in size_dict.items() for path in files
         )
         return size_iter
 
@@ -177,6 +175,22 @@ class DeleteReturnSizeExecutor(TaskExecutor):
         for size in self.get_success_dict().values():
             delete_size += size
         return HumanBytes(delete_size)
+
+
+class FindPureExecutor(TaskExecutor):
+    """查找纯粹文件夹执行器，返回所有纯粹文件夹的路径。"""
+
+    def process_result_dict(self):
+        """
+        返回所有纯粹文件夹的路径。
+
+        :return: 纯粹文件夹的路径列表。
+        """
+        pure_dirs = []
+        for dir in self.get_success_dict().keys():
+            if is_pure_dir(dir):
+                pure_dirs.append(dir)
+        return pure_dirs
 
 
 def create_dir(path: str | Path) -> Path:
@@ -229,7 +243,9 @@ def handle_item(
 
 def handle_dir_files(
     dir_path: str | Path,
-    rules: dict[str, tuple[Callable[[Path, Path, dict], None], Callable[[Path], Path], dict]],
+    rules: dict[
+        str, tuple[Callable[[Path, Path, dict], None], Callable[[Path], Path], dict]
+    ],
     execution_mode: str = "serial",
     progress_desc: str = "Processing files",
     dir_name_suffix: str = "_re",
@@ -268,7 +284,9 @@ def handle_dir_files(
 
 def handle_subdirs(
     dir_path: str | Path,
-    rules: dict[str, tuple[Callable[[Path, Path, dict], None], Callable[[Path], Path], dict]],
+    rules: dict[
+        str, tuple[Callable[[Path, Path, dict], None], Callable[[Path], Path], dict]
+    ],
     execution_mode: str = "serial",
     progress_desc: str = "Processing dirs",
     dir_name_suffix: str = "_re",
@@ -680,7 +698,9 @@ def detect_identical_dirs(
     )
 
     # 根据文件夹大小进行初步筛选
-    dir_path_list = [pure_path for path in dir_list for pure_path in find_pure_dirs(path)]
+    dir_path_list = [
+        pure_path for path in dir_list for pure_path in find_pure_dirs(path)
+    ]
     scan_size_executor.start(dir_path_list)
     dir_size_iter = scan_size_executor.process_result_dict()
 
@@ -885,24 +905,24 @@ def split_text_and_number(s: str, special_keywords: dict[str, int]) -> tuple:
     :return: 包含关键词优先级、文本和数字交替的元组。
     """
     # 提取文本和数字部分
-    parts = re.findall(r'([a-zA-Z]+|\d+)', s)
+    parts = re.findall(r"([a-zA-Z]+|\d+)", s)
     result = []
-    
+
     # 提取关键字优先级
     keyword_priority = min(
         (special_keywords[keyword] for keyword in special_keywords if keyword in s),
-        default=float('inf')  # 默认无关键词时优先级为无穷大
+        default=float("inf"),  # 默认无关键词时优先级为无穷大
     )
-    
+
     result.append(keyword_priority)
-    
+
     # 将文本和数字交替放入结果列表
     for part in parts:
         if part.isdigit():
             result.append(int(part))  # 如果是数字部分，转换为整数
         else:
             result.append(part)  # 如果是文本部分，直接保留文本
-    
+
     return tuple(result)
 
 
@@ -917,12 +937,14 @@ def sort_by_number(file_path: Path, special_keywords: dict[str, int]) -> tuple:
     :return: 用于排序的元组。
     """
     # 处理路径中的每一层（包括文件名）
-    path_parts = [split_text_and_number(part, special_keywords) for part in file_path.parts]
-    
+    path_parts = [
+        split_text_and_number(part, special_keywords) for part in file_path.parts
+    ]
+
     # 处理文件名部分：最后一个部分是文件名
     file_name = file_path.name
     file_name_parts = split_text_and_number(file_name, special_keywords)
-    
+
     return (*path_parts, *file_name_parts)
 
 
@@ -1014,6 +1036,27 @@ def extract_file_numbers(dir_path: Path | str, suffix: str) -> set:
     return num_set
 
 
+def is_pure_dir(dir: Path, only_nonempty: bool = False) -> bool:
+    """
+    判断一个文件夹是否为“纯粹文件夹”，即只包含文件而不包含子文件夹。
+
+    :param dir: 文件夹路径
+    :param only_nonempty: 是否只返回至少包含一个文件的纯粹文件夹
+    :return: 布尔值，True 表示是纯粹文件夹，False 表示不是
+    """
+    have_file = False
+    for p in dir.iterdir():
+        if p.is_dir():
+            return False
+        elif p.is_file():
+            have_file = True
+
+    if only_nonempty:
+        return have_file
+    else:
+        return True
+
+
 def find_pure_dirs(root: str | Path, only_nonempty: bool = False) -> list[Path]:
     """
     查找指定路径下所有的“纯粹文件夹”，即只包含文件而不包含子文件夹的文件夹。
@@ -1023,23 +1066,17 @@ def find_pure_dirs(root: str | Path, only_nonempty: bool = False) -> list[Path]:
     :return: 纯粹文件夹的 Path 列表
     """
     root = Path(root)
-    pure_dirs = []
+    subdirs = [(dir, only_nonempty) for dir in root.rglob("*") if dir.is_dir()]
 
-    for dir in root.rglob("*"):
-        if not dir.is_dir():
-            # 不可为文件
-            continue
-        subdirs = [p for p in dir.iterdir() if p.is_dir()]
-        if subdirs: 
-            # 不可有子文件夹
-            continue
-
-        files = [p for p in dir.iterdir() if p.is_file()]
-        if only_nonempty:
-            if files:
-                pure_dirs.append(dir)
-        else:
-            pure_dirs.append(dir)
+    find_pure_dir_executor = FindPureExecutor(
+        is_pure_dir,
+        "thread",
+        enable_success_cache=True,
+        progress_desc="Finding pure directories",
+        show_progress=True,
+    )
+    find_pure_dir_executor.start(subdirs)
+    pure_dirs = find_pure_dir_executor.process_result_dict()
 
     return pure_dirs
 
