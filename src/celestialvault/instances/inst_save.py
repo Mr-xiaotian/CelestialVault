@@ -1,5 +1,6 @@
 # _*_ coding: utf-8 _*_
 
+import io
 import json
 import pickle
 import subprocess
@@ -93,6 +94,15 @@ class Saver(object):
             return False
         return True
 
+    def _get_writable_path(self, file_name, file_suffix):
+        path = self.get_path(file_name, file_suffix)
+        return path, self.can_overwrite(path)
+
+    def save_text_core(self, text, file_name, encoding="utf-8", file_suffix=None):
+        path = self.get_path(file_name, file_suffix)
+        path.write_text(text, encoding=encoding, errors="ignore")
+        return path
+
     def save_text(self, text, file_name, encoding="utf-8", file_suffix=None):
         """
         将文本内容保存到文件。
@@ -103,13 +113,11 @@ class Saver(object):
         :param file_suffix: 文件后缀。
         :return: 保存的文件路径。
         """
-        path = self.get_path(file_name, file_suffix)
-        if not self.can_overwrite(path):
+        path, can_write = self._get_writable_path(file_name, file_suffix)
+        if not can_write:
             return path
 
-        # 使用 Path 对象的写入操作
-        path.write_text(text, encoding=encoding, errors="ignore")
-        return path
+        return self.save_text_core(text, file_name, encoding, file_suffix)
 
     def add_text(self, text, file_name, encoding="utf-8", file_suffix=None):
         """
@@ -129,6 +137,11 @@ class Saver(object):
             f.write(text.encode(encoding, "ignore").decode(encoding, "ignore"))
         return path
 
+    def save_content_core(self, content, file_name, file_suffix=None):
+        path = self.get_path(file_name, file_suffix)
+        path.write_bytes(content)
+        return path
+
     def save_content(self, content, file_name, file_suffix=None):
         """
         将二进制内容保存到文件。
@@ -138,12 +151,18 @@ class Saver(object):
         :param file_suffix: 文件后缀。
         :return: 保存的文件路径。
         """
-        path = self.get_path(file_name, file_suffix)
-        if not self.can_overwrite(path):
+        path, can_write = self._get_writable_path(file_name, file_suffix)
+        if not can_write:
             return path
 
-        # 写入二进制内容
-        path.write_bytes(content)
+        return self.save_content_core(content, file_name, file_suffix)
+
+    def save_image_core(self, image, file_name, file_suffix=None):
+        path = self.get_path(file_name, file_suffix)
+        save_image = image
+        if path.suffix:
+            save_image = convert_img_format(image, path.suffix)
+        save_image.save(path)
         return path
     
     def save_image(self, image, file_name, file_suffix=None):
@@ -155,15 +174,17 @@ class Saver(object):
         :param file_suffix: 文件后缀。
         :return: 保存的文件路径
         """
-        path = self.get_path(file_name, file_suffix)
-        if not self.can_overwrite(path):
+        path, can_write = self._get_writable_path(file_name, file_suffix)
+        if not can_write:
             return path
 
-        save_image = image
-        if path.suffix:
-            save_image = convert_img_format(image, path.suffix)
+        return self.save_image_core(image, file_name, file_suffix)
 
-        save_image.save(path)
+    def save_dataframe_core(
+        self, dataframe: pd.DataFrame, file_name: str, file_suffix=None
+    ):
+        path = self.get_path(file_name, file_suffix)
+        dataframe.to_csv(path, index=False, sep=",", encoding="utf-8-sig")
         return path
 
     def save_dataframe(
@@ -177,11 +198,17 @@ class Saver(object):
         :param file_suffix: 文件后缀。
         :return: 保存的文件路径。
         """
-        path = self.get_path(file_name, file_suffix)
-        if not self.can_overwrite(path):
+        path, can_write = self._get_writable_path(file_name, file_suffix)
+        if not can_write:
             return path
 
-        dataframe.to_csv(path, index=False, sep=",", encoding="utf-8-sig")
+        return self.save_dataframe_core(dataframe, file_name, file_suffix)
+
+    def save_pickle_core(self, obj, file_name, file_suffix=None):
+        path = self.get_path(file_name, file_suffix)
+        with open(path, "wb") as f:
+            pickle.dump(obj, f)
+        return path
 
     def save_pickle(self, obj, file_name, file_suffix=None):
         """
@@ -192,12 +219,16 @@ class Saver(object):
         :param file_suffix: 文件后缀。
         :return: 保存的文件路径。
         """
-        path = self.get_path(file_name, file_suffix)
-        if not self.can_overwrite(path):
+        path, can_write = self._get_writable_path(file_name, file_suffix)
+        if not can_write:
             return path
 
-        with open(path, "wb") as f:
-            pickle.dump(obj, f)
+        return self.save_pickle_core(obj, file_name, file_suffix)
+
+    def save_json_core(self, data, file_name, file_suffix=None, encoding=None):
+        path = self.get_path(file_name, file_suffix)
+        with open(path, "w", encoding=encoding) as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
         return path
 
     def save_json(self, data, file_name, file_suffix=None, encoding=None):
@@ -210,16 +241,20 @@ class Saver(object):
         :param encoding: 文件编码。
         :return: 保存的文件路径。
         """
-        path = self.get_path(file_name, file_suffix)
-        if not self.can_overwrite(path):
+        path, can_write = self._get_writable_path(file_name, file_suffix)
+        if not can_write:
             return path
 
-        with open(path, "w", encoding=encoding) as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-        return path
+        return self.save_json_core(data, file_name, file_suffix, encoding)
 
-    def download_url(self, url, file_name, file_suffix=None):
+    def download_text(self, url, file_name, encoding="utf-8", file_suffix=None):
+        fetcher = Fetcher()
+        text = fetcher.getText(url)
+        return self.save_text(text, file_name, encoding, file_suffix)
+
+    def download_content(self, url, file_name, file_suffix=None):
         """
+        
         从 URL 下载内容并保存为文件。
 
         :param url: 下载的 URL 地址。
@@ -227,14 +262,28 @@ class Saver(object):
         :param file_suffix: 文件后缀。
         :return: 保存的文件路径。
         """
-        path = self.get_path(file_name, file_suffix)
-        if not self.can_overwrite(path):
-            return path
-
         fetcher = Fetcher()
         content = fetcher.getContent(url)
-        path.write_bytes(content)
-        return path
+        return self.save_content(content, file_name, file_suffix)
+
+    def download_dataframe(
+        self, url, file_name, file_suffix=None, read_kwargs: dict | None = None
+    ):
+        fetcher = Fetcher()
+        text = fetcher.getText(url)
+        dataframe = pd.read_csv(io.StringIO(text), **(read_kwargs or {}))
+        return self.save_dataframe(dataframe, file_name, file_suffix)
+
+    def download_pickle(self, url, file_name, file_suffix=None):
+        fetcher = Fetcher()
+        content = fetcher.getContent(url)
+        obj = pickle.loads(content)
+        return self.save_pickle(obj, file_name, file_suffix)
+
+    def download_json(self, url, file_name, file_suffix=None, encoding=None):
+        fetcher = Fetcher()
+        data = json.loads(fetcher.getText(url))
+        return self.save_json(data, file_name, file_suffix, encoding)
 
     def download_image(self, url, file_name, file_suffix=None):
         """
@@ -245,14 +294,13 @@ class Saver(object):
         :param file_suffix: 文件后缀。
         :return: 保存的文件路径。
         """
-        path = self.get_path(file_name, file_suffix)
-        if not self.can_overwrite(path):
-            return path
-
         fetcher = Fetcher()
         content = fetcher.getContent(url)
         image = binary_to_img(content)
-        return self.save_image(image, file_name, file_suffix)
+        path, can_write = self._get_writable_path(file_name, file_suffix)
+        if not can_write:
+            return path
+        return self.save_image_core(image, path, file_suffix)
 
     def download_urls(
         self,
@@ -316,8 +364,8 @@ class Saver(object):
         :raises TimeoutError: 下载超时时抛出。
         :raises FFmpegError: ffmpeg 执行失败时抛出。
         """
-        m3u8_path = self.get_path(file_name, file_suffix)
-        if not self.can_overwrite(m3u8_path):
+        m3u8_path, can_overwrite = self._get_writable_path(file_name, file_suffix)
+        if not can_overwrite:
             return m3u8_path
 
         command = [
@@ -356,5 +404,5 @@ class Saver(object):
         path = self.get_path(file_name, file_suffix)
         if path.exists():
             path.unlink()
-            return True
-        return False
+            return path, True
+        return path, False
