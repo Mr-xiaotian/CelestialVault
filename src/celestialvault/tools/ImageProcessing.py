@@ -15,6 +15,8 @@ from skimage.metrics import structural_similarity as compare_ssim
 from tqdm import tqdm
 from celestialflow import TaskExecutor
 
+from ..constants import IMAGE_SUFFIX_TO_FORMAT
+
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True  # 允许加载截断的图片
 
@@ -178,6 +180,32 @@ def binary_to_img(binary_img: bytes) -> Image.Image:
     """
     img = Image.open(io.BytesIO(binary_img))
     return img
+
+
+def convert_img_format(img: Image.Image, img_format: str) -> Image.Image:
+    """
+    将 Image 对象转换为指定格式，并返回转换后的 Image 对象。
+
+    :param img: PIL Image 对象。
+    :param img_format: 目标图片格式或后缀，如 PNG、JPEG、WEBP、.jpg。
+    :return: 转换格式后的 Image 对象。
+    """
+    img_format = img_format.strip()
+    suffix = img_format.lower()
+    suffix = suffix if suffix.startswith(".") else f".{suffix}"
+    img_format = IMAGE_SUFFIX_TO_FORMAT.get(suffix, img_format.upper())
+
+    save_img = img
+    if img_format == "JPEG" and img.mode in {"RGBA", "LA", "P"}:
+        save_img = img.convert("RGB")
+
+    buffer = io.BytesIO()
+    save_img.save(buffer, format=img_format)
+    buffer.seek(0)
+
+    converted_img = Image.open(buffer)
+    converted_img.load()
+    return converted_img
 
 
 def base64_to_img(base64_str: str) -> Image.Image:
@@ -786,3 +814,5 @@ def show_diff_heatmap(
     )
 
     return diff_intensity
+
+
