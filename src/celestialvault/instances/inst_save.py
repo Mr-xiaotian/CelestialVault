@@ -46,6 +46,12 @@ class Saver(object):
     """文件保存器，支持文本、二进制、DataFrame、JSON、Pickle 等多种格式的保存和下载。"""
 
     def __init__(self, base_path=".", overwrite=False):
+        """
+        初始化保存器并设置基础路径与覆盖策略。
+
+        :param base_path: 文件保存的基础路径。
+        :param overwrite: 是否允许覆盖已存在文件。
+        """
         self.overwrite = overwrite
 
         self.set_base_path(base_path)
@@ -83,26 +89,108 @@ class Saver(object):
             path = path.with_suffix(file_suffix)  # 添加后缀
         return path
 
-    def can_overwrite(self, path):
+    def _get_writable_path(self, file_name, file_suffix):
         """
         检查是否允许写入指定路径（若禁止覆盖且文件已存在则返回 False）。
 
-        :param path: 文件路径。
+        :param file_name: 文件名。
+        :param file_suffix: 文件后缀（如 '.txt'）；为 None 则不添加后缀。
         :return: 是否允许写入。
         """
-        if not self.overwrite and Path(path).exists():  # 使用 Path 的 exists 方法
-            return False
-        return True
-
-    def _get_writable_path(self, file_name, file_suffix):
         path = self.get_path(file_name, file_suffix)
-        return path, self.can_overwrite(path)
+        if not self.overwrite and path.exists():  # 使用 Path 的 exists 方法
+            return path, False
+        return path, True
 
-    def save_text_core(self, text, file_name, encoding="utf-8", file_suffix=None):
+    # ==== core methods ====
+    def _text_core(self, text, file_name, encoding="utf-8", file_suffix=None):
+        """
+        直接将文本写入目标文件，不执行覆盖检查。
+
+        :param text: 要保存的文本内容。
+        :param file_name: 文件名。
+        :param encoding: 文件编码。
+        :param file_suffix: 文件后缀。
+        :return: 保存后的文件路径。
+        """
         path = self.get_path(file_name, file_suffix)
         path.write_text(text, encoding=encoding, errors="ignore")
         return path
 
+    def _content_core(self, content, file_name, file_suffix=None):
+        """
+        直接将二进制内容写入目标文件，不执行覆盖检查。
+
+        :param content: 要保存的二进制内容。
+        :param file_name: 文件名。
+        :param file_suffix: 文件后缀。
+        :return: 保存后的文件路径。
+        """
+        path = self.get_path(file_name, file_suffix)
+        path.write_bytes(content)
+        return path
+
+    def _image_core(self, image, file_name, file_suffix=None):
+        """
+        直接将图像保存到目标文件，不执行覆盖检查。
+
+        :param image: 要保存的图像对象。
+        :param file_name: 文件名。
+        :param file_suffix: 文件后缀。
+        :return: 保存后的文件路径。
+        """
+        path = self.get_path(file_name, file_suffix)
+        save_image = image
+        if path.suffix:
+            save_image = convert_img_format(image, path.suffix)
+        save_image.save(path)
+        return path
+
+    def _dataframe_core(
+        self, dataframe: pd.DataFrame, file_name: str, file_suffix=None
+    ):
+        """
+        直接将 DataFrame 写入目标文件，不执行覆盖检查。
+
+        :param dataframe: 要保存的 DataFrame 对象。
+        :param file_name: 文件名。
+        :param file_suffix: 文件后缀。
+        :return: 保存后的文件路径。
+        """
+        path = self.get_path(file_name, file_suffix)
+        dataframe.to_csv(path, index=False, sep=",", encoding="utf-8-sig")
+        return path
+
+    def _pickle_core(self, obj, file_name, file_suffix=None):
+        """
+        直接将对象序列化到目标文件，不执行覆盖检查。
+
+        :param obj: 要序列化的 Python 对象。
+        :param file_name: 文件名。
+        :param file_suffix: 文件后缀。
+        :return: 保存后的文件路径。
+        """
+        path = self.get_path(file_name, file_suffix)
+        with open(path, "wb") as f:
+            pickle.dump(obj, f)
+        return path
+
+    def _json_core(self, data, file_name, file_suffix=None, encoding=None):
+        """
+        直接将数据写入 JSON 文件，不执行覆盖检查。
+
+        :param data: 要保存的数据对象。
+        :param file_name: 文件名。
+        :param file_suffix: 文件后缀。
+        :param encoding: 文件编码。
+        :return: 保存后的文件路径。
+        """
+        path = self.get_path(file_name, file_suffix)
+        with open(path, "w", encoding=encoding) as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        return path
+
+    # ==== save methods ====
     def save_text(self, text, file_name, encoding="utf-8", file_suffix=None):
         """
         将文本内容保存到文件。
@@ -117,7 +205,7 @@ class Saver(object):
         if not can_write:
             return path
 
-        return self.save_text_core(text, file_name, encoding, file_suffix)
+        return self._text_core(text, file_name, encoding, file_suffix)
 
     def add_text(self, text, file_name, encoding="utf-8", file_suffix=None):
         """
@@ -129,17 +217,12 @@ class Saver(object):
         :param file_suffix: 文件后缀。
         :return: 保存的文件路径。
         """
-        path = self.get_path(file_name, file_suffix)
-        if not self.can_overwrite(path):
+        path, can_write = self._get_writable_path(file_name, file_suffix)
+        if not can_write:
             return path
 
         with open(path, "a", encoding=encoding) as f:
             f.write(text.encode(encoding, "ignore").decode(encoding, "ignore"))
-        return path
-
-    def save_content_core(self, content, file_name, file_suffix=None):
-        path = self.get_path(file_name, file_suffix)
-        path.write_bytes(content)
         return path
 
     def save_content(self, content, file_name, file_suffix=None):
@@ -155,15 +238,7 @@ class Saver(object):
         if not can_write:
             return path
 
-        return self.save_content_core(content, file_name, file_suffix)
-
-    def save_image_core(self, image, file_name, file_suffix=None):
-        path = self.get_path(file_name, file_suffix)
-        save_image = image
-        if path.suffix:
-            save_image = convert_img_format(image, path.suffix)
-        save_image.save(path)
-        return path
+        return self._content_core(content, file_name, file_suffix)
     
     def save_image(self, image, file_name, file_suffix=None):
         """
@@ -178,14 +253,7 @@ class Saver(object):
         if not can_write:
             return path
 
-        return self.save_image_core(image, file_name, file_suffix)
-
-    def save_dataframe_core(
-        self, dataframe: pd.DataFrame, file_name: str, file_suffix=None
-    ):
-        path = self.get_path(file_name, file_suffix)
-        dataframe.to_csv(path, index=False, sep=",", encoding="utf-8-sig")
-        return path
+        return self._image_core(image, file_name, file_suffix)
 
     def save_dataframe(
         self, dataframe: pd.DataFrame, file_name: str, file_suffix=None
@@ -202,13 +270,7 @@ class Saver(object):
         if not can_write:
             return path
 
-        return self.save_dataframe_core(dataframe, file_name, file_suffix)
-
-    def save_pickle_core(self, obj, file_name, file_suffix=None):
-        path = self.get_path(file_name, file_suffix)
-        with open(path, "wb") as f:
-            pickle.dump(obj, f)
-        return path
+        return self._dataframe_core(dataframe, file_name, file_suffix)
 
     def save_pickle(self, obj, file_name, file_suffix=None):
         """
@@ -223,13 +285,7 @@ class Saver(object):
         if not can_write:
             return path
 
-        return self.save_pickle_core(obj, file_name, file_suffix)
-
-    def save_json_core(self, data, file_name, file_suffix=None, encoding=None):
-        path = self.get_path(file_name, file_suffix)
-        with open(path, "w", encoding=encoding) as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-        return path
+        return self._pickle_core(obj, file_name, file_suffix)
 
     def save_json(self, data, file_name, file_suffix=None, encoding=None):
         """
@@ -245,16 +301,40 @@ class Saver(object):
         if not can_write:
             return path
 
-        return self.save_json_core(data, file_name, file_suffix, encoding)
+        return self._json_core(data, file_name, file_suffix, encoding)
+    
+    # ==== delete methods ====
+    def delete_file(self, file_name, file_suffix=None):
+        """
+        删除指定文件。
 
+        :param file_name: 文件名。
+        :param file_suffix: 文件后缀。
+        :return: (文件路径, 是否成功删除) 元组。
+        """
+        path = self.get_path(file_name, file_suffix)
+        if path.exists():
+            path.unlink()
+            return path, True
+        return path, False
+    
+    # ==== download methods ====
     def download_text(self, url, file_name, encoding="utf-8", file_suffix=None):
+        """
+        从 URL 下载文本并保存为文件。
+
+        :param url: 文本资源的 URL 地址。
+        :param file_name: 文件名。
+        :param encoding: 保存文件时使用的编码。
+        :param file_suffix: 文件后缀。
+        :return: 保存的文件路径。
+        """
         fetcher = Fetcher()
         text = fetcher.getText(url)
-        return self.save_text(text, file_name, encoding, file_suffix)
+        return self._text_core(text, file_name, encoding, file_suffix)
 
     def download_content(self, url, file_name, file_suffix=None):
         """
-        
         从 URL 下载内容并保存为文件。
 
         :param url: 下载的 URL 地址。
@@ -264,26 +344,7 @@ class Saver(object):
         """
         fetcher = Fetcher()
         content = fetcher.getContent(url)
-        return self.save_content(content, file_name, file_suffix)
-
-    def download_dataframe(
-        self, url, file_name, file_suffix=None, read_kwargs: dict | None = None
-    ):
-        fetcher = Fetcher()
-        text = fetcher.getText(url)
-        dataframe = pd.read_csv(io.StringIO(text), **(read_kwargs or {}))
-        return self.save_dataframe(dataframe, file_name, file_suffix)
-
-    def download_pickle(self, url, file_name, file_suffix=None):
-        fetcher = Fetcher()
-        content = fetcher.getContent(url)
-        obj = pickle.loads(content)
-        return self.save_pickle(obj, file_name, file_suffix)
-
-    def download_json(self, url, file_name, file_suffix=None, encoding=None):
-        fetcher = Fetcher()
-        data = json.loads(fetcher.getText(url))
-        return self.save_json(data, file_name, file_suffix, encoding)
+        return self._content_core(content, file_name, file_suffix)
 
     def download_image(self, url, file_name, file_suffix=None):
         """
@@ -300,7 +361,52 @@ class Saver(object):
         path, can_write = self._get_writable_path(file_name, file_suffix)
         if not can_write:
             return path
-        return self.save_image_core(image, path, file_suffix)
+        return self._image_core(image, file_name, file_suffix)
+
+    def download_dataframe(
+        self, url, file_name, file_suffix=None, read_kwargs: dict | None = None
+    ):
+        """
+        从 URL 下载表格文本并解析为 DataFrame 后保存。
+
+        :param url: 表格资源的 URL 地址。
+        :param file_name: 文件名。
+        :param file_suffix: 文件后缀。
+        :param read_kwargs: 传给 pandas.read_csv 的额外参数。
+        :return: 保存的文件路径。
+        """
+        fetcher = Fetcher()
+        text = fetcher.getText(url)
+        dataframe = pd.read_csv(io.StringIO(text), **(read_kwargs or {}))
+        return self._dataframe_core(dataframe, file_name, file_suffix)
+
+    def download_pickle(self, url, file_name, file_suffix=None):
+        """
+        从 URL 下载 pickle 二进制内容并反序列化后保存。
+
+        :param url: pickle 资源的 URL 地址。
+        :param file_name: 文件名。
+        :param file_suffix: 文件后缀。
+        :return: 保存的文件路径。
+        """
+        fetcher = Fetcher()
+        content = fetcher.getContent(url)
+        obj = pickle.loads(content)
+        return self._pickle_core(obj, file_name, file_suffix)
+
+    def download_json(self, url, file_name, file_suffix=None, encoding=None):
+        """
+        从 URL 下载 JSON 内容并保存为文件。
+
+        :param url: JSON 资源的 URL 地址。
+        :param file_name: 文件名。
+        :param file_suffix: 文件后缀。
+        :param encoding: 保存文件时使用的编码。
+        :return: 保存的文件路径。
+        """
+        fetcher = Fetcher()
+        data = json.loads(fetcher.getText(url))
+        return self._json_core(data, file_name, file_suffix, encoding)
 
     def download_urls(
         self,
@@ -399,10 +505,3 @@ class Saver(object):
             raise FFmpegError(f"Failed to download {m3u8_url}.", stderr=error_msg)
 
         return m3u8_path
-    
-    def delete_file(self, file_name, file_suffix=None):
-        path = self.get_path(file_name, file_suffix)
-        if path.exists():
-            path.unlink()
-            return path, True
-        return path, False
