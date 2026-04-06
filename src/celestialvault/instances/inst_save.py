@@ -10,6 +10,7 @@ from celestialflow import TaskChain, TaskStage
 
 from .inst_error import FFmpegError
 from .inst_fetch import Fetcher
+from ..tools.ImageProcessing import binary_to_img, convert_img_format
 
 
 class FetchStage(TaskStage):
@@ -144,6 +145,26 @@ class Saver(object):
         # 写入二进制内容
         path.write_bytes(content)
         return path
+    
+    def save_image(self, image, file_name, file_suffix=None):
+        """
+        将图像保存为文件。
+
+        :param image: 要保存的图像对象。
+        :param file_name: 文件名。
+        :param file_suffix: 文件后缀。
+        :return: 保存的文件路径
+        """
+        path = self.get_path(file_name, file_suffix)
+        if not self.can_overwrite(path):
+            return path
+
+        save_image = image
+        if path.suffix:
+            save_image = convert_img_format(image, path.suffix)
+
+        save_image.save(path)
+        return path
 
     def save_dataframe(
         self, dataframe: pd.DataFrame, file_name: str, file_suffix=None
@@ -214,6 +235,24 @@ class Saver(object):
         content = fetcher.getContent(url)
         path.write_bytes(content)
         return path
+
+    def download_image(self, url, file_name, file_suffix=None):
+        """
+        从 URL 下载图片并保存为文件。
+
+        :param url: 图片的 URL 地址。
+        :param file_name: 文件名。
+        :param file_suffix: 文件后缀。
+        :return: 保存的文件路径。
+        """
+        path = self.get_path(file_name, file_suffix)
+        if not self.can_overwrite(path):
+            return path
+
+        fetcher = Fetcher()
+        content = fetcher.getContent(url)
+        image = binary_to_img(content)
+        return self.save_image(image, file_name, file_suffix)
 
     def download_urls(
         self,
