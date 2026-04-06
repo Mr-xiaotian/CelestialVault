@@ -141,7 +141,7 @@ class Fetcher:
                 headers=self.headers,
                 timeout=self._wait_time,
                 verify=self.verify,
-                proxies=self.proxies,  # 🟢 如果不使用代理，proxies=None
+                proxy=self.proxies,  # 🟢 如果不使用代理，proxies=None
             )
 
     def obtainText(self, func: object, *args, **kwargs) -> tuple[int, Any, str]:
