@@ -7,7 +7,14 @@
 无模块级文档字符串。
 
 ## 导入依赖
-- 无
+所有导入均已被注释掉，各子模块需独立导入：
+- `# from .DocumentConversion import *`
+- `# from .FileOperations import *`
+- `# from .ImageProcessing import *`
+- `# from .ListDictTools import *`
+- `# from .TextTools import *`
+- `# from .Utilities import *`
+- `# from .VideoProcessing import *`
 
 ## 模块常量
 - 无

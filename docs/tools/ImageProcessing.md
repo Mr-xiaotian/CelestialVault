@@ -59,6 +59,14 @@
 - 签名: `def binary_to_img(binary_img: bytes) -> Image.Image`
 - 说明: 将二进制数据转换为Image对象
 
+### `convert_img_format`
+- 签名: `def convert_img_format(img: Image.Image, img_format: str) -> Image.Image`
+- 说明: 将 Image 对象转换为指定格式，并返回转换后的 Image 对象。
+
+:param img: PIL Image 对象。
+:param img_format: 目标图片格式或后缀，如 PNG、JPEG、WEBP、.jpg。
+:return: 转换格式后的 Image 对象。
+
 ### `base64_to_img`
 - 签名: `def base64_to_img(base64_str: str) -> Image.Image`
 - 说明: 将 Base64 编码的字符串解码并转换为 PIL Image 对象。

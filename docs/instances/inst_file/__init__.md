@@ -7,12 +7,11 @@
 无模块级文档字符串。
 
 ## 导入依赖
-- `from .file_node import FileNode`
 - `from .file_tree import FileTree`
-- `from .file_diff import FileDiff`
+- `from .file_diff import FileDiff, compare_trees`
 
 ## 模块常量
-- 无
+- `__all__` = `[FileTree, FileDiff, compare_trees]`
 
 ## 顶层函数
 - 无

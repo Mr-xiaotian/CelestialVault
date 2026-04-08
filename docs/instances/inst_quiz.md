@@ -35,7 +35,7 @@
 
 ### `MultiplicationQuiz`
 - 继承: `QuizBase`
-- 说明: 无模块级文档字符串。
+- 说明: 乘法速算测验，支持多种出题模式（平方、尾5平方、个位和10、平方差、重复数乘9 等）。
 - 方法:
   - `def __init__(self, digit_num: int, modes: list[str] = None)`
   - `def generate_problem(self)`
@@ -53,7 +53,7 @@
 
 ### `DictationQuiz`
 - 继承: `QuizBase`
-- 说明: 无模块级文档字符串。
+- 说明: 听写/词汇测验，基于 SymmetricMap 双向映射随机出题。
 - 方法:
   - `def __init__(self, word_map: SymmetricMap, random_mode: str = 'any')`
   - `def generate_problem(self)`
