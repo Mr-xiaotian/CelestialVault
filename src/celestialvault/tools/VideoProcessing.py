@@ -47,7 +47,7 @@ def compress_video(old_video_path: Path | str, new_video_path: Path | str):
         str(new_video_path),
     ]
 
-    subprocess.run(command, check=True)
+    subprocess.run(command, capture_output=True, check=True)
 
 
 def join_and_label_videos(
@@ -166,7 +166,11 @@ def transfer_gif_to_video(gif_path, output_path):
         output_path,
     ]
 
-    subprocess.run(command, check=True)
+    subprocess.run(
+        command, 
+        capture_output=True,   # 捕获 stdout 和 stderr，不显示到终端
+        check=True              # 非零退出码时抛出 CalledProcessError
+    )
 
 
 def transfer_gif_dir(dir_path: str | Path) -> list[tuple[Path, Exception]]:
@@ -219,7 +223,7 @@ def rotate_video(video_path: str | Path, output_path, angle: int) -> Path:
 
     # 执行命令
     try:
-        subprocess.run(command, check=True, text=True)
+        subprocess.run(command, check=True, text=True, capture_output=True)
     except subprocess.CalledProcessError as e:
         print(f"FFmpeg 执行失败: {e}")
         raise
@@ -337,8 +341,7 @@ def get_video_info(video_path: str):
             "default=noprint_wrappers=1",
             str(video_path),
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
     )
 
@@ -413,5 +416,7 @@ def set_container_ratio_to_resolution(video_path, output_path):
             "-aspect",
             resolution_ratio,
             str(output_path),
-        ]
+        ],
+        capture_output=True,
+        check=True,
     )
