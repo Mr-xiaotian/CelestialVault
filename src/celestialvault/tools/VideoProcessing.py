@@ -4,8 +4,6 @@ from collections import defaultdict
 from pathlib import Path
 
 import ffmpeg
-from moviepy.editor import CompositeVideoClip, TextClip, VideoFileClip, clips_array
-
 from celestialflow import TaskExecutor
 
 
@@ -68,6 +66,8 @@ def join_and_label_videos(
     :param label1: 第一个视频的标签（默认文件名）
     :param label2: 第二个视频的标签（默认文件名）
     """
+    from moviepy.editor import CompositeVideoClip, TextClip, VideoFileClip, clips_array
+
     # 检查输入文件
     video_path1 = Path(video_path1)
     video_path2 = Path(video_path2)

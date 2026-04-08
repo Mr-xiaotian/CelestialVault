@@ -6,17 +6,15 @@ from colorsys import hsv_to_rgb
 from itertools import product
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from PIL import Image, PngImagePlugin, ImageFile
-from pillow_heif import register_heif_opener
-from skimage.metrics import structural_similarity as compare_ssim
-from tqdm import tqdm
 from celestialflow import TaskExecutor
+from PIL import Image, ImageFile, PngImagePlugin
+from pillow_heif import register_heif_opener
+from tqdm import tqdm
 
 from ..constants import IMAGE_SUFFIX_TO_FORMAT
-
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True  # 允许加载截断的图片
 
@@ -36,7 +34,6 @@ class CompareSSIMExecutor(TaskExecutor):
             # 将文件名和 SSIM 值添加到数据列表中
             data.append([file1.name, ssim])
         return data
-
 
 
 def compress_img(old_img_path: str | Path, new_img_path: str | Path):
@@ -462,11 +459,13 @@ def extract_pixels_as_gif(image: Image.Image, frame_size=200, duration=100, loop
 def compare_ssim_by_path(path1: Path | str, path2: Path | str) -> float:
     """
     比较两张图像的结构相似性指数（SSIM）。
-    
+
     :param path1: 第一张图像的路径。
     :param path2: 第二张图像的路径。
     :return: 两张图像的SSIM值，范围在-1到1之间，值越大表示越相似。
     """
+    from skimage.metrics import structural_similarity as compare_ssim
+
     img1 = Image.open(path1)
     img2 = Image.open(path2)
 
@@ -516,12 +515,12 @@ def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
         tasks.append((file1, file2))
 
     compare_executor = CompareSSIMExecutor(
-        compare_ssim_by_path, 
-        execution_mode="thread", 
-        max_workers=8, 
-        enable_success_cache=True, 
-        progress_desc="Comparing Images", 
-        show_progress=True
+        compare_ssim_by_path,
+        execution_mode="thread",
+        max_workers=8,
+        enable_success_cache=True,
+        progress_desc="Comparing Images",
+        show_progress=True,
     )
     compare_executor.start(tasks)
     data = compare_executor.process_result_dict()
@@ -814,5 +813,3 @@ def show_diff_heatmap(
     )
 
     return diff_intensity
-
-
