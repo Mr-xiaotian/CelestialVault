@@ -93,9 +93,9 @@ class FileTree:
             "mtime": float(node.mtime),
             "icon": node.icon,
             "level": node.level,
-            "is_dir": node.is_dir,
+            "is_dir": node.is_dir(),
         }
-        if node.is_dir:
+        if node.is_dir():
             d["children"] = [self._node_to_dict(c) for c in node.children]
         else:
             d["suffix"] = node.suffix
@@ -199,7 +199,7 @@ class FileTree:
         exclude_exts = set(exclude_exts or [])
 
         def _get_display_name(node: BaseNode, depth: int) -> str:
-            if node.is_dir and node.children and depth >= max_depth:
+            if node.is_dir() and node.children and depth >= max_depth:
                 return node.name + "[已折叠]"
             return node.name
 
@@ -207,9 +207,9 @@ class FileTree:
             display_name = _get_display_name(node, depth)
             node.print(name=display_name, max_name_len=max_name_len)
 
-            if node.is_dir and node.children and depth >= max_depth:
+            if node.is_dir() and node.children and depth >= max_depth:
                 return
-            if not node.is_dir or not node.children:
+            if not node.is_dir() or not node.children:
                 return
 
             dirs = []
@@ -219,12 +219,12 @@ class FileTree:
             child_names = []
 
             for child in node.children:
-                if child.is_dir and child.name in exclude_names:
+                if child.is_dir() and child.name in exclude_names:
                     exclude_dirs.append(child)
-                elif child.is_dir:
+                elif child.is_dir():
                     dirs.append(child)
                     child_names.append(_get_display_name(child, depth + 1))
-                elif not child.is_dir and child.suffix in exclude_exts:
+                elif not child.is_dir() and child.suffix in exclude_exts:
                     exclude_files.append(child)
                 else:
                     files.append(child)
@@ -259,7 +259,7 @@ class FileTree:
                 exclude_dirs_node.print(max_name_len=child_max_name_len)
             for f in files:
                 _print(f, depth + 1, child_max_name_len)
-            if exclude_files:
+            if exclude_files_node:
                 exclude_files_node.print(max_name_len=max_name_len)
 
         _print(self.root, 0)

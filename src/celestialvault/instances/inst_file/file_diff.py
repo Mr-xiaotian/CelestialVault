@@ -1,7 +1,8 @@
 from pathlib import Path
 from dataclasses import dataclass
 from celestialflow import TaskExecutor
-from typing import TYPE_CHECKING
+
+from wcwidth import wcswidth
 
 from ...instances.inst_units import HumanBytes, HumanTimestamp
 from ...tools.FileOperations import (
@@ -80,7 +81,7 @@ class FileDiff:
         """
         以树形结构打印差异文件，并显示两侧目录的差异大小汇总表。
         """
-        def _print(node: BaseNode):
+        def _print(node: BaseNode, max_name_len: int = 0):
             node.print(
                 level=node.level-1,
                 prefix=(
@@ -93,21 +94,32 @@ class FileDiff:
                     if self.compare_hash and node._hash
                     else f"({node.size})"
                 ),
+                max_name_len=max_name_len,
             )
-            if node.is_dir:
-                dirs = [c for c in node.children if c.is_dir]
-                files = [c for c in node.children if not c.is_dir]
+            if node.is_dir():
+                dirs = []
+                files = []
+                child_names = []
+
+                for c in node.children:
+                    if c.is_dir():
+                        dirs.append(c)
+                    else:
+                        files.append(c)
+                    child_names.append(c.name)
+                child_max_name_len = max((wcswidth(name) for name in child_names), default=0)
+                
                 for d in dirs:
-                    _print(d)
+                    _print(d, child_max_name_len)
                 for f in files:
-                    _print(f)
+                    _print(f, child_max_name_len)
 
         if self.is_identical():
             print("No different files found.")
             return
         
-        dirs = [c for c in self.diff_tree.root.children if c.is_dir]
-        files = [c for c in self.diff_tree.root.children if not c.is_dir]
+        dirs = [c for c in self.diff_tree.root.children if c.is_dir()]
+        files = [c for c in self.diff_tree.root.children if not c.is_dir()]
         for d in dirs:
             _print(d)
         for f in files:
@@ -249,7 +261,7 @@ def compare_trees(tree1: FileTree, tree2: FileTree, compare_hash: bool = False) 
         # 公共项
         for name in common:
             c1, c2 = n1_map[name], n2_map[name]
-            if c1.is_dir and c2.is_dir:
+            if c1.is_dir() and c2.is_dir():
                 # 双方都是文件夹
                 is_equal_size = c1.size == c2.size
                 if is_equal_size:
@@ -260,7 +272,7 @@ def compare_trees(tree1: FileTree, tree2: FileTree, compare_hash: bool = False) 
                 diff_size += sub_dir.size
                 mtime = max(mtime, sub_dir.mtime)
                 diff_children.append(sub_dir)
-            elif not c1.is_dir and not c2.is_dir:
+            elif not c1.is_dir() and not c2.is_dir():
                 # 双方都是文件  
                 is_equal_size = c1.size == c2.size
                 if is_equal_size:
