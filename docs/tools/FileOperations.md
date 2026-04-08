@@ -275,11 +275,19 @@
 
 ### `find_pure_dirs`
 - 签名: `def find_pure_dirs(root: str | Path, only_nonempty: bool = False) -> list[Path]`
-- 说明: 查找指定路径下所有的“纯粹文件夹”，即只包含文件而不包含子文件夹的文件夹。
+- 说明: 查找指定路径下所有的”纯粹文件夹”，即只包含文件而不包含子文件夹的文件夹。
 
 :param root: 根目录路径
 :param only_nonempty: 是否只返回至少包含一个文件的纯粹文件夹
 :return: 纯粹文件夹的 Path 列表
+
+### `is_pure_dir`
+- 签名: `def is_pure_dir(dir: Path, only_nonempty: bool = False) -> bool`
+- 说明: 判断一个文件夹是否为”纯粹文件夹”，即只包含文件而不包含子文件夹。
+
+:param dir: 文件夹路径
+:param only_nonempty: 是否只返回至少包含一个文件的纯粹文件夹
+:return: 是否为纯粹文件夹
 
 ### `align_width`
 - 签名: `def align_width(s: str, max_len: int) -> str`
@@ -328,5 +336,11 @@
 ### `DeleteReturnSizeExecutor`
 - 继承: `TaskExecutor`
 - 说明: 删除文件执行器，删除文件后累计并返回已删除文件的总大小。
+- 方法:
+  - `def process_result_dict(self)`
+
+### `FindPureExecutor`
+- 继承: `TaskExecutor`
+- 说明: 查找纯粹文件夹执行器，返回所有纯粹文件夹的路径。
 - 方法:
   - `def process_result_dict(self)`

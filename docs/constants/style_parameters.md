@@ -51,7 +51,19 @@
 - 无
 
 ## 模块常量
-- 无
+### `style_params`
+- 定义 17 种调色板风格的 HSV 参数字典。每种风格包含一个或多个色域，每个色域指定：
+  - `hue_range` — 色调范围
+  - `saturation_range` — 饱和度范围
+  - `value_range` — 明度范围
+  - `weight`（可选）— 该色域的采样权重
+- 可用风格: morandi, hawaiian, deepsea, twilight, sunrise, cyberpunk, autumn, aurora, desert_twilight, coral_reef, midnight_sky, candyland, volcanic_lava, frozen_wonderland, tropical_rainforest, sacred_flame, wave_sky
+
+### `image_mode_params`
+- 图片模式参数字典，定义了不同图像模式的通道数和 PIL 模式名称：
+  - `grey` — 1 通道, PIL 模式 `"L"`, 8-bit 灰度
+  - `rgb` — 3 通道, PIL 模式 `"RGB"`, 真彩色
+  - `rgba` — 4 通道, PIL 模式 `"RGBA"`, 真彩色带透明通道
 
 ## 顶层函数
 - 无

@@ -74,7 +74,7 @@ def combine_imgs_to_pdf(
 
     :param root_path: 包含JPEG图片的文件夹路径。
     :param pdf_path: 输出的PDF文件路径。
-    :return: None
+    :param special_keywords: 特殊关键词，用于排序图片。eg: {'番外': 1, '特典': 1, '原画': 2}
     """
     from ..constants import IMG_SUFFIXES
     from .FileOperations import dir_to_file_path, sort_by_number
@@ -136,7 +136,6 @@ def combine_imgs_dir(dir_path: Path, special_keywords: dict = None):
 
     :param dir_path: 包含JPEG图片的文件夹路径。
     :param special_keywords: 特殊关键词，用于排序图片。eg: {'番外': 1, '特典': 1, '原画': 2}
-    :return: None
     """
 
     def rename_pdf(file_path: Path) -> Path:

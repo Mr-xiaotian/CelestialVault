@@ -488,8 +488,7 @@ class Saver(object):
         try:
             result = subprocess.run(
                 command,
-                stderr=subprocess.PIPE,
-                stdout=subprocess.PIPE,
+                capture_output=True,
                 text=True,
                 encoding="utf-8",
                 timeout=timeout,

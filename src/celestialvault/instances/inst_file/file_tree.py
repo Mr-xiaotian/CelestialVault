@@ -1,15 +1,16 @@
+import json
 from pathlib import Path
 
 from wcwidth import wcswidth
+from celestialflow import TaskExecutor
 
 from ...constants import FILE_ICONS
 from ...instances.inst_units import HumanBytes, HumanTimestamp
 from ...tools.FileOperations import (
-    get_file_size,
-    get_file_mtime,
+    get_file_info,
+    get_dir_mtime,
 )
 from .file_node import BaseNode, FileNode, DirNode
-from .file_util import to_string
 
 
 class FileTree:
@@ -31,11 +32,25 @@ class FileTree:
         root_path = Path(root_path)
         if not root_path.is_dir():
             raise ValueError(f"Path {root_path} is not a directory")
+        
+        def _scan(dir_path: Path) -> dict:
+            scan_info_executor = TaskExecutor(
+                get_file_info, "thread", max_workers=4, enable_success_cache=True, progress_desc="Scanning files", show_progress=True
+            )
 
-        def _scan(node_path: Path, level: int) -> BaseNode:
+            file_path_list = [
+                file_path for file_path in dir_path.glob("**/*") if file_path.is_file()
+            ]
+            scan_info_executor.start(file_path_list)
+
+            _info = scan_info_executor.get_success_dict()
+            return _info
+        
+        def _build(node_path: Path, level: int) -> BaseNode:
             if node_path.is_file():
-                size = get_file_size(node_path)
-                mtime = get_file_mtime(node_path)
+                node_info = _info.get(node_path, {})
+                size = node_info.get("size", HumanBytes(0))
+                mtime = node_info.get("mtime", HumanTimestamp(0))
                 icon = FILE_ICONS.get(node_path.suffix.lower(), FILE_ICONS["default"])
                 return FileNode(
                     node_path.name, node_path.suffix, node_path, size, mtime, icon, level
@@ -48,7 +63,7 @@ class FileTree:
             dir_mtime = HumanTimestamp(0)
 
             for child in entries:
-                cnode = _scan(child, level+1)
+                cnode = _build(child, level+1)
                 children.append(cnode)
                 total_size += cnode.size
                 dir_mtime = max(dir_mtime, cnode.mtime)
@@ -62,9 +77,115 @@ class FileTree:
                 children,
             )
 
-        return cls(_scan(root_path, 0), root_path)
+        _info = _scan(root_path)
+        return cls(_build(root_path, 0), root_path)
 
-    # 打印树
+    # ---- 序列化 / 反序列化 ----
+
+    _CACHE_DIR = ".file_tree"
+
+    def _node_to_dict(self, node: BaseNode) -> dict:
+        """将节点递归转换为可 JSON 序列化的字典。"""
+        d = {
+            "name": node.name,
+            "path": node.node_path.as_posix(),
+            "size": int(node.size),
+            "mtime": float(node.mtime),
+            "icon": node.icon,
+            "level": node.level,
+            "is_dir": node.is_dir(),
+        }
+        if node.is_dir():
+            d["children"] = [self._node_to_dict(c) for c in node.children]
+        else:
+            d["suffix"] = node.suffix
+        return d
+
+    @staticmethod
+    def _dict_to_node(d: dict) -> BaseNode:
+        """将字典递归还原为节点。"""
+        if d["is_dir"]:
+            children = [FileTree._dict_to_node(c) for c in d["children"]]
+            return DirNode(
+                d["name"], Path(d["path"]),
+                HumanBytes(d["size"]), HumanTimestamp(d["mtime"]),
+                d["level"], children,
+            )
+        return FileNode(
+            d["name"], d["suffix"], Path(d["path"]),
+            HumanBytes(d["size"]), HumanTimestamp(d["mtime"]),
+            d["icon"], d["level"],
+        )
+
+    def _cache_path(self) -> Path:
+        """返回缓存 JSON 的路径: <root>/.file_tree/<root_name>.json"""
+        cache_dir = self.path / self._CACHE_DIR
+        return cache_dir / f"{self.path.name}.json"
+
+    def save(self) -> Path:
+        """
+        将文件树序列化为 JSON 并保存到 <root>/.file_tree/<root_name>.json。
+
+        JSON 中额外存储 root_mtime（通过 get_dir_mtime 计算），供 update 时比对。
+
+        :return: 写入的 JSON 文件路径。
+        """
+        data = {
+            "root_path": self.path.as_posix(),
+            "root_mtime": float(get_dir_mtime(self.path)),
+            "tree": self._node_to_dict(self.root),
+        }
+        path = self._cache_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        return path
+
+    @classmethod
+    def load(cls, root_path: str | Path) -> "FileTree":
+        """
+        从 <root_path>/.file_tree/<dir_name>.json 还原文件树。
+
+        :param root_path: 根目录路径，用于定位 .file_tree 下的缓存 JSON。
+        :return: 还原的 FileTree 对象。
+        :raises FileNotFoundError: 找不到对应的缓存文件时抛出。
+        """
+        root_path = Path(root_path)
+        cache_file = root_path / cls._CACHE_DIR / f"{root_path.name}.json"
+        if not cache_file.exists():
+            raise FileNotFoundError(f"Cache file not found: {cache_file}")
+
+        data = json.loads(cache_file.read_text(encoding="utf-8"))
+        root_node = cls._dict_to_node(data["tree"])
+        return cls(root_node, root_path)
+
+    def update(self) -> bool:
+        """
+        检查目录 mtime 是否变化，若变化则重新构建并保存。
+
+        比较方式：用 get_dir_mtime 重新计算 root 的 mtime，与缓存 JSON
+        中记录的 root_mtime 比对。
+
+        :return: True 表示已更新，False 表示无变化。
+        """
+        cache_file = self._cache_path()
+
+        if cache_file.exists():
+            data = json.loads(cache_file.read_text(encoding="utf-8"))
+            saved_mtime = data.get("root_mtime", 0)
+        else:
+            saved_mtime = 0
+
+        current_mtime = float(get_dir_mtime(self.path))
+        if current_mtime == saved_mtime:
+            return False
+
+        new_tree = FileTree.build_from_path(self.path)
+        self.root = new_tree.root
+        self.save()
+        return True
+
+    # ---- 打印 ----
+
     def print_tree(self, exclude_names=None, exclude_exts=None, max_depth=3):
         """
         递归打印整棵文件树，目录在前、文件在后。
@@ -78,7 +199,7 @@ class FileTree:
         exclude_exts = set(exclude_exts or [])
 
         def _get_display_name(node: BaseNode, depth: int) -> str:
-            if node.is_dir and node.children and depth >= max_depth:
+            if node.is_dir() and node.children and depth >= max_depth:
                 return node.name + "[已折叠]"
             return node.name
 
@@ -86,9 +207,9 @@ class FileTree:
             display_name = _get_display_name(node, depth)
             node.print(name=display_name, max_name_len=max_name_len)
 
-            if node.is_dir and node.children and depth >= max_depth:
+            if node.is_dir() and node.children and depth >= max_depth:
                 return
-            if not node.is_dir or not node.children:
+            if not node.is_dir() or not node.children:
                 return
 
             dirs = []
@@ -98,12 +219,12 @@ class FileTree:
             child_names = []
 
             for child in node.children:
-                if child.is_dir and child.name in exclude_names:
+                if child.is_dir() and child.name in exclude_names:
                     exclude_dirs.append(child)
-                elif child.is_dir:
+                elif child.is_dir():
                     dirs.append(child)
                     child_names.append(_get_display_name(child, depth + 1))
-                elif not child.is_dir and child.suffix in exclude_exts:
+                elif not child.is_dir() and child.suffix in exclude_exts:
                     exclude_files.append(child)
                 else:
                     files.append(child)
@@ -138,7 +259,7 @@ class FileTree:
                 exclude_dirs_node.print(max_name_len=child_max_name_len)
             for f in files:
                 _print(f, depth + 1, child_max_name_len)
-            if exclude_files:
+            if exclude_files_node:
                 exclude_files_node.print(max_name_len=max_name_len)
 
         _print(self.root, 0)

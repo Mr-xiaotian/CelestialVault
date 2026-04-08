@@ -11,14 +11,13 @@ from .file_util import to_string
 
 
 class BaseNode:
-    def __init__(self, name: str, node_path: Path, size: HumanBytes, mtime: HumanTimestamp, icon: str, level: int, is_dir: bool):
+    def __init__(self, name: str, node_path: Path, size: HumanBytes, mtime: HumanTimestamp, icon: str, level: int):
         self.name = name
         self.node_path = node_path
         self.size = size
         self.mtime = mtime
         self.icon = icon
         self.level = level
-        self.is_dir = is_dir
 
         self._hash: str | None = None
 
@@ -36,7 +35,7 @@ class BaseNode:
 @dataclass
 class FileNode(BaseNode):
     def __init__(self, name: str, suffix: str, node_path: Path, size: HumanBytes, mtime: HumanTimestamp, icon: str, level: int):
-        super().__init__(name, node_path, size, mtime, icon, level, False)
+        super().__init__(name, node_path, size, mtime, icon, level)
         self.suffix = suffix
 
     @property
@@ -56,13 +55,15 @@ class FileNode(BaseNode):
         self._hash = get_file_hash(self.node_path)
 
         return self._hash
-
+    
+    def is_dir(self) -> bool:
+        return False
 
 
 @dataclass
 class DirNode(BaseNode):
     def __init__(self, name: str, node_path: Path, size: HumanBytes, mtime: HumanTimestamp, level: int, children: list["BaseNode"]):
-        super().__init__(name, node_path, size, mtime, "📁", level, True)
+        super().__init__(name, node_path, size, mtime, "📁", level)
         self.children: list["BaseNode"] = children
 
     @property
@@ -79,10 +80,7 @@ class DirNode(BaseNode):
 
         # 更新状态并重新计算
         self.mtime = new_mtime
-        if self.is_dir:
-            self._hash = self._compute_dir_hash()
-        else:
-            self._hash = get_file_hash(self.node_path)
+        self._hash = self._compute_dir_hash()
 
         return self._hash
 
@@ -93,11 +91,11 @@ class DirNode(BaseNode):
             return hashlib.new(algo, data).hexdigest()
 
         child_hashes = []
-        for child in sorted(self.children, key=lambda c: (not c.is_dir, c.name)):
+        for child in sorted(self.children, key=lambda c: (not c.is_dir(), c.name)):
             h = child.hash
             if not h:
                 continue
-            tag = "D" if child.is_dir else "F"
+            tag = "D" if child.is_dir() else "F"
             entry = f"{tag}:{child.name}:{h}".encode("utf-8")
             child_hashes.append(entry)
 
@@ -107,3 +105,6 @@ class DirNode(BaseNode):
             combined = b"".join(child_hashes)
 
         return _hash_bytes(combined)
+
+    def is_dir(self) -> bool:
+        return True

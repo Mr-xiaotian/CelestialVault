@@ -70,7 +70,11 @@
 
 ### `resize_pdfs`
 - 签名: `def resize_pdfs(dir_path: Path, execution_mode: str = 'serial')`
-- 说明: 无模块级文档字符串。
+- 说明: 批量调整文件夹中所有 PDF 文件的页面宽度为该文件夹中所有 PDF 的最大页面宽度。
+  内部调用 `get_max_pdf_width` 检测最大宽度，再通过 `handle_dir_files` 批量处理。
+
+:param dir_path: 文件夹路径
+:param execution_mode: 执行模式，可以是 'serial' 或 'thread' 'process'。默认为 'serial'。
 
 ## 类
 - 无

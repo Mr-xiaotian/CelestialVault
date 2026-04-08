@@ -124,7 +124,7 @@
 
 ### `RedundancyCodec`
 - 继承: `BaseCodec`
-- 说明: 无模块级文档字符串。
+- 说明: 冗余编解码器，通过多通道旋转写入实现数据冗余存储，解码时以多数投票恢复数据。
 - 方法:
   - `def __init__(self, mode_name: str, channels: int)`
   - `def _encode_text_core(self, text: str) -> Image.Image`

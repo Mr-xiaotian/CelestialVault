@@ -597,8 +597,6 @@ def get_file_mtime(file_path: Path) -> HumanTimestamp:
     :return: 文件的修改时间戳 (HumanTimestamp)
     """
     file_path = Path(file_path)
-    if not file_path.exists():
-        return HumanTimestamp(0)
     return HumanTimestamp(file_path.stat().st_mtime)
 
 
@@ -611,8 +609,6 @@ def get_dir_mtime(dir_path: Path) -> HumanTimestamp:
     :return: 目录内最新修改时间戳 (HumanTimestamp)
     """
     dir_path = Path(dir_path)
-    if not dir_path.exists():
-        return HumanTimestamp(0)
 
     max_mtime = dir_path.stat().st_mtime  # 目录本身的修改时间
 
@@ -626,6 +622,25 @@ def get_dir_mtime(dir_path: Path) -> HumanTimestamp:
             continue
 
     return HumanTimestamp(max_mtime)
+
+
+def get_file_info(file_path: Path, include_hash: bool = False) -> dict[str, Any]:
+    """
+    获取文件的详细信息，包括大小、修改时间和哈希值。
+
+    :param file_path: 文件路径。
+    :param include_hash: 是否包含哈希值。
+    :return: 包含文件信息的字典。
+    """
+    file_path = Path(file_path)
+    file_stat = file_path.stat()
+    info = {
+        "size": HumanBytes(file_stat.st_size),
+        "mtime": HumanTimestamp(file_stat.st_mtime),
+    }
+    if include_hash:
+        info["hash"] = get_file_hash(file_path)
+    return info
 
 
 def detect_identical_files(
