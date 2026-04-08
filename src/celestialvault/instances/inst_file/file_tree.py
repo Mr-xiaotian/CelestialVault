@@ -1,15 +1,14 @@
 from pathlib import Path
 
 from wcwidth import wcswidth
+from celestialflow import TaskExecutor
 
 from ...constants import FILE_ICONS
 from ...instances.inst_units import HumanBytes, HumanTimestamp
 from ...tools.FileOperations import (
-    get_file_size,
-    get_file_mtime,
+    get_file_info,
 )
 from .file_node import BaseNode, FileNode, DirNode
-from .file_util import to_string
 
 
 class FileTree:
@@ -31,11 +30,25 @@ class FileTree:
         root_path = Path(root_path)
         if not root_path.is_dir():
             raise ValueError(f"Path {root_path} is not a directory")
+        
+        def _scan(dir_path: Path) -> dict:
+            scan_info_executor = TaskExecutor(
+                get_file_info, "thread", max_workers=4, enable_success_cache=True, progress_desc="Scanning files", show_progress=True
+            )
 
-        def _scan(node_path: Path, level: int) -> BaseNode:
+            file_path_list = [
+                file_path for file_path in dir_path.glob("**/*") if file_path.is_file()
+            ]
+            scan_info_executor.start(file_path_list)
+
+            _info = scan_info_executor.get_success_dict()
+            return _info
+        
+        def _build(node_path: Path, level: int) -> BaseNode:
             if node_path.is_file():
-                size = get_file_size(node_path)
-                mtime = get_file_mtime(node_path)
+                node_info = _info.get(node_path, {})
+                size = node_info.get("size", HumanBytes(0))
+                mtime = node_info.get("mtime", HumanTimestamp(0))
                 icon = FILE_ICONS.get(node_path.suffix.lower(), FILE_ICONS["default"])
                 return FileNode(
                     node_path.name, node_path.suffix, node_path, size, mtime, icon, level
@@ -48,7 +61,7 @@ class FileTree:
             dir_mtime = HumanTimestamp(0)
 
             for child in entries:
-                cnode = _scan(child, level+1)
+                cnode = _build(child, level+1)
                 children.append(cnode)
                 total_size += cnode.size
                 dir_mtime = max(dir_mtime, cnode.mtime)
@@ -62,7 +75,8 @@ class FileTree:
                 children,
             )
 
-        return cls(_scan(root_path, 0), root_path)
+        _info = _scan(root_path)
+        return cls(_build(root_path, 0), root_path)
 
     # 打印树
     def print_tree(self, exclude_names=None, exclude_exts=None, max_depth=3):
