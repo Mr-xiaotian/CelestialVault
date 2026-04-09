@@ -24,8 +24,9 @@ def md_to_pdf(md_file_path: str | Path, pdf_file_path: str | Path):
     # --template 指定latex模板
     subprocess.run(
         ["pandoc", str(md_file_path), "-o", str(pdf_file_path), "--pdf-engine=xelatex"],
-        capture_output=True,
-        check=True
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
     )
 
 
