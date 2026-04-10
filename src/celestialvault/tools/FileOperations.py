@@ -158,7 +158,11 @@ class ScanHashExecutor(TaskExecutor):
         for (path, size), hash_value in self.get_success_dict().items():
             identical_dict[(hash_value, size)].append(path)
 
-        identical_dict = {k: v for k, v in identical_dict.items() if len(v) > 1}
+        identical_dict = {
+            key: [Path(path) for path in path_list] 
+            for key, path_list in identical_dict.items() 
+            if len(path_list) > 1
+        }
         return identical_dict
 
 
@@ -187,9 +191,10 @@ class FindPureExecutor(TaskExecutor):
         :return: 纯粹文件夹的路径列表。
         """
         pure_dirs = []
-        for dir in self.get_success_dict().keys():
-            if is_pure_dir(dir):
-                pure_dirs.append(dir)
+        for task, is_pure in self.get_success_dict().items():
+            dir_path = Path(task[0]) if isinstance(task, tuple) else Path(task)
+            if is_pure:
+                pure_dirs.append(dir_path)
         return pure_dirs
 
 
@@ -671,7 +676,7 @@ def detect_identical_files(
 
     # 根据文件大小进行初步筛选
     file_path_iter = (
-        path
+        str(path)
         for dir_path in dir_list
         for path in Path(dir_path).rglob("*")
         if path.is_file()
@@ -714,7 +719,7 @@ def detect_identical_dirs(
 
     # 根据文件夹大小进行初步筛选
     dir_path_list = [
-        pure_path for path in dir_list for pure_path in find_pure_dirs(path)
+        str(pure_path) for path in dir_list for pure_path in find_pure_dirs(path)
     ]
     scan_size_executor.start(dir_path_list)
     dir_size_iter = scan_size_executor.process_result_dict()
@@ -1051,7 +1056,7 @@ def extract_file_numbers(dir_path: Path | str, suffix: str) -> set:
     return num_set
 
 
-def is_pure_dir(dir: Path, only_nonempty: bool = False) -> bool:
+def is_pure_dir(dir: Path | str, only_nonempty: bool = False) -> bool:
     """
     判断一个文件夹是否为“纯粹文件夹”，即只包含文件而不包含子文件夹。
 
@@ -1059,6 +1064,7 @@ def is_pure_dir(dir: Path, only_nonempty: bool = False) -> bool:
     :param only_nonempty: 是否只返回至少包含一个文件的纯粹文件夹
     :return: 布尔值，True 表示是纯粹文件夹，False 表示不是
     """
+    dir = Path(dir)
     have_file = False
     for p in dir.iterdir():
         if p.is_dir():
@@ -1081,7 +1087,7 @@ def find_pure_dirs(root: str | Path, only_nonempty: bool = False) -> list[Path]:
     :return: 纯粹文件夹的 Path 列表
     """
     root = Path(root)
-    subdirs = [(dir, only_nonempty) for dir in root.rglob("*") if dir.is_dir()]
+    subdirs = [(str(dir), only_nonempty) for dir in root.rglob("*") if dir.is_dir()]
 
     find_pure_dir_executor = FindPureExecutor(
         is_pure_dir,
