@@ -70,7 +70,7 @@ class HandleFileExecutor(TaskExecutor):
         """
         error_path_dict = defaultdict(list)
 
-        for file_path, error in self.get_error_dict().items():
+        for file_path, error in self.get_error_pairs():
             rel_path = file_path.relative_to(self.dir_path)
             new_file_path = self.new_dir_path / rel_path
             shutil.copy(file_path, new_file_path)
@@ -106,7 +106,7 @@ class HandleSubFolderExecutor(HandleFileExecutor):
         """
         error_path_dict = defaultdict(list)
 
-        for file_path, error in self.get_error_dict().items():
+        for file_path, error in self.get_error_pairs():
             rel_path = file_path.relative_to(self.dir_path)
             new_file_path = self.new_dir_path / rel_path
             # shutil.copy(file_path, new_file_path)
@@ -125,7 +125,7 @@ class ScanSizeExecutor(TaskExecutor):
         """
         size_dict = defaultdict(list)
 
-        for path, size in self.get_success_dict().items():
+        for path, size in self.get_success_pairs():
             size_dict[size].append(path)
 
         size_dict = {k: v for k, v in size_dict.items() if len(v) > 1}
@@ -155,7 +155,7 @@ class ScanHashExecutor(TaskExecutor):
         """
         identical_dict = defaultdict(list)
 
-        for (path, size), hash_value in self.get_success_dict().items():
+        for (path, size), hash_value in self.get_success_pairs():
             identical_dict[(hash_value, size)].append(path)
 
         identical_dict = {
@@ -176,7 +176,7 @@ class DeleteReturnSizeExecutor(TaskExecutor):
         :return: 已删除文件的总大小（HumanBytes）。
         """
         delete_size = 0
-        for size in self.get_success_dict().values():
+        for _, size in self.get_success_pairs():
             delete_size += size
         return HumanBytes(delete_size)
 
@@ -191,7 +191,7 @@ class FindPureExecutor(TaskExecutor):
         :return: 纯粹文件夹的路径列表。
         """
         pure_dirs = []
-        for task, is_pure in self.get_success_dict().items():
+        for task, is_pure in self.get_success_pairs():
             dir_path = Path(task[0]) if isinstance(task, tuple) else Path(task)
             if is_pure:
                 pure_dirs.append(dir_path)

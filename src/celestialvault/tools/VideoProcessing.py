@@ -17,7 +17,7 @@ class GetCodecExecutor(TaskExecutor):
         :return: 字典，键为编码格式名称，值为对应的文件路径列表。
         """
         codec_dict = defaultdict(list)
-        for path, codec in self.get_success_dict().items():
+        for path, codec in self.get_success_pairs():
             codec_dict[codec].append(path)
 
         return codec_dict

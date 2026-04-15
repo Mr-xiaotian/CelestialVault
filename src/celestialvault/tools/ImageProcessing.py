@@ -28,9 +28,8 @@ class CompareSSIMExecutor(TaskExecutor):
 
         :return: 包含 [文件名, SSIM值] 的二维列表。
         """
-        success_dict = self.get_success_dict()
         data = []
-        for (file1, file2), ssim in success_dict.items():
+        for (file1, file2), ssim in self.get_success_pairs():
             # 将文件名和 SSIM 值添加到数据列表中
             data.append([file1.name, ssim])
         return data

@@ -21,7 +21,10 @@ class RectangleDamageExecutor(TaskExecutor):
         return self.codec, self.img, self.text, w, h
 
     def process_result_dict(self):
-        return self.get_success_dict()
+        result_dict = dict()
+        for (w, h), success in self.get_success_pairs():
+            result_dict[(w, h)] = success
+        return result_dict
 
 
 class RandomDamageExecutor(TaskExecutor):
@@ -34,7 +37,10 @@ class RandomDamageExecutor(TaskExecutor):
         return self.codec, self.img, self.text, damage_ratio, 100
 
     def process_result_dict(self):
-        return self.get_success_dict()
+        result_dict = dict()
+        for damage_ratio, success in self.get_success_pairs():
+            result_dict[damage_ratio] = success
+        return result_dict
 
 
 def success_rate_rectangle_damage_block(

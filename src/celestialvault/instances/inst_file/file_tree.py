@@ -43,7 +43,7 @@ class FileTree:
             ]
             scan_info_executor.start(file_path_list)
 
-            _info = scan_info_executor.get_success_dict()
+            _info = scan_info_executor.process_result_dict()
             return _info
         
         def _build(node_path: Path, level: int) -> BaseNode:
