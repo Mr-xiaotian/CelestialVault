@@ -37,7 +37,9 @@ class CopyExecutor(TaskExecutor):
     """复制执行器，根据相对路径将文件从主目录批量复制到次目录。"""
 
     def __init__(self, func, main_dir: Path, minor_dir: Path, copy_mode: str):
-        super().__init__(func, progress_desc=f"Copying({copy_mode})", show_progress=True)
+        super().__init__(
+            func, progress_desc=f"Copying({copy_mode})", show_progress=True
+        )
         self.main_dir = main_dir
         self.minor_dir = minor_dir
 
@@ -52,7 +54,7 @@ class CopyExecutor(TaskExecutor):
         target = self.minor_dir / rel_path
         target.parent.mkdir(parents=True, exist_ok=True)
         return (source, target)
-    
+
 
 @dataclass
 class FileDiff:
@@ -81,13 +83,12 @@ class FileDiff:
         """
         以树形结构打印差异文件，并显示两侧目录的差异大小汇总表。
         """
+
         def _print(node: BaseNode, max_name_len: int = 0):
             node.print(
-                level=node.level-1,
+                level=node.level - 1,
                 prefix=(
-                    f"[{node.node_path.parent.as_posix()}]"
-                    if node.node_path
-                    else ""
+                    f"[{node.node_path.parent.as_posix()}]" if node.node_path else ""
                 ),
                 suffix=(
                     f"({node.size}) ({node.hash})"
@@ -107,8 +108,10 @@ class FileDiff:
                     else:
                         files.append(c)
                     child_names.append(c.name)
-                child_max_name_len = max((wcswidth(name) for name in child_names), default=0)
-                
+                child_max_name_len = max(
+                    (wcswidth(name) for name in child_names), default=0
+                )
+
                 for d in dirs:
                     _print(d, child_max_name_len)
                 for f in files:
@@ -117,7 +120,7 @@ class FileDiff:
         if self.is_identical():
             print("No different files found.")
             return
-        
+
         dirs = [c for c in self.diff_tree.root.children if c.is_dir()]
         files = [c for c in self.diff_tree.root.children if not c.is_dir()]
         for d in dirs:
@@ -214,7 +217,9 @@ class FileDiff:
 
 
 # 对比两棵树
-def compare_trees(tree1: FileTree, tree2: FileTree, compare_hash: bool = False) -> "FileDiff":
+def compare_trees(
+    tree1: FileTree, tree2: FileTree, compare_hash: bool = False
+) -> "FileDiff":
     """
     将当前文件树与另一棵文件树对比，返回包含差异信息的 FileDiff 对象。
 
@@ -273,7 +278,7 @@ def compare_trees(tree1: FileTree, tree2: FileTree, compare_hash: bool = False) 
                 mtime = max(mtime, sub_dir.mtime)
                 diff_children.append(sub_dir)
             elif not c1.is_dir() and not c2.is_dir():
-                # 双方都是文件  
+                # 双方都是文件
                 is_equal_size = c1.size == c2.size
                 if is_equal_size:
                     if not compare_hash or c1.hash == c2.hash:
@@ -308,4 +313,3 @@ def compare_trees(tree1: FileTree, tree2: FileTree, compare_hash: bool = False) 
 
     diff.diff_tree = FileTree(_compare(tree1.root, tree2.root), tree1.path)
     return diff
-

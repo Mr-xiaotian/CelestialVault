@@ -47,7 +47,7 @@ class Findiffer:
             # print(f"(LCS: {self.split_part_str.join(lcs_part)})")
             similarity = calculate_similarity(list_a[i], list_b[i], lcs_part)
             if part_len > 1:
-                print(f"(第{i+1}行, 相似度：{similarity})\n")
+                print(f"(第{i + 1}行, 相似度：{similarity})\n")
             else:
                 print(f"(相似度：{similarity})\n")
 

@@ -1,7 +1,9 @@
 from ...tools.FileOperations import align_width
 
 
-def to_string(indent: str, icon: str, prefix: str, name: str, suffix: str, max_name_len: int = 0) -> str:
+def to_string(
+    indent: str, icon: str, prefix: str, name: str, suffix: str, max_name_len: int = 0
+) -> str:
     """
     将节点格式化为带缩进、前缀和后缀的字符串表示。
 

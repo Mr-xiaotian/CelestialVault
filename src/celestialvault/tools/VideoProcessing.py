@@ -35,7 +35,9 @@ def compress_video(old_video_path: Path | str, new_video_path: Path | str):
         str(new_video_path),
     ]
 
-    subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(
+        command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
 
 
 def join_and_label_videos(
@@ -214,7 +216,13 @@ def rotate_video(video_path: str | Path, output_path, angle: int) -> Path:
 
     # 执行命令
     try:
-        subprocess.run(command, check=True, text=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        subprocess.run(
+            command,
+            check=True,
+            text=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
     except subprocess.CalledProcessError as e:
         print(f"FFmpeg 执行失败: {e}")
         raise
@@ -299,7 +307,7 @@ def get_videos_codec(
         file_path for file_path in dir_path.rglob("*.mp4") if file_path.is_file()
     )  # 使用glob('**/*')遍历目录中的文件和子目录
     get_codec_executor.start(file_path_iter)
-    
+
     codec_dict = defaultdict(list)
     for path, codec in get_codec_executor.get_success_pairs():
         if codec in exclude_codecs:

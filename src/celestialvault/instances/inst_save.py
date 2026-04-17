@@ -39,6 +39,7 @@ class FetchStage(TaskStage):
 
 class SaveStage(TaskStage):
     """保存阶段，将上一阶段传入的内容保存到文件。"""
+
     pass
 
 
@@ -239,7 +240,7 @@ class Saver(object):
             return path
 
         return self._content_core(content, file_name, file_suffix)
-    
+
     def save_image(self, image, file_name, file_suffix=None):
         """
         将图像保存为文件。
@@ -255,9 +256,7 @@ class Saver(object):
 
         return self._image_core(image, file_name, file_suffix)
 
-    def save_dataframe(
-        self, dataframe: pd.DataFrame, file_name: str, file_suffix=None
-    ):
+    def save_dataframe(self, dataframe: pd.DataFrame, file_name: str, file_suffix=None):
         """
         将 DataFrame 保存为 CSV 文件。
 
@@ -302,7 +301,7 @@ class Saver(object):
             return path
 
         return self._json_core(data, file_name, file_suffix, encoding)
-    
+
     # ==== delete methods ====
     def delete_file(self, file_name, file_suffix=None):
         """
@@ -317,7 +316,7 @@ class Saver(object):
             path.unlink()
             return path, True
         return path, False
-    
+
     # ==== download methods ====
     def download_text(self, url, file_name, encoding="utf-8", file_suffix=None):
         """

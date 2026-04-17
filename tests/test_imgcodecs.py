@@ -33,7 +33,7 @@ def test_codecs_bytes():
     """
     测试所有注册的 byte-codec 是否能正确进行 编码 -> 解码（纯 bytes）
     """
-    sample_data = b"Hello\x00\xFFWorld\x10\x20Binary!\xAB\xCD"
+    sample_data = b"Hello\x00\xffWorld\x10\x20Binary!\xab\xcd"
     exist_error = False
 
     for mode, codec in CODEC_REGISTRY.items():
@@ -71,7 +71,9 @@ def test_codecs_txt_file():
             print(f"  Encoded image size: {img.size}, mode: {img.mode}")
 
             # 2. 解码
-            image_path = sample_text_path.replace(".txt", f"({codec.mode_name})(txt).png")
+            image_path = sample_text_path.replace(
+                ".txt", f"({codec.mode_name})(txt).png"
+            )
             decoded_text = codec.decode_txt_image_file(image_path)
             print(f"  Decoded text length: {len(decoded_text)}")
 
