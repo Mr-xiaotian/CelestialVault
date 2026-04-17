@@ -98,6 +98,7 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
         success_rate_rectangle_damage_block,
         "serial",
         show_progress=True,
+        progress_desc="Testing rectangle damage",
     )
     rectangle_damage_executor.codec = codec
     rectangle_damage_executor.img = img
@@ -105,9 +106,10 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
 
     random_damage_executor = RandomDamageExecutor(
         success_rate_random_damage,
-        "process",
+        "thread",
         5,
         show_progress=True,
+        progress_desc="Testing random damage",
     )
     random_damage_executor.codec = codec
     random_damage_executor.img = img
