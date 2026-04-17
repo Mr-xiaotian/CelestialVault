@@ -35,7 +35,7 @@ class FileTree:
         
         def _scan(dir_path: Path) -> dict:
             scan_info_executor = TaskExecutor(
-                get_file_info, "thread", max_workers=4, enable_success_cache=True, progress_desc="Scanning files", show_progress=True
+                get_file_info, "thread", max_workers=4, progress_desc="Scanning files", show_progress=True
             )
 
             file_path_list = [
@@ -43,7 +43,9 @@ class FileTree:
             ]
             scan_info_executor.start(file_path_list)
 
-            _info = scan_info_executor.process_result_dict()
+            _info = dict()
+            for file_path, file_info in scan_info_executor.get_success_pairs():
+                _info[file_path] = file_info
             return _info
         
         def _build(node_path: Path, level: int) -> BaseNode:

@@ -10,7 +10,7 @@ from celestialvault.tools.FileOperations import (
 
 def scan(dir_path: Path, max_workers) -> dict:
     scan_info_executor = TaskExecutor(
-        get_file_info, "thread", max_workers=max_workers, enable_success_cache=True, progress_desc="Scanning files", show_progress=True
+        get_file_info, "thread", max_workers=max_workers, progress_desc="Scanning files", show_progress=True
     )
 
     file_path_list = [

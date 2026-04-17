@@ -10,17 +10,7 @@ from celestialflow import TaskExecutor
 class GetCodecExecutor(TaskExecutor):
     """视频编码格式扫描执行器，批量获取视频编码并按编码类型分组。"""
 
-    def process_result_dict(self):
-        """
-        将扫描结果按编码格式分组。
-
-        :return: 字典，键为编码格式名称，值为对应的文件路径列表。
-        """
-        codec_dict = defaultdict(list)
-        for path, codec in self.get_success_pairs():
-            codec_dict[codec].append(path)
-
-        return codec_dict
+    pass
 
 
 def compress_video(old_video_path: Path | str, new_video_path: Path | str):
@@ -301,7 +291,6 @@ def get_videos_codec(
     get_codec_executor = GetCodecExecutor(
         get_video_codec,
         execution_mode="thread",
-        enable_success_cache=True,
         progress_desc="Getting video codec",
         show_progress=True,
     )
@@ -310,13 +299,12 @@ def get_videos_codec(
         file_path for file_path in dir_path.rglob("*.mp4") if file_path.is_file()
     )  # 使用glob('**/*')遍历目录中的文件和子目录
     get_codec_executor.start(file_path_iter)
-
-    codec_dict = get_codec_executor.process_result_dict()
-    codec_dict = {
-        codec: path_list
-        for codec, path_list in codec_dict.items()
-        if codec not in exclude_codecs
-    }
+    
+    codec_dict = defaultdict(list)
+    for path, codec in get_codec_executor.get_success_pairs():
+        if codec in exclude_codecs:
+            continue
+        codec_dict[codec].append(path)
 
     return codec_dict
 

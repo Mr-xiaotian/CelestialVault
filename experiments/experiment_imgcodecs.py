@@ -20,12 +20,6 @@ class RectangleDamageExecutor(TaskExecutor):
         w, h = task
         return self.codec, self.img, self.text, w, h
 
-    def process_result_dict(self):
-        result_dict = dict()
-        for (w, h), success in self.get_success_pairs():
-            result_dict[(w, h)] = success
-        return result_dict
-
 
 class RandomDamageExecutor(TaskExecutor):
     codec: BaseCodec
@@ -35,12 +29,6 @@ class RandomDamageExecutor(TaskExecutor):
     def get_args(self, task):
         damage_ratio = task
         return self.codec, self.img, self.text, damage_ratio, 100
-
-    def process_result_dict(self):
-        result_dict = dict()
-        for damage_ratio, success in self.get_success_pairs():
-            result_dict[damage_ratio] = success
-        return result_dict
 
 
 def success_rate_rectangle_damage_block(
@@ -109,7 +97,6 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
     rectangle_damage_executor = RectangleDamageExecutor(
         success_rate_rectangle_damage_block,
         "serial",
-        enable_success_cache=True,
         show_progress=True,
     )
     rectangle_damage_executor.codec = codec
@@ -120,7 +107,6 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
         success_rate_random_damage,
         "process",
         5,
-        enable_success_cache=True,
         show_progress=True,
     )
     random_damage_executor.codec = codec
@@ -128,11 +114,15 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
     random_damage_executor.text = text
 
     rectangle_damage_executor.start(product(range(1, width + 1), range(1, height + 1)))
-    rectangle_damage_result_dict = rectangle_damage_executor.process_result_dict()
+    rectangle_damage_result_dict = dict()
+    for (w, h), success in rectangle_damage_executor.get_success_pairs():
+        rectangle_damage_result_dict[(w, h)] = success
 
     ratios = np.arange(0, 1.01, 0.01)  # 从0到1，步长0.01
     random_damage_executor.start(ratios)
-    random_damage_result_dict = random_damage_executor.process_result_dict()
+    random_damage_result_dict = dict()
+    for damage_ratio, success in random_damage_executor.get_success_pairs():
+        random_damage_result_dict[damage_ratio] = success
     success_rates = [random_damage_result_dict[r] for r in ratios]
 
     for (w, h), success in rectangle_damage_result_dict.items():
