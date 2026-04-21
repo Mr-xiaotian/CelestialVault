@@ -128,9 +128,10 @@ def list_to_square_matrix(lst: list):
 
 def format_simple_matrix(matrix: list):
     """
-    格式化简单矩阵
-    :param matrix: 矩阵
-    :return: 格式化后的字符串
+    格式化简单矩阵为对齐的字符串表示。
+
+    :param matrix: 二维列表（矩阵）。
+    :return: 格式化后的字符串。
     """
     # 确定每个元素的最大宽度
     max_width = max(len(str(item)) for row in matrix for item in row)

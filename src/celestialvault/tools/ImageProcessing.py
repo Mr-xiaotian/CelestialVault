@@ -27,7 +27,10 @@ class CompareSSIMExecutor(TaskExecutor):
 
 def compress_img(old_img_path: str | Path, new_img_path: str | Path):
     """
-    压缩图片
+    压缩图片，使用 optimize 和 quality=75 进行有损压缩。
+
+    :param old_img_path: 原始图片文件路径。
+    :param new_img_path: 压缩后图片文件路径。
     """
     register_heif_opener()
     Image.LOAD_TRUNCATED_IMAGES = True
@@ -40,7 +43,10 @@ def compress_img(old_img_path: str | Path, new_img_path: str | Path):
 
 def safe_open_image(path: Path) -> tuple[Image.Image | None, bool]:
     """
-    安全地打开一张图片并返回Image对象。
+    安全地打开一张图片并返回Image对象，先验证再加载进内存。
+
+    :param path: 图片文件路径。
+    :return: 元组 (Image对象或None, 是否成功)。
     """
     try:
         # 第一次只验证，不保留句柄
@@ -151,7 +157,10 @@ def combine_imgs_dir(dir_path: Path, special_keywords: dict = None):
 
 def img_to_binary(img: Image.Image) -> bytes:
     """
-    将Image对象转换为二进制数据。
+    将Image对象转换为PNG格式的二进制数据。
+
+    :param img: PIL Image 对象。
+    :return: PNG格式的二进制数据。
     """
     buffered = io.BytesIO()
     img.save(buffered, format="PNG")
@@ -161,7 +170,10 @@ def img_to_binary(img: Image.Image) -> bytes:
 
 def binary_to_img(binary_img: bytes) -> Image.Image:
     """
-    将二进制数据转换为Image对象
+    将二进制数据转换为Image对象。
+
+    :param binary_img: 图片的二进制数据。
+    :return: PIL Image 对象。
     """
     img = Image.open(io.BytesIO(binary_img))
     return img
@@ -309,6 +321,7 @@ def palette_to_image(palette, block_size=50):
 
     :param palette: 一个包含 RGB 颜色的平铺列表或元组，例如 [r, g, b, r, g, b, ...]
     :param block_size: 每个颜色块的像素大小，默认 50
+    :return: 生成的调色板图像。
     """
     total_colors = len(palette) // 3  # 颜色数量
 
@@ -334,7 +347,8 @@ def expand_image(image: Image.Image, expand_factor: int = 50) -> Image.Image:
     将图像中的每个像素点扩大为n x n的块
 
     :param image: 要处理的图像。如果是调色板图像（P模式），将其转换为RGB模式。
-    :param block_size: 扩展因子，默认 50
+    :param expand_factor: 扩展因子，默认 50。
+    :return: 扩展后的图像。
     """
     if expand_factor <= 0:
         raise ValueError("n must be a positive integer")
@@ -358,6 +372,7 @@ def restore_expanded_image(
 
     :param expanded_image: 要恢复的扩展图像
     :param expand_factor: 扩展因子，默认为50
+    :return: 恢复后的原始大小图像。
     """
     if expand_factor <= 0:
         raise ValueError("expand_factor must be a positive integer")
@@ -409,6 +424,7 @@ def extract_pixels_as_gif(image: Image.Image, frame_size=200, duration=100, loop
     :param frame_size: 每帧图像的大小。
     :param duration: 每帧显示的持续时间（毫秒）。
     :param loop: GIF循环的次数，0表示无限循环。
+    :return: 包含GIF数据的 BytesIO 对象。
     """
     # 如果图像是P模式（调色板图像），转换为RGB模式
     if image.mode == "P":
@@ -682,8 +698,9 @@ def ensure_capacity(
 
     :param ref_img: 参考图像 (RGBA)
     :param required_bytes: 需要存储的字节数
-    :param min_size: 图像的最小宽高限制
-    :return: 调整后的图像 (RGBA)
+    :param min_able: 是否允许缩小图像，默认 True。为 False 时仅放大不缩小。
+    :param min_size: 图像的最小宽高限制。
+    :return: 调整后的图像 (RGBA)。
     """
     width, height = ref_img.size
     current_capacity = width * height
@@ -716,6 +733,10 @@ def compare_random_pixels(
     """
     在随机点位比较两张图的像素差异。
     打印每个点位的 RGB(A) 值差异，以及整体平均差。
+
+    :param ref_img: 参考原图。
+    :param enc_img: 编码后的图像。
+    :param sample_num: 随机抽样的像素数量，默认 20。
     """
     from .TextTools import format_table
 
@@ -761,6 +782,7 @@ def show_diff_heatmap(
     :param enc_img: 编码图 (PIL.Image)
     :param save_path: 保存路径（可选）
     :param show: 是否显示结果
+    :return: 差异强度矩阵，每像素的平均通道差异值。
     """
     width, height = enc_img.size
     ref_img = ensure_capacity(ref_img, width * height)

@@ -25,6 +25,7 @@ def convert_mp3_dir(dir_path: Path) -> dict[tuple[str, str], list[Path]]:
     将指定目录下的所有 mp3 文件转换为 wav 文件
 
     :param dir_path: mp3 文件所在的目录
+    :return: 处理结果，包含成功和失败的文件路径信息。
     """
 
     def rename_mp4(file_path: Path) -> Path:

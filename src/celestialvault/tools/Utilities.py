@@ -10,8 +10,10 @@ from ..instances.inst_units import HumanBytes
 
 def get_format_time(now_time=None) -> str:
     """
-    获取当前时间
-    :return:
+    获取格式化的时间字符串。
+
+    :param now_time: 时间戳，默认为当前时间。
+    :return: 格式化的时间字符串，如 "2024-01-01 12:00:00"。
     """
     now_time = localtime(now_time) or localtime()
     return strftime("%Y-%m-%d %H:%M:%S", now_time)
@@ -19,11 +21,11 @@ def get_format_time(now_time=None) -> str:
 
 def functions_are_equal(func1: Callable, func2: Callable) -> bool:
     """
-    判断两个函数是否相等
+    判断两个函数是否相等，通过比较字节码、常量、变量名等属性。
 
-    :param func1:
-    :param func2:
-    :return:
+    :param func1: 第一个函数。
+    :param func2: 第二个函数。
+    :return: 如果两个函数相等返回 True，否则返回 False。
     """
     if not (isinstance(func1, FunctionType) and isinstance(func2, FunctionType)):
         return False
@@ -72,9 +74,10 @@ def get_total_size(obj, seen=None) -> HumanBytes:
 
 def log_time(func: Callable) -> Callable:
     """
-    记录函数执行时间的装饰器
-    :param func: 要装饰的函数
-    :return:
+    记录函数执行时间的装饰器。
+
+    :param func: 要装饰的函数。
+    :return: 装饰后的函数。
     """
 
     @wraps(func)

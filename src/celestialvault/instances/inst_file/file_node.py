@@ -20,6 +20,16 @@ class BaseNode:
         icon: str,
         level: int,
     ):
+        """
+        初始化文件树节点基类。
+
+        :param name: 节点名称。
+        :param node_path: 节点的文件系统路径。
+        :param size: 节点大小。
+        :param mtime: 节点修改时间。
+        :param icon: 节点显示图标。
+        :param level: 节点在文件树中的深度。
+        """
         self.name = name
         self.node_path = node_path
         self.size = size
@@ -37,6 +47,15 @@ class BaseNode:
         suffix: str = None,
         max_name_len: int = None,
     ):
+        """
+        打印节点信息。
+
+        :param level: 缩进级别，默认使用节点自身层级。
+        :param prefix: 前缀字符串。
+        :param name: 显示名称，默认使用节点名称。
+        :param suffix: 后缀字符串，默认显示大小。
+        :param max_name_len: 名称对齐的最大长度。
+        """
         print(
             to_string(
                 indent="    " * level if level is not None else "    " * self.level,
@@ -62,6 +81,17 @@ class FileNode(BaseNode):
         icon: str,
         level: int,
     ):
+        """
+        初始化文件节点。
+
+        :param name: 文件名。
+        :param suffix: 文件后缀。
+        :param node_path: 文件路径。
+        :param size: 文件大小。
+        :param mtime: 文件修改时间。
+        :param icon: 显示图标。
+        :param level: 节点深度。
+        """
         super().__init__(name, node_path, size, mtime, icon, level)
         self.suffix = suffix
 
@@ -98,6 +128,16 @@ class DirNode(BaseNode):
         level: int,
         children: list["BaseNode"],
     ):
+        """
+        初始化目录节点。
+
+        :param name: 目录名。
+        :param node_path: 目录路径。
+        :param size: 目录总大小。
+        :param mtime: 目录修改时间。
+        :param level: 节点深度。
+        :param children: 子节点列表。
+        """
         super().__init__(name, node_path, size, mtime, "📁", level)
         self.children: list["BaseNode"] = children
 

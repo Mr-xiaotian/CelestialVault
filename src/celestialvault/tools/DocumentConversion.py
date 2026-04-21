@@ -163,7 +163,8 @@ def resize_pdf_to_max_width(
 
     :param pdf_path: 输入 PDF 文件路径
     :param output_path: 输出 PDF 文件路径
-    :return: None
+    :param max_width: 目标最大宽度，默认为文件中所有页面的最大宽度。
+    :return: 实际使用的最大宽度值。
     """
 
     def get_max_width(doc):
@@ -229,6 +230,13 @@ def get_max_pdf_width(dir_path: str | Path) -> float:
 
 
 def resize_pdfs(dir_path: Path, execution_mode: str = "serial"):
+    """
+    将文件夹中所有 PDF 文件的页面宽度统一调整为最大宽度。
+
+    :param dir_path: 包含 PDF 文件的文件夹路径。
+    :param execution_mode: 执行模式，默认 "serial"。
+    :return: 处理结果列表。
+    """
     def resize_pdf(pdf_path: Path, output_path: Path) -> Path:
         return resize_pdf_to_max_width(pdf_path, output_path, max_pdf_width)
 

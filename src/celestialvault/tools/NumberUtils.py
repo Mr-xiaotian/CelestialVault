@@ -406,9 +406,9 @@ def choose_square_container(n: int, threshold: float = 0.7):
     """
     给定原始数据长度 n，选择一个平方数容器。
 
-    :param n 原始数据长度
-    :param threshold 控制最大允许的填充率（0~1）。
-    :return (容器边长, 最大可用数据长度, 冗余长度)
+    :param n: 原始数据长度。
+    :param threshold: 控制最大允许的填充率（0~1）。
+    :return: (容器边长, 最大可用数据长度, 冗余长度)。
     """
     # 从理论下限 sqrt((n+4)/threshold) 开始
     s = math.ceil(math.sqrt((n + 4) / threshold))
@@ -424,9 +424,9 @@ def redundancy_from_container(container: int, threshold: float = 0.7) -> int:
     """
     已知容器长度（平方数），计算对应冗余长度。
 
-    :param container 容器长度（平方数）
-    :param threshold 控制最大允许的填充率（0~1）。
-    :return 冗余长度
+    :param container: 容器长度（平方数）。
+    :param threshold: 控制最大允许的填充率（0~1）。
+    :return: 冗余长度。
     """
     if int(math.isqrt(container)) ** 2 != container:
         raise ValueError("container 必须是一个平方数")

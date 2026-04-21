@@ -228,6 +228,7 @@ def rand_strict_increasing_ints(
     :param length: 序列长度
     :param start: 起始值
     :param max_step: 每次递增的最大步长（至少 1）
+    :return: 随机递增整数列表。
     """
     seq = [start]
     for _ in range(length - 1):
@@ -291,6 +292,7 @@ def gapped_range_tuples(length: int, tuple_size: int):
 
     :param length: 元组数量
     :param tuple_size: 每个元组的长度
+    :return: 递增数列元组列表。
     """
     result = []
     current = 0

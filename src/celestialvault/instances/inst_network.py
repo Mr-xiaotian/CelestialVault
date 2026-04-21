@@ -12,6 +12,14 @@ class NeuralNetwork:
     """三层前馈神经网络（输入层、隐藏层、输出层），使用 sigmoid 激活和反向传播训练。"""
 
     def __init__(self, inputnodes, hiddennodes, outputnodes, learningrate):
+        """
+        初始化三层前馈神经网络。
+
+        :param inputnodes: 输入层节点数。
+        :param hiddennodes: 隐藏层节点数。
+        :param outputnodes: 输出层节点数。
+        :param learningrate: 学习率。
+        """
         # 定义输入层、隐藏层、输出层的节点数，以及学习率
         self.inodes = inputnodes
         self.hnodes = hiddennodes

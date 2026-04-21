@@ -124,6 +124,13 @@ class Suber:
         return text.strip()
 
     def sub_name(self, name: str, max_len: int = 100) -> str:
+        """
+        清理文件名中的非法字符，并在超长时进行截断。
+
+        :param name: 原始文件名。
+        :param max_len: 文件名最大长度限制，默认 100。
+        :return: 清理后的文件名。
+        """
         name = name.strip()
 
         # 替换非法字符

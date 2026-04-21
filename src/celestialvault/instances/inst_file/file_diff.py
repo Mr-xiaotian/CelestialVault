@@ -223,7 +223,8 @@ def compare_trees(
     """
     将当前文件树与另一棵文件树对比，返回包含差异信息的 FileDiff 对象。
 
-    :param tree2: 要对比的另一棵文件树。
+    :param tree1: 第一棵文件树。
+    :param tree2: 要对比的第二棵文件树。
     :param compare_hash: 是否通过哈希值比较文件内容。
     :return: 包含两棵树差异信息的 FileDiff 对象。
     """

@@ -126,13 +126,20 @@ def iprint(obj: list | dict, start="", end=""):
 def string_split(string: str, split_str: str = "\n") -> list[str]:
     """
     将字符串按指定分隔符分割，返回一个列表，每个元素是分割后非空的子字符串。
+
+    :param string: 待分割的字符串。
+    :param split_str: 分隔符，默认为换行符。
+    :return: 分割后的非空子字符串列表。
     """
     return [s for s in string.split(split_str) if s]
 
 
 def language_fingerprint(text: str) -> dict:
     """
-    根据文本生成语言指纹字典。
+    根据文本生成语言指纹字典，包括词数、字符数、词长分布、停用词比例和高频词等信息。
+
+    :param text: 待分析的文本。
+    :return: 包含语言指纹信息的字典。
     """
     return
     # 将文本分词
@@ -169,9 +176,12 @@ def language_fingerprint(text: str) -> dict:
     return fingerprint
 
 
-def calculate_valid_chinese_text(text: str):
+def calculate_valid_chinese_text(text: str) -> float:
     """
-    计算文本中中文字符的比例。
+    计算文本中中文字符（含中文标点和数字字母）的比例。
+
+    :param text: 待分析的文本。
+    :return: 中文字符占总字符数的比例。
     """
     # 定义一个正则表达式来匹配中文字符
     chinese_char_pattern = re.compile(
@@ -185,9 +195,12 @@ def calculate_valid_chinese_text(text: str):
     return chinese_char_count / len(text)
 
 
-def calculate_valid_text(text: str):
+def calculate_valid_text(text: str) -> float:
     """
-    计算文本中有效字符的比例。
+    计算文本中有效字符（中文、英文、数字及常见标点）的比例。
+
+    :param text: 待分析的文本。
+    :return: 有效字符占总字符数的比例。
     """
     # 定义一个正则表达式来匹配所有常见语言字符和标点符号
     valid_char_pattern = re.compile(
@@ -201,23 +214,34 @@ def calculate_valid_text(text: str):
     return valid_char_count / len(text)
 
 
-def is_valid_chinese_text(text: str, threshold: int = 0.8):
+def is_valid_chinese_text(text: str, threshold: float = 0.8) -> bool:
     """
-    判断文本是否为有效文本，即文本中有效字符的比例是否大于阈值。
+    判断文本是否为有效中文文本，即中文字符比例是否大于阈值。
+
+    :param text: 待判断的文本。
+    :param threshold: 有效字符比例阈值，默认 0.8。
+    :return: 如果中文字符比例大于阈值返回 True，否则返回 False。
     """
     return calculate_valid_chinese_text(text) > threshold
 
 
-def is_valid_text(text: str, threshold: int = 0.8):
+def is_valid_text(text: str, threshold: float = 0.8) -> bool:
     """
-    判断文本是否为有效文本，即文本中有效字符的比例是否大于阈值。
+    判断文本是否为有效文本，即有效字符比例是否大于阈值。
+
+    :param text: 待判断的文本。
+    :param threshold: 有效字符比例阈值，默认 0.8。
+    :return: 如果有效字符比例大于阈值返回 True，否则返回 False。
     """
     return calculate_valid_text(text) > threshold
 
 
 def crc_encode_text(actual_text: str) -> str:
     """
-    在文本开头添加CRC32校验和。
+    在文本开头添加 4 字节 CRC32 校验和。
+
+    :param actual_text: 原始文本。
+    :return: 前置 CRC32 校验和后的文本。
     """
     # 计算CRC32校验和
     crc = zlib.crc32(actual_text.encode("utf-8"))
@@ -231,7 +255,11 @@ def crc_encode_text(actual_text: str) -> str:
 
 def crc_decode_text(crc_text: str) -> str:
     """
-    从文本中提取CRC32校验和并验证。
+    从文本中提取 CRC32 校验和并验证，返回原始文本。
+
+    :param crc_text: 带 CRC32 校验和前缀的文本。
+    :return: 验证通过后的原始文本。
+    :raises ValueError: 校验和验证失败时抛出。
     """
     # 提取校验和和实际文本
     crc_received = int.from_bytes(crc_text[:4].encode("latin1"), "big")
@@ -248,6 +276,9 @@ def crc_decode_text(crc_text: str) -> str:
 def crc_encode_bytes(data: bytes) -> bytes:
     """
     在字节串前附加 4 字节 big-endian CRC32。
+
+    :param data: 原始字节串。
+    :return: 前置 CRC32 校验和后的字节串。
     """
     crc = zlib.crc32(data)
     crc_bytes = crc.to_bytes(4, "big")
@@ -257,6 +288,10 @@ def crc_encode_bytes(data: bytes) -> bytes:
 def crc_decode_bytes(crc_data: bytes) -> bytes:
     """
     分离并验证前置 CRC32，返回原始字节。
+
+    :param crc_data: 带 CRC32 前缀的字节串。
+    :return: 验证通过后的原始字节串。
+    :raises ValueError: 数据不足或校验失败时抛出。
     """
     if len(crc_data) < 4:
         raise ValueError("数据长度不足，没有包含 CRC32。")
@@ -273,8 +308,11 @@ def crc_decode_bytes(crc_data: bytes) -> bytes:
 
 def add_length_header_to_text(text: str) -> str:
     """
-    将文本前加 4 字节长度头（注意：长度为“UTF-8字节长度”），并返回 str。
+    将文本前加 4 字节长度头（注意：长度为”UTF-8字节长度”），并返回 str。
     头部使用 latin1 解码，保证无损保留二进制。
+
+    :param text: 原始文本。
+    :return: 带 4 字节长度头的文本。
     """
     raw = text.encode("utf-8")
     length_prefix = struct.pack(">I", len(raw))  # 必须是 UTF-8 字节长度
@@ -284,6 +322,10 @@ def add_length_header_to_text(text: str) -> str:
 def restore_text_from_length_header(data: str) -> str:
     """
     从带长度头的文本恢复原始 UTF-8 文本。
+
+    :param data: 带 4 字节长度头的文本。
+    :return: 恢复的原始 UTF-8 文本。
+    :raises ValueError: 数据不足或不完整时抛出。
     """
     data_bytes = data.encode("latin1")  # 先无损转回 bytes
 
@@ -303,6 +345,9 @@ def add_length_header_to_bytes(raw: bytes) -> bytes:
     """
     为 bytes 加上 4 字节长度头（big-endian）。
     返回值为： [4字节长度] + [原始bytes]
+
+    :param raw: 原始字节串。
+    :return: 带 4 字节长度头的字节串。
     """
     length_prefix = struct.pack(">I", len(raw))
     return length_prefix + raw
@@ -311,6 +356,10 @@ def add_length_header_to_bytes(raw: bytes) -> bytes:
 def restore_bytes_from_length_header(data: bytes) -> bytes:
     """
     从带长度头的字节串中恢复原始 bytes。
+
+    :param data: 带 4 字节长度头的字节串。
+    :return: 恢复的原始字节串。
+    :raises ValueError: 数据不足或不完整时抛出。
     """
     if len(data) < 4:
         raise ValueError("数据不足 4 字节，缺少长度头")
@@ -327,6 +376,9 @@ def encode_bytes_to_base64(data: bytes) -> str:
     """
     将字节串编码为 Base64 文本，并在前方加上 4 字节长度头（真实二进制长度）。
     返回值为 UTF-8 文本。
+
+    :param data: 原始字节串。
+    :return: Base64 编码后的 UTF-8 文本。
     """
     length_prefix = struct.pack(">I", len(data))  # 4 字节长度头
     payload = length_prefix + data
@@ -336,6 +388,10 @@ def encode_bytes_to_base64(data: bytes) -> str:
 def decode_bytes_from_base64(text: str) -> bytes:
     """
     从 Base64 文本解码为字节串，解析前 4 字节长度头，截取真实数据。
+
+    :param text: Base64 编码的文本。
+    :return: 解码后的原始字节串。
+    :raises ValueError: 数据不足或不完整时抛出。
     """
     raw = base64.b64decode(text.encode("utf-8"))
 
@@ -353,6 +409,9 @@ def decode_bytes_from_base64(text: str) -> bytes:
 def compress_text_to_bytes(text: str) -> bytes:
     """
     压缩文本并返回字节流，前 4 字节存储真实压缩长度。
+
+    :param text: 待压缩的文本。
+    :return: 带 4 字节长度头的压缩字节流。
     """
     compressed_data = zlib.compress(text.encode("utf-8"))
     length_prefix = struct.pack(">I", len(compressed_data))  # 4 字节长度头
@@ -362,6 +421,10 @@ def compress_text_to_bytes(text: str) -> bytes:
 def decompress_text_from_bytes(compressed_data: bytes) -> str:
     """
     从字节流中解压缩文本，利用前 4 字节长度头截取真实压缩数据。
+
+    :param compressed_data: 带 4 字节长度头的压缩字节流。
+    :return: 解压缩后的原始文本。
+    :raises ValueError: 数据不足或不完整时抛出。
     """
     if len(compressed_data) < 4:
         raise ValueError("压缩数据过短，缺少长度头")
@@ -377,8 +440,13 @@ def decompress_text_from_bytes(compressed_data: bytes) -> str:
 
 def rs_encode(data: bytes, nsym: int) -> bytes:
     """
-    把 data 分成 n 份，每份添加 nsym/n 个冗余，
-    保证 (len(data)/n + nsym/n) < 255。
+    对数据进行 Reed-Solomon 编码，自动分块以满足 GF(256) 长度限制。
+    把 data 分成 n 份，每份添加 nsym/n 个冗余，保证 (len(data)/n + nsym/n) < 255。
+
+    :param data: 原始字节数据。
+    :param nsym: 总冗余字节数（必须 >= 1）。
+    :return: 编码后的字节串。
+    :raises ValueError: nsym < 1 时抛出。
     """
     if nsym < 1:
         raise ValueError("nsym 必须 >= 1")
@@ -412,9 +480,12 @@ def rs_encode(data: bytes, nsym: int) -> bytes:
 
 def rs_decode(encoded: bytes, nsym: int) -> bytes:
     """
-    解码由 rs_encode 生成的数据。
-    输入: encoded (编码数据), nsym (总冗余字节数)
-    输出: 原始 data
+    解码由 rs_encode 生成的 Reed-Solomon 编码数据，恢复原始数据。
+
+    :param encoded: rs_encode 生成的编码数据。
+    :param nsym: 总冗余字节数（必须 >= 1）。
+    :return: 解码后的原始字节数据。
+    :raises ValueError: nsym < 1 或数据非法时抛出。
     """
     if nsym < 1:
         raise ValueError("nsym 必须 >= 1")
@@ -455,7 +526,12 @@ def rs_decode(encoded: bytes, nsym: int) -> bytes:
 
 def pad_bytes(data: bytes, target_len: int) -> bytes:
     """
-    在 data 前加 4 字节长度头，并用 0xEC, 0x11 循环补齐到 target_len
+    在 data 前加 4 字节长度头，并用 0xEC, 0x11 循环补齐到 target_len。
+
+    :param data: 原始字节数据。
+    :param target_len: 目标总长度（包含 4 字节头）。
+    :return: 补齐后的字节串。
+    :raises ValueError: target_len 不足时抛出。
     """
     header = len(data).to_bytes(4, "big")
     data_with_header = header + data
@@ -471,7 +547,11 @@ def pad_bytes(data: bytes, target_len: int) -> bytes:
 
 def unpad_bytes(data: bytes) -> bytes:
     """
-    去掉补位并根据头部恢复原始数据
+    去掉补位并根据头部恢复原始数据。
+
+    :param data: 带 4 字节长度头和补位的字节串。
+    :return: 恢复的原始字节数据。
+    :raises ValueError: 数据太短或长度不匹配时抛出。
     """
     if len(data) < 4:
         raise ValueError("数据太短，缺少长度头")
@@ -487,7 +567,11 @@ def unpad_bytes(data: bytes) -> bytes:
 
 def pad_to_align(data: bytes, align: int) -> bytes:
     """
-    把字节流补齐到 align 的倍数。
+    把字节流补齐到 align 的倍数，使用 0xEC, 0x11 循环填充。
+
+    :param data: 原始字节流。
+    :param align: 对齐目标（字节数）。
+    :return: 补齐后的字节流。
     """
     if align <= 1:
         return data
@@ -517,7 +601,10 @@ def compress_to_base64(text: str) -> str:
 
 def decode_from_base64(base64_text: str) -> str:
     """
-    从Base64编码中解码并解压缩文本。
+    从 Base64 编码中解码并解压缩文本。
+
+    :param base64_text: Base64 编码的压缩文本。
+    :return: 解压缩后的原始文本。
     """
     # Decode the Base64 text to get the compressed data
     compressed_data = base64.b64decode(base64_text.encode("utf-8"))
@@ -624,8 +711,12 @@ def character_ratio(target_str: str) -> dict[str, float]:
 
 def get_lcs(str1: str, str2: str) -> list[str]:
     """
-    找出两个字符串的最大相似部分。
-    返回一个包含最大相似部分的字符串，如 "1-234-6"。
+    找出两个字符串的最长公共子序列，并按连续段落分组返回。
+    空字符串 "" 表示不匹配的间隔。
+
+    :param str1: 第一个字符串。
+    :param str2: 第二个字符串。
+    :return: 最长公共子序列的分段列表。
     """
 
     def update_common(common_parts: list, current_part):

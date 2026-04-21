@@ -64,15 +64,11 @@ class BaseCodec:
         self, file_path: str | Path, save_img: bool = False
     ) -> Image.Image:
         """
-        Docstring for encode_txt_file
+        读取文本文件并编码为图像。
 
-        :param self: Description
-        :param file_path: Description
-        :type file_path: str | Path
-        :param save_img: Description
-        :type save_img: bool
-        :return: Description
-        :rtype: Image
+        :param file_path: 文本文件路径。
+        :param save_img: 是否将编码后的图像保存到磁盘。
+        :return: 编码后的 Image 对象。
         """
         file_path = Path(file_path)
 
@@ -91,15 +87,11 @@ class BaseCodec:
 
     def decode_txt_file(self, img_path: str, save_text: bool = False) -> str:
         """
-        Docstring for decode_txt_file
+        从图像文件中解码还原文本内容。
 
-        :param self: Description
-        :param img_path: Description
-        :type img_path: str
-        :param save_text: Description
-        :type save_text: bool
-        :return: Description
-        :rtype: str
+        :param img_path: 编码图像的文件路径。
+        :param save_text: 是否将解码后的文本保存到磁盘。
+        :return: 解码后的文本字符串。
         """
         img_path = Path(img_path)
         img = Image.open(img_path)
@@ -135,10 +127,11 @@ class BaseCodec:
     ) -> Image.Image:
         """
         读取任意二进制文件并编码为图像。
-        输出图像文件名格式：
-            <原文件名>(<mode_name>)(<原扩展名>).png
-        例如：
-            data.bin → data(rgb_mode)(bin).png
+        输出图像文件名格式：<原文件名>(<mode_name>)(<原扩展名>).png
+
+        :param file_path: 二进制文件路径。
+        :param save_img: 是否将编码后的图像保存到磁盘。
+        :return: 编码后的 Image 对象。
         """
         file_path = Path(file_path)
 
@@ -163,11 +156,11 @@ class BaseCodec:
     ) -> bytes:
         """
         从图像文件中恢复二进制数据。
-        图像文件名格式：
-            <原文件名>(<mode_name>)(<原扩展名>).png
+        图像文件名格式：<原文件名>(<mode_name>)(<原扩展名>).png
 
-        例如：
-            data(rgb_ori)(bin).png → 输出 data.bin
+        :param img_path: 编码图像的文件路径。
+        :param save_file: 是否将解码后的二进制数据保存到磁盘。
+        :return: 解码后的二进制数据。
         """
         img_path = Path(img_path)
         img = Image.open(img_path)
@@ -513,6 +506,12 @@ class ChannelCodec(BaseCodec):
     """通用多通道编解码器，每个像素的各通道各存储 1 字节数据。"""
 
     def __init__(self, mode_name: str, channels: int):
+        """
+        初始化通用多通道编解码器。
+
+        :param mode_name: 图像模式名称，如 'RGB'、'RGBA'、'L'。
+        :param channels: 通道数。
+        """
         self.mode_name = mode_name
         self.channels = channels
 
@@ -586,6 +585,11 @@ class RefRGBALSBCodec(BaseCodec):
     """
 
     def __init__(self, ref_image: str | Path | Image.Image):
+        """
+        初始化 RGBA-LSB 编码器。
+
+        :param ref_image: 参考图像，可以是路径或 Image 对象。
+        """
         super().__init__()
         if isinstance(ref_image, (str, Path)):
             ref_image = Image.open(ref_image).convert("RGBA")
@@ -676,6 +680,12 @@ class PaletteCodec(BaseCodec):
     """调色板模式编解码器，使用 256 色调色板，每个像素存储 1 字节数据。"""
 
     def __init__(self, palette_style: str, palatte_mode: str = "random"):
+        """
+        初始化调色板编解码器。
+
+        :param palette_style: 调色板风格名称。
+        :param palatte_mode: 颜色生成模式，默认 'random'。
+        """
         self.mode_name = palette_style  # 用 palette_style 名称作为 mode
         self.palette = generate_palette(256, style=palette_style, mode=palatte_mode)
 
@@ -734,6 +744,13 @@ class PaletteWithRsCodec(BaseCodec):
     def __init__(
         self, palette_style: str, palatte_mode: str = "random", threshold: float = 0.7
     ):
+        """
+        初始化带 Reed-Solomon 纠错的调色板编解码器。
+
+        :param palette_style: 调色板风格名称。
+        :param palatte_mode: 颜色生成模式，默认 'random'。
+        :param threshold: 最大数据填充率（0~1），默认 0.7。
+        """
         self.mode_name = palette_style + "_rs"  # 用 style 名称作为 mode
         self.palette = generate_palette(256, style=palette_style, mode=palatte_mode)
         self.threshold = threshold
@@ -794,8 +811,10 @@ class PaletteWithRsCodec(BaseCodec):
 class RedundancyCodec(BaseCodec):
     def __init__(self, mode_name: str, channels: int):
         """
-        mode_name: 图像模式名称，比如 'RGB', 'RGBA', 'L'
-        channels: 通道数
+        初始化冗余编解码器。
+
+        :param mode_name: 图像模式名称，如 'RGB'、'RGBA'、'L'。
+        :param channels: 通道数。
         """
         self.mode_name = mode_name.lower() + "_redundancy"  # 注册名
         self.base_mode = mode_name.upper()  # Pillow 图像模式

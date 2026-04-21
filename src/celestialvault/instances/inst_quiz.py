@@ -11,6 +11,12 @@ class QuizBase:
     """通用测验UI框架"""
 
     def __init__(self, title="测验", input_type="text"):
+        """
+        初始化测验 UI 框架。
+
+        :param title: 测验标题。
+        :param input_type: 输入类型，'text' 或 'int'。
+        """
         self.title = title
         self.score = 0
         self.total_questions = 0
@@ -135,6 +141,12 @@ class QuizBase:
 
 class MultiplicationQuiz(QuizBase):
     def __init__(self, digit_num: int, modes: list[str] = None):
+        """
+        初始化乘法速算测验。
+
+        :param digit_num: 乘法数字的位数。
+        :param modes: 出题模式列表，如 ['square', 'random'] 等。
+        """
         self.digit_num = max(1, digit_num)
         self.modes = modes or ["random"]
 
@@ -327,6 +339,12 @@ class MultiplicationQuiz(QuizBase):
 
 class DictationQuiz(QuizBase):
     def __init__(self, word_map: SymmetricMap, random_mode: str = "any"):
+        """
+        初始化单词听写测验。
+
+        :param word_map: 单词映射表（SymmetricMap）。
+        :param random_mode: 随机出题模式，可选 'forward'、'backward' 或 'any'。
+        """
         self.word_map = word_map
         self.random_mode = random_mode
 

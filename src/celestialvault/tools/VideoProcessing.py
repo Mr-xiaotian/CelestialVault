@@ -365,7 +365,7 @@ def is_container_ratio_matching_resolution(video_path):
     """
     检查视频容器的宽高比是否与分辨率比例一致。
 
-    :param video_info: 包含视频信息的字典，需包含 width, height, display_aspect_ratio。
+    :param video_path: 视频文件路径。
     :return: 布尔值，表示是否一致。
     """
     video_info = get_video_info(video_path)

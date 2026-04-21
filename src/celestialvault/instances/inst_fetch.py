@@ -31,8 +31,21 @@ class Fetcher:
         verify: bool = True,
         clash_api: str = "http://127.0.0.1:9097",
         clash_proxy_port: int = 7899,
-        use_proxy: bool = False,  # 🟢 新增参数：是否使用代理
+        use_proxy: bool = False,
     ):
+        """
+        初始化 HTTP 请求封装器。
+
+        :param headers: 自定义请求头。
+        :param sleep_time: 每次请求间隔的睡眠时间（秒）。
+        :param wait_time: 请求超时时间（秒）。
+        :param max_repeat: 最大重试次数。
+        :param text_encoding: 文本响应的编码格式。
+        :param verify: 是否验证 SSL 证书。
+        :param clash_api: Clash API 地址。
+        :param clash_proxy_port: Clash 代理端口。
+        :param use_proxy: 是否使用代理。
+        """
         self._sleep_time = sleep_time
         self._wait_time = wait_time
         self._max_repeat = max_repeat
