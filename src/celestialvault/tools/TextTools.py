@@ -12,6 +12,7 @@ from pathlib import Path
 from pprint import pprint
 
 import charset_normalizer
+
 # import jieba
 # from jieba import analyse
 from tqdm import tqdm
@@ -117,7 +118,7 @@ def iprint(obj: list | dict, start="", end=""):
         pprint(obj)
     else:
         pprint(obj[:10])
-        print(f"(此处省略{length-15}项)")
+        print(f"(此处省略{length - 15}项)")
         pprint(obj[-5:])
     print(end, end="")
 

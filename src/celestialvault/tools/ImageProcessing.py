@@ -22,17 +22,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True  # 允许加载截断的图片
 class CompareSSIMExecutor(TaskExecutor):
     """SSIM 比较执行器，批量计算图像对的结构相似性并汇总结果。"""
 
-    def process_result_dict(self):
-        """
-        将成功的比较结果转换为 [文件名, SSIM值] 的列表。
-
-        :return: 包含 [文件名, SSIM值] 的二维列表。
-        """
-        data = []
-        for (file1, file2), ssim in self.get_success_pairs():
-            # 将文件名和 SSIM 值添加到数据列表中
-            data.append([file1.name, ssim])
-        return data
+    pass
 
 
 def compress_img(old_img_path: str | Path, new_img_path: str | Path):
@@ -516,12 +506,14 @@ def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
         compare_ssim_by_path,
         execution_mode="thread",
         max_workers=8,
-        enable_success_cache=True,
         progress_desc="Comparing Images",
         show_progress=True,
     )
     compare_executor.start(tasks)
-    data = compare_executor.process_result_dict()
+    data = []
+    for (file1, file2), ssim in compare_executor.get_success_pairs():
+        # 将文件名和 SSIM 值添加到数据列表中
+        data.append([file1.name, ssim])
 
     # 返回包含图像名称和 SSIM 值的 DataFrame
     df = pd.DataFrame(data, columns=["Image Name", "SSIM"])

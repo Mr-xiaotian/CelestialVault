@@ -19,9 +19,7 @@ class FileTree:
         self.path = path
 
     @classmethod
-    def build_from_path(
-        cls, root_path: Path
-    ):
+    def build_from_path(cls, root_path: Path):
         """
         从路径构建文件树。
 
@@ -32,10 +30,14 @@ class FileTree:
         root_path = Path(root_path)
         if not root_path.is_dir():
             raise ValueError(f"Path {root_path} is not a directory")
-        
+
         def _scan(dir_path: Path) -> dict:
             scan_info_executor = TaskExecutor(
-                get_file_info, "thread", max_workers=4, enable_success_cache=True, progress_desc="Scanning files", show_progress=True
+                get_file_info,
+                "thread",
+                max_workers=4,
+                progress_desc="Scanning files",
+                show_progress=True,
             )
 
             file_path_list = [
@@ -43,9 +45,11 @@ class FileTree:
             ]
             scan_info_executor.start(file_path_list)
 
-            _info = scan_info_executor.process_result_dict()
+            _info = dict()
+            for file_path, file_info in scan_info_executor.get_success_pairs():
+                _info[file_path] = file_info
             return _info
-        
+
         def _build(node_path: Path, level: int) -> BaseNode:
             if node_path.is_file():
                 node_info = _info.get(node_path, {})
@@ -53,8 +57,14 @@ class FileTree:
                 mtime = node_info.get("mtime", HumanTimestamp(0))
                 icon = FILE_ICONS.get(node_path.suffix.lower(), FILE_ICONS["default"])
                 return FileNode(
-                    node_path.name, node_path.suffix, node_path, size, mtime, icon, level
-                ) 
+                    node_path.name,
+                    node_path.suffix,
+                    node_path,
+                    size,
+                    mtime,
+                    icon,
+                    level,
+                )
 
             entries = list(node_path.iterdir())
             children = []
@@ -63,7 +73,7 @@ class FileTree:
             dir_mtime = HumanTimestamp(0)
 
             for child in entries:
-                cnode = _build(child, level+1)
+                cnode = _build(child, level + 1)
                 children.append(cnode)
                 total_size += cnode.size
                 dir_mtime = max(dir_mtime, cnode.mtime)
@@ -107,14 +117,21 @@ class FileTree:
         if d["is_dir"]:
             children = [FileTree._dict_to_node(c) for c in d["children"]]
             return DirNode(
-                d["name"], Path(d["path"]),
-                HumanBytes(d["size"]), HumanTimestamp(d["mtime"]),
-                d["level"], children,
+                d["name"],
+                Path(d["path"]),
+                HumanBytes(d["size"]),
+                HumanTimestamp(d["mtime"]),
+                d["level"],
+                children,
             )
         return FileNode(
-            d["name"], d["suffix"], Path(d["path"]),
-            HumanBytes(d["size"]), HumanTimestamp(d["mtime"]),
-            d["icon"], d["level"],
+            d["name"],
+            d["suffix"],
+            Path(d["path"]),
+            HumanBytes(d["size"]),
+            HumanTimestamp(d["mtime"]),
+            d["icon"],
+            d["level"],
         )
 
     def _cache_path(self) -> Path:
@@ -137,7 +154,9 @@ class FileTree:
         }
         path = self._cache_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        path.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
         return path
 
     @classmethod
@@ -229,29 +248,39 @@ class FileTree:
                 else:
                     files.append(child)
                     child_names.append(_get_display_name(child, depth + 1))
-            
+
             if exclude_dirs:
                 child_names.append(f"[{len(exclude_dirs)}项排除的目录]")
             if exclude_files:
                 child_names.append(f"[{len(exclude_files)}项排除的文件]")
 
-            child_max_name_len = max((wcswidth(name) for name in child_names), default=0)
-            exclude_dirs_node = DirNode(
-                f"[{len(exclude_dirs)}项排除的目录]",
-                node.node_path,
-                HumanBytes(sum(d.size for d in exclude_dirs)),
-                HumanTimestamp(max(d.mtime for d in exclude_dirs)),
-                depth + 1,
-                [],
-            ) if exclude_dirs else None
-            exclude_files_node = FileNode(
-                f"[{len(exclude_files)}项排除的文件]",
-                node.node_path,
-                HumanBytes(sum(f.size for f in exclude_files)),
-                HumanTimestamp(max(f.mtime for f in exclude_files)),
-                "📄",
-                depth + 1,
-            ) if exclude_files else None
+            child_max_name_len = max(
+                (wcswidth(name) for name in child_names), default=0
+            )
+            exclude_dirs_node = (
+                DirNode(
+                    f"[{len(exclude_dirs)}项排除的目录]",
+                    node.node_path,
+                    HumanBytes(sum(d.size for d in exclude_dirs)),
+                    HumanTimestamp(max(d.mtime for d in exclude_dirs)),
+                    depth + 1,
+                    [],
+                )
+                if exclude_dirs
+                else None
+            )
+            exclude_files_node = (
+                FileNode(
+                    f"[{len(exclude_files)}项排除的文件]",
+                    node.node_path,
+                    HumanBytes(sum(f.size for f in exclude_files)),
+                    HumanTimestamp(max(f.mtime for f in exclude_files)),
+                    "📄",
+                    depth + 1,
+                )
+                if exclude_files
+                else None
+            )
 
             for d in dirs:
                 _print(d, depth + 1, child_max_name_len)

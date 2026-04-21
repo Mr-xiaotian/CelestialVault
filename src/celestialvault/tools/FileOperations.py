@@ -36,7 +36,6 @@ class HandleFileExecutor(TaskExecutor):
             execution_mode=execution_mode,
             max_workers=6,
             max_info=100,
-            enable_error_cache=True,
             progress_desc=progress_desc,
             show_progress=True,
         )
@@ -44,51 +43,36 @@ class HandleFileExecutor(TaskExecutor):
         self.new_dir_path = new_dir_path
         self.rules = rules
 
-    def get_args(self, file_path: Path):
+    def get_args(self, task: Path):
         """
         根据文件后缀匹配处理规则，返回传递给处理函数的参数元组。
 
-        :param file_path: 待处理文件的绝对路径。
+        :param task: 待处理文件的绝对路径。
         :return: (源路径, 目标路径, 处理函数, 额外参数) 的元组。
         """
-        rel_path = file_path.relative_to(self.dir_path)
+        rel_path = task.relative_to(self.dir_path)
         new_file_path = self.new_dir_path / rel_path
 
-        file_suffix = file_path.suffix.lower()
+        file_suffix = task.suffix.lower()
         action_func, rename_func, args_extra = self.rules.get(
             file_suffix, (shutil.copy2, lambda x: x, {})
         )
 
         final_path = rename_func(new_file_path)
-        return (file_path, final_path, action_func, args_extra)
-
-    def handle_error_dict(self):
-        """
-        处理执行中的错误：将失败文件直接复制到目标目录，并按错误类型分组返回。
-
-        :return: 错误字典，键为 (错误类型名, 错误信息)，值为对应的目标文件路径列表。
-        """
-        error_path_dict = defaultdict(list)
-
-        for file_path, error in self.get_error_pairs():
-            rel_path = file_path.relative_to(self.dir_path)
-            new_file_path = self.new_dir_path / rel_path
-            shutil.copy(file_path, new_file_path)
-            error_path_dict[(type(error).__name__, str(error))].append(new_file_path)
-        return dict(error_path_dict)
+        return (task, final_path, action_func, args_extra)
 
 
 class HandleSubFolderExecutor(HandleFileExecutor):
     """子文件夹处理执行器，继承自 HandleFileExecutor，以子文件夹为单位进行批量处理。"""
 
-    def get_args(self, sub_dir_path: Path):
+    def get_args(self, task: Path):
         """
         根据子文件夹匹配 'dir' 规则，返回传递给处理函数的参数元组。
 
-        :param sub_dir_path: 待处理子文件夹的绝对路径。
+        :param task: 待处理子文件夹的绝对路径。
         :return: (源路径, 目标路径, 处理函数, 额外参数) 的元组。
         """
-        rel_path = sub_dir_path.relative_to(self.dir_path)
+        rel_path = task.relative_to(self.dir_path)
         new_sub_dir_path = self.new_dir_path / rel_path
 
         action_func, rename_func, args_extra = self.rules.get(
@@ -96,43 +80,13 @@ class HandleSubFolderExecutor(HandleFileExecutor):
         )
 
         final_path = rename_func(new_sub_dir_path)
-        return (sub_dir_path, final_path, action_func, args_extra)
-
-    def handle_error_dict(self):
-        """
-        处理执行中的错误：按错误类型分组返回失败的子文件夹路径。
-
-        :return: 错误字典，键为 (错误类型名, 错误信息)，值为对应的目标文件夹路径列表。
-        """
-        error_path_dict = defaultdict(list)
-
-        for file_path, error in self.get_error_pairs():
-            rel_path = file_path.relative_to(self.dir_path)
-            new_file_path = self.new_dir_path / rel_path
-            # shutil.copy(file_path, new_file_path)
-            error_path_dict[(type(error).__name__, str(error))].append(new_file_path)
-        return dict(error_path_dict)
+        return (task, final_path, action_func, args_extra)
 
 
 class ScanSizeExecutor(TaskExecutor):
     """文件大小扫描执行器，按大小分组并筛选出大小相同的文件。"""
 
-    def process_result_dict(self):
-        """
-        将扫描结果按文件大小分组，返回具有相同大小的文件迭代器。
-
-        :return: (文件路径, 文件大小) 的迭代器，仅包含大小重复的文件。
-        """
-        size_dict = defaultdict(list)
-
-        for path, size in self.get_success_pairs():
-            size_dict[size].append(path)
-
-        size_dict = {k: v for k, v in size_dict.items() if len(v) > 1}
-        size_iter = (
-            (path, size) for size, files in size_dict.items() for path in files
-        )
-        return size_iter
+    pass
 
 
 class ScanHashExecutor(TaskExecutor):
@@ -147,55 +101,17 @@ class ScanHashExecutor(TaskExecutor):
         """
         return (task[0],)
 
-    def process_result_dict(self):
-        """
-        将扫描结果按哈希值和大小分组，返回具有相同哈希值的文件字典。
-
-        :return: 字典，键为 (哈希值, 文件大小)，值为文件路径列表。
-        """
-        identical_dict = defaultdict(list)
-
-        for (path, size), hash_value in self.get_success_pairs():
-            identical_dict[(hash_value, size)].append(path)
-
-        identical_dict = {
-            key: [Path(path) for path in path_list] 
-            for key, path_list in identical_dict.items() 
-            if len(path_list) > 1
-        }
-        return identical_dict
-
 
 class DeleteReturnSizeExecutor(TaskExecutor):
     """删除文件执行器，删除文件后累计并返回已删除文件的总大小。"""
 
-    def process_result_dict(self):
-        """
-        累计所有已成功删除文件的大小，返回总删除大小。
-
-        :return: 已删除文件的总大小（HumanBytes）。
-        """
-        delete_size = 0
-        for _, size in self.get_success_pairs():
-            delete_size += size
-        return HumanBytes(delete_size)
+    pass
 
 
 class FindPureExecutor(TaskExecutor):
     """查找纯粹文件夹执行器，返回所有纯粹文件夹的路径。"""
 
-    def process_result_dict(self):
-        """
-        返回所有纯粹文件夹的路径。
-
-        :return: 纯粹文件夹的路径列表。
-        """
-        pure_dirs = []
-        for task, is_pure in self.get_success_pairs():
-            dir_path = Path(task[0]) if isinstance(task, tuple) else Path(task)
-            if is_pure:
-                pure_dirs.append(dir_path)
-        return pure_dirs
+    pass
 
 
 def create_dir(path: str | Path) -> Path:
@@ -284,8 +200,14 @@ def handle_dir_files(
     )
     handlefile_executor.start(file_path_iter)
 
-    error_path_dict = handlefile_executor.handle_error_dict()
-    return error_path_dict
+    error_path_dict = defaultdict(list)
+    for file_path, error in handlefile_executor.get_error_pairs():
+        rel_path = file_path.relative_to(handlefile_executor.dir_path)
+        new_file_path = handlefile_executor.new_dir_path / rel_path
+        shutil.copy(file_path, new_file_path)
+        error_path_dict[(type(error).__name__, str(error))].append(new_file_path)
+
+    return dict(error_path_dict)
 
 
 def handle_subdirs(
@@ -323,8 +245,14 @@ def handle_subdirs(
     sub_dir_list = find_pure_dirs(dir_path, True)
     handlefile_executor.start(sub_dir_list)
 
-    error_path_dict = handlefile_executor.handle_error_dict()
-    return error_path_dict
+    error_path_dict = defaultdict(list)
+    for file_path, error in handlefile_executor.get_error_pairs():
+        rel_path = file_path.relative_to(handlefile_executor.dir_path)
+        new_file_path = handlefile_executor.new_dir_path / rel_path
+        # shutil.copy(file_path, new_file_path)
+        error_path_dict[(type(error).__name__, str(error))].append(new_file_path)
+
+    return dict(error_path_dict)
 
 
 def compress_dir(
@@ -661,7 +589,6 @@ def detect_identical_files(
     scan_size_executor = ScanSizeExecutor(
         get_file_size,
         execution_mode,
-        enable_success_cache=True,
         progress_desc="Scanning files size",
         show_progress=True,
         log_level="INFO",
@@ -669,7 +596,6 @@ def detect_identical_files(
     scan_hash_executor = ScanHashExecutor(
         get_file_hash,
         execution_mode,
-        enable_success_cache=True,
         progress_desc="Calculating files hash",
         show_progress=True,
         log_level="INFO",
@@ -683,11 +609,31 @@ def detect_identical_files(
         if path.is_file()
     )
     scan_size_executor.start(file_path_iter)
-    file_size_iter = scan_size_executor.process_result_dict()
+    file_size_dict = defaultdict(list)
+
+    for path, size in scan_size_executor.get_success_pairs():
+        file_size_dict[size].append(path)
+
+    file_size_iter = (
+        (path, size)
+        for size, files in file_size_dict.items()
+        if size > 0
+        if len(files) > 1
+        for path in files
+    )
 
     # 对于相同大小的文件，进一步计算哈希值, 找出哈希值相同的文件
     scan_hash_executor.start(file_size_iter)
-    identical_dict = scan_hash_executor.process_result_dict()
+    identical_dict = defaultdict(list)
+
+    for (path, size), hash_value in scan_hash_executor.get_success_pairs():
+        identical_dict[(hash_value, size)].append(path)
+
+    identical_dict = {
+        key: [Path(path) for path in path_list]
+        for key, path_list in identical_dict.items()
+        if len(path_list) > 1
+    }
 
     return identical_dict
 
@@ -704,7 +650,6 @@ def detect_identical_dirs(
     scan_size_executor = ScanSizeExecutor(
         get_dir_size,
         execution_mode,
-        enable_success_cache=True,
         progress_desc="Scanning dirs size",
         show_progress=True,
         log_level="INFO",
@@ -712,7 +657,6 @@ def detect_identical_dirs(
     scan_hash_executor = ScanHashExecutor(
         get_dir_hash,
         execution_mode,
-        enable_success_cache=True,
         progress_desc="Calculating dirs hash",
         show_progress=True,
         log_level="INFO",
@@ -723,11 +667,31 @@ def detect_identical_dirs(
         str(pure_path) for path in dir_list for pure_path in find_pure_dirs(path)
     ]
     scan_size_executor.start(dir_path_list)
-    dir_size_iter = scan_size_executor.process_result_dict()
+    file_size_dict = defaultdict(list)
+
+    for path, size in scan_size_executor.get_success_pairs():
+        file_size_dict[size].append(path)
+
+    dir_size_iter = (
+        (path, size)
+        for size, files in file_size_dict.items()
+        if size > 0
+        if len(files) > 1
+        for path in files
+    )
 
     # 对于相同大小的文件夹，进一步计算哈希值, 找出哈希值相同的文件夹
     scan_hash_executor.start(dir_size_iter)
-    identical_dict = scan_hash_executor.process_result_dict()
+    identical_dict = defaultdict(list)
+
+    for (path, size), hash_value in scan_hash_executor.get_success_pairs():
+        identical_dict[(hash_value, size)].append(path)
+
+    identical_dict = {
+        key: [Path(path) for path in path_list]
+        for key, path_list in identical_dict.items()
+        if len(path_list) > 1
+    }
 
     return identical_dict
 
@@ -805,9 +769,12 @@ def delete_identical(identical_dict: dict[tuple[str, HumanBytes], list[Path]]):
         delete_and_return_size, unpack_task_args=True, enable_success_cache=True
     )
     delete_return_size_executor.start(delete_list)
-    delete_size = delete_return_size_executor.process_result_dict()
 
-    print(f"\nTotal size of deleted files: {delete_size}")
+    delete_size = 0
+    for _, size in delete_return_size_executor.get_success_pairs():
+        delete_size += size
+
+    print(f"\nTotal size of deleted files: {HumanBytes(delete_size)}")
 
 
 def move_identical(
@@ -1093,12 +1060,15 @@ def find_pure_dirs(root: str | Path, only_nonempty: bool = False) -> list[Path]:
     find_pure_dir_executor = FindPureExecutor(
         is_pure_dir,
         "thread",
-        enable_success_cache=True,
         progress_desc="Finding pure directories",
         show_progress=True,
     )
     find_pure_dir_executor.start(subdirs)
-    pure_dirs = find_pure_dir_executor.process_result_dict()
+    pure_dirs = []
+    for task, is_pure in find_pure_dir_executor.get_success_pairs():
+        dir_path = Path(task[0]) if isinstance(task, tuple) else Path(task)
+        if is_pure:
+            pure_dirs.append(dir_path)
 
     return pure_dirs
 

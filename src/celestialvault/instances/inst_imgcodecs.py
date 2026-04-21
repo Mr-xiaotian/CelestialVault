@@ -46,7 +46,6 @@ class BaseCodec:
         crc_text = self._decode_text_core(img)
         return crc_decode_text(crc_text)
 
-
     # ======== 二进制接口 ========
     def encode_bytes(self, data: bytes) -> Image.Image:
         """对二进制数据加上 CRC 后再调用子类实现的像素编码"""
@@ -61,10 +60,12 @@ class BaseCodec:
         return crc_decode_bytes(crc_bytes)
 
     # ======== 文件接口 ========
-    def encode_txt_file(self, file_path: str|Path, save_img: bool = False) -> Image.Image:
+    def encode_txt_file(
+        self, file_path: str | Path, save_img: bool = False
+    ) -> Image.Image:
         """
         Docstring for encode_txt_file
-        
+
         :param self: Description
         :param file_path: Description
         :type file_path: str | Path
@@ -91,7 +92,7 @@ class BaseCodec:
     def decode_txt_file(self, img_path: str, save_text: bool = False) -> str:
         """
         Docstring for decode_txt_file
-        
+
         :param self: Description
         :param img_path: Description
         :type img_path: str
@@ -106,7 +107,7 @@ class BaseCodec:
 
         if save_text:
             stem = img_path.stem  # "data(rgb_ori)(bin)"
-            
+
             # --- 解析括号 ---
             # 找到最后一个括号对：(<ext>)
             last_open = stem.rfind("(")
@@ -114,7 +115,7 @@ class BaseCodec:
             if last_open == -1 or last_close == -1 or last_close < last_open:
                 raise ValueError("文件名格式错误：无法解析原始扩展名")
 
-            original_ext = stem[last_open + 1:last_close]  # "bin"
+            original_ext = stem[last_open + 1 : last_close]  # "bin"
 
             # 去掉最后一个括号部分
             second_stem = stem[:last_open]  # "data(rgb_ori)"
@@ -128,8 +129,10 @@ class BaseCodec:
             print(f"  ✅ Decoded text saved to: {img_path.replace(f'.png', '.txt')}")
 
         return actual_text
-    
-    def encode_binary_file(self, file_path: str | Path, save_img: bool = False) -> Image.Image:
+
+    def encode_binary_file(
+        self, file_path: str | Path, save_img: bool = False
+    ) -> Image.Image:
         """
         读取任意二进制文件并编码为图像。
         输出图像文件名格式：
@@ -155,7 +158,9 @@ class BaseCodec:
 
         return img
 
-    def decode_binary_file(self, img_path: str | Path, save_file: bool = False) -> bytes:
+    def decode_binary_file(
+        self, img_path: str | Path, save_file: bool = False
+    ) -> bytes:
         """
         从图像文件中恢复二进制数据。
         图像文件名格式：
@@ -171,7 +176,7 @@ class BaseCodec:
 
         if save_file:
             stem = img_path.stem  # "data(rgb_ori)(bin)"
-            
+
             # --- 解析括号 ---
             # 找到最后一个括号对：(<ext>)
             last_open = stem.rfind("(")
@@ -179,7 +184,7 @@ class BaseCodec:
             if last_open == -1 or last_close == -1 or last_close < last_open:
                 raise ValueError("文件名格式错误：无法解析原始扩展名")
 
-            original_ext = stem[last_open + 1:last_close]  # "bin"
+            original_ext = stem[last_open + 1 : last_close]  # "bin"
 
             # 去掉最后一个括号部分
             second_stem = stem[:last_open]  # "data(rgb_ori)"
@@ -194,14 +199,13 @@ class BaseCodec:
 
         return raw_bytes
 
-
     # --- 子类需要实现的接口 ---
     def _encode_text_core(self, text: str) -> Image.Image:
         raise NotImplementedError
 
     def _decode_text_core(self, img: Image.Image) -> str:
         raise NotImplementedError
-    
+
     def _encode_bytes_core(self, data: bytes) -> Image.Image:
         raise NotImplementedError
 
@@ -281,11 +285,11 @@ class GreyCodec(BaseCodec):
 
         progress_bar.close()
         return "".join(chars)
-    
+
     def _encode_bytes_core(self, data: bytes) -> Image.Image:
         base64_text = encode_bytes_to_base64(data)
         return self._encode_text_core(base64_text)
-    
+
     def _decode_bytes_core(self, img: Image.Image) -> bytes:
         base64_text = self._decode_text_core(img)
         return decode_bytes_from_base64(base64_text)
@@ -359,11 +363,11 @@ class RGBCodec(BaseCodec):
 
         progress_bar.close()
         return "".join(chars)
-    
+
     def _encode_bytes_core(self, data: bytes) -> Image.Image:
         base64_text = encode_bytes_to_base64(data)
         return self._encode_text_core(base64_text)
-    
+
     def _decode_bytes_core(self, img: Image.Image) -> bytes:
         base64_text = self._decode_text_core(img)
         return decode_bytes_from_base64(base64_text)
@@ -421,11 +425,11 @@ class RGBACodec(BaseCodec):
 
         progress_bar.close()
         return "".join(chars)
-    
+
     def _encode_bytes_core(self, data: bytes) -> Image.Image:
         base64_text = encode_bytes_to_base64(data)
         return self._encode_text_core(base64_text)
-    
+
     def _decode_bytes_core(self, img: Image.Image) -> bytes:
         base64_text = self._decode_text_core(img)
         return decode_bytes_from_base64(base64_text)
@@ -441,7 +445,7 @@ class OneBitCodec(BaseCodec):
         # 压缩为二进制
         compressed_binary = compress_text_to_bytes(text)
         return self._encode_bytes_core(compressed_binary)
-    
+
     def _decode_text_core(self, img: Image.Image) -> str:
         # 解压缩
         compressed_binary = self._decode_bytes_core(img)
@@ -516,7 +520,7 @@ class ChannelCodec(BaseCodec):
         # 压缩为二进制
         compressed_binary = compress_text_to_bytes(text)
         return self._encode_bytes_core(compressed_binary)
-    
+
     def _decode_text_core(self, img: Image.Image) -> str:
         # 解压缩
         compressed_binary = self._decode_bytes_core(img)
@@ -595,7 +599,7 @@ class RefRGBALSBCodec(BaseCodec):
         # 压缩为二进制
         compressed_binary = compress_text_to_bytes(text)
         return self._encode_bytes_core(compressed_binary)
-    
+
     def _decode_text_core(self, img: Image.Image) -> str:
         # 解压缩
         compressed_binary = self._decode_bytes_core(img)
@@ -679,7 +683,7 @@ class PaletteCodec(BaseCodec):
         # 压缩为二进制
         compressed_binary = compress_text_to_bytes(text)
         return self._encode_bytes_core(compressed_binary)
-    
+
     def _decode_text_core(self, img: Image.Image) -> str:
         # 解压缩
         compressed_binary = self._decode_bytes_core(img)
@@ -720,7 +724,7 @@ class PaletteCodec(BaseCodec):
                 progress_bar.update(1)
 
         progress_bar.close()
-        
+
         return bytes(bytes_list)
 
 
@@ -738,16 +742,14 @@ class PaletteWithRsCodec(BaseCodec):
         # 压缩为二进制
         compressed_binary = compress_text_to_bytes(text)
         return self._encode_bytes_core(compressed_binary)
-    
+
     def _decode_text_core(self, img: Image.Image) -> str:
         # 解压缩
         compressed_binary = self._decode_bytes_core(img)
         return decompress_text_from_bytes(compressed_binary)
 
     def _encode_bytes_core(self, data: bytes) -> Image.Image:
-        side_len, max_payload, nsym = choose_square_container(
-            len(data), self.threshold
-        )
+        side_len, max_payload, nsym = choose_square_container(len(data), self.threshold)
         pad_binary = pad_bytes(data, max_payload)
         rs_binary = rs_encode(pad_binary, nsym)
 
@@ -785,7 +787,7 @@ class PaletteWithRsCodec(BaseCodec):
         nsym = redundancy_from_container(side_len * side_len, self.threshold)
         ders_binary = rs_decode(bytes(bytes_list), nsym)
         unpad_binary = unpad_bytes(ders_binary)
-        
+
         return unpad_binary
 
 
@@ -803,7 +805,7 @@ class RedundancyCodec(BaseCodec):
         # 压缩为二进制
         compressed_binary = compress_text_to_bytes(text)
         return self._encode_bytes_core(compressed_binary)
-    
+
     def _decode_text_core(self, img: Image.Image) -> str:
         # 解压缩
         compressed_binary = self._decode_bytes_core(img)

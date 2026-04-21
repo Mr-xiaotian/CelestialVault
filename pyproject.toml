@@ -55,3 +55,9 @@ Repository = "https://github.com/Mr-xiaotian/CelestialVault"
 # Poetry-specific：如果你用 src/ 布局并需要显式声明包位置，可以保留这个
 [tool.poetry]
 packages = [{ include = "celestialvault", from = "src" }]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+    "ruff",
+]

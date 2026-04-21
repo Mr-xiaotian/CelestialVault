@@ -46,8 +46,9 @@ def evaluate_restore_effectiveness(
     arr_restored = np.array(restored.convert("RGB"))
 
     # 对齐尺寸（防止某些模式不同导致尺寸略差）
-    h, w = min(arr_original.shape[0], arr_restored.shape[0]), min(
-        arr_original.shape[1], arr_restored.shape[1]
+    h, w = (
+        min(arr_original.shape[0], arr_restored.shape[0]),
+        min(arr_original.shape[1], arr_restored.shape[1]),
     )
     arr_original, arr_restored = arr_original[:h, :w], arr_restored[:h, :w]
 
@@ -64,9 +65,9 @@ def evaluate_restore_effectiveness(
         axes[0].imshow(image)
         axes[0].set_title("Original")
         axes[1].imshow(damaged)
-        axes[1].set_title(f"Damaged ({damage_ratio*100:.1f}%)")
+        axes[1].set_title(f"Damaged ({damage_ratio * 100:.1f}%)")
         axes[2].imshow(restored)
-        axes[2].set_title(f"Restored\nAcc={accuracy*100:.2f}%, MAE={mae:.2f}")
+        axes[2].set_title(f"Restored\nAcc={accuracy * 100:.2f}%, MAE={mae:.2f}")
         for ax in axes:
             ax.axis("off")
         plt.tight_layout()
@@ -105,8 +106,9 @@ def evaluate_restore_curve(
         restored = restore_expanded_image(damaged, n)
 
         arr_restored = np.array(restored.convert("RGB"))
-        h, w = min(arr_original.shape[0], arr_restored.shape[0]), min(
-            arr_original.shape[1], arr_restored.shape[1]
+        h, w = (
+            min(arr_original.shape[0], arr_restored.shape[0]),
+            min(arr_original.shape[1], arr_restored.shape[1]),
         )
         arr_o, arr_r = arr_original[:h, :w], arr_restored[:h, :w]
 
@@ -155,7 +157,7 @@ def evaluate_restore_curve(
                 )
             )
             acc = results["accuracy"][i] * 100
-            ax_dmg.set_title(f"Damage {damage_ratio*100:.1f}%\nAcc={acc:.2f}%")
+            ax_dmg.set_title(f"Damage {damage_ratio * 100:.1f}%\nAcc={acc:.2f}%")
             ax_dmg.axis("off")
 
         plt.tight_layout()

@@ -250,23 +250,35 @@ class Fetcher:
                     continue
                 print(f"✅ 成功请求, 状态码: {status}") if self.show_info else None
                 return status, content
-            
-            except (ConnectError, ProxyError, ConnectTimeout, ProtocolError, RequestError) as e:
+
+            except (
+                ConnectError,
+                ProxyError,
+                ConnectTimeout,
+                ProtocolError,
+                RequestError,
+            ) as e:
                 # 这些通常说明代理节点或网络本身问题 → 换代理
-                print(f"⚠️ 网络级错误: {type(e).__name__}，切换代理…") if self.show_info else None
+                print(
+                    f"⚠️ 网络级错误: {type(e).__name__}，切换代理…"
+                ) if self.show_info else None
                 tried_proxies.add(self.proxy_list[self.proxy_index])
                 self._switch_proxy(tried_proxies)
                 continue
 
             except (ReadTimeout, ReadError) as e:
                 # 这些通常是服务器响应慢，可以原地重试一次
-                print(f"⏳ 响应超时: {type(e).__name__}，重试…") if self.show_info else None
+                print(
+                    f"⏳ 响应超时: {type(e).__name__}，重试…"
+                ) if self.show_info else None
                 time.sleep(random.uniform(1, 3))
                 continue
 
             except PoolTimeout as e:
                 # 连接池耗尽，多为瞬时高并发问题
-                print(f"⚠️ 连接池耗尽: {type(e).__name__}，等待后重试…") if self.show_info else None
+                print(
+                    f"⚠️ 连接池耗尽: {type(e).__name__}，等待后重试…"
+                ) if self.show_info else None
                 time.sleep(random.uniform(2, 4))
                 continue
 

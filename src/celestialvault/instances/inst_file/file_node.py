@@ -11,7 +11,15 @@ from .file_util import to_string
 
 
 class BaseNode:
-    def __init__(self, name: str, node_path: Path, size: HumanBytes, mtime: HumanTimestamp, icon: str, level: int):
+    def __init__(
+        self,
+        name: str,
+        node_path: Path,
+        size: HumanBytes,
+        mtime: HumanTimestamp,
+        icon: str,
+        level: int,
+    ):
         self.name = name
         self.node_path = node_path
         self.size = size
@@ -21,20 +29,39 @@ class BaseNode:
 
         self._hash: str | None = None
 
-    def print(self, level: int = None, prefix: str = None, name: str = None, suffix: str = None, max_name_len: int = None):
-        print(to_string(
-            indent="    " * level if level is not None else "    " * self.level,
-            icon=self.icon,
-            prefix=prefix or "", # f"[{self.node_path.parent.as_posix()}]"
-            name=name or self.name,
-            suffix=suffix or f"({self.size})", # f"({self.size})" / f"[{self.mtime}]",
-            max_name_len=max_name_len or 0,
-        ))
+    def print(
+        self,
+        level: int = None,
+        prefix: str = None,
+        name: str = None,
+        suffix: str = None,
+        max_name_len: int = None,
+    ):
+        print(
+            to_string(
+                indent="    " * level if level is not None else "    " * self.level,
+                icon=self.icon,
+                prefix=prefix or "",  # f"[{self.node_path.parent.as_posix()}]"
+                name=name or self.name,
+                suffix=suffix
+                or f"({self.size})",  # f"({self.size})" / f"[{self.mtime}]",
+                max_name_len=max_name_len or 0,
+            )
+        )
 
 
 @dataclass
 class FileNode(BaseNode):
-    def __init__(self, name: str, suffix: str, node_path: Path, size: HumanBytes, mtime: HumanTimestamp, icon: str, level: int):
+    def __init__(
+        self,
+        name: str,
+        suffix: str,
+        node_path: Path,
+        size: HumanBytes,
+        mtime: HumanTimestamp,
+        icon: str,
+        level: int,
+    ):
         super().__init__(name, node_path, size, mtime, icon, level)
         self.suffix = suffix
 
@@ -55,14 +82,22 @@ class FileNode(BaseNode):
         self._hash = get_file_hash(self.node_path)
 
         return self._hash
-    
+
     def is_dir(self) -> bool:
         return False
 
 
 @dataclass
 class DirNode(BaseNode):
-    def __init__(self, name: str, node_path: Path, size: HumanBytes, mtime: HumanTimestamp, level: int, children: list["BaseNode"]):
+    def __init__(
+        self,
+        name: str,
+        node_path: Path,
+        size: HumanBytes,
+        mtime: HumanTimestamp,
+        level: int,
+        children: list["BaseNode"],
+    ):
         super().__init__(name, node_path, size, mtime, "📁", level)
         self.children: list["BaseNode"] = children
 
