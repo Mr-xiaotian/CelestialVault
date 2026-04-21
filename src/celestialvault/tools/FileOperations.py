@@ -200,6 +200,7 @@ class FindPureExecutor(TaskExecutor):
 
 def create_dir(path: str | Path) -> Path:
     """
+    (前身为我写的第一个可复用函数)
     判断系统是否存在该路径,没有则创建。
 
     :param path: 要创建的文件夹路径。
