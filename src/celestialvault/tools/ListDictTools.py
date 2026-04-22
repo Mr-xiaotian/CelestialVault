@@ -1,6 +1,6 @@
+from collections.abc import Callable, Iterable
 from functools import reduce
 from itertools import islice
-from collections.abc import Callable, Iterable
 from typing import Any
 
 
@@ -69,7 +69,7 @@ def list_replace(lists: list[Any], replace_rules: list[tuple[Any, Any]]) -> list
         return element
 
     # 遍历原始列表中的每个元素，并应用所有的替换规则
-    return [reduce(replace_element, replace_rules, l) for l in lists]
+    return [reduce(replace_element, replace_rules, item) for item in lists]
 
 
 def dictkey_mix(

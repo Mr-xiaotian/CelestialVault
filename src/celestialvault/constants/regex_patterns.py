@@ -22,12 +22,12 @@ EMAIL_REGEX_2 = re.compile(
 
 # 匹配网址URL
 URL_REGEX_0 = re.compile(r"(https?|ftp)://[^\s/$.?#].[^\s]*")
-URL_REGEX_1 = re.compile(r"[a-zA-z]+://\S*")
+URL_REGEX_1 = re.compile(r"[a-zA-Z]+://\S*")
 
 # 匹配国内电话号码
 PHONE_REGEX_0 = re.compile(r"(\(\d{3,4}\)|\d{3,4}-|\s)?\d{7,14}")
 PHONE_REGEX_1 = re.compile(r"\+?1?\d{9,15}")
-PHONE_REGEX_2 = re.compile(r"\d{3}-\d{8}|\d{4}-\{7,8}")
+PHONE_REGEX_2 = re.compile(r"\d{3}-\d{8}|\d{4}-\d{7,8}")
 
 # 匹配腾讯QQ号
 QQ_REGEX = re.compile(r"[1-9][0-9]{4,}")
@@ -57,7 +57,7 @@ HEX_REGEX = re.compile(r"^[0-9a-fA-F]+$")
 
 
 # 银行卡号正则表达式
-BANK_CARD_REGEX = re.compile(r"^\d{16}|\d{19}$")
+BANK_CARD_REGEX = re.compile(r"^(\d{16}|\d{19})$")
 
 # 密码强度正则表达式
 PASSWORD_STRENGTH_REGEX = re.compile(

@@ -2,7 +2,8 @@ from html import unescape
 from typing import Any
 from urllib.parse import unquote
 
-import time, random
+import random
+import time
 import requests
 import httpx
 

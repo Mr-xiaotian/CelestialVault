@@ -237,6 +237,7 @@ def resize_pdfs(dir_path: Path, execution_mode: str = "serial"):
     :param execution_mode: 执行模式，默认 "serial"。
     :return: 处理结果列表。
     """
+
     def resize_pdf(pdf_path: Path, output_path: Path) -> Path:
         return resize_pdf_to_max_width(pdf_path, output_path, max_pdf_width)
 

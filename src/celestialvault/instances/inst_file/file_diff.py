@@ -1,14 +1,14 @@
-from pathlib import Path
 from dataclasses import dataclass
-from celestialflow import TaskExecutor
+from pathlib import Path
 
+from celestialflow import TaskExecutor
 from wcwidth import wcswidth
 
 from ...instances.inst_units import HumanBytes, HumanTimestamp
 from ...tools.FileOperations import (
-    delete_file_or_dir,
-    copy_file_or_dir,
     append_hash_to_filename,
+    copy_file_or_dir,
+    delete_file_or_dir,
 )
 from ...tools.TextTools import format_table
 from .file_node import BaseNode, DirNode

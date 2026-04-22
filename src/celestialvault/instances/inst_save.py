@@ -9,9 +9,9 @@ from pathlib import Path
 import pandas as pd
 from celestialflow import TaskChain, TaskStage
 
+from ..tools.ImageProcessing import binary_to_img, convert_img_format
 from .inst_error import FFmpegError
 from .inst_fetch import Fetcher
-from ..tools.ImageProcessing import binary_to_img, convert_img_format
 
 
 class FetchStage(TaskStage):

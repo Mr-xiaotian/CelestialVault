@@ -1,17 +1,17 @@
 # pyright: reportGeneralTypeIssues=false
 
 import base64
-import re
 import math
+import re
 import string
-import zlib
 import struct
-import reedsolo
+import zlib
 from itertools import zip_longest
 from pathlib import Path
 from pprint import pprint
 
 import charset_normalizer
+import reedsolo
 
 # import jieba
 # from jieba import analyse
@@ -132,48 +132,6 @@ def string_split(string: str, split_str: str = "\n") -> list[str]:
     :return: 分割后的非空子字符串列表。
     """
     return [s for s in string.split(split_str) if s]
-
-
-def language_fingerprint(text: str) -> dict:
-    """
-    根据文本生成语言指纹字典，包括词数、字符数、词长分布、停用词比例和高频词等信息。
-
-    :param text: 待分析的文本。
-    :return: 包含语言指纹信息的字典。
-    """
-    return
-    # 将文本分词
-    words = list(jieba.cut(text))
-
-    # 计算单词和字符的数量
-    num_words = len(words)
-    num_chars = len(text)
-
-    # 计算单词长度分布
-    word_lengths = [len(w) for w in words]
-    avg_word_length = sum(word_lengths) / num_words
-    max_word_length = max(word_lengths)
-
-    # 计算停用词比例
-    stopwords = set(["的", "了", "是", "在", "我", "有", "和", "就", "不"])
-    num_stopwords = len([w for w in words if w in stopwords])
-    stopwords_ratio = num_stopwords / num_words
-
-    # 计算词频分布
-    freq_dist = dict(analyse.extract_tags(text, topK=10, withWeight=True))
-    top_10_words = {word: freq_dist[word] for word in list(freq_dist.keys())}
-
-    # 构建语言指纹字典
-    fingerprint = {
-        "num_words": num_words,
-        "num_chars": num_chars,
-        "avg_word_length": avg_word_length,
-        "max_word_length": max_word_length,
-        "stopwords_ratio": stopwords_ratio,
-        "top_10_words": top_10_words,
-    }
-
-    return fingerprint
 
 
 def calculate_valid_chinese_text(text: str) -> float:

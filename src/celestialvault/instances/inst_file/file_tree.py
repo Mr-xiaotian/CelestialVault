@@ -1,16 +1,16 @@
 import json
 from pathlib import Path
 
-from wcwidth import wcswidth
 from celestialflow import TaskExecutor
+from wcwidth import wcswidth
 
 from ...constants import FILE_ICONS
 from ...instances.inst_units import HumanBytes, HumanTimestamp
 from ...tools.FileOperations import (
-    get_file_info,
     get_dir_mtime,
+    get_file_info,
 )
-from .file_node import BaseNode, FileNode, DirNode
+from .file_node import BaseNode, DirNode, FileNode
 
 
 class FileTree:
@@ -205,7 +205,9 @@ class FileTree:
 
     # ---- 打印 ----
 
-    def print_tree(self, exclude_names=None, exclude_exts=None, max_depth=3, show_files=True):
+    def print_tree(
+        self, exclude_names=None, exclude_exts=None, max_depth=3, show_files=True
+    ):
         """
         递归打印整棵文件树，目录在前、文件在后。
 

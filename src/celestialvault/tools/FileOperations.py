@@ -983,7 +983,7 @@ def move_files_with_keyword(
 
 def extract_dir_numbers(dir_path: Path | str) -> set:
     """
-    遍历给定文件夹，提取所有文件夹名称中匹配*(\d+)的数字部分，返回字典 {文件夹名: 数字(str)}。
+    遍历给定文件夹，提取所有文件夹名称中匹配*(\\d+)的数字部分，返回字典 {文件夹名: 数字(str)}。
 
     :param dir_path: 文件夹路径（str 或 Path）
     :return: 字典，包含文件夹名称和对应的数字部分。
@@ -1004,7 +1004,7 @@ def extract_dir_numbers(dir_path: Path | str) -> set:
 
 def extract_file_numbers(dir_path: Path | str, suffix: str) -> set:
     """
-    遍历给定文件夹，提取所有文件名中匹配*(\d+)的数字部分，返回字典 {文件夹名: 数字(str)}。
+    遍历给定文件夹，提取所有文件名中匹配*(\\d+)的数字部分，返回字典 {文件夹名: 数字(str)}。
 
     :param dir_path: 文件夹路径（str 或 Path）
     :param suffix: 文件后缀名

@@ -57,7 +57,7 @@ def safe_open_image(path: Path) -> tuple[Image.Image | None, bool]:
         img = Image.open(path)
         img.load()  # ✅ 读取进内存后不再依赖文件句柄
         return img, True
-    except Exception as e:
+    except Exception:
         return None, False
 
 
@@ -562,7 +562,7 @@ def is_image_valid(data: str | Path | io.BytesIO) -> bool:
 
         return True
 
-    except Exception as e:
+    except Exception:
         return False
 
 

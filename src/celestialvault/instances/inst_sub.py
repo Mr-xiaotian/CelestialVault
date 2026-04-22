@@ -1,7 +1,8 @@
-import regex as re
 from html import unescape
 from pathlib import Path
 from urllib.parse import unquote
+
+import regex as re
 
 from ..tools.FileOperations import handle_dir_files
 from ..tools.TextTools import pro_slash, safe_open_txt
@@ -10,13 +11,13 @@ from ..tools.TextTools import pro_slash, safe_open_txt
 class Suber:
     def __init__(self):
         # Characters that need both lookbehind and lookahead checks
-        self.both_check_chars = "#|◆|\*|＊|=|＝|…|_|～|—|－"
+        self.both_check_chars = r"#|◆|\*|＊|=|＝|…|_|～|—|－"
 
         # Characters that need only lookahead checks
-        self.lookahead_only_chars = '章节[^\s]+|作者：[^\s]+|字数：\d+|20\d+[^\s]+|第[^\s]+|\]|』|」|】|》|\)|）|\}|\!|！|\?|？|\||”|"|\.|。|章|：|:|日'
+        self.lookahead_only_chars = r'章节[^\s]+|作者：[^\s]+|字数：\d+|20\d+[^\s]+|第[^\s]+|\]|』|」|】|》|\)|）|\}|\!|！|\?|？|\||”|"|\.|。|章|：|:|日'
 
         # Characters that need only lookbehind checks
-        self.lookbehind_only_chars = "章节|作者|字数|20|第|（|\(|\{|「|\[|【|<"
+        self.lookbehind_only_chars = r"章节|作者|字数|20|第|（|\(|\{|「|\[|【|<"
 
         self.regex_remove_unwanted_newlines = [
             # 移除不在某些标点符号后的换行符
@@ -62,17 +63,17 @@ class Suber:
         self.sub_name_list = [
             ("：", "_"),
             (":", "_"),
-            (r"\\", "_"),
+            ("\\\\", "_"),
             ("/", "_"),
-            ("\|", "_"),
-            ("\*", "_"),
+            (r"\|", "_"),
+            (r"\*", "_"),
             # ("-", "_"),
             ('"', "_"),
             ("'", "_"),
             ("？", ""),
-            ("\?", ""),
+            (r"\?", ""),
             (r"\t", "_"),
-            ("\.+", "_"),
+            (r"\.+", "_"),
             ("<", "_"),
             (">", "_"),
             ("\n", ""),

@@ -1,6 +1,6 @@
 import random
-import string
 import shutil
+import string
 from pathlib import Path
 
 import fitz  # PyMuPDF
@@ -34,7 +34,7 @@ def make_image_tree(root_dir: str | Path, num_dirs: int = 3, images_per_dir: int
             text = f"{sub_dir.name}_{img_idx}\n{width}x{height}"
             try:
                 font = ImageFont.truetype("arial.ttf", size=24)
-            except:
+            except Exception:
                 font = ImageFont.load_default()
             draw.text((10, 10), text, fill="white", font=font)
 

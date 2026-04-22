@@ -1,31 +1,32 @@
 import math
-import numpy as np
 from itertools import product
 from pathlib import Path
+
+import numpy as np
 from PIL import Image
 from tqdm import tqdm
 
 from ..constants import image_mode_params, style_params
-from ..tools.ImageProcessing import generate_palette, ensure_capacity
+from ..tools.ImageProcessing import ensure_capacity, generate_palette
+from ..tools.NumberUtils import choose_square_container, redundancy_from_container
 from ..tools.TextTools import (
-    crc_encode_text,
+    add_length_header_to_bytes,
+    compress_text_to_bytes,
+    crc_decode_bytes,
     crc_decode_text,
     crc_encode_bytes,
-    crc_decode_bytes,
-    add_length_header_to_bytes,
-    restore_bytes_from_length_header,
-    encode_bytes_to_base64,
+    crc_encode_text,
     decode_bytes_from_base64,
-    compress_text_to_bytes,
     decompress_text_from_bytes,
-    rs_encode,
-    rs_decode,
+    encode_bytes_to_base64,
     pad_bytes,
-    unpad_bytes,
     pad_to_align,
+    restore_bytes_from_length_header,
+    rs_decode,
+    rs_encode,
     safe_open_txt,
+    unpad_bytes,
 )
-from ..tools.NumberUtils import choose_square_container, redundancy_from_container
 
 
 # ========== 公共基类 ==========
@@ -118,7 +119,7 @@ class BaseCodec:
 
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(actual_text)
-            print(f"  ✅ Decoded text saved to: {img_path.replace(f'.png', '.txt')}")
+            print(f"  ✅ Decoded text saved to: {img_path.replace('.png', '.txt')}")
 
         return actual_text
 

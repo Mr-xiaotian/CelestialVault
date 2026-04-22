@@ -1,11 +1,12 @@
 import hashlib
-from pathlib import Path
 from dataclasses import dataclass
+from pathlib import Path
+
 from ...instances.inst_units import HumanBytes, HumanTimestamp
 from ...tools.FileOperations import (
+    get_dir_mtime,
     get_file_hash,
     get_file_mtime,
-    get_dir_mtime,
 )
 from .file_util import to_string
 
