@@ -1,5 +1,7 @@
 # __init__.py
 
+> 📅 最后更新日期: 2025/05/12
+
 ## 源文件
 - `src/celestialvault/__init__.py`
 

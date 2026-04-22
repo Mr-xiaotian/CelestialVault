@@ -1,5 +1,7 @@
 # `celestialvault.tools.NumberUtils`
 
+> 📅 最后更新日期: 2026/04/21
+
 ## 源文件
 
 [src/celestialvault/tools/NumberUtils.py](../../src/celestialvault/tools/NumberUtils.py)

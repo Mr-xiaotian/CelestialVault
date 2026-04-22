@@ -1,5 +1,7 @@
 # constants/__init__.py
 
+> 📅 最后更新日期: 2026/04/06
+
 ## 源文件
 - `src/celestialvault/constants/__init__.py`
 

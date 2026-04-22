@@ -1,5 +1,7 @@
 # `celestialvault.instances.inst_file.file_node`
 
+> 📅 最后更新日期: 2026/04/21
+
 ## 源文件 - `src/celestialvault/instances/inst_file/file_node.py`
 
 ## 模块说明

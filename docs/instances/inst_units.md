@@ -1,5 +1,7 @@
 # `celestialvault.instances.inst_units`
 
+> 📅 最后更新日期: 2026/04/03
+
 ## 源文件 - `src/celestialvault/instances/inst_units.py`
 
 ## 模块说明

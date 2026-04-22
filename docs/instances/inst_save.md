@@ -1,5 +1,7 @@
 # `celestialvault.instances.inst_save`
 
+> 📅 最后更新日期: 2026/04/17
+
 ## 源文件 - `src/celestialvault/instances/inst_save.py`
 
 ## 模块说明

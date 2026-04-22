@@ -1,5 +1,7 @@
 # `celestialvault.instances.inst_fetch`
 
+> 📅 最后更新日期: 2026/04/21
+
 ## 源文件 - `src/celestialvault/instances/inst_fetch.py`
 
 ## 模块说明

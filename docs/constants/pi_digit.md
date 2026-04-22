@@ -1,5 +1,7 @@
 # `celestialvault.constants.pi_digit`
 
+> 📅 最后更新日期: 2026/04/22
+
 ## 源文件
 - `src/celestialvault/constants/pi_digit.py`
 
