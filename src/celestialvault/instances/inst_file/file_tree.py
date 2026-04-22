@@ -205,12 +205,14 @@ class FileTree:
 
     # ---- 打印 ----
 
-    def print_tree(self, exclude_names=None, exclude_exts=None, max_depth=3):
+    def print_tree(self, exclude_names=None, exclude_exts=None, max_depth=3, show_files=True):
         """
         递归打印整棵文件树，目录在前、文件在后。
 
         :param exclude_names: 要排除的目录名称集合。
+        :param exclude_exts: 要排除的文件扩展名集合。
         :param max_depth: 最大打印深度。
+        :param show_files: 是否显示文件节点，为 False 时只显示目录结构。
         :return: None
         :raises ValueError: 如果最大深度小于等于0
         """
@@ -243,6 +245,8 @@ class FileTree:
                 elif child.is_dir():
                     dirs.append(child)
                     child_names.append(_get_display_name(child, depth + 1))
+                elif not show_files:
+                    pass
                 elif not child.is_dir() and child.suffix in exclude_exts:
                     exclude_files.append(child)
                 else:
