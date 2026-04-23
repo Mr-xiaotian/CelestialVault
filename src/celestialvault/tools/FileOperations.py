@@ -776,7 +776,8 @@ def delete_identical(identical_dict: dict[tuple[str, HumanBytes], list[Path]]):
         delete_list.extend([(item_path, item_size) for item_path in item_list])
 
     delete_return_size_executor = DeleteReturnSizeExecutor(
-        delete_and_return_size, unpack_task_args=True, 
+        "Deleting duplicates",
+        delete_and_return_size, unpack_task_args=True,
     )
     delete_return_size_executor.start(delete_list)
 
