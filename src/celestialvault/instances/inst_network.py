@@ -105,6 +105,7 @@ class Layer:
     """神经网络层的抽象基类，定义前向传播和反向传播接口。"""
 
     def __init__(self):
+        """初始化网络层，设置参数列表、前后层引用及输入输出数据和梯度。"""
         self.params = []
 
         self.previous: Layer = None
@@ -126,6 +127,7 @@ class Layer:
         next_layer.previous = self
 
     def forward(self):
+        """抽象前向传播方法，子类必须实现。"""
         raise NotImplementedError
 
     def get_forward_input(self):
@@ -140,6 +142,7 @@ class Layer:
             return self.input_data
 
     def backward(self):
+        """抽象反向传播方法，子类必须实现。"""
         raise NotImplementedError
 
     def get_backward_input(self):
@@ -154,12 +157,19 @@ class Layer:
             return self.input_delta
 
     def clear_deltas(self):
+        """清除梯度累积，子类按需重写。"""
         pass
 
     def update_params(self, learning_rate):
+        """
+        更新层参数。
+
+        :param learning_rate: 学习率。
+        """
         pass
 
     def describe(self):
+        """打印层描述信息，子类必须实现。"""
         raise NotImplementedError
 
 
@@ -207,18 +217,25 @@ class ActivationLayer(Layer):
     """使用 sigmoid 函数的激活层。"""
 
     def __init__(self, input_dim):
+        """
+        初始化 sigmoid 激活层。
+
+        :param input_dim: 输入（同时也是输出）的维度。
+        """
         super(ActivationLayer, self).__init__()
 
         self.input_dim = input_dim
         self.output_dim = input_dim
 
     def forward(self):
+        """对输入数据执行 sigmoid 前向传播，将结果存入 output_data。"""
         data = self.get_forward_input()
         if data is None:
             raise ValueError("Input data to forward pass cannot be None.")
         self.output_data = sigmoid(data)
 
     def backward(self):
+        """计算 sigmoid 反向传播梯度，将结果存入 output_delta。"""
         data = self.get_forward_input()
         delta = self.get_backward_input()
         sigmoid_prime_data = sigmoid_prime(data)
@@ -226,6 +243,7 @@ class ActivationLayer(Layer):
         self.output_delta = delta * sigmoid_prime_data
 
     def describe(self):
+        """打印激活层的名称和维度信息。"""
         print("|--" + self.__class__.__name__)
         print(f" |-- dimensions: ({self.input_dim}, {self.output_dim})")
 
@@ -234,6 +252,12 @@ class DenseLayer(Layer):
     """全连接层，包含权重矩阵和偏置向量。"""
 
     def __init__(self, input_dim, output_dim):
+        """
+        初始化全连接层。
+
+        :param input_dim: 输入维度。
+        :param output_dim: 输出维度。
+        """
         super(DenseLayer, self).__init__()
 
         self.input_dim = input_dim
@@ -247,12 +271,14 @@ class DenseLayer(Layer):
         self.delta_b = np.zeros(self.bias.shape)
 
     def forward(self):
+        """执行全连接层前向传播：output = weight · input + bias。"""
         data = self.get_forward_input()
         if data is None:
             raise ValueError("Input data to forward pass cannot be None.")
         self.output_data = np.dot(self.weight, data) + self.bias
 
     def backward(self):
+        """计算全连接层反向传播梯度，累积权重和偏置的梯度增量。"""
         data = self.get_forward_input()
         delta = self.get_backward_input()
 
@@ -261,14 +287,21 @@ class DenseLayer(Layer):
         self.output_delta = np.dot(self.weight.T, delta)
 
     def update_params(self, learning_rate):
+        """
+        根据累积梯度更新权重和偏置。
+
+        :param learning_rate: 学习率。
+        """
         self.weight -= learning_rate * self.delta_w
         self.bias -= learning_rate * self.delta_b
 
     def clear_deltas(self):
+        """将权重和偏置的梯度累积清零。"""
         self.delta_w = np.zeros(self.weight.shape)
         self.delta_b = np.zeros(self.bias.shape)
 
     def describe(self):
+        """打印全连接层的名称和维度信息。"""
         print("|--" + self.__class__.__name__)
         print(f" |-- dimensions: ({self.input_dim}, {self.output_dim})")
 
@@ -277,6 +310,11 @@ class SequentialNetwork:
     """顺序神经网络容器，按添加顺序连接各层并支持小批量训练。"""
 
     def __init__(self, loss=None):
+        """
+        初始化顺序神经网络。
+
+        :param loss: 损失函数实例，默认使用 MSE。
+        """
         print("Initialize Network...")
         self.layers = []
         if loss is None:

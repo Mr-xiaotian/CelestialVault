@@ -7,6 +7,7 @@ class HTMLContentParser:
     """
 
     def __init__(self):
+        """初始化 HTML 内容解析器。"""
         pass
 
     def init_list(self):

@@ -15,6 +15,12 @@ from .file_node import BaseNode, DirNode, FileNode
 
 class FileTree:
     def __init__(self, root: DirNode, path: Path):
+        """
+        初始化文件树。
+
+        :param root: 根目录节点。
+        :param path: 根目录的路径。
+        """
         self.root = root
         self.path = path
 

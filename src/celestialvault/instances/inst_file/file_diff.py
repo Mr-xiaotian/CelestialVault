@@ -19,6 +19,12 @@ class DeleteExecutor(TaskExecutor):
     """删除执行器，根据相对路径批量删除指定目录下的文件或文件夹。"""
 
     def __init__(self, func, parent_dir: Path):
+        """
+        初始化删除执行器。
+
+        :param func: 执行删除操作的函数。
+        :param parent_dir: 被删除文件所在的父目录路径。
+        """
         super().__init__("Deleting", func, show_progress=True)
         self.parent_dir = parent_dir
 
@@ -37,6 +43,14 @@ class CopyExecutor(TaskExecutor):
     """复制执行器，根据相对路径将文件从主目录批量复制到次目录。"""
 
     def __init__(self, func, main_dir: Path, minor_dir: Path, copy_mode: str):
+        """
+        初始化复制执行器。
+
+        :param func: 执行复制操作的函数。
+        :param main_dir: 主目录（源）路径。
+        :param minor_dir: 次目录（目标）路径。
+        :param copy_mode: 同步模式，如 '->'、'<-'。
+        """
         super().__init__(
             f"Copying({copy_mode})", func, show_progress=True
         )

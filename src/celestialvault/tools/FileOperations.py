@@ -31,6 +31,16 @@ class HandleFileExecutor(TaskExecutor):
         rules: dict[str, tuple[Callable, Callable]],
         execution_mode: str,
     ):
+        """
+        初始化文件处理执行器。
+
+        :param name: 任务名称。
+        :param func: 处理文件的函数。
+        :param dir_path: 源目录路径。
+        :param new_dir_path: 目标目录路径。
+        :param rules: 文件后缀与处理规则的映射字典。
+        :param execution_mode: 执行模式，'serial'、'thread' 或 'process'。
+        """
         super().__init__(
             name=name,
             func=func,
@@ -766,7 +776,7 @@ def delete_identical(identical_dict: dict[tuple[str, HumanBytes], list[Path]]):
         delete_list.extend([(item_path, item_size) for item_path in item_list])
 
     delete_return_size_executor = DeleteReturnSizeExecutor(
-        delete_and_return_size, unpack_task_args=True, enable_success_cache=True
+        delete_and_return_size, unpack_task_args=True, 
     )
     delete_return_size_executor.start(delete_list)
 

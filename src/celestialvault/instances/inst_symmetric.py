@@ -16,6 +16,11 @@ class SymmetricMap(Generic[T]):
     __slots__ = ("pairs", "reverse", "_allow_self")
 
     def __init__(self, allow_self: bool = False):
+        """
+        初始化双向映射。
+
+        :param allow_self: 是否允许元素映射到自身。
+        """
         self.pairs: dict[T, T] = {}  # a -> b （代表键）
         self.reverse: dict[T, T] = {}  # b -> a
         self._allow_self = allow_self

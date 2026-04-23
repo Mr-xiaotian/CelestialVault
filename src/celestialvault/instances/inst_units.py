@@ -235,6 +235,11 @@ class HumanTimestamp(float):
     # ---------- 时区与转换 ----------
     @property
     def tz(self):
+        """
+        返回当前对象的时区。
+
+        :return: 时区对象。
+        """
         return self._tz
 
     def with_tz(self, tz) -> "HumanTimestamp":
@@ -242,6 +247,12 @@ class HumanTimestamp(float):
         return HumanTimestamp(float(self), tz=tz)
 
     def to_datetime(self, tz=None) -> datetime:
+        """
+        将时间戳转换为 datetime 对象。
+
+        :param tz: 目标时区，默认使用自身时区。
+        :return: 对应的 datetime 对象。
+        """
         tz = tz or self._tz
         return datetime.fromtimestamp(float(self), tz)
 
@@ -317,5 +328,11 @@ class HumanTimestamp(float):
     # ---------- 便捷方法 ----------
     @classmethod
     def now(cls, tz=None) -> "HumanTimestamp":
+        """
+        返回当前时间的 HumanTimestamp 实例。
+
+        :param tz: 时区，默认使用 DEFAULT_TZ。
+        :return: 当前时间的 HumanTimestamp。
+        """
         tz = tz or cls.DEFAULT_TZ
         return cls(datetime.now(tz), tz=tz)

@@ -52,6 +52,11 @@ class QuizBase:
         )
 
     def question_text(self) -> str:
+        """
+        返回当前题目的显示文本，子类必须实现。
+
+        :return: 题目文本字符串。
+        """
         raise NotImplementedError("子类必须实现此方法")
 
     def generate_problem(self):
@@ -154,6 +159,7 @@ class MultiplicationQuiz(QuizBase):
 
     # ---------- 出题逻辑 ----------
     def generate_problem(self):
+        """根据 self.modes 中的模式列表生成一道乘法题目，设置 num1、num2 和 correct_answer。"""
         mode_funcs = {
             "square": self.generate_square,
             "square_with_5": self.generate_square_with_5,
@@ -189,6 +195,11 @@ class MultiplicationQuiz(QuizBase):
         self.correct_answer = self.num1 * self.num2
 
     def question_text(self):
+        """
+        返回乘法题目的显示文本。
+
+        :return: 格式为 "num1 × num2 = ?" 的字符串。
+        """
         return f"{self.num1} × {self.num2} = ?"
 
     # ---------- 各种生成方法 ----------
@@ -351,7 +362,13 @@ class DictationQuiz(QuizBase):
         super().__init__(title="单词听写", input_type="text")
 
     def generate_problem(self):
+        """从单词映射表中随机抽取一对，设置 problem 和 correct_answer。"""
         self.problem, self.correct_answer = self.word_map.random_pair(self.random_mode)
 
     def question_text(self):
+        """
+        返回听写题目的显示文本。
+
+        :return: 格式为 "problem -> ?" 的字符串。
+        """
         return f"{self.problem} -> ?"

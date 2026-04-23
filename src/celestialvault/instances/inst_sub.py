@@ -10,6 +10,7 @@ from ..tools.TextTools import pro_slash, safe_open_txt
 
 class Suber:
     def __init__(self):
+        """初始化文本清理器，设置各类正则替换规则。"""
         # Characters that need both lookbehind and lookahead checks
         self.both_check_chars = r"#|◆|\*|＊|=|＝|…|_|～|—|－"
 

@@ -115,6 +115,7 @@ class FileNode(BaseNode):
         return self._hash
 
     def is_dir(self) -> bool:
+        """返回 False，文件节点不是目录。"""
         return False
 
 
@@ -183,4 +184,5 @@ class DirNode(BaseNode):
         return _hash_bytes(combined)
 
     def is_dir(self) -> bool:
+        """返回 True，目录节点是目录。"""
         return True
