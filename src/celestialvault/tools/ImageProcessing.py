@@ -150,7 +150,7 @@ def combine_imgs_dir(dir_path: Path, special_keywords: dict = None):
         dir_path,
         rules,
         execution_mode="serial",
-        progress_desc="Combine Img Folders",
+        name="Combine Img Folders",
         dir_name_suffix="_img2pdf",
     )
 
@@ -519,10 +519,10 @@ def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
         tasks.append((file1, file2))
 
     compare_executor = CompareSSIMExecutor(
+        "Comparing Images",
         compare_ssim_by_path,
         execution_mode="thread",
         max_workers=8,
-        progress_desc="Comparing Images",
         show_progress=True,
     )
     compare_executor.start(tasks)

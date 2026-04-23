@@ -24,19 +24,19 @@ class HandleFileExecutor(TaskExecutor):
 
     def __init__(
         self,
+        name: str,
         func: Callable,
         dir_path: Path,
         new_dir_path: Path,
         rules: dict[str, tuple[Callable, Callable]],
         execution_mode: str,
-        progress_desc: str,
     ):
         super().__init__(
+            name=name,
             func=func,
             execution_mode=execution_mode,
             max_workers=6,
             max_info=100,
-            progress_desc=progress_desc,
             show_progress=True,
         )
         self.dir_path = dir_path
@@ -169,7 +169,7 @@ def handle_dir_files(
         str, tuple[Callable[[Path, Path, dict], None], Callable[[Path], Path], dict]
     ],
     execution_mode: str = "serial",
-    progress_desc: str = "Processing files",
+    name: str = "Processing files",
     dir_name_suffix: str = "_re",
 ) -> dict[tuple[str, str], list[Path]]:
     """
@@ -180,19 +180,19 @@ def handle_dir_files(
     :param dir_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
     :param rules: 一个字典，键为文件后缀，值为处理该类型文件的函数和重命名函数的元组。
     :param execution_mode: 执行模式，可以是 'serial' 或 'thread' 'process'。默认为 'serial'。
-    :param progress_desc: 进度条描述。
+    :param name: 任务名称。
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
     dir_path = Path(dir_path)
     new_dir_path = dir_path.parent / (dir_path.name + dir_name_suffix)
 
     handlefile_executor = HandleFileExecutor(
+        name=name,
         func=handle_item,
         dir_path=dir_path,
         new_dir_path=new_dir_path,
         rules=rules,
         execution_mode=execution_mode,
-        progress_desc=progress_desc,
     )
 
     file_path_iter = (
@@ -216,7 +216,7 @@ def handle_subdirs(
         str, tuple[Callable[[Path, Path, dict], None], Callable[[Path], Path], dict]
     ],
     execution_mode: str = "serial",
-    progress_desc: str = "Processing dirs",
+    name: str = "Processing dirs",
     dir_name_suffix: str = "_re",
 ) -> dict[tuple[str, str], list[Path]]:
     """
@@ -227,19 +227,19 @@ def handle_subdirs(
     :param dir_path: 要处理的文件夹的路径，可以是相对路径或绝对路径。
     :param rules: 一个字典，键为文件后缀，值为处理该类型文件的函数和重命名函数的元组。
     :param execution_mode: 执行模式，可以是 'serial' 或 'thread' 'process'。默认为 'serial'。
-    :param progress_desc: 进度条描述。
+    :param name: 任务名称。
     :return: 包含因错误未能正确处理的文件及其对应错误信息的列表。每个元素是一个元组，包括文件路径和错误对象。
     """
     dir_path = Path(dir_path)
     new_dir_path = dir_path.parent / (dir_path.name + dir_name_suffix)
 
     handlefile_executor = HandleSubFolderExecutor(
+        name=name,
         func=handle_item,
         dir_path=dir_path,
         new_dir_path=new_dir_path,
         rules=rules,
         execution_mode=execution_mode,
-        progress_desc=progress_desc,
     )
 
     sub_dir_list = find_pure_dirs(dir_path, True)
@@ -291,7 +291,7 @@ def compress_dir(
     # rules.update({'.pdf': (compress_pdf,rename_pdf, {})})
 
     return handle_dir_files(
-        dir_path, rules, execution_mode, progress_desc="Compressing Folder"
+        dir_path, rules, execution_mode, name="Compressing Folder"
     )
 
 
@@ -390,7 +390,7 @@ def unzip_dir(dir_path: str | Path):
         ".7z": (unzip_7z_file, rename_unzip, {}),
     }
 
-    return handle_dir_files(dir_path, rules, progress_desc="Unziping dir")
+    return handle_dir_files(dir_path, rules, name="Unziping dir")
 
 
 def delete_file_or_dir(path: Path) -> None:
@@ -587,16 +587,16 @@ def detect_identical_files(
     :return: 相同文件的字典，键为文件大小和哈希值，值为文件路径列表。
     """
     scan_size_executor = ScanSizeExecutor(
+        "Scanning files size",
         get_file_size,
         execution_mode,
-        progress_desc="Scanning files size",
         show_progress=True,
         log_level="INFO",
     )
     scan_hash_executor = ScanHashExecutor(
+        "Calculating files hash",
         get_file_hash,
         execution_mode,
-        progress_desc="Calculating files hash",
         show_progress=True,
         log_level="INFO",
     )
@@ -648,16 +648,16 @@ def detect_identical_dirs(
     :return: 相同文件夹的字典，键为文件夹大小和哈希值，值为文件夹路径列表。
     """
     scan_size_executor = ScanSizeExecutor(
+        "Scanning dirs size",
         get_dir_size,
         execution_mode,
-        progress_desc="Scanning dirs size",
         show_progress=True,
         log_level="INFO",
     )
     scan_hash_executor = ScanHashExecutor(
+        "Calculating dirs hash",
         get_dir_hash,
         execution_mode,
-        progress_desc="Calculating dirs hash",
         show_progress=True,
         log_level="INFO",
     )
@@ -1058,9 +1058,9 @@ def find_pure_dirs(root: str | Path, only_nonempty: bool = False) -> list[Path]:
     subdirs = [(str(dir), only_nonempty) for dir in root.rglob("*") if dir.is_dir()]
 
     find_pure_dir_executor = FindPureExecutor(
+        "Finding pure directories",
         is_pure_dir,
         "thread",
-        progress_desc="Finding pure directories",
         show_progress=True,
     )
     find_pure_dir_executor.start(subdirs)

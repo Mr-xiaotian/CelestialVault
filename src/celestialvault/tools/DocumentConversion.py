@@ -254,6 +254,6 @@ def resize_pdfs(dir_path: Path, execution_mode: str = "serial"):
         dir_path,
         rules,
         execution_mode,
-        progress_desc="Resize PDFs",
+        name="Resize PDFs",
         dir_name_suffix="_resized",
     )

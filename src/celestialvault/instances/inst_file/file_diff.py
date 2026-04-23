@@ -19,7 +19,7 @@ class DeleteExecutor(TaskExecutor):
     """删除执行器，根据相对路径批量删除指定目录下的文件或文件夹。"""
 
     def __init__(self, func, parent_dir: Path):
-        super().__init__(func, progress_desc="Deleting", show_progress=True)
+        super().__init__("Deleting", func, show_progress=True)
         self.parent_dir = parent_dir
 
     def get_args(self, rel_path: Path):
@@ -38,7 +38,7 @@ class CopyExecutor(TaskExecutor):
 
     def __init__(self, func, main_dir: Path, minor_dir: Path, copy_mode: str):
         super().__init__(
-            func, progress_desc=f"Copying({copy_mode})", show_progress=True
+            f"Copying({copy_mode})", func, show_progress=True
         )
         self.main_dir = main_dir
         self.minor_dir = minor_dir

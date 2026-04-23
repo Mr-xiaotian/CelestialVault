@@ -429,15 +429,15 @@ class Saver(object):
         """
         fetcher = Fetcher()  # 创建用于获取 URL 内容的 Fetcher 实例
         fetch_stage = FetchStage(
+            "urlsFetchProcess",
             fetcher.getContent,
             execution_mode="thread",
-            progress_desc="urlsFetchProcess",
             show_progress=show_progress,
         )
         save_stage = SaveStage(
+            "urlsSaveProcess",
             self.save_content,
             execution_mode="serial",
-            progress_desc="urlsSaveProcess",
             show_progress=show_progress,
             unpack_task_args=True,
         )

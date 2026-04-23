@@ -47,6 +47,6 @@ def convert_mp3_dir(dir_path: Path) -> dict[tuple[str, str], list[Path]]:
         dir_path,
         rules,
         execution_mode="serial",
-        progress_desc="Convert Audio Folders",
+        name="Convert Audio Folders",
         dir_name_suffix="_mp3towav",
     )

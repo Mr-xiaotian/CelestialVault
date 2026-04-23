@@ -33,10 +33,10 @@ class FileTree:
 
         def _scan(dir_path: Path) -> dict:
             scan_info_executor = TaskExecutor(
+                "Scanning files",
                 get_file_info,
                 "thread",
                 max_workers=4,
-                progress_desc="Scanning files",
                 show_progress=True,
             )
 

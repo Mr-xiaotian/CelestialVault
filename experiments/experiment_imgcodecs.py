@@ -95,21 +95,21 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
     result = np.zeros((height, width))
 
     rectangle_damage_executor = RectangleDamageExecutor(
+        "Testing rectangle damage",
         success_rate_rectangle_damage_block,
         "serial",
         show_progress=True,
-        progress_desc="Testing rectangle damage",
     )
     rectangle_damage_executor.codec = codec
     rectangle_damage_executor.img = img
     rectangle_damage_executor.text = text
 
     random_damage_executor = RandomDamageExecutor(
+        "Testing random damage",
         success_rate_random_damage,
         "thread",
         5,
         show_progress=True,
-        progress_desc="Testing random damage",
     )
     random_damage_executor.codec = codec
     random_damage_executor.img = img

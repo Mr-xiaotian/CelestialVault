@@ -263,7 +263,7 @@ def rotate_video_dir(dir_path: str | Path, angle: int) -> list[tuple[Path, Excep
         dir_path,
         rules,
         "thread",
-        progress_desc=f"Rotating videos by {angle} degrees",
+        name=f"Rotating videos by {angle} degrees",
     )
 
 
@@ -297,9 +297,9 @@ def get_videos_codec(
         raise ValueError(f"{dir_path} 不是有效的文件夹路径")
 
     get_codec_executor = GetCodecExecutor(
+        "Getting video codec",
         get_video_codec,
         execution_mode="thread",
-        progress_desc="Getting video codec",
         show_progress=True,
     )
 

@@ -90,7 +90,7 @@ class Suber:
         rules = {".txt": (self.clear_book, lambda a: a, {})}
 
         return handle_dir_files(
-            dir_path, rules, execution_mode, progress_desc="Clearing book dir"
+            dir_path, rules, execution_mode, name="Clearing book dir"
         )
 
     def clear_book(self, book_path: Path, new_path: Path):
