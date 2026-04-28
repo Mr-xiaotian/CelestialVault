@@ -8,10 +8,11 @@ from ...instances.inst_units import HumanBytes, HumanTimestamp
 from ...tools.FileOperations import (
     get_dir_mtime,
     get_dir_size,
-    get_dir_info,
+    get_file_mtime,
+    get_file_size,
     scan_dir_info,
 )
-from .file_node import BaseNode, DirNode, FileNode
+from .file_node import BaseNode, DirNode, ExcludedDirsNode, ExcludedFilesNode, FileNode
 
 
 class FileTree:
@@ -26,17 +27,22 @@ class FileTree:
         self.path = path
 
     @classmethod
-    def build_from_path(cls, root_path: Path):
+    def build_from_path(cls, root_path: Path, exclude_names=None, exclude_exts=None):
         """
         从路径构建文件树。
 
         :param root_path: 根目录路径
+        :param exclude_names: 要排除的目录名称集合。
+        :param exclude_exts: 要排除的文件扩展名集合。
         :return: 文件树
         :raises ValueError: 如果路径不是目录
         """
         root_path = Path(root_path)
         if not root_path.is_dir():
             raise ValueError(f"Path {root_path} is not a directory")
+
+        exclude_names = set(exclude_names or [])
+        exclude_exts = set(exclude_exts or [])
 
         def _build(node_path: Path, level: int) -> BaseNode:
             if node_path.is_file():
@@ -60,11 +66,41 @@ class FileTree:
             total_size = HumanBytes(0)
             dir_mtime = HumanTimestamp(0)
 
+            excluded_dirs = []
+            excluded_files = []
+
             for child in entries:
-                cnode = _build(child, level + 1)
-                children.append(cnode)
-                total_size += cnode.size
-                dir_mtime = max(dir_mtime, cnode.mtime)
+                if child.is_dir() and child.name in exclude_names:
+                    excluded_dirs.append(child)
+                elif child.is_file() and child.suffix.lower() in exclude_exts:
+                    excluded_files.append(child)
+                else:
+                    cnode = _build(child, level + 1)
+                    children.append(cnode)
+                    total_size += cnode.size
+                    dir_mtime = max(dir_mtime, cnode.mtime)
+
+            if excluded_dirs:
+                exc_size = sum((get_dir_size(d) for d in excluded_dirs), HumanBytes(0))
+                exc_mtime = max(get_dir_mtime(d) for d in excluded_dirs)
+                total_size += exc_size
+                dir_mtime = max(dir_mtime, exc_mtime)
+                children.append(
+                    ExcludedDirsNode(
+                        len(excluded_dirs), node_path, exc_size, exc_mtime, level + 1
+                    )
+                )
+
+            if excluded_files:
+                exc_size = sum((get_file_size(f) for f in excluded_files), HumanBytes(0))
+                exc_mtime = max(get_file_mtime(f) for f in excluded_files)
+                total_size += exc_size
+                dir_mtime = max(dir_mtime, exc_mtime)
+                children.append(
+                    ExcludedFilesNode(
+                        len(excluded_files), node_path, exc_size, exc_mtime, level + 1
+                    )
+                )
 
             return DirNode(
                 node_path.name,
@@ -137,7 +173,7 @@ class FileTree:
         """
         data = {
             "root_path": self.path.as_posix(),
-            "root_mtime": float(get_dir_mtime(self.path)),
+            "root_mtime": self.root.mtime,
             "tree": self._node_to_dict(self.root),
         }
         path = self._cache_path()
@@ -193,24 +229,20 @@ class FileTree:
 
     # ---- 打印 ----
 
-    def print_tree(
-        self, exclude_names=None, exclude_exts=None, max_depth=3, show_files=True
-    ):
+    def print_tree(self, max_depth=3, show_files=True):
         """
         递归打印整棵文件树，目录在前、文件在后。
 
-        :param exclude_names: 要排除的目录名称集合。
-        :param exclude_exts: 要排除的文件扩展名集合。
         :param max_depth: 最大打印深度。
         :param show_files: 是否显示文件节点，为 False 时只显示目录结构。
         :return: None
-        :raises ValueError: 如果最大深度小于等于0
         """
-        exclude_names = set(exclude_names or [])
-        exclude_exts = set(exclude_exts or [])
+
+        def _is_excluded(node: BaseNode) -> bool:
+            return isinstance(node, (ExcludedFilesNode, ExcludedDirsNode))
 
         def _get_display_name(node: BaseNode, depth: int) -> str:
-            if node.is_dir() and node.children and depth >= max_depth:
+            if node.is_dir() and hasattr(node, "children") and node.children and depth >= max_depth:
                 return node.name + "[已折叠]"
             return node.name
 
@@ -218,72 +250,33 @@ class FileTree:
             display_name = _get_display_name(node, depth)
             node.print(name=display_name, max_name_len=max_name_len)
 
-            if node.is_dir() and node.children and depth >= max_depth:
+            if _is_excluded(node):
                 return
-            if not node.is_dir() or not node.children:
+            if node.is_dir() and hasattr(node, "children") and node.children and depth >= max_depth:
+                return
+            if not node.is_dir() or not hasattr(node, "children") or not node.children:
                 return
 
             dirs = []
             files = []
-            exclude_dirs = []
-            exclude_files = []
             child_names = []
 
             for child in node.children:
-                if child.is_dir() and child.name in exclude_names:
-                    exclude_dirs.append(child)
-                elif child.is_dir():
+                if not show_files and not child.is_dir():
+                    continue
+                if child.is_dir():
                     dirs.append(child)
-                    child_names.append(_get_display_name(child, depth + 1))
-                elif not show_files:
-                    pass
-                elif not child.is_dir() and child.suffix in exclude_exts:
-                    exclude_files.append(child)
                 else:
                     files.append(child)
-                    child_names.append(_get_display_name(child, depth + 1))
-
-            if exclude_dirs:
-                child_names.append(f"[{len(exclude_dirs)}项排除的目录]")
-            if exclude_files:
-                child_names.append(f"[{len(exclude_files)}项排除的文件]")
+                child_names.append(_get_display_name(child, depth + 1))
 
             child_max_name_len = max(
                 (wcswidth(name) for name in child_names), default=0
             )
-            exclude_dirs_node = (
-                DirNode(
-                    f"[{len(exclude_dirs)}项排除的目录]",
-                    node.node_path,
-                    HumanBytes(sum(d.size for d in exclude_dirs)),
-                    HumanTimestamp(max(d.mtime for d in exclude_dirs)),
-                    depth + 1,
-                    [],
-                )
-                if exclude_dirs
-                else None
-            )
-            exclude_files_node = (
-                FileNode(
-                    f"[{len(exclude_files)}项排除的文件]",
-                    "",
-                    node.node_path,
-                    HumanBytes(sum(f.size for f in exclude_files)),
-                    HumanTimestamp(max(f.mtime for f in exclude_files)),
-                    "📄",
-                    depth + 1,
-                )
-                if exclude_files
-                else None
-            )
 
             for d in dirs:
                 _print(d, depth + 1, child_max_name_len)
-            if exclude_dirs_node:
-                exclude_dirs_node.print(max_name_len=child_max_name_len)
             for f in files:
                 _print(f, depth + 1, child_max_name_len)
-            if exclude_files_node:
-                exclude_files_node.print(max_name_len=child_max_name_len)
 
         _print(self.root, 0)
