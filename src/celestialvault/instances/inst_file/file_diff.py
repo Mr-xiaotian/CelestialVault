@@ -11,7 +11,7 @@ from ...tools.FileOperations import (
     delete_file_or_dir,
 )
 from ...tools.TextTools import format_table
-from .file_node import BaseNode, DirNode
+from .file_node import BaseNode, DirNode, ExcludedDirsNode, ExcludedFilesNode
 from .file_tree import FileTree
 
 
@@ -254,8 +254,8 @@ def compare_trees(
     )
 
     def _compare(n1: DirNode, n2: DirNode) -> DirNode:
-        n1_map = {c.name: c for c in n1.children}
-        n2_map = {c.name: c for c in n2.children}
+        n1_map = {c.name: c for c in n1.children if not isinstance(c, (ExcludedFilesNode, ExcludedDirsNode))}
+        n2_map = {c.name: c for c in n2.children if not isinstance(c, (ExcludedFilesNode, ExcludedDirsNode))}
         common = n1_map.keys() & n2_map.keys()
 
         diff_children = []
