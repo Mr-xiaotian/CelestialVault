@@ -411,7 +411,6 @@ class Saver(object):
         self,
         task_list: list[tuple[str, str, str]],
         chain_mode="serial",
-        show_progress=False,
     ):
         """
         下载给定的 URL 列表，并将其内容保存到指定的文件中。
@@ -424,7 +423,6 @@ class Saver(object):
         :param chain_mode: "serial" 或 "process"
                         - "serial": 任务链将串行执行
                         - "process": 任务链将并行执行
-        :param show_progress: 是否显示下载和保存进度 (默认值为 False)
         :return: 一个字典，包含每个任务的最终结果
         """
         fetcher = Fetcher()  # 创建用于获取 URL 内容的 Fetcher 实例
@@ -432,13 +430,11 @@ class Saver(object):
             "urlsFetchProcess",
             fetcher.getContent,
             execution_mode="thread",
-            show_progress=show_progress,
         )
         save_stage = SaveStage(
             "urlsSaveProcess",
             self.save_content,
             execution_mode="serial",
-            show_progress=show_progress,
             unpack_task_args=True,
         )
 

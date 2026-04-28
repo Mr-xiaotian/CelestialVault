@@ -9,7 +9,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from celestialflow import TaskExecutor
+from celestialflow import TaskExecutor, TaskProgress
 from PIL import Image, ImageFile, PngImagePlugin
 from pillow_heif import register_heif_opener
 from tqdm import tqdm
@@ -523,8 +523,8 @@ def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
         compare_ssim_by_path,
         execution_mode="thread",
         max_workers=8,
-        show_progress=True,
     )
+    compare_executor.add_observer(TaskProgress())
     compare_executor.start(tasks)
     data = []
     for (file1, file2), ssim in compare_executor.get_success_pairs():

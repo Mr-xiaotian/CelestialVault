@@ -47,8 +47,8 @@ class HandleFileExecutor(TaskExecutor):
             execution_mode=execution_mode,
             max_workers=6,
             max_info=100,
-            show_progress=True,
         )
+        self.add_observer(TaskProgress())
         self.dir_path = dir_path
         self.new_dir_path = new_dir_path
         self.rules = rules
@@ -605,7 +605,7 @@ def get_dir_info(dir_path: Path, include_hash: bool = False) -> dict[str, Any]:
     return info
 
 
-def get_files_Info_recursive(
+def get_files_info_recursive(
     dir_path: Path | str,
 ) -> dict[Path, dict[str, Any]]:
     """
@@ -655,16 +655,16 @@ def detect_identical_files(
         "Scanning files size",
         get_file_size,
         execution_mode,
-        show_progress=True,
         log_level="INFO",
     )
+    scan_size_executor.add_observer(TaskProgress())
     scan_hash_executor = ScanHashExecutor(
         "Calculating files hash",
         get_file_hash,
         execution_mode,
-        show_progress=True,
         log_level="INFO",
     )
+    scan_hash_executor.add_observer(TaskProgress())
 
     # 根据文件大小进行初步筛选
     file_path_iter = (
@@ -716,16 +716,16 @@ def detect_identical_dirs(
         "Scanning dirs size",
         get_dir_size,
         execution_mode,
-        show_progress=True,
         log_level="INFO",
     )
+    scan_size_executor.add_observer(TaskProgress())
     scan_hash_executor = ScanHashExecutor(
         "Calculating dirs hash",
         get_dir_hash,
         execution_mode,
-        show_progress=True,
         log_level="INFO",
     )
+    scan_hash_executor.add_observer(TaskProgress())
 
     # 根据文件夹大小进行初步筛选
     dir_path_list = [
@@ -1127,8 +1127,8 @@ def find_pure_dirs(root: str | Path, only_nonempty: bool = False) -> list[Path]:
         "Finding pure directories",
         is_pure_dir,
         "thread",
-        show_progress=True,
     )
+    find_pure_dir_executor.add_observer(TaskProgress())
     find_pure_dir_executor.start(subdirs)
     pure_dirs = []
     for task, is_pure in find_pure_dir_executor.get_success_pairs():

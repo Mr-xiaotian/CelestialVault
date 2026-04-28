@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from itertools import product
 from PIL import Image
 
-from celestialflow import TaskExecutor
+from celestialflow import TaskExecutor, TaskProgress
 from celestialvault.instances.inst_imgcodecs import BaseCodec, CODEC_REGISTRY
 from celestialvault.tools.ImageProcessing import (
     simulate_rectangle_damage,
@@ -98,8 +98,8 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
         "Testing rectangle damage",
         success_rate_rectangle_damage_block,
         "serial",
-        show_progress=True,
     )
+    rectangle_damage_executor.add_observer(TaskProgress())
     rectangle_damage_executor.codec = codec
     rectangle_damage_executor.img = img
     rectangle_damage_executor.text = text
@@ -109,8 +109,8 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
         success_rate_random_damage,
         "thread",
         5,
-        show_progress=True,
     )
+    random_damage_executor.add_observer(TaskProgress())
     random_damage_executor.codec = codec
     random_damage_executor.img = img
     random_damage_executor.text = text

@@ -1,7 +1,7 @@
 import time
 from pathlib import Path
 
-from celestialflow import TaskExecutor
+from celestialflow import TaskExecutor, TaskProgress
 
 from celestialvault.tools.FileOperations import (
     get_file_info,
@@ -14,8 +14,8 @@ def scan(dir_path: Path, max_workers) -> dict:
         get_file_info,
         "thread",
         max_workers=max_workers,
-        show_progress=True,
     )
+    scan_info_executor.add_observer(TaskProgress())
 
     file_path_list = [
         file_path for file_path in dir_path.glob("**/*") if file_path.is_file()

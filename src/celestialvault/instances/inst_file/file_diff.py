@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from celestialflow import TaskExecutor
+from celestialflow import TaskExecutor, TaskProgress
 from wcwidth import wcswidth
 
 from ...instances.inst_units import HumanBytes, HumanTimestamp
@@ -25,7 +25,8 @@ class DeleteExecutor(TaskExecutor):
         :param func: 执行删除操作的函数。
         :param parent_dir: 被删除文件所在的父目录路径。
         """
-        super().__init__("Deleting", func, show_progress=True)
+        super().__init__("Deleting", func)
+        self.add_observer(TaskProgress())
         self.parent_dir = parent_dir
 
     def get_args(self, rel_path: Path):
@@ -52,8 +53,9 @@ class CopyExecutor(TaskExecutor):
         :param copy_mode: 同步模式，如 '->'、'<-'。
         """
         super().__init__(
-            f"Copying({copy_mode})", func, show_progress=True
+            f"Copying({copy_mode})", func
         )
+        self.add_observer(TaskProgress())
         self.main_dir = main_dir
         self.minor_dir = minor_dir
 

@@ -4,7 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import ffmpeg
-from celestialflow import TaskExecutor
+from celestialflow import TaskExecutor, TaskProgress
 
 
 class GetCodecExecutor(TaskExecutor):
@@ -300,8 +300,8 @@ def get_videos_codec(
         "Getting video codec",
         get_video_codec,
         execution_mode="thread",
-        show_progress=True,
     )
+    get_codec_executor.add_observer(TaskProgress())
 
     file_path_iter = (
         file_path for file_path in dir_path.rglob("*.mp4") if file_path.is_file()
