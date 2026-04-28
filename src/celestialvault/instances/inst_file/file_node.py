@@ -186,3 +186,70 @@ class DirNode(BaseNode):
     def is_dir(self) -> bool:
         """返回 True，目录节点是目录。"""
         return True
+
+
+class ExcludedFilesNode(BaseNode):
+    """被排除的文件汇总节点，记录被排除文件的数量和总大小。"""
+
+    def __init__(
+        self,
+        count: int,
+        node_path: Path,
+        size: HumanBytes,
+        mtime: HumanTimestamp,
+        level: int,
+    ):
+        """
+        初始化被排除的文件汇总节点。
+
+        :param count: 被排除的文件数量。
+        :param node_path: 所属目录路径。
+        :param size: 被排除文件的总大小。
+        :param mtime: 被排除文件中最晚的修改时间。
+        :param level: 节点深度。
+        """
+        super().__init__(f"[{count}项排除的文件]", node_path, size, mtime, "📄", level)
+        self.count = count
+
+    @property
+    def hash(self) -> str:
+        """排除节点不计算哈希。"""
+        return ""
+
+    def is_dir(self) -> bool:
+        """返回 False，文件汇总节点不是目录。"""
+        return False
+
+
+class ExcludedDirsNode(BaseNode):
+    """被排除的目录汇总节点，记录被排除目录的数量和总大小。"""
+
+    def __init__(
+        self,
+        count: int,
+        node_path: Path,
+        size: HumanBytes,
+        mtime: HumanTimestamp,
+        level: int,
+    ):
+        """
+        初始化被排除的目录汇总节点。
+
+        :param count: 被排除的目录数量。
+        :param node_path: 所属目录路径。
+        :param size: 被排除目录的总大小。
+        :param mtime: 被排除目录中最晚的修改时间。
+        :param level: 节点深度。
+        """
+        super().__init__(f"[{count}项排除的目录]", node_path, size, mtime, "📁", level)
+        self.count = count
+        self.children: list["BaseNode"] = []
+
+    @property
+    def hash(self) -> str:
+        """排除节点不计算哈希。"""
+        return ""
+
+    def is_dir(self) -> bool:
+        """返回 True，目录汇总节点是目录。"""
+        return True

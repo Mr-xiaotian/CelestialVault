@@ -1,14 +1,15 @@
 import json
 from pathlib import Path
 
-from celestialflow import TaskExecutor
 from wcwidth import wcswidth
 
 from ...constants import FILE_ICONS
 from ...instances.inst_units import HumanBytes, HumanTimestamp
 from ...tools.FileOperations import (
     get_dir_mtime,
-    get_file_info,
+    get_dir_size,
+    get_dir_info,
+    scan_dir_info,
 )
 from .file_node import BaseNode, DirNode, FileNode
 
@@ -36,25 +37,6 @@ class FileTree:
         root_path = Path(root_path)
         if not root_path.is_dir():
             raise ValueError(f"Path {root_path} is not a directory")
-
-        def _scan(dir_path: Path) -> dict:
-            scan_info_executor = TaskExecutor(
-                "Scanning files",
-                get_file_info,
-                "thread",
-                max_workers=4,
-                show_progress=True,
-            )
-
-            file_path_list = [
-                file_path for file_path in dir_path.glob("**/*") if file_path.is_file()
-            ]
-            scan_info_executor.start(file_path_list)
-
-            _info = dict()
-            for file_path, file_info in scan_info_executor.get_success_pairs():
-                _info[file_path] = file_info
-            return _info
 
         def _build(node_path: Path, level: int) -> BaseNode:
             if node_path.is_file():
@@ -93,7 +75,7 @@ class FileTree:
                 children,
             )
 
-        _info = _scan(root_path)
+        _info = scan_dir_info(root_path)
         return cls(_build(root_path, 0), root_path)
 
     # ---- 序列化 / 反序列化 ----

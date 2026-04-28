@@ -10,7 +10,7 @@ from typing import Any
 
 import py7zr
 import rarfile
-from celestialflow import TaskExecutor
+from celestialflow import TaskExecutor, TaskProgress
 from tqdm import tqdm
 from wcwidth import wcswidth
 
@@ -585,6 +585,61 @@ def get_file_info(file_path: Path, include_hash: bool = False) -> dict[str, Any]
     if include_hash:
         info["hash"] = get_file_hash(file_path)
     return info
+
+
+def get_dir_info(dir_path: Path, include_hash: bool = False) -> dict[str, Any]:
+    """
+    获取目录的详细信息，包括大小、修改时间和哈希值。
+
+    :param dir_path: 目录路径。
+    :param include_hash: 是否包含哈希值。
+    :return: 包含目录信息的字典。
+    """
+    dir_path = Path(dir_path)
+    info = {
+        "size": get_dir_size(dir_path),
+        "mtime": get_dir_mtime(dir_path),
+    }
+    if include_hash:
+        info["hash"] = get_dir_hash(dir_path)
+    return info
+
+
+def scan_dir_info(
+    dir_path: Path | str,
+) -> dict[Path, dict[str, Any]]:
+    """
+    递归扫描目录，返回目录下所有文件和子目录的信息。
+
+    文件信息通过多线程并行扫描获取，目录信息（size、mtime）由其子项自底向上聚合。
+
+    :param dir_path: 要扫描的目录路径。
+    :return: 路径到信息字典的映射，信息字典包含 size、mtime、type 等字段。
+    """
+    dir_path = Path(dir_path)
+    if not dir_path.is_dir():
+        raise ValueError(f"Path {dir_path} is not a directory")
+
+    file_paths = [
+        p
+        for p in dir_path.glob("**/*")
+        if p.is_file()
+    ]
+
+    scan_executor = TaskExecutor(
+        "Scanning file info",
+        get_file_info,
+        "thread",
+        max_workers=4,
+    )
+    scan_executor.add_observer(TaskProgress())
+    scan_executor.start(file_paths)
+
+    result: dict[Path, dict[str, Any]] = {}
+    for file_path, file_info in scan_executor.get_success_pairs():
+        result[file_path] = file_info
+
+    return result
 
 
 def detect_identical_files(
