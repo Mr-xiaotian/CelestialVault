@@ -605,7 +605,7 @@ def get_dir_info(dir_path: Path, include_hash: bool = False) -> dict[str, Any]:
     return info
 
 
-def scan_dir_info(
+def get_files_Info_recursive(
     dir_path: Path | str,
 ) -> dict[Path, dict[str, Any]]:
     """

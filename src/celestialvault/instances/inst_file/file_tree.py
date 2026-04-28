@@ -10,7 +10,7 @@ from ...tools.FileOperations import (
     get_dir_size,
     get_file_mtime,
     get_file_size,
-    scan_dir_info,
+    get_files_Info_recursive,
 )
 from .file_node import BaseNode, DirNode, ExcludedDirsNode, ExcludedFilesNode, FileNode
 
@@ -111,7 +111,7 @@ class FileTree:
                 children,
             )
 
-        _info = scan_dir_info(root_path)
+        _info = get_files_Info_recursive(root_path)
         return cls(_build(root_path, 0), root_path)
 
     # ---- 序列化 / 反序列化 ----
