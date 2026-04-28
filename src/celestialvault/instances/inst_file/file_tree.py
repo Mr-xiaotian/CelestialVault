@@ -123,21 +123,21 @@ class FileTree:
         if d["is_dir"]:
             children = [FileTree._dict_to_node(c) for c in d["children"]]
             return DirNode(
-                d["name"],
-                Path(d["path"]),
-                HumanBytes(d["size"]),
-                HumanTimestamp(d["mtime"]),
-                d["level"],
-                children,
+                name=d["name"],
+                node_path=Path(d["path"]),
+                size=HumanBytes(d["size"]),
+                mtime=HumanTimestamp(d["mtime"]),
+                level=d["level"],
+                children=children,
             )
         return FileNode(
-            d["name"],
-            d["suffix"],
-            Path(d["path"]),
-            HumanBytes(d["size"]),
-            HumanTimestamp(d["mtime"]),
-            d["icon"],
-            d["level"],
+            name=d["name"],
+            suffix=d["suffix"],
+            node_path=Path(d["path"]),
+            size=HumanBytes(d["size"]),
+            mtime=HumanTimestamp(d["mtime"]),
+            icon=d["icon"],
+            level=d["level"],
         )
 
     def _cache_path(self) -> Path:
@@ -284,6 +284,7 @@ class FileTree:
             exclude_files_node = (
                 FileNode(
                     f"[{len(exclude_files)}项排除的文件]",
+                    "",
                     node.node_path,
                     HumanBytes(sum(f.size for f in exclude_files)),
                     HumanTimestamp(max(f.mtime for f in exclude_files)),
@@ -301,6 +302,6 @@ class FileTree:
             for f in files:
                 _print(f, depth + 1, child_max_name_len)
             if exclude_files_node:
-                exclude_files_node.print(max_name_len=max_name_len)
+                exclude_files_node.print(max_name_len=child_max_name_len)
 
         _print(self.root, 0)
