@@ -609,35 +609,25 @@ def get_files_info_recursive(
     dir_path: Path | str,
 ) -> dict[Path, dict[str, Any]]:
     """
-    递归扫描目录，返回目录下所有文件和子目录的信息。
-
-    文件信息通过多线程并行扫描获取，目录信息（size、mtime）由其子项自底向上聚合。
+    递归扫描目录，返回目录下所有文件的信息。
 
     :param dir_path: 要扫描的目录路径。
-    :return: 路径到信息字典的映射，信息字典包含 size、mtime、type 等字段。
+    :return: 路径到信息字典的映射，信息字典包含 size、mtime 字段。
     """
     dir_path = Path(dir_path)
-    if not dir_path.is_dir():
+    if dir_path.is_file():
         raise ValueError(f"Path {dir_path} is not a directory")
 
-    file_paths = [
-        p
-        for p in dir_path.glob("**/*")
-        if p.is_file()
-    ]
-
-    scan_executor = TaskExecutor(
-        "Scanning file info",
-        get_file_info,
-        "thread",
-        max_workers=4,
-    )
-    scan_executor.add_observer(TaskProgress())
-    scan_executor.start(file_paths)
-
     result: dict[Path, dict[str, Any]] = {}
-    for file_path, file_info in scan_executor.get_success_pairs():
-        result[file_path] = file_info
+    for p in dir_path.glob("**/*"):
+        if p.is_dir():
+            continue
+
+        stat = p.stat()
+        result[p] = {
+            "size": HumanBytes(stat.st_size),
+            "mtime": HumanTimestamp(stat.st_mtime),
+        }
 
     return result
 
