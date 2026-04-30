@@ -10,9 +10,8 @@ from ...tools.FileOperations import (
     get_dir_size,
     get_file_mtime,
     get_file_size,
-    get_files_info_recursive,
 )
-from .file_node import BaseNode, DirNode, ExcludedDirsNode, ExcludedFilesNode, FileNode
+from .file_node import BaseNode, DirNode, FileNode, ExcludedDirsNode, ExcludedFilesNode
 
 
 class FileTree:
@@ -46,9 +45,9 @@ class FileTree:
 
         def _build(node_path: Path, level: int) -> BaseNode:
             if node_path.is_file():
-                node_info = _info.get(node_path, {})
-                size = node_info.get("size", HumanBytes(0))
-                mtime = node_info.get("mtime", HumanTimestamp(0))
+                stat = node_path.stat()
+                size = HumanBytes(stat.st_size)
+                mtime = HumanTimestamp(stat.st_mtime)
                 icon = FILE_ICONS.get(node_path.suffix.lower(), FILE_ICONS["default"])
                 return FileNode(
                     node_path.name,
@@ -111,7 +110,6 @@ class FileTree:
                 children,
             )
 
-        _info = get_files_info_recursive(root_path)
         return cls(_build(root_path, 0), root_path)
 
     # ---- 序列化 / 反序列化 ----
