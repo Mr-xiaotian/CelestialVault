@@ -624,7 +624,7 @@ def combine_txt_files(source_dir: str | Path, target_file: str | Path):
         从文件名中提取数字，用于排序。
         """
         matches = re.findall(r"\d+", file_name.name)
-        return int("".join(matches)) if matches else float("inf")
+        return int("".join(matches)) if matches else int("inf")
 
     # 转换路径为 Path 对象
     source_dir = Path(source_dir)
@@ -632,15 +632,18 @@ def combine_txt_files(source_dir: str | Path, target_file: str | Path):
     if not source_dir.is_dir():
         raise ValueError(f"The provided path {source_dir} is not a directory.")
 
-    # 获取所有txt文件路径，并按文件名中的数字排序
-    txt_files = sorted(source_dir.glob("*.txt"), key=extract_number)
+    # 获取所有txt和md文件路径，并按文件名中的数字排序
+    text_files = sorted(
+        list(source_dir.glob("*.txt")) + list(source_dir.glob("*.md")),
+        key=extract_number,
+    )
 
-    if not txt_files:
-        raise ValueError(f"No txt files found in {source_dir}.")
+    if not text_files:
+        raise ValueError(f"No txt or md files found in {source_dir}.")
 
     # 合并文件
     with open(target_file, "w", encoding="utf-8") as outfile:
-        for txt_file in tqdm(txt_files):
+        for txt_file in tqdm(text_files):
             with open(txt_file, "r", encoding="utf-8") as infile:
                 content = infile.read()
                 # 写入文件名和内容
