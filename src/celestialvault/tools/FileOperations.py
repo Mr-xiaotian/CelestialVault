@@ -45,7 +45,7 @@ class HandleFileExecutor(TaskExecutor):
             name=name,
             func=func,
             execution_mode=execution_mode,
-            max_workers=6,
+            max_workers=8,
             max_info=100,
         )
         self.add_observer(TaskProgress())
@@ -300,9 +300,7 @@ def compress_dir(
     )
     # rules.update({'.pdf': (compress_pdf,rename_pdf, {})})
 
-    return handle_dir_files(
-        dir_path, rules, execution_mode, name="Compressing Folder"
-    )
+    return handle_dir_files(dir_path, rules, execution_mode, name="Compressing Folder")
 
 
 def unzip_zip_file(zip_file: Path, destination: Path):
@@ -822,7 +820,8 @@ def delete_identical(identical_dict: dict[tuple[str, HumanBytes], list[Path]]):
 
     delete_return_size_executor = DeleteReturnSizeExecutor(
         "Deleting duplicates",
-        delete_and_return_size, unpack_task_args=True,
+        delete_and_return_size,
+        unpack_task_args=True,
     )
     delete_return_size_executor.start(delete_list)
 

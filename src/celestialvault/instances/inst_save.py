@@ -328,6 +328,10 @@ class Saver(object):
         :param file_suffix: 文件后缀。
         :return: 保存的文件路径。
         """
+        path, can_write = self._get_writable_path(file_name, file_suffix)
+        if not can_write:
+            return path
+
         fetcher = Fetcher()
         text = fetcher.getText(url)
         return self._text_core(text, file_name, encoding, file_suffix)
@@ -341,6 +345,10 @@ class Saver(object):
         :param file_suffix: 文件后缀。
         :return: 保存的文件路径。
         """
+        path, can_write = self._get_writable_path(file_name, file_suffix)
+        if not can_write:
+            return path
+
         fetcher = Fetcher()
         content = fetcher.getContent(url)
         return self._content_core(content, file_name, file_suffix)
@@ -354,6 +362,10 @@ class Saver(object):
         :param file_suffix: 文件后缀。
         :return: 保存的文件路径。
         """
+        path, can_write = self._get_writable_path(file_name, file_suffix)
+        if not can_write:
+            return path
+
         fetcher = Fetcher()
         content = fetcher.getContent(url)
         image = binary_to_img(content)
@@ -374,6 +386,10 @@ class Saver(object):
         :param read_kwargs: 传给 pandas.read_csv 的额外参数。
         :return: 保存的文件路径。
         """
+        path, can_write = self._get_writable_path(file_name, file_suffix)
+        if not can_write:
+            return path
+
         fetcher = Fetcher()
         text = fetcher.getText(url)
         dataframe = pd.read_csv(io.StringIO(text), **(read_kwargs or {}))
@@ -388,6 +404,10 @@ class Saver(object):
         :param file_suffix: 文件后缀。
         :return: 保存的文件路径。
         """
+        path, can_write = self._get_writable_path(file_name, file_suffix)
+        if not can_write:
+            return path
+
         fetcher = Fetcher()
         content = fetcher.getContent(url)
         obj = pickle.loads(content)
@@ -403,6 +423,10 @@ class Saver(object):
         :param encoding: 保存文件时使用的编码。
         :return: 保存的文件路径。
         """
+        path, can_write = self._get_writable_path(file_name, file_suffix)
+        if not can_write:
+            return path
+
         fetcher = Fetcher()
         data = json.loads(fetcher.getText(url))
         return self._json_core(data, file_name, file_suffix, encoding)
