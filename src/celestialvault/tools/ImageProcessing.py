@@ -19,12 +19,6 @@ from ..constants import IMAGE_SUFFIX_TO_FORMAT
 ImageFile.LOAD_TRUNCATED_IMAGES = True  # 允许加载截断的图片
 
 
-class CompareSSIMExecutor(TaskExecutor):
-    """SSIM 比较执行器，批量计算图像对的结构相似性并汇总结果。"""
-
-    pass
-
-
 def compress_img(old_img_path: str | Path, new_img_path: str | Path):
     """
     压缩图片，使用 optimize 和 quality=75 进行有损压缩。
@@ -55,7 +49,7 @@ def safe_open_image(path: Path) -> tuple[Image.Image | None, bool]:
 
         # 再打开一次时立即加载进内存，然后关闭底层文件句柄
         img = Image.open(path)
-        img.load()  # ✅ 读取进内存后不再依赖文件句柄
+        img.load()  # 读取进内存后不再依赖文件句柄
         return img, True
     except Exception:
         return None, False
@@ -518,7 +512,7 @@ def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
 
         tasks.append((file1, file2))
 
-    compare_executor = CompareSSIMExecutor(
+    compare_executor = TaskExecutor(
         "Comparing Images",
         compare_ssim_by_path,
         execution_mode="thread",
@@ -564,6 +558,59 @@ def is_image_valid(data: str | Path | io.BytesIO) -> bool:
 
     except Exception:
         return False
+
+
+def convert_webp_to_png(img_path: str | Path) -> str:
+    """
+    将 webp 格式图片转换为 png 格式，验证转换结果有效后删除原图片。
+
+    :param img_path: webp 图片的路径。
+    :return: 转换后的 png 图片路径。
+    :raises ValueError: 如果输入不是 webp 格式。
+    :raises ValueError: 如果转换后的 png 图片验证失败。
+    """
+    img_path = Path(img_path)
+    if img_path.suffix.lower() != ".webp":
+        raise ValueError(f"Expected .webp file, got {img_path.suffix}")
+
+    png_path = img_path.with_suffix(".png")
+    img = Image.open(img_path)
+    img.save(png_path, format="PNG")
+    img.close()
+
+    if not is_image_valid(png_path):
+        png_path.unlink(missing_ok=True)
+        raise ValueError(f"Converted PNG is invalid: {png_path}")
+
+    img_path.unlink()
+    return str(png_path)
+
+
+def convert_webp_to_jpg(img_path: str | Path) -> str:
+    """
+    将 webp 格式图片转换为 jpg 格式，验证转换结果有效后删除原图片。
+
+    :param img_path: webp 图片的路径。
+    :return: 转换后的 jpg 图片路径。
+    :raises ValueError: 如果输入不是 webp 格式。
+    :raises ValueError: 如果转换后的 jpg 图片验证失败。
+    """
+    img_path = Path(img_path)
+    if img_path.suffix.lower() != ".webp":
+        raise ValueError(f"Expected .webp file, got {img_path.suffix}")
+
+    jpg_path = img_path.with_suffix(".jpg")
+    img = Image.open(img_path)
+    save_img = img.convert("RGB") if img.mode in {"RGBA", "LA", "P"} else img
+    save_img.save(jpg_path, format="JPEG")
+    img.close()
+
+    if not is_image_valid(jpg_path):
+        jpg_path.unlink(missing_ok=True)
+        raise ValueError(f"Converted JPG is invalid: {jpg_path}")
+
+    img_path.unlink()
+    return str(jpg_path)
 
 
 def is_image_bytes_valid(byte_data: bytes) -> bool:
