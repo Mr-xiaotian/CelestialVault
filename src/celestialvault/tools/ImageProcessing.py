@@ -613,6 +613,33 @@ def convert_webp_to_jpg(img_path: str | Path) -> str:
     return str(jpg_path)
 
 
+def convert_png_to_jpg(img_path: str | Path) -> str:
+    """
+    将 png 格式图片转换为 jpg 格式，验证转换结果有效后删除原图片。
+
+    :param img_path: png 图片的路径。
+    :return: 转换后的 jpg 图片路径。
+    :raises ValueError: 如果输入不是 png 格式。
+    :raises ValueError: 如果转换后的 jpg 图片验证失败。
+    """
+    img_path = Path(img_path)
+    if img_path.suffix.lower() != ".png":
+        raise ValueError(f"Expected .png file, got {img_path.suffix}")
+
+    jpg_path = img_path.with_suffix(".jpg")
+    img = Image.open(img_path)
+    save_img = img.convert("RGB") if img.mode in {"RGBA", "LA", "P"} else img
+    save_img.save(jpg_path, format="JPEG")
+    img.close()
+
+    if not is_image_valid(jpg_path):
+        jpg_path.unlink(missing_ok=True)
+        raise ValueError(f"Converted JPG is invalid: {jpg_path}")
+
+    img_path.unlink()
+    return str(jpg_path)
+
+
 def is_image_bytes_valid(byte_data: bytes) -> bool:
     """
     检测二进制图片数据是否有效
