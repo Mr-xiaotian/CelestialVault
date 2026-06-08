@@ -14,33 +14,21 @@ from .inst_error import FFmpegError
 from .inst_fetch import Fetcher
 
 
-class FetchStage(TaskStage):
-    """抓取阶段，从 URL 获取内容并将结果与文件名、后缀组合传递给下一阶段。"""
-
-    def get_args(self, task: object):
+def meta_get_content(fetcher: Fetcher):
+    def get_content(
+        url: str, file_name: str, file_suffix: str
+    ) -> tuple[bytes, str, str]:
         """
-        从任务元组中提取 URL 作为抓取参数。
+        从抓取结果中提取内容。
 
-        :param task: (URL, 文件名, 文件后缀) 元组。
-        :return: 仅包含 URL 的元组。
-        """
-        return (task[0],)
-
-    def process_result(self, task, result):
-        """
-        将抓取结果与任务中的文件名和后缀组合为下一阶段的输入。
-
-        :param task: 原始任务元组 (URL, 文件名, 文件后缀)。
         :param result: 抓取阶段的返回结果（响应内容）。
-        :return: (响应内容, 文件名, 文件后缀) 元组。
+        :return: 提取后的内容字符串。
         """
-        return (result, task[1], task[2])
+        content = fetcher.getContent(url)
 
+        return content, file_name, file_suffix
 
-class SaveStage(TaskStage):
-    """保存阶段，将上一阶段传入的内容保存到文件。"""
-
-    pass
+    return get_content
 
 
 class Saver(object):
@@ -392,7 +380,7 @@ class Saver(object):
 
         fetcher = Fetcher()
         text = fetcher.getText(url)
-        dataframe = pd.read_csv(io.StringIO(text), **(read_kwargs or {}))
+        dataframe = pd.read_csv(io.StringIO(text), **(read_kwargs or {}))  # type: ignore[reportCallIssue]
         return self._dataframe_core(dataframe, file_name, file_suffix)
 
     def download_pickle(self, url, file_name, file_suffix=None):
@@ -450,12 +438,12 @@ class Saver(object):
         :return: 一个字典，包含每个任务的最终结果
         """
         fetcher = Fetcher()  # 创建用于获取 URL 内容的 Fetcher 实例
-        fetch_stage = FetchStage(
+        fetch_stage = TaskStage(
             "urlsFetchProcess",
-            fetcher.getContent,
+            meta_get_content(fetcher),
             execution_mode="thread",
         )
-        save_stage = SaveStage(
+        save_stage = TaskStage(
             "urlsSaveProcess",
             self.save_content,
             execution_mode="serial",
