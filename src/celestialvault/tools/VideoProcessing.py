@@ -7,12 +7,6 @@ import ffmpeg
 from celestialflow import TaskExecutor, TaskProgress
 
 
-class GetCodecExecutor(TaskExecutor):
-    """视频编码格式扫描执行器，批量获取视频编码并按编码类型分组。"""
-
-    pass
-
-
 def compress_video(old_video_path: Path | str, new_video_path: Path | str):
     """
     使用ffmpeg压缩视频
@@ -296,7 +290,7 @@ def get_videos_codec(
     if not dir_path.is_dir():
         raise ValueError(f"{dir_path} 不是有效的文件夹路径")
 
-    get_codec_executor = GetCodecExecutor(
+    get_codec_executor = TaskExecutor(
         "Getting video codec",
         get_video_codec,
         execution_mode="thread",

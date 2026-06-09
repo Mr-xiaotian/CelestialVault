@@ -19,111 +19,6 @@ from ..instances.inst_units import HumanBytes, HumanTimestamp
 from .TextTools import format_table
 
 
-class HandleFileExecutor(TaskExecutor):
-    """文件处理执行器，根据后缀规则对目录中的文件进行批量处理。"""
-
-    def __init__(
-        self,
-        name: str,
-        func: Callable,
-        dir_path: Path,
-        new_dir_path: Path,
-        rules: dict[str, tuple[Callable, Callable]],
-        execution_mode: str,
-    ):
-        """
-        初始化文件处理执行器。
-
-        :param name: 任务名称。
-        :param func: 处理文件的函数。
-        :param dir_path: 源目录路径。
-        :param new_dir_path: 目标目录路径。
-        :param rules: 文件后缀与处理规则的映射字典。
-        :param execution_mode: 执行模式，'serial'、'thread' 或 'process'。
-        """
-        super().__init__(
-            name=name,
-            func=func,
-            execution_mode=execution_mode,
-            max_workers=8,
-            max_info=100,
-        )
-        self.add_observer(TaskProgress())
-        self.dir_path = dir_path
-        self.new_dir_path = new_dir_path
-        self.rules = rules
-
-    def get_args(self, task: Path):
-        """
-        根据文件后缀匹配处理规则，返回传递给处理函数的参数元组。
-
-        :param task: 待处理文件的绝对路径。
-        :return: (源路径, 目标路径, 处理函数, 额外参数) 的元组。
-        """
-        rel_path = task.relative_to(self.dir_path)
-        new_file_path = self.new_dir_path / rel_path
-
-        file_suffix = task.suffix.lower()
-        action_func, rename_func, args_extra = self.rules.get(
-            file_suffix, (shutil.copy2, lambda x: x, {})
-        )
-
-        final_path = rename_func(new_file_path)
-        return (task, final_path, action_func, args_extra)
-
-
-class HandleSubFolderExecutor(HandleFileExecutor):
-    """子文件夹处理执行器，继承自 HandleFileExecutor，以子文件夹为单位进行批量处理。"""
-
-    def get_args(self, task: Path):
-        """
-        根据子文件夹匹配 'dir' 规则，返回传递给处理函数的参数元组。
-
-        :param task: 待处理子文件夹的绝对路径。
-        :return: (源路径, 目标路径, 处理函数, 额外参数) 的元组。
-        """
-        rel_path = task.relative_to(self.dir_path)
-        new_sub_dir_path = self.new_dir_path / rel_path
-
-        action_func, rename_func, args_extra = self.rules.get(
-            "dir", (shutil.copy, lambda x: x, {})
-        )
-
-        final_path = rename_func(new_sub_dir_path)
-        return (task, final_path, action_func, args_extra)
-
-
-class ScanSizeExecutor(TaskExecutor):
-    """文件大小扫描执行器，按大小分组并筛选出大小相同的文件。"""
-
-    pass
-
-
-class ScanHashExecutor(TaskExecutor):
-    """文件哈希扫描执行器，计算文件哈希值并筛选出哈希相同的文件。"""
-
-    def get_args(self, task):
-        """
-        从 (path, size) 元组中提取文件路径作为哈希计算的参数。
-
-        :param task: (文件路径, 文件大小) 元组。
-        :return: 仅包含文件路径的元组。
-        """
-        return (task[0],)
-
-
-class DeleteReturnSizeExecutor(TaskExecutor):
-    """删除文件执行器，删除文件后累计并返回已删除文件的总大小。"""
-
-    pass
-
-
-class FindPureExecutor(TaskExecutor):
-    """查找纯粹文件夹执行器，返回所有纯粹文件夹的路径。"""
-
-    pass
-
-
 def create_dir(path: str | Path) -> Path:
     """
     (前身为我写的第一个可复用函数)
@@ -196,14 +91,25 @@ def handle_dir_files(
     dir_path = Path(dir_path)
     new_dir_path = dir_path.parent / (dir_path.name + dir_name_suffix)
 
-    handlefile_executor = HandleFileExecutor(
+    def handle_item_wrapper(task: Path) -> Any:
+        rel_path = task.relative_to(dir_path)
+        new_file_path = new_dir_path / rel_path
+
+        file_suffix = task.suffix.lower()
+        action_func, rename_func, args_extra = rules.get(
+            file_suffix, (shutil.copy2, lambda x: x, {})
+        )
+
+        final_path = rename_func(new_file_path)
+
+        return handle_item(task, final_path, action_func, args_extra)
+
+    handlefile_executor = TaskExecutor(
         name=name,
-        func=handle_item,
-        dir_path=dir_path,
-        new_dir_path=new_dir_path,
-        rules=rules,
+        func=handle_item_wrapper,
         execution_mode=execution_mode,
     )
+    handlefile_executor.add_observer(TaskProgress())
 
     file_path_iter = (
         file_path for file_path in dir_path.glob("**/*") if file_path.is_file()
@@ -243,12 +149,20 @@ def handle_subdirs(
     dir_path = Path(dir_path)
     new_dir_path = dir_path.parent / (dir_path.name + dir_name_suffix)
 
-    handlefile_executor = HandleSubFolderExecutor(
+    def handle_item_wrapper(task: Path) -> Any:
+        rel_path = task.relative_to(dir_path)
+        new_sub_dir_path = new_dir_path / rel_path
+
+        action_func, rename_func, args_extra = rules.get(
+            "dir", (shutil.copy, lambda x: x, {})
+        )
+
+        final_path = rename_func(new_sub_dir_path)
+        return handle_item(task, final_path, action_func, args_extra)
+
+    handlefile_executor = TaskExecutor(
         name=name,
-        func=handle_item,
-        dir_path=dir_path,
-        new_dir_path=new_dir_path,
-        rules=rules,
+        func=handle_item_wrapper,
         execution_mode=execution_mode,
     )
 
@@ -639,16 +553,20 @@ def detect_identical_files(
     :param dir_list: 文件夹路径列表。
     :return: 相同文件的字典，键为文件大小和哈希值，值为文件路径列表。
     """
-    scan_size_executor = ScanSizeExecutor(
+
+    def get_file_hash_wrapper(task) -> tuple[str, int]:
+        return get_file_hash(task[0])
+
+    scan_size_executor = TaskExecutor(
         "Scanning files size",
         get_file_size,
         execution_mode,
         log_level="INFO",
     )
     scan_size_executor.add_observer(TaskProgress())
-    scan_hash_executor = ScanHashExecutor(
+    scan_hash_executor = TaskExecutor(
         "Calculating files hash",
-        get_file_hash,
+        get_file_hash_wrapper,
         execution_mode,
         log_level="INFO",
     )
@@ -700,7 +618,7 @@ def detect_identical_dirs(
     :param dir_list: 文件夹路径列表。
     :return: 相同文件夹的字典，键为文件夹大小和哈希值，值为文件夹路径列表。
     """
-    scan_size_executor = ScanSizeExecutor(
+    scan_size_executor = TaskExecutor(
         "Scanning dirs size",
         get_dir_size,
         execution_mode,
@@ -818,7 +736,7 @@ def delete_identical(identical_dict: dict[tuple[str, HumanBytes], list[Path]]):
     for (hash_value, item_size), item_list in identical_dict.items():
         delete_list.extend([(item_path, item_size) for item_path in item_list])
 
-    delete_return_size_executor = DeleteReturnSizeExecutor(
+    delete_return_size_executor = TaskExecutor(
         "Deleting duplicates",
         delete_and_return_size,
         unpack_task_args=True,
@@ -1112,7 +1030,7 @@ def find_pure_dirs(root: str | Path, only_nonempty: bool = False) -> list[Path]:
     root = Path(root)
     subdirs = [(str(dir), only_nonempty) for dir in root.rglob("*") if dir.is_dir()]
 
-    find_pure_dir_executor = FindPureExecutor(
+    find_pure_dir_executor = TaskExecutor(
         "Finding pure directories",
         is_pure_dir,
         "thread",

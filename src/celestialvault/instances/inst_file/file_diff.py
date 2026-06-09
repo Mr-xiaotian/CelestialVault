@@ -15,63 +15,6 @@ from .file_node import BaseNode, DirNode, ExcludedDirsNode, ExcludedFilesNode
 from .file_tree import FileTree
 
 
-class DeleteExecutor(TaskExecutor):
-    """删除执行器，根据相对路径批量删除指定目录下的文件或文件夹。"""
-
-    def __init__(self, func, parent_dir: Path):
-        """
-        初始化删除执行器。
-
-        :param func: 执行删除操作的函数。
-        :param parent_dir: 被删除文件所在的父目录路径。
-        """
-        super().__init__("Deleting", func)
-        self.add_observer(TaskProgress())
-        self.parent_dir = parent_dir
-
-    def get_args(self, rel_path: Path):
-        """
-        根据相对路径计算要删除的目标绝对路径。
-
-        :param rel_path: 文件的相对路径。
-        :return: 包含目标绝对路径的元组。
-        """
-        target = self.parent_dir / rel_path
-        return (target,)
-
-
-class CopyExecutor(TaskExecutor):
-    """复制执行器，根据相对路径将文件从主目录批量复制到次目录。"""
-
-    def __init__(self, func, main_dir: Path, minor_dir: Path, copy_mode: str):
-        """
-        初始化复制执行器。
-
-        :param func: 执行复制操作的函数。
-        :param main_dir: 主目录（源）路径。
-        :param minor_dir: 次目录（目标）路径。
-        :param copy_mode: 同步模式，如 '->'、'<-'。
-        """
-        super().__init__(
-            f"Copying({copy_mode})", func
-        )
-        self.add_observer(TaskProgress())
-        self.main_dir = main_dir
-        self.minor_dir = minor_dir
-
-    def get_args(self, rel_path: Path):
-        """
-        根据相对路径计算源文件和目标文件的绝对路径，并确保目标目录存在。
-
-        :param rel_path: 文件的相对路径。
-        :return: (源文件路径, 目标文件路径) 的元组。
-        """
-        source = self.main_dir / rel_path
-        target = self.minor_dir / rel_path
-        target.parent.mkdir(parents=True, exist_ok=True)
-        return (source, target)
-
-
 @dataclass
 class FileDiff:
     """两个目录的差异比较结果，包含仅存在于单侧的文件和内容不同的文件列表。"""
@@ -173,6 +116,16 @@ class FileDiff:
                 else (self.right_path, self.left_path)
             )
 
+            def delete_file_or_dir_wrapper(task) -> tuple[str, int]:
+                target = minor_dir / rel_path
+                return delete_file_or_dir(target)
+
+            def copy_file_or_dir_wrapper(task) -> tuple[str, int]:
+                source = main_dir / rel_path
+                target = minor_dir / rel_path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                return copy_file_or_dir(source, target)
+
             # 差异分配
             main_dir_diff, minor_dir_diff = (
                 (self.only_in_left, self.only_in_right)
@@ -181,10 +134,11 @@ class FileDiff:
             )
             main_dir_diff = main_dir_diff + self.different_files
 
-            delete_executor = DeleteExecutor(delete_file_or_dir, minor_dir)
-            copy_executor = CopyExecutor(
-                copy_file_or_dir, main_dir, minor_dir, copy_mode=mode
-            )
+            delete_executor = TaskExecutor("Deleting", delete_file_or_dir_wrapper)
+            copy_executor = TaskExecutor(f"Copying({mode})", copy_file_or_dir_wrapper)
+
+            delete_executor.add_observer(TaskProgress())
+            copy_executor.add_observer(TaskProgress())
 
             delete_executor.start(minor_dir_diff)
             copy_executor.start(main_dir_diff)
@@ -256,8 +210,16 @@ def compare_trees(
     )
 
     def _compare(n1: DirNode, n2: DirNode) -> DirNode:
-        n1_map = {c.name: c for c in n1.children if not isinstance(c, (ExcludedFilesNode, ExcludedDirsNode))}
-        n2_map = {c.name: c for c in n2.children if not isinstance(c, (ExcludedFilesNode, ExcludedDirsNode))}
+        n1_map = {
+            c.name: c
+            for c in n1.children
+            if not isinstance(c, (ExcludedFilesNode, ExcludedDirsNode))
+        }
+        n2_map = {
+            c.name: c
+            for c in n2.children
+            if not isinstance(c, (ExcludedFilesNode, ExcludedDirsNode))
+        }
         common = n1_map.keys() & n2_map.keys()
 
         diff_children = []

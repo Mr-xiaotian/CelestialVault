@@ -1,34 +1,15 @@
-import numpy as np
-import matplotlib.pyplot as plt
 from itertools import product
+
+import matplotlib.pyplot as plt
+import numpy as np
+from celestialflow import TaskExecutor, TaskProgress
 from PIL import Image
 
-from celestialflow import TaskExecutor, TaskProgress
-from celestialvault.instances.inst_imgcodecs import BaseCodec, CODEC_REGISTRY
+from celestialvault.instances.inst_imgcodecs import CODEC_REGISTRY, BaseCodec
 from celestialvault.tools.ImageProcessing import (
-    simulate_rectangle_damage,
     simulate_random_damage,
+    simulate_rectangle_damage,
 )
-
-
-class RectangleDamageExecutor(TaskExecutor):
-    codec: BaseCodec
-    img: Image.Image
-    text: str
-
-    def get_args(self, task):
-        w, h = task
-        return self.codec, self.img, self.text, w, h
-
-
-class RandomDamageExecutor(TaskExecutor):
-    codec: BaseCodec
-    img: Image.Image
-    text: str
-
-    def get_args(self, task):
-        damage_ratio = task
-        return self.codec, self.img, self.text, damage_ratio, 100
 
 
 def success_rate_rectangle_damage_block(
@@ -94,26 +75,27 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
     # 结果矩阵
     result = np.zeros((height, width))
 
-    rectangle_damage_executor = RectangleDamageExecutor(
+    def success_rate_rectangle_damage_block_wrapper(task) -> int:
+        w, h = task
+        return success_rate_rectangle_damage_block(codec, img, text, w, h)
+
+    def success_rate_random_damage_wrapper(task) -> float:
+        damage_ratio = task
+        return success_rate_random_damage(codec, img, text, damage_ratio, 100)
+
+    rectangle_damage_executor = TaskExecutor(
         "Testing rectangle damage",
-        success_rate_rectangle_damage_block,
+        success_rate_rectangle_damage_block_wrapper,
         "serial",
     )
-    rectangle_damage_executor.add_observer(TaskProgress())
-    rectangle_damage_executor.codec = codec
-    rectangle_damage_executor.img = img
-    rectangle_damage_executor.text = text
-
-    random_damage_executor = RandomDamageExecutor(
+    random_damage_executor = TaskExecutor(
         "Testing random damage",
-        success_rate_random_damage,
+        success_rate_random_damage_wrapper,
         "thread",
         5,
     )
     random_damage_executor.add_observer(TaskProgress())
-    random_damage_executor.codec = codec
-    random_damage_executor.img = img
-    random_damage_executor.text = text
+    rectangle_damage_executor.add_observer(TaskProgress())
 
     rectangle_damage_executor.start(product(range(1, width + 1), range(1, height + 1)))
     rectangle_damage_result_dict = dict()
