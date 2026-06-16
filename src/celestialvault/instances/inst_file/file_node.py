@@ -12,6 +12,13 @@ from .file_util import to_string
 
 
 class BaseNode:
+    name: str
+    node_path: Path
+    size: HumanBytes
+    mtime: HumanTimestamp
+    icon: str
+    level: int
+
     def __init__(
         self,
         name: str,
@@ -40,14 +47,28 @@ class BaseNode:
 
         self._hash: str | None = None
 
+    @property
+    def hash(self) -> str:
+        """返回节点哈希值。子类应覆盖此属性。"""
+        return self._hash or ""
+
+    def is_dir(self) -> bool:
+        """返回节点是否为目录。子类应覆盖此方法。"""
+        return False
+
+    @property
+    def children(self) -> list["BaseNode"]:
+        """返回子节点列表。叶子节点返回空列表。"""
+        return []
+
     def print(
         self,
-        level: int = None,
-        prefix: str = None,
-        name: str = None,
-        suffix: str = None,
-        max_name_len: int = None,
-    ):
+        level: int | None = None,
+        prefix: str | None = None,
+        name: str | None = None,
+        suffix: str | None = None,
+        max_name_len: int | None = None,
+    ) -> None:
         """
         打印节点信息。
 
@@ -167,7 +188,7 @@ class DirNode(BaseNode):
         def _hash_bytes(data: bytes) -> str:
             return hashlib.new(algo, data).hexdigest()
 
-        child_hashes = []
+        child_hashes: list[bytes] = []
         for child in sorted(self.children, key=lambda c: (not c.is_dir(), c.name)):
             h = child.hash
             if not h:
@@ -176,10 +197,7 @@ class DirNode(BaseNode):
             entry = f"{tag}:{child.name}:{h}".encode()
             child_hashes.append(entry)
 
-        if not child_hashes:
-            combined = b"[EMPTY]"
-        else:
-            combined = b"".join(child_hashes)
+        combined = b"[EMPTY]" if not child_hashes else b"".join(child_hashes)
 
         return _hash_bytes(combined)
 

@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import Any
 
 from wcwidth import wcswidth
 
@@ -26,7 +27,12 @@ class FileTree:
         self.path = path
 
     @classmethod
-    def build_from_path(cls, root_path: Path, exclude_names=None, exclude_exts=None):
+    def build_from_path(
+        cls,
+        root_path: Path | str,
+        exclude_names: set[str] | None = None,
+        exclude_exts: set[str] | None = None,
+    ) -> "FileTree":
         """
         从路径构建文件树。
 
@@ -60,13 +66,13 @@ class FileTree:
                 )
 
             entries = list(node_path.iterdir())
-            children = []
+            children: list[BaseNode] = []
 
             total_size = HumanBytes(0)
             dir_mtime = HumanTimestamp(0)
 
-            excluded_dirs = []
-            excluded_files = []
+            excluded_dirs: list[Path] = []
+            excluded_files: list[Path] = []
 
             for child in entries:
                 if child.is_dir() and child.name in exclude_names:
@@ -91,7 +97,9 @@ class FileTree:
                 )
 
             if excluded_files:
-                exc_size = sum((get_file_size(f) for f in excluded_files), HumanBytes(0))
+                exc_size = sum(
+                    (get_file_size(f) for f in excluded_files), HumanBytes(0)
+                )
                 exc_mtime = max(get_file_mtime(f) for f in excluded_files)
                 total_size += exc_size
                 dir_mtime = max(dir_mtime, exc_mtime)
@@ -116,9 +124,9 @@ class FileTree:
 
     _CACHE_DIR = ".file_tree"
 
-    def _node_to_dict(self, node: BaseNode) -> dict:
+    def _node_to_dict(self, node: BaseNode) -> dict[str, Any]:
         """将节点递归转换为可 JSON 序列化的字典。"""
-        d = {
+        d: dict[str, Any] = {
             "name": node.name,
             "path": node.node_path.as_posix(),
             "size": int(node.size),
@@ -130,11 +138,11 @@ class FileTree:
         if node.is_dir():
             d["children"] = [self._node_to_dict(c) for c in node.children]
         else:
-            d["suffix"] = node.suffix
+            d["suffix"] = getattr(node, "suffix", "")
         return d
 
     @staticmethod
-    def _dict_to_node(d: dict) -> BaseNode:
+    def _dict_to_node(d: dict[str, Any]) -> BaseNode:
         """将字典递归还原为节点。"""
         if d["is_dir"]:
             children = [FileTree._dict_to_node(c) for c in d["children"]]
@@ -169,7 +177,7 @@ class FileTree:
 
         :return: 写入的 JSON 文件路径。
         """
-        data = {
+        data: dict[str, Any] = {
             "root_path": self.path.as_posix(),
             "root_mtime": self.root.mtime,
             "tree": self._node_to_dict(self.root),
@@ -195,7 +203,7 @@ class FileTree:
         if not cache_file.exists():
             raise FileNotFoundError(f"Cache file not found: {cache_file}")
 
-        data = json.loads(cache_file.read_text(encoding="utf-8"))
+        data: dict[str, Any] = json.loads(cache_file.read_text(encoding="utf-8"))
         root_node = cls._dict_to_node(data["tree"])
         return cls(root_node, root_path)
 
@@ -211,7 +219,7 @@ class FileTree:
         cache_file = self._cache_path()
 
         if cache_file.exists():
-            data = json.loads(cache_file.read_text(encoding="utf-8"))
+            data: dict[str, Any] = json.loads(cache_file.read_text(encoding="utf-8"))
             saved_mtime = data.get("root_mtime", 0)
         else:
             saved_mtime = 0
@@ -240,24 +248,34 @@ class FileTree:
             return isinstance(node, (ExcludedFilesNode, ExcludedDirsNode))
 
         def _get_display_name(node: BaseNode, depth: int) -> str:
-            if node.is_dir() and hasattr(node, "children") and node.children and depth >= max_depth:
+            if (
+                node.is_dir()
+                and hasattr(node, "children")
+                and node.children
+                and depth >= max_depth
+            ):
                 return node.name + "[已折叠]"
             return node.name
 
-        def _print(node: BaseNode, depth: int, max_name_len: int = 0):
+        def _print(node: BaseNode, depth: int, max_name_len: int = 0) -> None:
             display_name = _get_display_name(node, depth)
             node.print(name=display_name, max_name_len=max_name_len)
 
             if _is_excluded(node):
                 return
-            if node.is_dir() and hasattr(node, "children") and node.children and depth >= max_depth:
+            if (
+                node.is_dir()
+                and hasattr(node, "children")
+                and node.children
+                and depth >= max_depth
+            ):
                 return
             if not node.is_dir() or not hasattr(node, "children") or not node.children:
                 return
 
-            dirs = []
-            files = []
-            child_names = []
+            dirs: list[BaseNode] = []
+            files: list[BaseNode] = []
+            child_names: list[str] = []
 
             for child in node.children:
                 if not show_files and not child.is_dir():

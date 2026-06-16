@@ -719,15 +719,17 @@ def get_lcs(str1: str, str2: str) -> list[str]:
             dp[i - 1][j] == dp[i][j - 1] and str1[i - 1] != str1[0]
         ):  # 如果上方格子值较大
             common_parts, current_part = update_common(common_parts, current_part)
-            if i == len1 or j == len2 or i == 1:
-                if not (common_parts and common_parts[-1] == ""):
-                    common_parts.append("")
+            if (i == len1 or j == len2 or i == 1) and not (
+                common_parts and common_parts[-1] == ""
+            ):
+                common_parts.append("")
             i -= 1  # 移动到上方格子
         else:  # 左方格子值较大
             common_parts, current_part = update_common(common_parts, current_part)
-            if i == len1 or j == len2 or j == 1:
-                if not (common_parts and common_parts[-1] == ""):
-                    common_parts.append("")
+            if (i == len1 or j == len2 or j == 1) and not (
+                common_parts and common_parts[-1] == ""
+            ):
+                common_parts.append("")
             j -= 1  # 移动到左方格子
 
     # 反转整个 common_parts 列表，因为回溯是从字符串的末尾开始
@@ -736,7 +738,9 @@ def get_lcs(str1: str, str2: str) -> list[str]:
     return common_parts
 
 
-def calculate_similarity(str1: str, str2: str, lcs_parts: list = None) -> float:
+def calculate_similarity(
+    str1: str, str2: str, lcs_parts: list[str] | None = None
+) -> float:
     """
     计算两个字符串的相似度。
 
@@ -745,7 +749,7 @@ def calculate_similarity(str1: str, str2: str, lcs_parts: list = None) -> float:
     :param lcs_parts: 最长公共子序列的字符部分列表
     :return: 相似度，范围在 0 到 1 之间
     """
-    lcs_parts = get_lcs(str1, str2) if not lcs_parts else lcs_parts
+    lcs_parts = lcs_parts if lcs_parts else get_lcs(str1, str2)
     lcs_length = len("".join(lcs_parts))
 
     max_length = max(len(str1), len(str2))
@@ -778,9 +782,9 @@ def find_nth_occurrence(target_str: str, similar_str: str, occurrence: int) -> t
 
 
 def format_table(
-    data: list,
-    column_names: list = None,
-    row_names: list = None,
+    data: list[list[object]],
+    column_names: list[str] | None = None,
+    row_names: list[str] | None = None,
     index_header: str = "#",
     fill_value: str = "N/A",
     align: str = "left",
@@ -833,26 +837,26 @@ def format_table(
     if row_names is None:
         row_names = range(len(data))
     elif len(row_names) < len(data):
-        row_names.extend([i for i in range(len(row_names), len(data))])
+        row_names.extend(range(len(row_names), len(data)))
 
     # 添加行号列
-    column_names = [index_header] + column_names
+    column_names = [index_header, *column_names]
     num_columns = len(column_names)
 
     # 处理行号
     formatted_data = []
     for i, row in enumerate(data):
         row_label = row_names[i] if row_names else i
-        formatted_data.append([row_label] + list(row))
+        formatted_data.append([row_label, *list(row)])
 
     # 统一填充数据行，确保所有行长度一致
     formatted_data = zip_longest(*formatted_data, fillvalue=fill_value)
-    formatted_data = list(zip(*formatted_data))  # 转置回来
+    formatted_data = list(zip(*formatted_data, strict=False))  # 转置回来
 
     # 计算每列的最大宽度
     col_widths = [
         max(wcswidth(str(item)) for item in col)
-        for col in zip(column_names, *formatted_data)
+        for col in zip(column_names, *formatted_data, strict=False)
     ]
 
     # 选择对齐方式

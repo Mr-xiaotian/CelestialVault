@@ -1,14 +1,15 @@
 import re
 import subprocess
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import ffmpeg
-
 from celestialflow import TaskExecutor, TaskProgress
 
 
-def compress_video(old_video_path: Path | str, new_video_path: Path | str):
+def compress_video(old_video_path: Path | str, new_video_path: Path | str) -> None:
     """
     使用ffmpeg压缩视频
 
@@ -40,9 +41,9 @@ def join_and_label_videos(
     video_path2: Path | str,
     output_path: str,
     duration: int = 10,
-    label1: str = None,
-    label2: str = None,
-):
+    label1: str | None = None,
+    label2: str | None = None,
+) -> None:
     """
     将两个视频拼接，并在左上角添加文本标签
 
@@ -53,7 +54,7 @@ def join_and_label_videos(
     :param label1: 第一个视频的标签（默认文件名）
     :param label2: 第二个视频的标签（默认文件名）
     """
-    from moviepy.editor import CompositeVideoClip, TextClip, VideoFileClip, clips_array
+    from moviepy.editor import CompositeVideoClip, TextClip, VideoFileClip, clips_array  # type: ignore[import-untyped,reportUnknownVariableType]  # fmt: skip  # noqa: I001
 
     # 检查输入文件
     video_path1 = Path(video_path1)
@@ -68,64 +69,68 @@ def join_and_label_videos(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 加载视频
-    clip1 = VideoFileClip(str(video_path1))
-    clip2 = VideoFileClip(str(video_path2))
+    clip1: Any = VideoFileClip(str(video_path1))  # type: ignore[reportUnknownVariableType]
+    clip2: Any = VideoFileClip(str(video_path2))  # type: ignore[reportUnknownVariableType]
 
     # 确定最短视频长度
-    min_duration = min(clip1.duration, clip2.duration, duration)
-    clip1 = clip1.subclip(0, min_duration)
-    clip2 = clip2.subclip(0, min_duration)
+    min_duration: float = min(clip1.duration, clip2.duration, duration)  # type: ignore[reportUnknownMemberType,reportUnknownArgumentType]
+    clip1 = clip1.subclip(0, min_duration)  # type: ignore[reportUnknownMemberType,reportUnknownVariableType]
+    clip2 = clip2.subclip(0, min_duration)  # type: ignore[reportUnknownMemberType,reportUnknownVariableType]
 
     # 调整分辨率
-    target_height = min(clip1.size[1], clip2.size[1])
-    clip1 = clip1.resize(
-        height=target_height, width=int(clip1.size[0] * (target_height / clip1.size[1]))
+    target_height: int = min(clip1.size[1], clip2.size[1])  # type: ignore[reportUnknownMemberType,reportUnknownArgumentType]
+    clip1 = clip1.resize(  # type: ignore[reportUnknownMemberType,reportUnknownVariableType]
+        height=target_height,
+        width=int(clip1.size[0] * (target_height / clip1.size[1])),  # type: ignore[reportUnknownMemberType]
     )
-    clip2 = clip2.resize(
-        height=target_height, width=int(clip2.size[0] * (target_height / clip2.size[1]))
+    clip2 = clip2.resize(  # type: ignore[reportUnknownMemberType,reportUnknownVariableType]
+        height=target_height,
+        width=int(clip2.size[0] * (target_height / clip2.size[1])),  # type: ignore[reportUnknownMemberType]
     )
 
     # 获取分辨率和帧率
-    width1, height1 = clip1.size
-    fps = int(clip1.fps)
+    width1: int
+    height1: int
+    width1, height1 = clip1.size  # type: ignore[reportUnknownMemberType,reportUnknownVariableType]
+    fps: int = int(clip1.fps)  # type: ignore[reportUnknownMemberType]
 
     # 动态设置标签
     label1 = label1 or video_path1.stem
     label2 = label2 or video_path2.stem
-    fontsize = max(min(width1 // 20, 50), 12)  # 根据分辨率调整字体大小
+    fontsize: int = max(min(width1 // 20, 50), 12)  # type: ignore[reportUnknownArgumentType]  # 根据分辨率调整字体大小
 
     # 添加文本标签
-    txt_clip1 = TextClip(
+    txt_clip1: Any = TextClip(  # type: ignore[reportUnknownVariableType]
         label1,
         fontsize=fontsize,
         color="white",
         bg_color="black",
         size=(width1 // 2, height1 // 10),
     )
-    txt_clip1 = txt_clip1.set_position(("left", "top")).set_duration(min_duration)
-    txt_clip2 = TextClip(
+    txt_clip1 = txt_clip1.set_position(("left", "top")).set_duration(min_duration)  # type: ignore[reportUnknownMemberType,reportUnknownVariableType]
+    txt_clip2: Any = TextClip(  # type: ignore[reportUnknownVariableType]
         label2,
         fontsize=fontsize,
         color="white",
         bg_color="black",
         size=(width1 // 2, height1 // 10),
     )
-    txt_clip2 = txt_clip2.set_position(("left", "top")).set_duration(min_duration)
+    txt_clip2 = txt_clip2.set_position(("left", "top")).set_duration(min_duration)  # type: ignore[reportUnknownMemberType,reportUnknownVariableType]
 
     # 组合视频和标签
-    video_with_label1 = CompositeVideoClip([clip1, txt_clip1])
-    video_with_label2 = CompositeVideoClip([clip2, txt_clip2])
+    video_with_label1: Any = CompositeVideoClip([clip1, txt_clip1])  # type: ignore[reportUnknownVariableType]
+    video_with_label2: Any = CompositeVideoClip([clip2, txt_clip2])  # type: ignore[reportUnknownVariableType]
 
     # 拼接视频
-    final_video = clips_array([[video_with_label1, video_with_label2]])
+    final_video: Any = clips_array([[video_with_label1, video_with_label2]])  # type: ignore[reportUnknownVariableType]
 
     # 保存结果
-    final_video.write_videofile(
+    final_video.write_videofile(  # type: ignore[reportUnknownMemberType]
         output_path, fps=fps, codec="libx264", preset="medium", threads=4
     )
 
 
-def transfer_gif_to_video(gif_path, output_path):
+def transfer_gif_to_video(gif_path: str | Path, output_path: str | Path) -> None:
     """
     将GIF文件转换为MP4视频文件
 
@@ -176,11 +181,13 @@ def transfer_gif_dir(dir_path: str | Path) -> list[tuple[Path, Exception]]:
 
     from .FileOperations import handle_dir_files
 
-    rules = {".gif": (transfer_gif_to_video, rename_mp4, {})}
+    rules: dict[str, tuple[Callable[..., Any], Callable[..., Any], dict[str, Any]]] = {
+        ".gif": (transfer_gif_to_video, rename_mp4, {})
+    }
     return handle_dir_files(dir_path, rules)
 
 
-def rotate_video(video_path: str | Path, output_path, angle: int) -> Path:
+def rotate_video(video_path: str | Path, output_path: str | Path, angle: int) -> Path:
     """
     旋转视频文件。
 
@@ -193,11 +200,11 @@ def rotate_video(video_path: str | Path, output_path, angle: int) -> Path:
     video_path = Path(video_path)
 
     # 检查角度是否有效
-    valid_transpose = {90: 1, 180: "2,transpose=2", 270: 2}
+    valid_transpose: dict[int, int | str] = {90: 1, 180: "2,transpose=2", 270: 2}
     if angle not in valid_transpose and angle != 0:
         raise ValueError(f"不支持的旋转角度: {angle}，仅支持 0, 90, 180, 270")
 
-    transpose = valid_transpose.get(angle)
+    transpose: int | str | None = valid_transpose.get(angle)
     command = [
         "ffmpeg",
         "-i",
@@ -242,15 +249,18 @@ def rotate_video_dir(dir_path: str | Path, angle: int) -> list[tuple[Path, Excep
     from .FileOperations import handle_dir_files
 
     if angle in [90, 180, 270]:
-        rules = {
-            ".mp4": (
-                lambda video_path, output_path: rotate_video(
-                    video_path, output_path, angle
-                ),
-                lambda file_path: rename_mp4(file_path, angle),
-                {},
-            )
-        }
+
+        def _rotate_video_wrapper(
+            video_path: str | Path, output_path: str | Path
+        ) -> Path:
+            return rotate_video(video_path, output_path, angle)
+
+        def _rename_mp4_wrapper(file_path: Path) -> Path:
+            return rename_mp4(file_path, angle)
+
+        rules: dict[
+            str, tuple[Callable[..., Any], Callable[..., Any], dict[str, Any]]
+        ] = {".mp4": (_rotate_video_wrapper, _rename_mp4_wrapper, {})}
     else:
         raise ValueError(f"不支持的旋转角度: {angle}，仅支持 0, 90, 180, 270")
 
@@ -269,15 +279,15 @@ def get_video_codec(video_path: Path) -> str:
     :param video_path: 视频文件路径
     :return: 编码格式
     """
-    probe = ffmpeg.probe(
+    probe: Any = ffmpeg.probe(  # type: ignore[reportUnknownMemberType]
         video_path, v="error", select_streams="v:0", show_entries="stream=codec_name"
     )
-    codec_name = probe["streams"][0]["codec_name"]
+    codec_name: str = probe["streams"][0]["codec_name"]
     return codec_name
 
 
 def get_videos_codec(
-    dir_path: Path, exclude_codecs: list[str] = ["h264"]
+    dir_path: Path, exclude_codecs: list[str] | None = None
 ) -> dict[str, list[Path]]:
     """
     获取文件夹中所有视频文件的编码格式。
@@ -288,6 +298,8 @@ def get_videos_codec(
     """
     # 确保传入的是一个文件夹路径
     dir_path = Path(dir_path)
+    if exclude_codecs is None:
+        exclude_codecs = ["h264"]
     if not dir_path.is_dir():
         raise ValueError(f"{dir_path} 不是有效的文件夹路径")
 
@@ -303,7 +315,7 @@ def get_videos_codec(
     )  # 使用glob('**/*')遍历目录中的文件和子目录
     get_codec_executor.start(file_path_iter)
 
-    codec_dict = defaultdict(list)
+    codec_dict: defaultdict[str, list[Path]] = defaultdict(list)
     for path, codec in get_codec_executor.get_success_pairs():
         if codec in exclude_codecs:
             continue
@@ -312,7 +324,7 @@ def get_videos_codec(
     return codec_dict
 
 
-def get_video_info(video_path: str):
+def get_video_info(video_path: str | Path) -> dict[str, int | str | None]:
     """
     获取视频的分辨率和显示宽高比（容器宽高比）。
 
@@ -339,15 +351,15 @@ def get_video_info(video_path: str):
     )
 
     # 提取结果
-    output = result.stdout
+    output: str = result.stdout
 
     # 使用正则解析结果
-    width = re.search(r"width=(\d+)", output)
-    height = re.search(r"height=(\d+)", output)
-    dar = re.search(r"display_aspect_ratio=(\S+)", output)
+    width: re.Match[str] | None = re.search(r"width=(\d+)", output)
+    height: re.Match[str] | None = re.search(r"height=(\d+)", output)
+    dar: re.Match[str] | None = re.search(r"display_aspect_ratio=(\S+)", output)
 
     # 格式化输出
-    video_info = {
+    video_info: dict[str, int | str | None] = {
         "width": int(width.group(1)) if width else None,
         "height": int(height.group(1)) if height else None,
         "display_aspect_ratio": dar.group(1) if dar else None,
@@ -356,7 +368,7 @@ def get_video_info(video_path: str):
     return video_info
 
 
-def is_container_ratio_matching_resolution(video_path):
+def is_container_ratio_matching_resolution(video_path: str | Path) -> bool:
     """
     检查视频容器的宽高比是否与分辨率比例一致。
 
@@ -364,9 +376,9 @@ def is_container_ratio_matching_resolution(video_path):
     :return: 布尔值，表示是否一致。
     """
     video_info = get_video_info(video_path)
-    width = video_info["width"]
-    height = video_info["height"]
-    dar = video_info["display_aspect_ratio"]
+    width: int | None = video_info["width"]  # type: ignore[assignment]
+    height: int | None = video_info["height"]  # type: ignore[assignment]
+    dar: str | None = video_info["display_aspect_ratio"]  # type: ignore[assignment]
 
     if not width or not height or not dar or dar == "N/A":
         return False
@@ -382,7 +394,9 @@ def is_container_ratio_matching_resolution(video_path):
     return abs(resolution_ratio - container_ratio) < 1e-6  # 允许微小误差
 
 
-def set_container_ratio_to_resolution(video_path, output_path):
+def set_container_ratio_to_resolution(
+    video_path: str | Path, output_path: str | Path
+) -> None:
     """
     修改视频容器宽高比，使其与分辨率比例一致。
 
@@ -394,9 +408,9 @@ def set_container_ratio_to_resolution(video_path, output_path):
         raise ValueError("无法获取视频分辨率信息。")
 
     # 获取分辨率的宽高比
-    width = video_info["width"]
-    height = video_info["height"]
-    resolution_ratio = f"{width}:{height}"
+    width: int | None = video_info["width"]  # type: ignore[assignment]
+    height: int | None = video_info["height"]  # type: ignore[assignment]
+    resolution_ratio: str = f"{width}:{height}"
 
     # 使用 ffmpeg 修改 DAR
     subprocess.run(

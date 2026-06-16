@@ -81,7 +81,7 @@ TEXT_SUFFIXES = [
     ".props",
 ]
 
-FILE_ICONS = {}
+FILE_ICONS: dict[str, str] = {}
 FILE_ICONS.update(dict.fromkeys(IMG_SUFFIXES, "📷"))
 FILE_ICONS.update(dict.fromkeys(VIDEO_SUFFIXES, "🎬"))
 FILE_ICONS.update(dict.fromkeys(AUDIO_SUFFIXES, "🎧"))
