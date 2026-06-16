@@ -1,9 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
-from wcwidth import wcswidth
-
 from celestialflow import TaskExecutor, TaskProgress
+from wcwidth import wcswidth
 
 from ...instances.inst_units import HumanBytes, HumanTimestamp
 from ...tools.FileOperations import (
@@ -26,9 +25,9 @@ class FileDiff:
     only_in_right: list[Path]
     different_files: list[Path]
     compare_hash: bool
-    diff_size_left: HumanBytes = HumanBytes(0)
-    diff_size_right: HumanBytes = HumanBytes(0)
-    diff_tree: "FileTree" = None
+    diff_size_left: HumanBytes = field(default_factory=lambda: HumanBytes(0))
+    diff_size_right: HumanBytes = field(default_factory=lambda: HumanBytes(0))
+    diff_tree: "FileTree | None" = None
 
     def is_identical(self) -> bool:
         """
@@ -44,7 +43,7 @@ class FileDiff:
         以树形结构打印差异文件，并显示两侧目录的差异大小汇总表。
         """
 
-        def _print(node: BaseNode, max_name_len: int = 0):
+        def _print(node: BaseNode, max_name_len: int = 0) -> None:
             node.print(
                 level=node.level - 1,
                 prefix=(
@@ -58,9 +57,9 @@ class FileDiff:
                 max_name_len=max_name_len,
             )
             if node.is_dir():
-                dirs = []
-                files = []
-                child_names = []
+                dirs: list[BaseNode] = []
+                files: list[BaseNode] = []
+                child_names: list[str] = []
 
                 for c in node.children:
                     if c.is_dir():
@@ -81,6 +80,7 @@ class FileDiff:
             print("No different files found.")
             return
 
+        assert self.diff_tree is not None
         dirs = [c for c in self.diff_tree.root.children if c.is_dir()]
         files = [c for c in self.diff_tree.root.children if not c.is_dir()]
         for d in dirs:
@@ -117,13 +117,13 @@ class FileDiff:
                 else (self.right_path, self.left_path)
             )
 
-            def delete_file_or_dir_wrapper(task) -> tuple[str, int]:
-                target = minor_dir / rel_path
+            def delete_file_or_dir_wrapper(task: Path) -> tuple[str, int]:
+                target = minor_dir / task
                 return delete_file_or_dir(target)
 
-            def copy_file_or_dir_wrapper(task) -> tuple[str, int]:
-                source = main_dir / rel_path
-                target = minor_dir / rel_path
+            def copy_file_or_dir_wrapper(task: Path) -> tuple[str, int]:
+                source = main_dir / task
+                target = minor_dir / task
                 target.parent.mkdir(parents=True, exist_ok=True)
                 return copy_file_or_dir(source, target)
 
@@ -145,15 +145,8 @@ class FileDiff:
             copy_executor.start(main_dir_diff)
 
         elif mode == "<->":
-            copy_a_to_b_executor = CopyExecutor(
-                copy_file_or_dir, self.left_path, self.right_path, copy_mode="->"
-            )
-            copy_b_to_a_executor = CopyExecutor(
-                copy_file_or_dir, self.right_path, self.left_path, copy_mode="<-"
-            )
-
-            diff_file_in_dir1 = []
-            diff_file_in_dir2 = []
+            diff_file_in_dir1: list[Path] = []
+            diff_file_in_dir2: list[Path] = []
             for rel_path in self.different_files:
                 file1 = self.left_path / rel_path
                 file2 = self.right_path / rel_path
@@ -164,13 +157,31 @@ class FileDiff:
                 diff_file_in_dir1.append(new_file1.relative_to(self.left_path))
                 diff_file_in_dir2.append(new_file2.relative_to(self.right_path))
 
+            def copy_a_to_b_wrapper(task: Path) -> tuple[str, int]:
+                source = self.left_path / task
+                target = self.right_path / task
+                target.parent.mkdir(parents=True, exist_ok=True)
+                return copy_file_or_dir(source, target)
+
+            def copy_b_to_a_wrapper(task: Path) -> tuple[str, int]:
+                source = self.right_path / task
+                target = self.left_path / task
+                target.parent.mkdir(parents=True, exist_ok=True)
+                return copy_file_or_dir(source, target)
+
+            copy_a_to_b_executor = TaskExecutor("Copying(->)", copy_a_to_b_wrapper)
+            copy_b_to_a_executor = TaskExecutor("Copying(<-)", copy_b_to_a_wrapper)
+
+            copy_a_to_b_executor.add_observer(TaskProgress())
+            copy_b_to_a_executor.add_observer(TaskProgress())
+
             copy_a_to_b_executor.start(self.only_in_left + diff_file_in_dir1)
             copy_b_to_a_executor.start(self.only_in_right + diff_file_in_dir2)
 
         else:
             raise ValueError("无效的模式，必须为 '->', '<-' 或 '<->'")
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, object]:
         """
         将差异结果转换为可序列化的字典。
 
@@ -223,7 +234,7 @@ def compare_trees(
         }
         common = n1_map.keys() & n2_map.keys()
 
-        diff_children = []
+        diff_children: list[BaseNode] = []
         diff_size = HumanBytes(0)
         mtime = HumanTimestamp(0)
 
@@ -249,9 +260,8 @@ def compare_trees(
             if c1.is_dir() and c2.is_dir():
                 # 双方都是文件夹
                 is_equal_size = c1.size == c2.size
-                if is_equal_size:
-                    if not compare_hash or c1.hash == c2.hash:
-                        continue
+                if is_equal_size and (not compare_hash or c1.hash == c2.hash):
+                    continue
 
                 sub_dir = _compare(c1, c2)
                 diff_size += sub_dir.size
@@ -260,9 +270,8 @@ def compare_trees(
             elif not c1.is_dir() and not c2.is_dir():
                 # 双方都是文件
                 is_equal_size = c1.size == c2.size
-                if is_equal_size:
-                    if not compare_hash or c1.hash == c2.hash:
-                        continue
+                if is_equal_size and (not compare_hash or c1.hash == c2.hash):
+                    continue
 
                 diff.different_files.append(c1.node_path.relative_to(tree1.path))
                 diff.diff_size_left += c1.size
