@@ -7,7 +7,7 @@ name = "celestialvault"
 version = "1.0.1"
 description = "A Python package for managing celestial data."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Mr.Xiaotian", email = "mingxiaomingtian@gmail.com" }]
 classifiers = [
@@ -33,7 +33,7 @@ dependencies = [
   "beautifulsoup4>=4.12",
   "matplotlib>=3.9.1",
   "wcwidth>=0.2",
-  "celestialflow>=3.1.1", # TODO: 换成真实范围/来源
+  "celestialflow",
   "scikit-image>=0.24",
   "scipy>=1.13",
   "pydub>=0.25",
@@ -44,6 +44,9 @@ dependencies = [
   "ipywidgets>=8.1",
   "ipython>=8.0"
 ]
+
+[tool.uv.sources]
+celestialflow = { path = "D:/Project/CelestialFlow" }
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "loguru>=0.7"]
