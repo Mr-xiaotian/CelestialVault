@@ -756,7 +756,8 @@ def delete_identical(identical_dict: dict[tuple[str, HumanBytes], list[Path]]) -
     :return: 删除的文件列表。
     """
 
-    def delete_and_return_size(path: Path, size: HumanBytes) -> HumanBytes:
+    def delete_and_return_size(task: tuple[Path, HumanBytes]) -> HumanBytes:
+        path, size = task
         path.unlink()
         return size
 
@@ -1061,9 +1062,13 @@ def find_pure_dirs(root: str | Path, only_nonempty: bool = False) -> list[Path]:
     root = Path(root)
     subdirs = [(str(dir), only_nonempty) for dir in root.rglob("*") if dir.is_dir()]
 
+    def _is_pure_dir_wrapper(task: tuple[str, bool]) -> bool:
+        dir_str, only_nonempty = task
+        return is_pure_dir(dir_str, only_nonempty)
+
     find_pure_dir_executor = TaskExecutor(
         "Finding pure directories",
-        is_pure_dir,
+        _is_pure_dir_wrapper,
         "thread",
     )
     find_pure_dir_executor.add_observer(TaskProgress())

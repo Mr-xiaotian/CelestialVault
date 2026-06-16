@@ -14,27 +14,23 @@ from .inst_fetch import Fetcher
 
 
 def meta_get_content(fetcher: Fetcher):
-    def get_content(
-        url: str, file_name: str, file_suffix: str
-    ) -> tuple[bytes, str, str]:
+    def get_content(task: tuple[str, str, str]) -> tuple[bytes, str, str]:
         """
         从抓取结果中提取内容。
 
-        :param url: 抓取阶段的 URL 地址。
-        :param file_name: 保存的文件名。
-        :param file_suffix: 文件后缀。
+        :param task: (url, file_name, file_suffix) 元组。
         :return: (内容, 文件名, 后缀) 元组。
         """
+        url, file_name, file_suffix = task
         content: bytes = fetcher.getContent(url)  # type: ignore[reportUnknownMemberType]
         return content, file_name, file_suffix
 
     return get_content
 
 
-def _save_content_for_task_stage(
-    content: bytes, file_name: str, file_suffix: str | None = None
-) -> Path:
+def _save_content_for_task_stage(task: tuple[bytes, str, str | None]) -> Path:
     """供 TaskStage 使用的包装函数，保持返回 Path 以兼容任务链。"""
+    content, file_name, file_suffix = task
     saver = Saver()
     path, _size = saver.save_content(content, file_name, file_suffix)
     return path

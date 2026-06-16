@@ -547,9 +547,13 @@ def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
 
         tasks.append((file1, file2))  # pyright: ignore[reportUnknownMemberType]
 
+    def _compare_ssim_by_path_wrapper(task: tuple[Path, Path]) -> float:
+        path1, path2 = task
+        return compare_ssim_by_path(path1, path2)
+
     compare_executor = TaskExecutor(  # pyright: ignore[reportUnknownVariableType]
         "Comparing Images",
-        compare_ssim_by_path,
+        _compare_ssim_by_path_wrapper,
         execution_mode="thread",
         max_workers=8,
     )
