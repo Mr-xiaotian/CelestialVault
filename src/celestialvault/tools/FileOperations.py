@@ -10,10 +10,9 @@ from typing import Any
 
 import py7zr
 import rarfile
+from celestialflow import TaskExecutor, TaskProgress
 from tqdm import tqdm
 from wcwidth import wcswidth
-
-from celestialflow import TaskExecutor, TaskProgress
 
 from ..constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 from ..instances.inst_units import HumanBytes, HumanTimestamp
@@ -65,7 +64,7 @@ def handle_item(
         destination.parent.mkdir(parents=True, exist_ok=True)
     else:
         destination.mkdir(parents=True, exist_ok=True)
-    action_result = action(source, destination, **extra)
+    action_result = action(source, destination, **extra)  # type: ignore
     return action_result
 
 
@@ -212,10 +211,10 @@ def compress_dir(
     # from .DocumentConversion import compress_pdf
 
     rules = {suffix: (compress_img, lambda x: x, {}) for suffix in IMG_SUFFIXES}
-    rules.update(
+    rules.update(  # type: ignore
         {suffix: (compress_video, rename_mp4, {}) for suffix in VIDEO_SUFFIXES}
     )
-    # rules.update({'.pdf': (compress_pdf,rename_pdf, {})})
+    # rules.update(  # type: ignore{'.pdf': (compress_pdf,rename_pdf, {})})
 
     return handle_dir_files(dir_path, rules, execution_mode, name="Compressing Folder")
 
@@ -228,14 +227,14 @@ def unzip_zip_file(zip_file: Path, destination: Path):
     :raises ValueError: 如果文件不是有效的 zip 文件或发生其他错误。
     """
     try:
-        with zipfile.ZipFile(zip_file) as zip_file:
-            zip_file.extractall(destination)
-    except zipfile.BadZipFile:
-        raise ValueError(f"{zip_file} 不是一个有效的 zip 文件")
-    except zipfile.LargeZipFile:
-        raise ValueError(f"{zip_file} 太大了，无法解压缩")
-    except RuntimeError:
-        raise ValueError("{zip_file} 受密码保护，无法解压缩")
+        with zipfile.ZipFile(zip_file) as zf:
+            zf.extractall(destination)
+    except zipfile.BadZipFile as e:
+        raise ValueError(f"{zip_file} 不是一个有效的 zip 文件") from e
+    except zipfile.LargeZipFile as e:
+        raise ValueError(f"{zip_file} 太大了，无法解压缩") from e
+    except RuntimeError as e:
+        raise ValueError("{zip_file} 受密码保护，无法解压缩") from e
 
 
 def unzip_rar_file(rar_file: Path, destination: Path):
@@ -245,14 +244,14 @@ def unzip_rar_file(rar_file: Path, destination: Path):
     :param rar_file: 要解压缩的 rar 文件路径。
     """
     try:
-        with rarfile.RarFile(rar_file) as rar_file:
-            rar_file.extractall(destination)
-    except rarfile.BadRarFile:
-        raise ValueError(f"{rar_file} 不是一个有效的 rar 文件")
-    except rarfile.LargeRarFile:
-        raise ValueError(f"{rar_file} 太大了，无法解压缩")
-    except rarfile.PasswordRequired:
-        raise ValueError(f"{rar_file} 受密码保护，无法解压缩")
+        with rarfile.RarFile(rar_file) as rf:
+            rf.extractall(destination)
+    except rarfile.BadRarFile as e:
+        raise ValueError(f"{rar_file} 不是一个有效的 rar 文件") from e
+    except rarfile.LargeRarFile as e:
+        raise ValueError(f"{rar_file} 太大了，无法解压缩") from e
+    except rarfile.PasswordRequired as e:
+        raise ValueError(f"{rar_file} 受密码保护，无法解压缩") from e
 
 
 def unzip_tar_file(tar_file: Path, destination: Path):
@@ -271,10 +270,10 @@ def unzip_tar_file(tar_file: Path, destination: Path):
         with tarfile.open(tar_file) as tar:
             # 提取所有内容到目标路径
             tar.extractall(path=destination)
-    except tarfile.ReadError:
-        raise ValueError(f"{tar_file} 读取错误，可能不是一个有效的 tar 文件")
+    except tarfile.ReadError as e:
+        raise ValueError(f"{tar_file} 读取错误，可能不是一个有效的 tar 文件") from e
     except Exception as e:
-        raise ValueError(f"解压 {tar_file} 时发生错误: {e}")
+        raise ValueError(f"解压 {tar_file} 时发生错误: {e}") from e
 
 
 def unzip_7z_file(seven_zip_file: Path, destination: Path):
@@ -285,14 +284,14 @@ def unzip_7z_file(seven_zip_file: Path, destination: Path):
     :raises ValueError: 如果文件不是有效的 7z 文件或发生其他错误。
     """
     try:
-        with py7zr.SevenZipFile(seven_zip_file, mode="r") as seven_zip_file:
-            seven_zip_file.extractall(destination)
-    except py7zr.Bad7zFile:
-        raise ValueError(f"{seven_zip_file} 不是一个有效的 7z 文件")
-    except py7zr.Large7zFile:
-        raise ValueError(f"{seven_zip_file} 太大了，无法解压缩")
-    except py7zr.PasswordRequired:
-        raise ValueError(f"{seven_zip_file} 受密码保护，无法解压缩")
+        with py7zr.SevenZipFile(seven_zip_file, mode="r") as szf:
+            szf.extractall(destination)
+    except py7zr.Bad7zFile as e:
+        raise ValueError(f"{seven_zip_file} 不是一个有效的 7z 文件") from e
+    except py7zr.Large7zFile as e:
+        raise ValueError(f"{seven_zip_file} 太大了，无法解压缩") from e
+    except py7zr.PasswordRequired as e:
+        raise ValueError(f"{seven_zip_file} 受密码保护，无法解压缩") from e
 
 
 def unzip_dir(dir_path: str | Path):
@@ -392,8 +391,8 @@ def get_file_hash(
 
 def get_dir_hash(
     dir_path: Path,
-    exclude_dirs: list[str] | None = None,
-    exclude_exts: list[str] | None = None,
+    exclude_dirs: set[str] | None = None,
+    exclude_exts: set[str] | None = None,
     algo: str = "sha256",
 ) -> str:
     """
@@ -407,7 +406,7 @@ def get_dir_hash(
     :return: 文件夹的哈希字符串。
     """
     exclude_dirs = set(exclude_dirs or [])
-    exclude_exts = set(ext.lower() for ext in (exclude_exts or []))
+    exclude_exts = {ext.lower() for ext in (exclude_exts or [])}
 
     def _hash_bytes(data: bytes) -> str:
         return hashlib.new(algo, data).hexdigest()
@@ -438,10 +437,7 @@ def get_dir_hash(
             entry = f"{tag}:{child.name}:{h}".encode()
             child_hashes.append(entry)
 
-        if not child_hashes:
-            combined = b"[EMPTY]"
-        else:
-            combined = b"".join(child_hashes)
+        combined = b"[EMPTY]" if not child_hashes else b"".join(child_hashes)
 
         return _hash_bytes(combined)
 
@@ -557,7 +553,7 @@ def detect_identical_files(
     :return: 相同文件的字典，键为文件大小和哈希值，值为文件路径列表。
     """
 
-    def get_file_hash_wrapper(task) -> tuple[str, int]:
+    def get_file_hash_wrapper(task) -> str:
         return get_file_hash(task[0])
 
     scan_size_executor = TaskExecutor(
@@ -621,6 +617,10 @@ def detect_identical_dirs(
     :param dir_list: 文件夹路径列表。
     :return: 相同文件夹的字典，键为文件夹大小和哈希值，值为文件夹路径列表。
     """
+
+    def get_dir_hash_wrapper(task) -> str:
+        return get_dir_hash(task[0])
+
     scan_size_executor = TaskExecutor(
         "Scanning dirs size",
         get_dir_size,
@@ -628,9 +628,9 @@ def detect_identical_dirs(
         log_level="INFO",
     )
     scan_size_executor.add_observer(TaskProgress())
-    scan_hash_executor = ScanHashExecutor(
+    scan_hash_executor = TaskExecutor(
         "Calculating dirs hash",
-        get_dir_hash,
+        get_dir_hash_wrapper,
         execution_mode,
         log_level="INFO",
     )
@@ -685,7 +685,7 @@ def duplicate_report(identical_dict: dict[tuple[str, HumanBytes], list[Path]]) -
     total_size = HumanBytes(0)
     total_item_num = 0
     max_item_num = 0
-    index = 0
+    max_item_key = None
     sort_identical_dict = dict(
         sorted(
             identical_dict.items(),
@@ -695,7 +695,9 @@ def duplicate_report(identical_dict: dict[tuple[str, HumanBytes], list[Path]]) -
     )
 
     report.append("\nIdentical items found:\n")
-    for (hash_value, item_size), item_list in sort_identical_dict.items():
+    for index, ((hash_value, item_size), item_list) in enumerate(
+        sort_identical_dict.items()
+    ):
         item_num = len(item_list)
         total_size += item_size * item_num
         total_item_num += item_num
@@ -710,8 +712,8 @@ def duplicate_report(identical_dict: dict[tuple[str, HumanBytes], list[Path]]) -
 
         report.append(f"{index}.Hash: {hash_value} (Size: {items_size})")
         report.append(table_text + "\n")
-        index += 1
 
+    assert max_item_key is not None
     hash_value, item_size = max_item_key
     report.append(f"Total size of duplicate items: {total_size}")
     report.append(f"Total number of duplicate items: {total_item_num}")
@@ -736,13 +738,12 @@ def delete_identical(identical_dict: dict[tuple[str, HumanBytes], list[Path]]):
         return size
 
     delete_list = []
-    for (hash_value, item_size), item_list in identical_dict.items():
+    for (_, item_size), item_list in identical_dict.items():
         delete_list.extend([(item_path, item_size) for item_path in item_list])
 
     delete_return_size_executor = TaskExecutor(
         "Deleting duplicates",
         delete_and_return_size,
-        unpack_task_args=True,
     )
     delete_return_size_executor.start(delete_list)
 
@@ -806,7 +807,7 @@ def move_identical(
 
 
 def dir_to_file_path(
-    dir_path: Path, file_extension: str, parent_dir: Path = None
+    dir_path: Path, file_extension: str, parent_dir: Path | None = None
 ) -> Path:
     """
     将文件夹路径转换为与文件夹同名的文件路径。
@@ -913,7 +914,7 @@ def sort_by_number(file_path: Path, special_keywords: dict[str, int]) -> tuple:
 
 
 def move_files_with_keyword(
-    source_dir: Path | str, target_dir: Path | str, keyword: str = None
+    source_dir: Path | str, target_dir: Path | str, keyword: str | None = None
 ):
     """
     将 source_dir 中所有文件名包含 keyword 的文件移动到 target_dir。

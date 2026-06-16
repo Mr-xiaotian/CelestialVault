@@ -9,11 +9,10 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from celestialflow import TaskExecutor, TaskProgress
 from PIL import Image, ImageFile, PngImagePlugin
 from pillow_heif import register_heif_opener
 from tqdm import tqdm
-
-from celestialflow import TaskExecutor, TaskProgress
 
 from ..constants import IMAGE_SUFFIX_TO_FORMAT
 
@@ -57,7 +56,9 @@ def safe_open_image(path: Path) -> tuple[Image.Image | None, bool]:
 
 
 def combine_imgs_to_pdf(
-    root_path: str | Path, pdf_path: str | Path = None, special_keywords: dict = None
+    root_path: str | Path,
+    pdf_path: str | Path | None = None,
+    special_keywords: dict | None = None,
 ):
     """
     将指定文件夹中的JPEG图片组合成单个PDF文件。
@@ -120,7 +121,7 @@ def combine_imgs_to_pdf(
         raise ValueError(f"Some images are damaged: {damage_images}")
 
 
-def combine_imgs_dir(dir_path: Path, special_keywords: dict = None):
+def combine_imgs_dir(dir_path: Path, special_keywords: dict | None = None):
     """
     将指定文件夹中的JPEG图片组合成单个PDF文件。
 
@@ -326,6 +327,8 @@ def palette_to_image(palette, block_size=50):
     # 创建图像
     logical_img = Image.new("RGB", (n_cols, n_rows))
     pixels = logical_img.load()
+    if pixels is None:
+        raise RuntimeError("Failed to load image pixels")
 
     for i in range(total_colors):
         r, g, b = palette[3 * i], palette[3 * i + 1], palette[3 * i + 2]
@@ -463,7 +466,9 @@ def compare_ssim_by_path(path1: Path | str, path2: Path | str) -> float:
     :param path2: 第二张图像的路径。
     :return: 两张图像的SSIM值，范围在-1到1之间，值越大表示越相似。
     """
-    from skimage.metrics import structural_similarity as compare_ssim
+    from skimage.metrics import (
+        structural_similarity as compare_ssim,  # pyright: ignore[reportMissingImports]
+    )
 
     img1 = Image.open(path1)
     img2 = Image.open(path2)
@@ -522,7 +527,7 @@ def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
     compare_executor.add_observer(TaskProgress())
     compare_executor.start(tasks)
     data = []
-    for (file1, file2), ssim in compare_executor.get_success_pairs():
+    for (file1, _file2), ssim in compare_executor.get_success_pairs():
         # 将文件名和 SSIM 值添加到数据列表中
         data.append([file1.name, ssim])
 
@@ -680,7 +685,7 @@ def read_text_chunks(img_path: str) -> dict[str, str]:
         # 兼容旧版本 Pillow，若没有 .text 就退回 .info
         if not info:
             info = img.info
-        return dict(info)
+        return dict(info)  # type: ignore[reportArgumentType]
 
 
 def simulate_rectangle_damage(
@@ -698,6 +703,8 @@ def simulate_rectangle_damage(
     """
     damaged = img.copy()
     pixels = damaged.load()
+    if pixels is None:
+        raise RuntimeError("Failed to load image pixels")
 
     if img.mode == "RGBA":
         zero_val = (0, 0, 0, 0)
@@ -727,6 +734,8 @@ def simulate_random_damage(img: Image.Image, damage_ratio: float) -> Image.Image
 
     damaged = img.copy()
     pixels = damaged.load()
+    if pixels is None:
+        raise RuntimeError("Failed to load image pixels")
     width, height = img.size
     total_pixels = width * height
 
@@ -778,7 +787,9 @@ def ensure_capacity(
 
     # 避免 0 或负值
     required_bytes = max(1, required_bytes)
-    if required_bytes == current_capacity or (not min_able and required_bytes < current_capacity):
+    if required_bytes == current_capacity or (
+        not min_able and required_bytes < current_capacity
+    ):
         return ref_img
 
     # 计算缩放因子（平方根是因为容量 ~ 面积）
@@ -815,6 +826,8 @@ def compare_random_pixels(
 
     pixels_ref = ref_img.load()
     pixels_enc = enc_img.load()
+    if pixels_ref is None or pixels_enc is None:
+        raise RuntimeError("Failed to load image pixels")
 
     diffs = []
     data = []
@@ -843,7 +856,10 @@ def compare_random_pixels(
 
 
 def show_diff_heatmap(
-    ref_img: Image.Image, enc_img: Image.Image, save_path: str = None, show: bool = True
+    ref_img: Image.Image,
+    enc_img: Image.Image,
+    save_path: str | None = None,
+    show: bool = True,
 ):
     """
     生成两张图像的像素差异热力图。

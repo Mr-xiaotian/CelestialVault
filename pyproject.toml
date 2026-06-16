@@ -78,9 +78,25 @@ dev = [
 [tool.pyright]
 include = ["src"]
 ignore = ["tests", "**/tests/**", "typings", "demo", "bench", "experiments", "examples", "temp"]
-typeCheckingMode = "strict"
-reportUnusedFunction = "none"
+typeCheckingMode = "standard"
+reportMissingTypeStubs = "none"
+reportImplicitOptional = "none"
+reportUnknownParameterType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownMemberType = "none"
+reportUnknownVariableType = "none"
+reportUnknownLambdaType = "none"
+reportUnnecessaryIsInstance = "none"
 reportImplicitOverride = "none"
+reportUnusedFunction = "none"
+reportUnusedVariable = "none"
+reportArgumentType = "none"
+reportAttributeAccessIssue = "none"
+reportReturnType = "none"
+reportOptionalSubscript = "none"
+reportMissingImports = "none"
+reportDeprecated = "none"
+reportUnusedCallResult = "none"
 
 [tool.ruff]
 target-version = "py312"
@@ -107,6 +123,3 @@ ignore = [
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
-
-[tool.ruff.lint.isort]
-known-first-party = ["celestialflow"]

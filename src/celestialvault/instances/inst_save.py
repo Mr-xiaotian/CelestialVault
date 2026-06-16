@@ -1,4 +1,3 @@
-
 import io
 import json
 import pickle
@@ -6,7 +5,6 @@ import subprocess
 from pathlib import Path
 
 import pandas as pd
-
 from celestialflow import TaskChain, TaskStage
 
 from ..tools.ImageProcessing import binary_to_img, convert_img_format
@@ -447,7 +445,6 @@ class Saver:
             "urlsSaveProcess",
             self.save_content,
             execution_mode="serial",
-            unpack_task_args=True,
         )
 
         # 创建 TaskChain 来管理 Fetch 和 Save 两个阶段的任务处理
@@ -500,10 +497,10 @@ class Saver:
                 encoding="utf-8",
                 timeout=timeout,
             )
-        except subprocess.TimeoutExpired:
-            raise TimeoutError(f"Download process timed out for {m3u8_url}.")
+        except subprocess.TimeoutExpired as e:
+            raise TimeoutError(f"Download process timed out for {m3u8_url}.") from e
         except Exception as e:
-            raise FFmpegError(f"Failed to download {m3u8_url}.", stderr=str(e))
+            raise FFmpegError(f"Failed to download {m3u8_url}.", stderr=str(e)) from e
 
         # 检查 FFmpeg 是否返回了错误
         if result.returncode != 0:
