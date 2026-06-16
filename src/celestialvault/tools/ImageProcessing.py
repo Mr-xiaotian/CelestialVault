@@ -2,16 +2,20 @@ import base64
 import io
 import math
 import random
+from collections.abc import Callable
 from colorsys import hsv_to_rgb
 from itertools import product
 from pathlib import Path
+from typing import Any, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from celestialflow import TaskExecutor, TaskProgress
 from PIL import Image, ImageFile, PngImagePlugin
-from pillow_heif import register_heif_opener
+from pillow_heif import (
+    register_heif_opener,  # pyright: ignore[reportUnknownVariableType]
+)
 from tqdm import tqdm
 
 from ..constants import IMAGE_SUFFIX_TO_FORMAT
@@ -49,7 +53,7 @@ def safe_open_image(path: Path) -> tuple[Image.Image | None, bool]:
 
         # 再打开一次时立即加载进内存，然后关闭底层文件句柄
         img = Image.open(path)
-        img.load()  # 读取进内存后不再依赖文件句柄
+        img.load()  # pyright: ignore[reportUnknownMemberType]
         return img, True
     except Exception:
         return None, False
@@ -58,7 +62,7 @@ def safe_open_image(path: Path) -> tuple[Image.Image | None, bool]:
 def combine_imgs_to_pdf(
     root_path: str | Path,
     pdf_path: str | Path | None = None,
-    special_keywords: dict | None = None,
+    special_keywords: dict[str, Any] | None = None,
 ):
     """
     将指定文件夹中的JPEG图片组合成单个PDF文件。
@@ -121,7 +125,7 @@ def combine_imgs_to_pdf(
         raise ValueError(f"Some images are damaged: {damage_images}")
 
 
-def combine_imgs_dir(dir_path: Path, special_keywords: dict | None = None):
+def combine_imgs_dir(dir_path: Path, special_keywords: dict[str, Any] | None = None):
     """
     将指定文件夹中的JPEG图片组合成单个PDF文件。
 
@@ -197,7 +201,7 @@ def convert_img_format(img: Image.Image, img_format: str) -> Image.Image:
     buffer.seek(0)
 
     converted_img = Image.open(buffer)
-    converted_img.load()
+    converted_img.load()  # pyright: ignore[reportUnknownMemberType]
     return converted_img
 
 
@@ -249,7 +253,12 @@ def generate_palette(
     :return: 返回生成的颜色列表
     """
 
-    def random_mode(hue_range, saturation_range, value_range, index):
+    def random_mode(
+        hue_range: tuple[float, float],
+        saturation_range: tuple[float, float],
+        value_range: tuple[float, float],
+        index: int,
+    ) -> tuple[float, float, float]:
         # 实现随机模式
         while True:
             h = np.random.uniform(*hue_range)
@@ -259,14 +268,24 @@ def generate_palette(
                 used_hsv.add((h, s, v))
                 return h, s, v
 
-    def uniform_mode(hue_range, saturation_range, value_range, index):
+    def uniform_mode(
+        hue_range: tuple[float, float],
+        saturation_range: tuple[float, float],
+        value_range: tuple[float, float],
+        index: int,
+    ) -> tuple[float, float, float]:
         # 实现均匀模式
         h = hue_range[0] + (hue_range[1] - hue_range[0]) * (index / color_num)
         s = np.mean(saturation_range)  # 使用饱和度的平均值
         v = np.mean(value_range)  # 使用亮度的平均值
         return h, s, v
 
-    def spiral_mode(hue_range, saturation_range, value_range, index):
+    def spiral_mode(
+        hue_range: tuple[float, float],
+        saturation_range: tuple[float, float],
+        value_range: tuple[float, float],
+        index: int,
+    ) -> tuple[float, float, float]:
         # 实现螺旋模式
         h = hue_range[0] + (hue_range[1] - hue_range[0]) * (index / color_num)
         s = saturation_range[0] + (saturation_range[1] - saturation_range[0]) * (
@@ -277,9 +296,15 @@ def generate_palette(
         )
         return h, s, v
 
-    from ..constants import style_params
+    from ..constants import style_params  # pyright: ignore[reportUnknownVariableType]
 
-    mode_dict = {"random": random_mode, "uniform": uniform_mode, "spiral": spiral_mode}
+    mode_dict: dict[
+        str,
+        Callable[
+            [tuple[float, float], tuple[float, float], tuple[float, float], int],
+            tuple[float, float, float],
+        ],
+    ] = {"random": random_mode, "uniform": uniform_mode, "spiral": spiral_mode}
 
     if style not in style_params:
         raise ValueError("Unsupported style")
@@ -289,20 +314,20 @@ def generate_palette(
     np.random.seed(random_seed)
     get_hsv = mode_dict[mode]
 
-    regions = style_params[style]
+    regions: list[dict[str, Any]] = cast(list[dict[str, Any]], style_params[style])
     if not isinstance(regions, list):
         raise TypeError(f"Style '{style}' should be a list of color region dicts.")
 
-    colors = []
-    used_hsv = set()
+    colors: list[tuple[int, int, int]] = []
+    used_hsv: set[tuple[float, float, float]] = set()
     for i in range(color_num):
         # 随机选一个色域
-        region = random.choices(regions, weights=[r.get("weight", 1) for r in regions])[
-            0
-        ]
-        hue_range = region["hue_range"]
-        sat_range = region["saturation_range"]
-        val_range = region["value_range"]
+        region: dict[str, Any] = random.choices(
+            regions, weights=[r.get("weight", 1) for r in regions]
+        )[0]
+        hue_range: tuple[float, float] = region["hue_range"]
+        sat_range: tuple[float, float] = region["saturation_range"]
+        val_range: tuple[float, float] = region["value_range"]
 
         h, s, v = get_hsv(hue_range, sat_range, val_range, i)
         r, g, b = hsv_to_rgb(h, s, v)
@@ -311,7 +336,7 @@ def generate_palette(
     return [value for color in colors for value in color]
 
 
-def palette_to_image(palette, block_size=50):
+def palette_to_image(palette: list[int], block_size: int = 50) -> Image.Image:
     """
     根据颜色列表生成调色板图像。
 
@@ -326,7 +351,7 @@ def palette_to_image(palette, block_size=50):
 
     # 创建图像
     logical_img = Image.new("RGB", (n_cols, n_rows))
-    pixels = logical_img.load()
+    pixels = logical_img.load()  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
     if pixels is None:
         raise RuntimeError("Failed to load image pixels")
 
@@ -357,7 +382,7 @@ def expand_image(image: Image.Image, expand_factor: int = 50) -> Image.Image:
     new_height = image.height * expand_factor
 
     # 直接使用resize方法来扩展图像
-    expanded_image = image.resize((new_width, new_height), Image.NEAREST)
+    expanded_image = image.resize((new_width, new_height), Image.NEAREST)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
 
     return expanded_image
 
@@ -414,7 +439,9 @@ def restore_expanded_image(
     return restored_image
 
 
-def extract_pixels_as_gif(image: Image.Image, frame_size=200, duration=100, loop=0):
+def extract_pixels_as_gif(
+    image: Image.Image, frame_size: int = 200, duration: int = 100, loop: int = 0
+) -> io.BytesIO:
     """
     将每个像素点提取出来作为GIF中的一帧。
 
@@ -438,14 +465,14 @@ def extract_pixels_as_gif(image: Image.Image, frame_size=200, duration=100, loop
     for y, x in product(range(height), range(width)):
         pixel = image.getpixel((x, y))
         frame = Image.new(image.mode, (frame_size, frame_size), color=pixel)
-        frames.append(frame)
+        frames.append(frame)  # pyright: ignore[reportUnknownMemberType]
         progress_bar.update(1)
 
     progress_bar.close()
 
     # 将帧保存到一个BytesIO对象中
     gif_io = io.BytesIO()
-    frames[0].save(
+    frames[0].save(  # pyright: ignore[reportUnknownMemberType]
         gif_io,
         format="GIF",
         save_all=True,
@@ -467,7 +494,7 @@ def compare_ssim_by_path(path1: Path | str, path2: Path | str) -> float:
     :return: 两张图像的SSIM值，范围在-1到1之间，值越大表示越相似。
     """
     from skimage.metrics import (
-        structural_similarity as compare_ssim,  # pyright: ignore[reportMissingImports]
+        structural_similarity as compare_ssim,  # pyright: ignore[reportMissingImports, reportUnknownVariableType]
     )
 
     img1 = Image.open(path1)
@@ -487,8 +514,10 @@ def compare_ssim_by_path(path1: Path | str, path2: Path | str) -> float:
     img2 = np.array(img2)
 
     # 计算 SSIM 值
-    ssim = compare_ssim(img1, img2, multichannel=True, win_size=21, channel_axis=2)
-    return ssim
+    ssim: float = compare_ssim(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        img1, img2, multichannel=True, win_size=21, channel_axis=2
+    )
+    return ssim  # pyright: ignore[reportUnknownVariableType]
 
 
 def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
@@ -499,8 +528,8 @@ def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
     :param dir2: 第二个文件夹的路径。
     :return: 包含文件名和 SSIM 值的 DataFrame。
     """
-    data = []
-    tasks = []
+    data: list[list[str | float]] = []
+    tasks: list[tuple[Path, Path]] = []
     dir1 = Path(dir1)
     dir2 = Path(dir2)
 
@@ -516,20 +545,20 @@ def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
         if not file2.exists() or not file2.is_file():  # 如果文件存在且是文件
             continue
 
-        tasks.append((file1, file2))
+        tasks.append((file1, file2))  # pyright: ignore[reportUnknownMemberType]
 
-    compare_executor = TaskExecutor(
+    compare_executor = TaskExecutor(  # pyright: ignore[reportUnknownVariableType]
         "Comparing Images",
         compare_ssim_by_path,
         execution_mode="thread",
         max_workers=8,
     )
-    compare_executor.add_observer(TaskProgress())
-    compare_executor.start(tasks)
-    data = []
-    for (file1, _file2), ssim in compare_executor.get_success_pairs():
+    compare_executor.add_observer(TaskProgress())  # pyright: ignore[reportUnknownMemberType]
+    compare_executor.start(tasks)  # pyright: ignore[reportUnknownMemberType]
+    data.clear()
+    for (file1, _file2), ssim in compare_executor.get_success_pairs():  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
         # 将文件名和 SSIM 值添加到数据列表中
-        data.append([file1.name, ssim])
+        data.append([file1.name, ssim])  # pyright: ignore[reportUnknownMemberType]
 
     # 返回包含图像名称和 SSIM 值的 DataFrame
     df = pd.DataFrame(data, columns=["Image Name", "SSIM"])
@@ -554,11 +583,11 @@ def is_image_valid(data: str | Path | io.BytesIO) -> bool:
 
         # 如果是文件流/BytesIO，重置指针
         if hasattr(data, "seek"):
-            data.seek(0)
+            data.seek(0)  # pyright: ignore[reportUnknownMemberType]
 
         # 第二次打开 + load，确保像素可解码
         with Image.open(data) as img:
-            img.load()
+            img.load()  # pyright: ignore[reportUnknownMemberType]
 
         return True
 
@@ -681,10 +710,10 @@ def read_text_chunks(img_path: str) -> dict[str, str]:
     :return: 包含所有文本块的字典
     """
     with Image.open(img_path) as img:
-        info = img.text  # Pillow >= 9.2 推荐用 .text 获取
+        info: Any = img.text  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
         # 兼容旧版本 Pillow，若没有 .text 就退回 .info
         if not info:
-            info = img.info
+            info = img.info  # pyright: ignore[reportUnknownMemberType]
         return dict(info)  # type: ignore[reportArgumentType]
 
 
@@ -702,10 +731,11 @@ def simulate_rectangle_damage(
     :return: 损坏后的图像
     """
     damaged = img.copy()
-    pixels = damaged.load()
+    pixels = damaged.load()  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
     if pixels is None:
         raise RuntimeError("Failed to load image pixels")
 
+    zero_val: tuple[int, int, int, int] | tuple[int, int, int] | int
     if img.mode == "RGBA":
         zero_val = (0, 0, 0, 0)
     elif img.mode == "RGB":
@@ -733,12 +763,13 @@ def simulate_random_damage(img: Image.Image, damage_ratio: float) -> Image.Image
         raise ValueError("damage_ratio 必须在 0 到 1 之间")
 
     damaged = img.copy()
-    pixels = damaged.load()
+    pixels = damaged.load()  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
     if pixels is None:
         raise RuntimeError("Failed to load image pixels")
     width, height = img.size
     total_pixels = width * height
 
+    zero_val: tuple[int, int, int, int] | tuple[int, int, int] | int
     if img.mode == "RGBA":
         zero_val = (0, 0, 0, 0)
     elif img.mode == "RGB":
@@ -803,8 +834,8 @@ def ensure_capacity(
         return ref_img
 
     # 当放大时使用平滑插值，当缩小时使用高质量下采样
-    resample_mode = Image.BICUBIC if scale_factor > 1 else Image.LANCZOS
-    return ref_img.resize((new_width, new_height), resample_mode)
+    resample_mode: int = Image.BICUBIC if scale_factor > 1 else Image.LANCZOS  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+    return ref_img.resize((new_width, new_height), resample_mode)  # pyright: ignore[reportUnknownArgumentType]
 
 
 def compare_random_pixels(
@@ -818,35 +849,35 @@ def compare_random_pixels(
     :param enc_img: 编码后的图像。
     :param sample_num: 随机抽样的像素数量，默认 20。
     """
-    from .TextTools import format_table
+    from .TextTools import format_table  # pyright: ignore[reportUnknownVariableType]
 
     width, height = enc_img.size
     ref_img = ensure_capacity(ref_img, width * height)
     ref_img = ref_img.convert("RGBA")
 
-    pixels_ref = ref_img.load()
-    pixels_enc = enc_img.load()
+    pixels_ref = ref_img.load()  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+    pixels_enc = enc_img.load()  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
     if pixels_ref is None or pixels_enc is None:
         raise RuntimeError("Failed to load image pixels")
 
-    diffs = []
-    data = []
+    diffs: list[np.ndarray] = []
+    data: list[list[int | tuple[int, ...]]] = []
     print(f"\n🎯 随机抽样 {sample_num} 个像素比较：\n")
 
     for _ in range(sample_num):
         x = random.randint(0, width - 1)
         y = random.randint(0, height - 1)
 
-        p_ref = np.array(pixels_ref[x, y])
-        p_enc = np.array(pixels_enc[x, y])
+        p_ref: np.ndarray = np.array(pixels_ref[x, y])  # pyright: ignore[reportUnknownArgumentType]
+        p_enc: np.ndarray = np.array(pixels_enc[x, y])  # pyright: ignore[reportUnknownArgumentType]
         diff = np.abs(p_enc - p_ref)
 
-        diffs.append(diff)
-        data.append([x, y, tuple(p_ref), tuple(p_enc), tuple(diff)])
+        diffs.append(diff)  # pyright: ignore[reportUnknownMemberType]
+        data.append([x, y, tuple(p_ref), tuple(p_enc), tuple(diff)])  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
 
-    diffs = np.array(diffs)
-    mean_diff = diffs.mean(axis=0)
-    max_diff = diffs.max(axis=0)
+    diffs_arr: np.ndarray = np.array(diffs)  # pyright: ignore[reportUnknownArgumentType]
+    mean_diff = diffs_arr.mean(axis=0)
+    max_diff = diffs_arr.max(axis=0)
 
     print(format_table(data, column_names=["X", "Y", "ref", "enc", "Δ"]))
 
@@ -889,16 +920,16 @@ def show_diff_heatmap(
         else diff_intensity
     )
 
-    plt.figure(figsize=(8, 8))
-    plt.title("Difference Heatmap")
-    plt.imshow(diff_norm, cmap="inferno")  # inferno / hot / magma 都不错
-    plt.axis("off")
+    plt.figure(figsize=(8, 8))  # pyright: ignore[reportUnknownMemberType]
+    plt.title("Difference Heatmap")  # pyright: ignore[reportUnknownMemberType]
+    plt.imshow(diff_norm, cmap="inferno")  # pyright: ignore[reportUnknownMemberType]
+    plt.axis("off")  # pyright: ignore[reportUnknownMemberType]
 
     if save_path:
-        plt.savefig(save_path, bbox_inches="tight", pad_inches=0)
+        plt.savefig(save_path, bbox_inches="tight", pad_inches=0)  # pyright: ignore[reportUnknownMemberType]
         print(f"✅ 热力图已保存到: {save_path}")
     if show:
-        plt.show()
+        plt.show()  # pyright: ignore[reportUnknownMemberType]
 
     # 返回统计信息
     mean_diff = diff_intensity.mean()

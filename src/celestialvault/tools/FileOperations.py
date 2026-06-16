@@ -16,7 +16,7 @@ from wcwidth import wcswidth
 
 from ..constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 from ..instances.inst_units import HumanBytes, HumanTimestamp
-from .TextTools import format_table
+from .TextTools import format_table  # type: ignore[reportUnknownVariableType]
 
 
 def create_dir(path: str | Path) -> Path:
@@ -45,9 +45,9 @@ def create_dir(path: str | Path) -> Path:
 def handle_item(
     source: Path,
     destination: Path,
-    action: Callable[[Path, Path, Any], Any],
-    extra: dict,
-):
+    action: Callable[..., Any],
+    extra: dict[str, Any],
+) -> Any:
     """
     处理文件，如果目标文件不存在则执行指定的操作。
 
@@ -71,7 +71,12 @@ def handle_item(
 def handle_dir_files(
     dir_path: str | Path,
     rules: dict[
-        str, tuple[Callable[[Path, Path, dict], None], Callable[[Path], Path], dict]
+        str,
+        tuple[
+            Callable[..., Any],
+            Callable[[Path], Path],
+            dict[str, Any],
+        ],
     ],
     execution_mode: str = "serial",
     name: str = "Processing files",
@@ -97,7 +102,8 @@ def handle_dir_files(
 
         file_suffix = task.suffix.lower()
         action_func, rename_func, args_extra = rules.get(
-            file_suffix, (shutil.copy2, lambda x: x, {})
+            file_suffix,
+            (shutil.copy2, lambda x: x, {}),  # type: ignore[assignment]
         )
 
         final_path = rename_func(new_file_path)
@@ -117,12 +123,12 @@ def handle_dir_files(
     )
     handlefile_executor.start(file_path_iter)
 
-    error_path_dict = defaultdict(list)
-    for file_path, error in handlefile_executor.get_error_pairs():
-        rel_path = file_path.relative_to(handlefile_executor.dir_path)
-        new_file_path = handlefile_executor.new_dir_path / rel_path
-        shutil.copy(file_path, new_file_path)
-        error_path_dict[(type(error).__name__, str(error))].append(new_file_path)
+    error_path_dict: defaultdict[tuple[str, str], list[Path]] = defaultdict(list)
+    for file_path, error in handlefile_executor.get_error_pairs():  # type: ignore[union-attr]
+        rel_path = file_path.relative_to(handlefile_executor.dir_path)  # type: ignore[union-attr]
+        new_file_path = handlefile_executor.new_dir_path / rel_path  # type: ignore[union-attr]
+        shutil.copy(file_path, new_file_path)  # type: ignore[arg-type]
+        error_path_dict[(type(error).__name__, str(error))].append(new_file_path)  # type: ignore[arg-type]
 
     return dict(error_path_dict)
 
@@ -130,7 +136,12 @@ def handle_dir_files(
 def handle_subdirs(
     dir_path: str | Path,
     rules: dict[
-        str, tuple[Callable[[Path, Path, dict], None], Callable[[Path], Path], dict]
+        str,
+        tuple[
+            Callable[..., Any],
+            Callable[[Path], Path],
+            dict[str, Any],
+        ],
     ],
     execution_mode: str = "serial",
     name: str = "Processing dirs",
@@ -155,7 +166,8 @@ def handle_subdirs(
         new_sub_dir_path = new_dir_path / rel_path
 
         action_func, rename_func, args_extra = rules.get(
-            "dir", (shutil.copy, lambda x: x, {})
+            "dir",
+            (shutil.copy, lambda x: x, {}),  # type: ignore[assignment]
         )
 
         final_path = rename_func(new_sub_dir_path)
@@ -171,19 +183,19 @@ def handle_subdirs(
     sub_dir_list = find_pure_dirs(dir_path, True)
     handlefile_executor.start(sub_dir_list)
 
-    error_path_dict = defaultdict(list)
-    for file_path, error in handlefile_executor.get_error_pairs():
-        rel_path = file_path.relative_to(handlefile_executor.dir_path)
-        new_file_path = handlefile_executor.new_dir_path / rel_path
+    error_path_dict: defaultdict[tuple[str, str], list[Path]] = defaultdict(list)
+    for file_path, error in handlefile_executor.get_error_pairs():  # type: ignore[union-attr]
+        rel_path = file_path.relative_to(handlefile_executor.dir_path)  # type: ignore[union-attr]
+        new_file_path = handlefile_executor.new_dir_path / rel_path  # type: ignore[union-attr]
         # shutil.copy(file_path, new_file_path)
-        error_path_dict[(type(error).__name__, str(error))].append(new_file_path)
+        error_path_dict[(type(error).__name__, str(error))].append(new_file_path)  # type: ignore[arg-type]
 
     return dict(error_path_dict)
 
 
 def compress_dir(
     dir_path: str | Path, execution_mode: str = "thread"
-) -> list[tuple[Path, Exception]]:
+) -> dict[tuple[str, str], list[Path]]:
     """
     遍历指定文件夹，根据文件后缀名对文件进行压缩处理，并将处理后的文件存储到新的目录中。
     支持的文件类型包括图片、视频和PDF。不属于这三种类型的文件将被直接复制到新目录中。
@@ -210,16 +222,18 @@ def compress_dir(
 
     # from .DocumentConversion import compress_pdf
 
-    rules = {suffix: (compress_img, lambda x: x, {}) for suffix in IMG_SUFFIXES}
+    rules: dict[
+        str, tuple[Callable[..., Any], Callable[[Path], Path], dict[str, Any]]
+    ] = {suffix: (compress_img, lambda x: x, {}) for suffix in IMG_SUFFIXES}  # type: ignore[assignment]
     rules.update(  # type: ignore
-        {suffix: (compress_video, rename_mp4, {}) for suffix in VIDEO_SUFFIXES}
+        {suffix: (compress_video, rename_mp4, {}) for suffix in VIDEO_SUFFIXES}  # type: ignore[assignment]
     )
     # rules.update(  # type: ignore{'.pdf': (compress_pdf,rename_pdf, {})})
 
     return handle_dir_files(dir_path, rules, execution_mode, name="Compressing Folder")
 
 
-def unzip_zip_file(zip_file: Path, destination: Path):
+def unzip_zip_file(zip_file: Path, destination: Path) -> None:
     """
     解压缩指定的 zip 文件。
 
@@ -237,7 +251,7 @@ def unzip_zip_file(zip_file: Path, destination: Path):
         raise ValueError("{zip_file} 受密码保护，无法解压缩") from e
 
 
-def unzip_rar_file(rar_file: Path, destination: Path):
+def unzip_rar_file(rar_file: Path, destination: Path) -> None:
     """
     解压缩指定的 rar 文件。
 
@@ -245,16 +259,16 @@ def unzip_rar_file(rar_file: Path, destination: Path):
     """
     try:
         with rarfile.RarFile(rar_file) as rf:
-            rf.extractall(destination)
+            rf.extractall(destination)  # type: ignore[union-attr]
     except rarfile.BadRarFile as e:
         raise ValueError(f"{rar_file} 不是一个有效的 rar 文件") from e
-    except rarfile.LargeRarFile as e:
+    except rarfile.LargeRarFile as e:  # type: ignore[name-defined]
         raise ValueError(f"{rar_file} 太大了，无法解压缩") from e
     except rarfile.PasswordRequired as e:
         raise ValueError(f"{rar_file} 受密码保护，无法解压缩") from e
 
 
-def unzip_tar_file(tar_file: Path, destination: Path):
+def unzip_tar_file(tar_file: Path, destination: Path) -> None:
     """
     解压缩指定的 tar 文件。
 
@@ -276,7 +290,7 @@ def unzip_tar_file(tar_file: Path, destination: Path):
         raise ValueError(f"解压 {tar_file} 时发生错误: {e}") from e
 
 
-def unzip_7z_file(seven_zip_file: Path, destination: Path):
+def unzip_7z_file(seven_zip_file: Path, destination: Path) -> None:
     """
     解压缩指定的 7z 文件。
 
@@ -288,13 +302,13 @@ def unzip_7z_file(seven_zip_file: Path, destination: Path):
             szf.extractall(destination)
     except py7zr.Bad7zFile as e:
         raise ValueError(f"{seven_zip_file} 不是一个有效的 7z 文件") from e
-    except py7zr.Large7zFile as e:
+    except py7zr.Large7zFile as e:  # type: ignore[name-defined]
         raise ValueError(f"{seven_zip_file} 太大了，无法解压缩") from e
     except py7zr.PasswordRequired as e:
         raise ValueError(f"{seven_zip_file} 受密码保护，无法解压缩") from e
 
 
-def unzip_dir(dir_path: str | Path):
+def unzip_dir(dir_path: str | Path) -> dict[tuple[str, str], list[Path]]:
     """
     遍历指定文件夹，解压缩所有支持的压缩文件。支持的文件类型包括 zip 和 rar。
 
@@ -307,7 +321,14 @@ def unzip_dir(dir_path: str | Path):
         new_name = f"{name}({suffix})_unzip"
         return file_path.with_name(new_name)
 
-    rules = {
+    rules: dict[
+        str,
+        tuple[
+            Callable[..., Any],
+            Callable[[Path], Path],
+            dict[str, Any],
+        ],
+    ] = {
         ".zip": (unzip_zip_file, rename_unzip, {}),
         ".rar": (unzip_rar_file, rename_unzip, {}),
         ".tar": (unzip_tar_file, rename_unzip, {}),
@@ -428,7 +449,7 @@ def get_dir_hash(
             return _hash_bytes(b"[MISSING]")
 
         # --- 目录：递归计算子项哈希 ---
-        child_hashes = []
+        child_hashes: list[bytes] = []
         for child in sorted(path.iterdir(), key=lambda c: (not c.is_dir(), c.name)):
             h = _compute(child)
             if not h:
@@ -489,7 +510,7 @@ def get_file_info(file_path: Path, include_hash: bool = False) -> dict[str, Any]
     """
     file_path = Path(file_path)
     file_stat = file_path.stat()
-    info = {
+    info: dict[str, Any] = {
         "size": HumanBytes(file_stat.st_size),
         "mtime": HumanTimestamp(file_stat.st_mtime),
     }
@@ -507,7 +528,7 @@ def get_dir_info(dir_path: Path, include_hash: bool = False) -> dict[str, Any]:
     :return: 包含目录信息的字典。
     """
     dir_path = Path(dir_path)
-    info = {
+    info: dict[str, Any] = {
         "size": get_dir_size(dir_path),
         "mtime": get_dir_mtime(dir_path),
     }
@@ -553,7 +574,7 @@ def detect_identical_files(
     :return: 相同文件的字典，键为文件大小和哈希值，值为文件路径列表。
     """
 
-    def get_file_hash_wrapper(task) -> str:
+    def get_file_hash_wrapper(task: tuple[Any, ...]) -> str:
         return get_file_hash(task[0])
 
     scan_size_executor = TaskExecutor(
@@ -579,7 +600,7 @@ def detect_identical_files(
         if path.is_file()
     )
     scan_size_executor.start(file_path_iter)
-    file_size_dict = defaultdict(list)
+    file_size_dict: defaultdict[HumanBytes, list[str]] = defaultdict(list)
 
     for path, size in scan_size_executor.get_success_pairs():
         file_size_dict[size].append(path)
@@ -594,12 +615,12 @@ def detect_identical_files(
 
     # 对于相同大小的文件，进一步计算哈希值, 找出哈希值相同的文件
     scan_hash_executor.start(file_size_iter)
-    identical_dict = defaultdict(list)
+    identical_dict: defaultdict[tuple[str, int], list[str]] = defaultdict(list)
 
     for (path, size), hash_value in scan_hash_executor.get_success_pairs():
-        identical_dict[(hash_value, size)].append(path)
+        identical_dict[(hash_value, size)].append(path)  # type: ignore[arg-type]
 
-    identical_dict = {
+    identical_dict = {  # type: ignore[assignment]
         key: [Path(path) for path in path_list]
         for key, path_list in identical_dict.items()
         if len(path_list) > 1
@@ -618,7 +639,7 @@ def detect_identical_dirs(
     :return: 相同文件夹的字典，键为文件夹大小和哈希值，值为文件夹路径列表。
     """
 
-    def get_dir_hash_wrapper(task) -> str:
+    def get_dir_hash_wrapper(task: tuple[Any, ...]) -> str:
         return get_dir_hash(task[0])
 
     scan_size_executor = TaskExecutor(
@@ -641,7 +662,7 @@ def detect_identical_dirs(
         str(pure_path) for path in dir_list for pure_path in find_pure_dirs(path)
     ]
     scan_size_executor.start(dir_path_list)
-    file_size_dict = defaultdict(list)
+    file_size_dict: defaultdict[HumanBytes, list[str]] = defaultdict(list)
 
     for path, size in scan_size_executor.get_success_pairs():
         file_size_dict[size].append(path)
@@ -656,12 +677,12 @@ def detect_identical_dirs(
 
     # 对于相同大小的文件夹，进一步计算哈希值, 找出哈希值相同的文件夹
     scan_hash_executor.start(dir_size_iter)
-    identical_dict = defaultdict(list)
+    identical_dict: defaultdict[tuple[str, HumanBytes], list[str]] = defaultdict(list)
 
     for (path, size), hash_value in scan_hash_executor.get_success_pairs():
-        identical_dict[(hash_value, size)].append(path)
+        identical_dict[(hash_value, size)].append(path)  # type: ignore[arg-type]
 
-    identical_dict = {
+    identical_dict = {  # type: ignore[assignment]
         key: [Path(path) for path in path_list]
         for key, path_list in identical_dict.items()
         if len(path_list) > 1
@@ -670,7 +691,9 @@ def detect_identical_dirs(
     return identical_dict
 
 
-def duplicate_report(identical_dict: dict[tuple[str, HumanBytes], list[Path]]) -> str:
+def duplicate_report(
+    identical_dict: dict[tuple[str, HumanBytes], list[Path]],
+) -> str:
     """
     生成一个详细报告，列出所有重复的文件/文件夹及其位置。
 
@@ -681,11 +704,11 @@ def duplicate_report(identical_dict: dict[tuple[str, HumanBytes], list[Path]]) -
         print("\nNo identical items found.")
         return ""
 
-    report = []
+    report: list[str] = []
     total_size = HumanBytes(0)
     total_item_num = 0
     max_item_num = 0
-    max_item_key = None
+    max_item_key: tuple[str, HumanBytes] | None = None
     sort_identical_dict = dict(
         sorted(
             identical_dict.items(),
@@ -725,7 +748,7 @@ def duplicate_report(identical_dict: dict[tuple[str, HumanBytes], list[Path]]) -
     return report_text
 
 
-def delete_identical(identical_dict: dict[tuple[str, HumanBytes], list[Path]]):
+def delete_identical(identical_dict: dict[tuple[str, HumanBytes], list[Path]]) -> None:
     """
     删除文件夹中相同内容的文件。
 
@@ -733,23 +756,23 @@ def delete_identical(identical_dict: dict[tuple[str, HumanBytes], list[Path]]):
     :return: 删除的文件列表。
     """
 
-    def delete_and_return_size(path: Path, size: HumanBytes):
+    def delete_and_return_size(path: Path, size: HumanBytes) -> HumanBytes:
         path.unlink()
         return size
 
-    delete_list = []
+    delete_list: list[tuple[Path, HumanBytes]] = []
     for (_, item_size), item_list in identical_dict.items():
         delete_list.extend([(item_path, item_size) for item_path in item_list])
 
-    delete_return_size_executor = TaskExecutor(
+    delete_return_size_executor = TaskExecutor(  # type: ignore[var-annotated]
         "Deleting duplicates",
         delete_and_return_size,
     )
-    delete_return_size_executor.start(delete_list)
+    delete_return_size_executor.start(delete_list)  # type: ignore[union-attr]
 
-    delete_size = 0
-    for _, size in delete_return_size_executor.get_success_pairs():
-        delete_size += size
+    delete_size: int = 0
+    for _, size in delete_return_size_executor.get_success_pairs():  # type: ignore[union-attr]
+        delete_size += size  # type: ignore[operator]
 
     print(f"\nTotal size of deleted files: {HumanBytes(delete_size)}")
 
@@ -757,8 +780,8 @@ def delete_identical(identical_dict: dict[tuple[str, HumanBytes], list[Path]]):
 def move_identical(
     identical_dict: dict[tuple[str, HumanBytes], list[Path]],
     target_dir: str | Path,
-    size_threshold: HumanBytes = None,
-):
+    size_threshold: HumanBytes | None = None,
+) -> dict[str, list[tuple[Path, Path]]]:
     """
     将相同内容的文件移动到指定的目标文件夹。
 
@@ -768,8 +791,8 @@ def move_identical(
     :return: 移动的文件列表。
     """
     target_dir = Path(target_dir)
-    moved_files = {}
-    report = []
+    moved_files: dict[str, list[tuple[Path, Path]]] = {}
+    report: list[str] = []
 
     for (hash_value, item_size), item_list in tqdm(identical_dict.items()):
         target_subdir = target_dir / f"{hash_value}({item_size})"
@@ -834,7 +857,7 @@ def dir_to_file_path(
     return file_path
 
 
-def replace_filenames(dir_path: Path | str, pattern: str, replacement: str):
+def replace_filenames(dir_path: Path | str, pattern: str, replacement: str) -> None:
     """
     使用正则表达式替换文件夹中所有文件名中的匹配部分。
     遍历指定文件夹，将其中每个文件的文件名中的匹配内容替换为 `replacement`。
@@ -860,7 +883,9 @@ def replace_filenames(dir_path: Path | str, pattern: str, replacement: str):
         file.rename(new_file_path)  # 重命名文件
 
 
-def split_text_and_number(s: str, special_keywords: dict[str, int]) -> tuple:
+def split_text_and_number(
+    s: str, special_keywords: dict[str, int]
+) -> tuple[int | float, *tuple[int | str, ...]]:
     """
     将路径部分中的文本与数字交替提取，同时根据关键词设置优先级。
     例如，"a1bbb2ccc3" -> (keyword_priority, "a", 1, "bbb", 2, "ccc", 3)
@@ -871,7 +896,7 @@ def split_text_and_number(s: str, special_keywords: dict[str, int]) -> tuple:
     """
     # 提取文本和数字部分
     parts = re.findall(r"([a-zA-Z]+|\d+)", s)
-    result = []
+    result: list[int | float | str] = []
 
     # 提取关键字优先级
     keyword_priority = min(
@@ -891,7 +916,9 @@ def split_text_and_number(s: str, special_keywords: dict[str, int]) -> tuple:
     return tuple(result)
 
 
-def sort_by_number(file_path: Path, special_keywords: dict[str, int]) -> tuple:
+def sort_by_number(
+    file_path: Path, special_keywords: dict[str, int]
+) -> tuple[Any, ...]:
     """
     文件排序规则：
     1. 按路径中的每一层（包括文件名）进行文本与数字交替排序，同时考虑关键词优先级。
@@ -915,7 +942,7 @@ def sort_by_number(file_path: Path, special_keywords: dict[str, int]) -> tuple:
 
 def move_files_with_keyword(
     source_dir: Path | str, target_dir: Path | str, keyword: str | None = None
-):
+) -> None:
     """
     将 source_dir 中所有文件名包含 keyword 的文件移动到 target_dir。
 
@@ -958,14 +985,14 @@ def move_files_with_keyword(
     print(f"\n📦 完成：移动 {count_moved} 个文件，跳过 {count_skipped} 个同名文件。")
 
 
-def extract_dir_numbers(dir_path: Path | str) -> set:
+def extract_dir_numbers(dir_path: Path | str) -> set[str]:
     """
     遍历给定文件夹，提取所有文件夹名称中匹配*(\\d+)的数字部分，返回字典 {文件夹名: 数字(str)}。
 
     :param dir_path: 文件夹路径（str 或 Path）
     :return: 字典，包含文件夹名称和对应的数字部分。
     """
-    num_set = set()
+    num_set: set[str] = set()
     pattern = re.compile(r"\((\d+)\)")
 
     path = Path(dir_path)
@@ -979,7 +1006,7 @@ def extract_dir_numbers(dir_path: Path | str) -> set:
     return num_set
 
 
-def extract_file_numbers(dir_path: Path | str, suffix: str) -> set:
+def extract_file_numbers(dir_path: Path | str, suffix: str) -> set[str]:
     """
     遍历给定文件夹，提取所有文件名中匹配*(\\d+)的数字部分，返回字典 {文件夹名: 数字(str)}。
 
@@ -987,7 +1014,7 @@ def extract_file_numbers(dir_path: Path | str, suffix: str) -> set:
     :param suffix: 文件后缀名
     :return: 字典，包含文件夹名称和对应的数字部分。
     """
-    num_set = set()
+    num_set: set[str] = set()
     pattern = re.compile(r"\((\d+)\)")
 
     path = Path(dir_path)
@@ -1041,9 +1068,9 @@ def find_pure_dirs(root: str | Path, only_nonempty: bool = False) -> list[Path]:
     )
     find_pure_dir_executor.add_observer(TaskProgress())
     find_pure_dir_executor.start(subdirs)
-    pure_dirs = []
+    pure_dirs: list[Path] = []
     for task, is_pure in find_pure_dir_executor.get_success_pairs():
-        dir_path = Path(task[0]) if isinstance(task, tuple) else Path(task)
+        dir_path: Path = Path(task[0]) if isinstance(task, tuple) else Path(task)  # type: ignore[arg-type]
         if is_pure:
             pure_dirs.append(dir_path)
 

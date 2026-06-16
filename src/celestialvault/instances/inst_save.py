@@ -3,6 +3,7 @@ import json
 import pickle
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 from celestialflow import TaskChain, TaskStage
@@ -24,7 +25,7 @@ def meta_get_content(fetcher: Fetcher):
         :param file_suffix: 文件后缀。
         :return: (内容, 文件名, 后缀) 元组。
         """
-        content = fetcher.getContent(url)
+        content: bytes = fetcher.getContent(url)  # type: ignore[reportUnknownMemberType]
         return content, file_name, file_suffix
 
     return get_content
@@ -42,7 +43,7 @@ def _save_content_for_task_stage(
 class Saver:
     """文件保存器，支持文本、二进制、DataFrame、JSON、Pickle 等多种格式的保存和下载。"""
 
-    def __init__(self, base_path=".", overwrite=False):
+    def __init__(self, base_path: str | Path = ".", overwrite: bool = False):
         """
         初始化保存器并设置基础路径与覆盖策略。
 
@@ -54,7 +55,7 @@ class Saver:
         self.set_base_path(base_path)
         self.set_add_path("")
 
-    def set_base_path(self, base_path):
+    def set_base_path(self, base_path: str | Path) -> None:
         """
         设置文件保存的基础路径。
 
@@ -62,7 +63,7 @@ class Saver:
         """
         self.base_path = Path(base_path)
 
-    def set_add_path(self, add_path):
+    def set_add_path(self, add_path: str | Path) -> None:
         """
         设置附加子路径，与基础路径拼接形成最终保存目录。
 
@@ -70,7 +71,7 @@ class Saver:
         """
         self.add_path = Path(add_path)
 
-    def get_path(self, file_name, file_suffix):
+    def get_path(self, file_name: str, file_suffix: str | None) -> Path:
         """
         根据基础路径、附加路径、文件名和后缀生成完整文件路径，并确保目录存在。
 
@@ -86,7 +87,9 @@ class Saver:
             path = path.with_suffix(file_suffix)  # 添加后缀
         return path
 
-    def _get_writable_path(self, file_name, file_suffix):
+    def _get_writable_path(
+        self, file_name: str, file_suffix: str | None
+    ) -> tuple[Path, bool]:
         """
         检查是否允许写入指定路径（若禁止覆盖且文件已存在则返回 False）。
 
@@ -105,7 +108,13 @@ class Saver:
         return file_path.stat().st_size
 
     # ==== core methods ====
-    def _text_core(self, text, file_name, encoding="utf-8", file_suffix=None):
+    def _text_core(
+        self,
+        text: str,
+        file_name: str,
+        encoding: str = "utf-8",
+        file_suffix: str | None = None,
+    ) -> tuple[Path, int]:
         """
         直接将文本写入目标文件，不执行覆盖检查。
 
@@ -119,7 +128,9 @@ class Saver:
         path.write_text(text, encoding=encoding, errors="ignore")
         return path, self._get_size(path)
 
-    def _content_core(self, content, file_name, file_suffix=None):
+    def _content_core(
+        self, content: bytes, file_name: str, file_suffix: str | None = None
+    ) -> tuple[Path, int]:
         """
         直接将二进制内容写入目标文件，不执行覆盖检查。
 
@@ -132,7 +143,9 @@ class Saver:
         path.write_bytes(content)
         return path, self._get_size(path)
 
-    def _image_core(self, image, file_name, file_suffix=None):
+    def _image_core(
+        self, image: Any, file_name: str, file_suffix: str | None = None
+    ) -> tuple[Path, int]:
         """
         直接将图像保存到目标文件，不执行覆盖检查。
 
@@ -149,8 +162,8 @@ class Saver:
         return path, self._get_size(path)
 
     def _dataframe_core(
-        self, dataframe: pd.DataFrame, file_name: str, file_suffix=None
-    ):
+        self, dataframe: pd.DataFrame, file_name: str, file_suffix: str | None = None
+    ) -> tuple[Path, int]:
         """
         直接将 DataFrame 写入目标文件，不执行覆盖检查。
 
@@ -160,10 +173,12 @@ class Saver:
         :return: (路径, 文件大小) 元组。
         """
         path = self.get_path(file_name, file_suffix)
-        dataframe.to_csv(path, index=False, sep=",", encoding="utf-8-sig")
+        dataframe.to_csv(path, index=False, sep=",", encoding="utf-8-sig")  # type: ignore[reportUnknownMemberType]
         return path, self._get_size(path)
 
-    def _pickle_core(self, obj, file_name, file_suffix=None):
+    def _pickle_core(
+        self, obj: Any, file_name: str, file_suffix: str | None = None
+    ) -> tuple[Path, int]:
         """
         直接将对象序列化到目标文件，不执行覆盖检查。
 
@@ -177,7 +192,13 @@ class Saver:
             pickle.dump(obj, f)
         return path, self._get_size(path)
 
-    def _json_core(self, data, file_name, file_suffix=None, encoding=None):
+    def _json_core(
+        self,
+        data: Any,
+        file_name: str,
+        file_suffix: str | None = None,
+        encoding: str | None = None,
+    ) -> tuple[Path, int]:
         """
         直接将数据写入 JSON 文件，不执行覆盖检查。
 
@@ -193,7 +214,13 @@ class Saver:
         return path, self._get_size(path)
 
     # ==== save methods ====
-    def save_text(self, text, file_name, encoding="utf-8", file_suffix=None):
+    def save_text(
+        self,
+        text: str,
+        file_name: str,
+        encoding: str = "utf-8",
+        file_suffix: str | None = None,
+    ) -> tuple[Path, int] | tuple[Path, None]:
         """
         将文本内容保存到文件。
 
@@ -209,7 +236,13 @@ class Saver:
 
         return self._text_core(text, file_name, encoding, file_suffix)
 
-    def add_text(self, text, file_name, encoding="utf-8", file_suffix=None):
+    def add_text(
+        self,
+        text: str,
+        file_name: str,
+        encoding: str = "utf-8",
+        file_suffix: str | None = None,
+    ) -> tuple[Path, int] | tuple[Path, None]:
         """
         将文本内容追加到文件末尾。
 
@@ -227,7 +260,9 @@ class Saver:
             f.write(text.encode(encoding, "ignore").decode(encoding, "ignore"))
         return path, self._get_size(path)
 
-    def save_content(self, content, file_name, file_suffix=None):
+    def save_content(
+        self, content: bytes, file_name: str, file_suffix: str | None = None
+    ) -> tuple[Path, int] | tuple[Path, None]:
         """
         将二进制内容保存到文件。
 
@@ -242,7 +277,9 @@ class Saver:
 
         return self._content_core(content, file_name, file_suffix)
 
-    def save_image(self, image, file_name, file_suffix=None):
+    def save_image(
+        self, image: Any, file_name: str, file_suffix: str | None = None
+    ) -> tuple[Path, int] | tuple[Path, None]:
         """
         将图像保存为文件。
 
@@ -257,7 +294,9 @@ class Saver:
 
         return self._image_core(image, file_name, file_suffix)
 
-    def save_dataframe(self, dataframe: pd.DataFrame, file_name: str, file_suffix=None):
+    def save_dataframe(
+        self, dataframe: pd.DataFrame, file_name: str, file_suffix: str | None = None
+    ) -> tuple[Path, int] | tuple[Path, None]:
         """
         将 DataFrame 保存为 CSV 文件。
 
@@ -272,7 +311,9 @@ class Saver:
 
         return self._dataframe_core(dataframe, file_name, file_suffix)
 
-    def save_pickle(self, obj, file_name, file_suffix=None):
+    def save_pickle(
+        self, obj: Any, file_name: str, file_suffix: str | None = None
+    ) -> tuple[Path, int] | tuple[Path, None]:
         """
         将 Python 对象序列化为 pickle 文件。
 
@@ -287,7 +328,13 @@ class Saver:
 
         return self._pickle_core(obj, file_name, file_suffix)
 
-    def save_json(self, data, file_name, file_suffix=None, encoding=None):
+    def save_json(
+        self,
+        data: Any,
+        file_name: str,
+        file_suffix: str | None = None,
+        encoding: str | None = None,
+    ) -> tuple[Path, int] | tuple[Path, None]:
         """
         将数据保存为格式化的 JSON 文件。
 
@@ -304,7 +351,9 @@ class Saver:
         return self._json_core(data, file_name, file_suffix, encoding)
 
     # ==== delete methods ====
-    def delete_file(self, file_name, file_suffix=None):
+    def delete_file(
+        self, file_name: str, file_suffix: str | None = None
+    ) -> tuple[Path, bool]:
         """
         删除指定文件。
 
@@ -319,7 +368,13 @@ class Saver:
         return path, False
 
     # ==== download methods ====
-    def download_text(self, url, file_name, encoding="utf-8", file_suffix=None):
+    def download_text(
+        self,
+        url: str,
+        file_name: str,
+        encoding: str = "utf-8",
+        file_suffix: str | None = None,
+    ) -> tuple[Path, int] | tuple[Path, None]:
         """
         从 URL 下载文本并保存为文件。
 
@@ -334,10 +389,12 @@ class Saver:
             return path, None
 
         fetcher = Fetcher()
-        text = fetcher.getText(url)
+        text: str = fetcher.getText(url)  # type: ignore[reportUnknownMemberType]
         return self._text_core(text, file_name, encoding, file_suffix)
 
-    def download_content(self, url, file_name, file_suffix=None):
+    def download_content(
+        self, url: str, file_name: str, file_suffix: str | None = None
+    ) -> tuple[Path, int] | tuple[Path, None]:
         """
         从 URL 下载内容并保存为文件。
 
@@ -351,10 +408,12 @@ class Saver:
             return path, None
 
         fetcher = Fetcher()
-        content = fetcher.getContent(url)
+        content: bytes = fetcher.getContent(url)  # type: ignore[reportUnknownMemberType]
         return self._content_core(content, file_name, file_suffix)
 
-    def download_image(self, url, file_name, file_suffix=None):
+    def download_image(
+        self, url: str, file_name: str, file_suffix: str | None = None
+    ) -> tuple[Path, int] | tuple[Path, None]:
         """
         从 URL 下载图片并保存为文件。
 
@@ -368,13 +427,17 @@ class Saver:
             return path, None
 
         fetcher = Fetcher()
-        content = fetcher.getContent(url)
+        content: bytes = fetcher.getContent(url)  # type: ignore[reportUnknownMemberType]
         image = binary_to_img(content)
         return self._image_core(image, file_name, file_suffix)
 
     def download_dataframe(
-        self, url, file_name, file_suffix=None, read_kwargs: dict | None = None
-    ):
+        self,
+        url: str,
+        file_name: str,
+        file_suffix: str | None = None,
+        read_kwargs: dict[str, Any] | None = None,
+    ) -> tuple[Path, int] | tuple[Path, None]:
         """
         从 URL 下载表格文本并解析为 DataFrame 后保存。
 
@@ -389,11 +452,15 @@ class Saver:
             return path, None
 
         fetcher = Fetcher()
-        text = fetcher.getText(url)
-        dataframe = pd.read_csv(io.StringIO(text), **(read_kwargs or {}))  # type: ignore[reportCallIssue]
-        return self._dataframe_core(dataframe, file_name, file_suffix)
+        text: str = fetcher.getText(url)  # type: ignore[reportUnknownMemberType]
+        dataframe: pd.DataFrame = pd.read_csv(  # type: ignore[reportUnknownArgumentType, reportCallIssue]
+            io.StringIO(text), **(read_kwargs or {})
+        )
+        return self._dataframe_core(dataframe, file_name, file_suffix)  # type: ignore[reportUnknownArgumentType]
 
-    def download_pickle(self, url, file_name, file_suffix=None):
+    def download_pickle(
+        self, url: str, file_name: str, file_suffix: str | None = None
+    ) -> tuple[Path, int] | tuple[Path, None]:
         """
         从 URL 下载 pickle 二进制内容并反序列化后保存。
 
@@ -407,11 +474,17 @@ class Saver:
             return path, None
 
         fetcher = Fetcher()
-        content = fetcher.getContent(url)
+        content: bytes = fetcher.getContent(url)  # type: ignore[reportUnknownMemberType]
         obj = pickle.loads(content)
         return self._pickle_core(obj, file_name, file_suffix)
 
-    def download_json(self, url, file_name, file_suffix=None, encoding=None):
+    def download_json(
+        self,
+        url: str,
+        file_name: str,
+        file_suffix: str | None = None,
+        encoding: str | None = None,
+    ) -> tuple[Path, int] | tuple[Path, None]:
         """
         从 URL 下载 JSON 内容并保存为文件。
 
@@ -426,14 +499,15 @@ class Saver:
             return path, None
 
         fetcher = Fetcher()
-        data = json.loads(fetcher.getText(url))
+        text: str = fetcher.getText(url)  # type: ignore[reportUnknownMemberType]
+        data = json.loads(text)
         return self._json_core(data, file_name, file_suffix, encoding)
 
     def download_urls(
         self,
         task_list: list[tuple[str, str, str]],
-        stage_mode="serial",
-    ):
+        stage_mode: str = "serial",
+    ) -> None:
         """
         下载给定的 URL 列表，并将其内容保存到指定的文件中。
 
@@ -448,12 +522,12 @@ class Saver:
         :return: 一个字典，包含每个任务的最终结果
         """
         fetcher = Fetcher()  # 创建用于获取 URL 内容的 Fetcher 实例
-        fetch_stage = TaskStage(
+        fetch_stage: TaskStage[Any, Any] = TaskStage(  # type: ignore[reportUnknownVariableType]
             "urlsFetchProcess",
             meta_get_content(fetcher),
             execution_mode="thread",
         )
-        save_stage = TaskStage(
+        save_stage: TaskStage[Any, Any] = TaskStage(  # type: ignore[reportUnknownVariableType]
             "urlsSaveProcess",
             _save_content_for_task_stage,
             execution_mode="serial",
@@ -463,7 +537,7 @@ class Saver:
         chain = TaskChain(
             "DownloadUrls", [fetch_stage, save_stage], stage_mode=stage_mode
         )
-        chain.start_chain({fetch_stage.get_tag(): task_list})  # 开始任务树
+        chain.start_chain({fetch_stage.get_tag(): task_list})  # type: ignore[reportUnknownMemberType]  # 开始任务树
 
     async def download_urls_async(self, task_list: list[tuple[str, str, str]]):
         """
@@ -476,7 +550,13 @@ class Saver:
         # await self.fetcher.close_session()
         pass
 
-    def download_m3u8(self, m3u8_url, file_name, file_suffix=None, timeout=3600):
+    def download_m3u8(
+        self,
+        m3u8_url: str,
+        file_name: str,
+        file_suffix: str | None = None,
+        timeout: int = 3600,
+    ) -> tuple[Path, int] | tuple[Path, None]:
         """
         使用 ffmpeg 下载 m3u8 流媒体并保存为文件。
 
@@ -492,7 +572,7 @@ class Saver:
         if not can_overwrite:
             return m3u8_path, None
 
-        command = [
+        command: list[str | Path] = [
             "ffmpeg",
             "-protocol_whitelist",
             "file,http,https,tcp,tls,crypto",

@@ -2,6 +2,7 @@ import random
 import shutil
 import string
 from pathlib import Path
+from typing import Any
 
 import fitz  # PyMuPDF
 from PIL import Image, ImageDraw, ImageFont
@@ -54,25 +55,25 @@ def make_multisize_pdf(file_path: str | Path):
 
     # 页面 1 - A5 尺寸 (420x595)
     page = doc.new_page(width=420, height=595)
-    page.insert_text((72, 100), "页面 1：A5 尺寸 (420x595)", fontsize=14)
-    page.insert_text(
+    page.insert_text((72, 100), "页面 1：A5 尺寸 (420x595)", fontsize=14)  # pyright: ignore[reportUnknownMemberType]
+    page.insert_text(  # pyright: ignore[reportUnknownMemberType]
         (72, 130), "这是一个示例 PDF，页面尺寸较小，用于测试页面宽度调整功能。"
     )
 
     # 页面 2 - A4 尺寸 (595x842)
     page = doc.new_page(width=595, height=842)
-    page.insert_text((72, 100), "页面 2：A4 尺寸 (595x842)", fontsize=14)
-    page.insert_text((72, 130), "该页面的宽度较上一页更大，适用于文本内容较多的场景。")
+    page.insert_text((72, 100), "页面 2：A4 尺寸 (595x842)", fontsize=14)  # pyright: ignore[reportUnknownMemberType]
+    page.insert_text((72, 130), "该页面的宽度较上一页更大，适用于文本内容较多的场景。")  # pyright: ignore[reportUnknownMemberType]
 
     # 页面 3 - A3 尺寸 (842x1191)
     page = doc.new_page(width=842, height=1191)
-    page.insert_text((72, 100), "页面 3：A3 尺寸 (842x1191)", fontsize=14)
-    page.insert_text(
+    page.insert_text((72, 100), "页面 3：A3 尺寸 (842x1191)", fontsize=14)  # pyright: ignore[reportUnknownMemberType]
+    page.insert_text(  # pyright: ignore[reportUnknownMemberType]
         (72, 130), "这是一个超宽页面，适用于需要展示更大图片或表格的场景。"
     )
 
     # 保存 PDF 文件
-    doc.save(str(file_path))
+    doc.save(str(file_path))  # pyright: ignore[reportUnknownMemberType]
 
     print(f"✅ 成功创建示例 PDF 文件：{file_path}")
 
@@ -154,7 +155,7 @@ def make_dirpair_fixture(base_path: str | Path):
 
 
 # ==== 测试数据生成函数 ====
-def random_values(length: int, data_types: str | list[str] | None = None) -> list:
+def random_values(length: int, data_types: str | list[str] | None = None) -> list[Any]:
     """
     生成测试数据
 
@@ -186,7 +187,7 @@ def random_values(length: int, data_types: str | list[str] | None = None) -> lis
         if not data_types:
             raise ValueError(f"不支持的数据类型: {data_types}")
 
-    def random_item(dtype: str):
+    def random_item(dtype: str) -> Any:
         if dtype == "str":
             return "".join(
                 random.choices(string.ascii_lowercase, k=random.randint(5, 10))
@@ -237,7 +238,7 @@ def rand_strict_increasing_ints(
     return seq
 
 
-def rand_int_matrix(size, min_val=1, max_val=9):
+def rand_int_matrix(size: int, min_val: int = 1, max_val: int = 9) -> list[list[int]]:
     """
     生成一个方形二维数组（矩阵），元素为随机正整数。
 
@@ -264,7 +265,7 @@ def fixed_length_series(n: int, digits: str = "0123456789") -> str:
     if not (1 <= n < 100):
         raise ValueError("n 必须在 1 到 99 之间")
 
-    res = []
+    res: list[str] = []
     need = n
     first_block = digits[1:]  # 去掉首字符，从第二个字符开始
     take = min(need, len(first_block))
@@ -286,7 +287,7 @@ def fixed_length_series(n: int, digits: str = "0123456789") -> str:
     return "".join(res)
 
 
-def gapped_range_tuples(length: int, tuple_size: int):
+def gapped_range_tuples(length: int, tuple_size: int) -> list[tuple[int, ...]]:
     """
     生成指定数量和元组长度的递增数列元组列表
 
@@ -294,7 +295,7 @@ def gapped_range_tuples(length: int, tuple_size: int):
     :param tuple_size: 每个元组的长度
     :return: 递增数列元组列表。
     """
-    result = []
+    result: list[tuple[int, ...]] = []
     current = 0
     for _ in range(length):
         tup = tuple(rand_strict_increasing_ints(tuple_size, current))
