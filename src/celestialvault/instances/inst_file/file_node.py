@@ -46,6 +46,7 @@ class BaseNode:
         self.level = level
 
         self._hash: str | None = None
+        self._children: list[BaseNode] = []
 
     @property
     def hash(self) -> str:
@@ -59,7 +60,7 @@ class BaseNode:
     @property
     def children(self) -> list["BaseNode"]:
         """返回子节点列表。叶子节点返回空列表。"""
-        return []
+        return self._children
 
     def print(
         self,
@@ -162,7 +163,7 @@ class DirNode(BaseNode):
         :param children: 子节点列表。
         """
         super().__init__(name, node_path, size, mtime, "📁", level)
-        self.children: list[BaseNode] = children
+        self._children: list[BaseNode] = children
 
     @property
     def hash(self) -> str:
@@ -261,7 +262,7 @@ class ExcludedDirsNode(BaseNode):
         """
         super().__init__(f"[{count}项排除的目录]", node_path, size, mtime, "📁", level)
         self.count = count
-        self.children: list[BaseNode] = []
+        self._children: list[BaseNode] = []
 
     @property
     def hash(self) -> str:
