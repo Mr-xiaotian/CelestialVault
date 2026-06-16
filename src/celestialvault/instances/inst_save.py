@@ -19,14 +19,24 @@ def meta_get_content(fetcher: Fetcher):
         """
         从抓取结果中提取内容。
 
-        :param result: 抓取阶段的返回结果（响应内容）。
-        :return: 提取后的内容字符串。
+        :param url: 抓取阶段的 URL 地址。
+        :param file_name: 保存的文件名。
+        :param file_suffix: 文件后缀。
+        :return: (内容, 文件名, 后缀) 元组。
         """
         content = fetcher.getContent(url)
-
         return content, file_name, file_suffix
 
     return get_content
+
+
+def _save_content_for_task_stage(
+    content: bytes, file_name: str, file_suffix: str | None = None
+) -> Path:
+    """供 TaskStage 使用的包装函数，保持返回 Path 以兼容任务链。"""
+    saver = Saver()
+    path, _size = saver.save_content(content, file_name, file_suffix)
+    return path
 
 
 class Saver:
@@ -82,12 +92,17 @@ class Saver:
 
         :param file_name: 文件名。
         :param file_suffix: 文件后缀（如 '.txt'）；为 None 则不添加后缀。
-        :return: 是否允许写入。
+        :return: (路径, 是否允许写入) 元组。
         """
         path = self.get_path(file_name, file_suffix)
-        if not self.overwrite and path.exists():  # 使用 Path 的 exists 方法
+        if not self.overwrite and path.exists():
             return path, False
         return path, True
+
+    @staticmethod
+    def _get_size(file_path: Path) -> int:
+        """获取文件大小（字节）。"""
+        return file_path.stat().st_size
 
     # ==== core methods ====
     def _text_core(self, text, file_name, encoding="utf-8", file_suffix=None):
@@ -98,11 +113,11 @@ class Saver:
         :param file_name: 文件名。
         :param encoding: 文件编码。
         :param file_suffix: 文件后缀。
-        :return: 保存后的文件路径。
+        :return: (路径, 文件大小) 元组。
         """
         path = self.get_path(file_name, file_suffix)
         path.write_text(text, encoding=encoding, errors="ignore")
-        return path
+        return path, self._get_size(path)
 
     def _content_core(self, content, file_name, file_suffix=None):
         """
@@ -111,11 +126,11 @@ class Saver:
         :param content: 要保存的二进制内容。
         :param file_name: 文件名。
         :param file_suffix: 文件后缀。
-        :return: 保存后的文件路径。
+        :return: (路径, 文件大小) 元组。
         """
         path = self.get_path(file_name, file_suffix)
         path.write_bytes(content)
-        return path
+        return path, self._get_size(path)
 
     def _image_core(self, image, file_name, file_suffix=None):
         """
@@ -124,14 +139,14 @@ class Saver:
         :param image: 要保存的图像对象。
         :param file_name: 文件名。
         :param file_suffix: 文件后缀。
-        :return: 保存后的文件路径。
+        :return: (路径, 文件大小) 元组。
         """
         path = self.get_path(file_name, file_suffix)
         save_image = image
         if path.suffix:
             save_image = convert_img_format(image, path.suffix)
         save_image.save(path)
-        return path
+        return path, self._get_size(path)
 
     def _dataframe_core(
         self, dataframe: pd.DataFrame, file_name: str, file_suffix=None
@@ -142,11 +157,11 @@ class Saver:
         :param dataframe: 要保存的 DataFrame 对象。
         :param file_name: 文件名。
         :param file_suffix: 文件后缀。
-        :return: 保存后的文件路径。
+        :return: (路径, 文件大小) 元组。
         """
         path = self.get_path(file_name, file_suffix)
         dataframe.to_csv(path, index=False, sep=",", encoding="utf-8-sig")
-        return path
+        return path, self._get_size(path)
 
     def _pickle_core(self, obj, file_name, file_suffix=None):
         """
@@ -155,12 +170,12 @@ class Saver:
         :param obj: 要序列化的 Python 对象。
         :param file_name: 文件名。
         :param file_suffix: 文件后缀。
-        :return: 保存后的文件路径。
+        :return: (路径, 文件大小) 元组。
         """
         path = self.get_path(file_name, file_suffix)
         with open(path, "wb") as f:
             pickle.dump(obj, f)
-        return path
+        return path, self._get_size(path)
 
     def _json_core(self, data, file_name, file_suffix=None, encoding=None):
         """
@@ -170,12 +185,12 @@ class Saver:
         :param file_name: 文件名。
         :param file_suffix: 文件后缀。
         :param encoding: 文件编码。
-        :return: 保存后的文件路径。
+        :return: (路径, 文件大小) 元组。
         """
         path = self.get_path(file_name, file_suffix)
         with open(path, "w", encoding=encoding) as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
-        return path
+        return path, self._get_size(path)
 
     # ==== save methods ====
     def save_text(self, text, file_name, encoding="utf-8", file_suffix=None):
@@ -186,11 +201,11 @@ class Saver:
         :param file_name: 文件名。
         :param encoding: 文件编码，默认 'utf-8'。
         :param file_suffix: 文件后缀。
-        :return: 保存的文件路径。
+        :return: (路径, 文件大小) 元组；不可写入时大小为 None。
         """
         path, can_write = self._get_writable_path(file_name, file_suffix)
         if not can_write:
-            return path
+            return path, None
 
         return self._text_core(text, file_name, encoding, file_suffix)
 
@@ -202,15 +217,15 @@ class Saver:
         :param file_name: 文件名。
         :param encoding: 文件编码，默认 'utf-8'。
         :param file_suffix: 文件后缀。
-        :return: 保存的文件路径。
+        :return: (路径, 文件大小) 元组；不可写入时大小为 None。
         """
         path, can_write = self._get_writable_path(file_name, file_suffix)
         if not can_write:
-            return path
+            return path, None
 
         with open(path, "a", encoding=encoding) as f:
             f.write(text.encode(encoding, "ignore").decode(encoding, "ignore"))
-        return path
+        return path, self._get_size(path)
 
     def save_content(self, content, file_name, file_suffix=None):
         """
@@ -219,11 +234,11 @@ class Saver:
         :param content: 要保存的二进制内容。
         :param file_name: 文件名。
         :param file_suffix: 文件后缀。
-        :return: 保存的文件路径。
+        :return: (路径, 文件大小) 元组；不可写入时大小为 None。
         """
         path, can_write = self._get_writable_path(file_name, file_suffix)
         if not can_write:
-            return path
+            return path, None
 
         return self._content_core(content, file_name, file_suffix)
 
@@ -234,11 +249,11 @@ class Saver:
         :param image: 要保存的图像对象。
         :param file_name: 文件名。
         :param file_suffix: 文件后缀。
-        :return: 保存的文件路径
+        :return: (路径, 文件大小) 元组；不可写入时大小为 None。
         """
         path, can_write = self._get_writable_path(file_name, file_suffix)
         if not can_write:
-            return path
+            return path, None
 
         return self._image_core(image, file_name, file_suffix)
 
@@ -249,11 +264,11 @@ class Saver:
         :param dataframe: 要保存的 DataFrame 对象。
         :param file_name: 文件名。
         :param file_suffix: 文件后缀。
-        :return: 保存的文件路径。
+        :return: (路径, 文件大小) 元组；不可写入时大小为 None。
         """
         path, can_write = self._get_writable_path(file_name, file_suffix)
         if not can_write:
-            return path
+            return path, None
 
         return self._dataframe_core(dataframe, file_name, file_suffix)
 
@@ -264,11 +279,11 @@ class Saver:
         :param obj: 要序列化的 Python 对象。
         :param file_name: 文件名。
         :param file_suffix: 文件后缀。
-        :return: 保存的文件路径。
+        :return: (路径, 文件大小) 元组；不可写入时大小为 None。
         """
         path, can_write = self._get_writable_path(file_name, file_suffix)
         if not can_write:
-            return path
+            return path, None
 
         return self._pickle_core(obj, file_name, file_suffix)
 
@@ -280,11 +295,11 @@ class Saver:
         :param file_name: 文件名。
         :param file_suffix: 文件后缀。
         :param encoding: 文件编码。
-        :return: 保存的文件路径。
+        :return: (路径, 文件大小) 元组；不可写入时大小为 None。
         """
         path, can_write = self._get_writable_path(file_name, file_suffix)
         if not can_write:
-            return path
+            return path, None
 
         return self._json_core(data, file_name, file_suffix, encoding)
 
@@ -312,11 +327,11 @@ class Saver:
         :param file_name: 文件名。
         :param encoding: 保存文件时使用的编码。
         :param file_suffix: 文件后缀。
-        :return: 保存的文件路径。
+        :return: (路径, 文件大小) 元组；不可写入时大小为 None。
         """
         path, can_write = self._get_writable_path(file_name, file_suffix)
         if not can_write:
-            return path
+            return path, None
 
         fetcher = Fetcher()
         text = fetcher.getText(url)
@@ -329,11 +344,11 @@ class Saver:
         :param url: 下载的 URL 地址。
         :param file_name: 文件名。
         :param file_suffix: 文件后缀。
-        :return: 保存的文件路径。
+        :return: (路径, 文件大小) 元组；不可写入时大小为 None。
         """
         path, can_write = self._get_writable_path(file_name, file_suffix)
         if not can_write:
-            return path
+            return path, None
 
         fetcher = Fetcher()
         content = fetcher.getContent(url)
@@ -346,18 +361,15 @@ class Saver:
         :param url: 图片的 URL 地址。
         :param file_name: 文件名。
         :param file_suffix: 文件后缀。
-        :return: 保存的文件路径。
+        :return: (路径, 文件大小) 元组；不可写入时大小为 None。
         """
         path, can_write = self._get_writable_path(file_name, file_suffix)
         if not can_write:
-            return path
+            return path, None
 
         fetcher = Fetcher()
         content = fetcher.getContent(url)
         image = binary_to_img(content)
-        path, can_write = self._get_writable_path(file_name, file_suffix)
-        if not can_write:
-            return path
         return self._image_core(image, file_name, file_suffix)
 
     def download_dataframe(
@@ -370,11 +382,11 @@ class Saver:
         :param file_name: 文件名。
         :param file_suffix: 文件后缀。
         :param read_kwargs: 传给 pandas.read_csv 的额外参数。
-        :return: 保存的文件路径。
+        :return: (路径, 文件大小) 元组；不可写入时大小为 None。
         """
         path, can_write = self._get_writable_path(file_name, file_suffix)
         if not can_write:
-            return path
+            return path, None
 
         fetcher = Fetcher()
         text = fetcher.getText(url)
@@ -388,11 +400,11 @@ class Saver:
         :param url: pickle 资源的 URL 地址。
         :param file_name: 文件名。
         :param file_suffix: 文件后缀。
-        :return: 保存的文件路径。
+        :return: (路径, 文件大小) 元组；不可写入时大小为 None。
         """
         path, can_write = self._get_writable_path(file_name, file_suffix)
         if not can_write:
-            return path
+            return path, None
 
         fetcher = Fetcher()
         content = fetcher.getContent(url)
@@ -407,11 +419,11 @@ class Saver:
         :param file_name: 文件名。
         :param file_suffix: 文件后缀。
         :param encoding: 保存文件时使用的编码。
-        :return: 保存的文件路径。
+        :return: (路径, 文件大小) 元组；不可写入时大小为 None。
         """
         path, can_write = self._get_writable_path(file_name, file_suffix)
         if not can_write:
-            return path
+            return path, None
 
         fetcher = Fetcher()
         data = json.loads(fetcher.getText(url))
@@ -420,7 +432,7 @@ class Saver:
     def download_urls(
         self,
         task_list: list[tuple[str, str, str]],
-        chain_mode="serial",
+        stage_mode="serial",
     ):
         """
         下载给定的 URL 列表，并将其内容保存到指定的文件中。
@@ -430,7 +442,7 @@ class Saver:
                         - URL (str): 要下载内容的 URL
                         - 文件名 (str): 要保存内容的文件名
                         - 文件后缀 (str): 要保存文件的后缀名（例如 '.txt', '.jpg' 等）
-        :param chain_mode: "serial" 或 "process"
+        :param stage_mode: "serial" 或 "process"
                         - "serial": 任务链将串行执行
                         - "process": 任务链将并行执行
         :return: 一个字典，包含每个任务的最终结果
@@ -443,12 +455,14 @@ class Saver:
         )
         save_stage = TaskStage(
             "urlsSaveProcess",
-            self.save_content,
+            _save_content_for_task_stage,
             execution_mode="serial",
         )
 
         # 创建 TaskChain 来管理 Fetch 和 Save 两个阶段的任务处理
-        chain = TaskChain([fetch_stage, save_stage], chain_mode)
+        chain = TaskChain(
+            "DownloadUrls", [fetch_stage, save_stage], stage_mode=stage_mode
+        )
         chain.start_chain({fetch_stage.get_tag(): task_list})  # 开始任务树
 
     async def download_urls_async(self, task_list: list[tuple[str, str, str]]):
@@ -470,13 +484,13 @@ class Saver:
         :param file_name: 保存的文件名。
         :param file_suffix: 文件后缀。
         :param timeout: 下载超时时间（秒），默认 3600。
-        :return: 保存的文件路径。
+        :return: (路径, 文件大小) 元组；不可写入时大小为 None。
         :raises TimeoutError: 下载超时时抛出。
         :raises FFmpegError: ffmpeg 执行失败时抛出。
         """
         m3u8_path, can_overwrite = self._get_writable_path(file_name, file_suffix)
         if not can_overwrite:
-            return m3u8_path
+            return m3u8_path, None
 
         command = [
             "ffmpeg",
@@ -507,4 +521,4 @@ class Saver:
             error_msg = result.stderr.strip()
             raise FFmpegError(f"Failed to download {m3u8_url}.", stderr=error_msg)
 
-        return m3u8_path
+        return m3u8_path, self._get_size(m3u8_path)
