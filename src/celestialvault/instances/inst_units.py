@@ -242,7 +242,7 @@ class HumanTimestamp(float):
         """
         return self._tz
 
-    def with_tz(self, tz) -> "HumanTimestamp":
+    def with_tz(self, tz) -> HumanTimestamp:
         """返回一个仅改变显示时区的新对象（纪元秒不变）"""
         return HumanTimestamp(float(self), tz=tz)
 
@@ -274,7 +274,7 @@ class HumanTimestamp(float):
         return f"HumanTimestamp({float(self):.6f}, tz='{tz_label}') -> {self.to_iso()}"
 
     # ---------- 运算（尽量保持语义） ----------
-    def _wrap(self, epoch: float) -> "HumanTimestamp":
+    def _wrap(self, epoch: float) -> HumanTimestamp:
         return HumanTimestamp(epoch, tz=self._tz)
 
     # 加：时间戳 + 秒数 -> 新时间戳
@@ -327,7 +327,7 @@ class HumanTimestamp(float):
 
     # ---------- 便捷方法 ----------
     @classmethod
-    def now(cls, tz=None) -> "HumanTimestamp":
+    def now(cls, tz=None) -> HumanTimestamp:
         """
         返回当前时间的 HumanTimestamp 实例。
 

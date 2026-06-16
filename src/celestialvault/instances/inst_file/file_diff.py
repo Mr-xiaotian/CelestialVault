@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from celestialflow import TaskExecutor, TaskProgress
 from wcwidth import wcswidth
+
+from celestialflow import TaskExecutor, TaskProgress
 
 from ...instances.inst_units import HumanBytes, HumanTimestamp
 from ...tools.FileOperations import (

@@ -10,9 +10,10 @@ from typing import Any
 
 import py7zr
 import rarfile
-from celestialflow import TaskExecutor, TaskProgress
 from tqdm import tqdm
 from wcwidth import wcswidth
+
+from celestialflow import TaskExecutor, TaskProgress
 
 from ..constants import IMG_SUFFIXES, VIDEO_SUFFIXES
 from ..instances.inst_units import HumanBytes, HumanTimestamp
@@ -108,6 +109,7 @@ def handle_dir_files(
         name=name,
         func=handle_item_wrapper,
         execution_mode=execution_mode,
+        persist_result=True,
     )
     handlefile_executor.add_observer(TaskProgress())
 
@@ -164,6 +166,7 @@ def handle_subdirs(
         name=name,
         func=handle_item_wrapper,
         execution_mode=execution_mode,
+        persist_result=True,
     )
 
     sub_dir_list = find_pure_dirs(dir_path, True)
@@ -432,7 +435,7 @@ def get_dir_hash(
             if not h:
                 continue
             tag = "D" if child.is_dir() else "F"
-            entry = f"{tag}:{child.name}:{h}".encode("utf-8")
+            entry = f"{tag}:{child.name}:{h}".encode()
             child_hashes.append(entry)
 
         if not child_hashes:

@@ -428,7 +428,7 @@ def redundancy_from_container(container: int, threshold: float = 0.7) -> int:
     :param threshold: 控制最大允许的填充率（0~1）。
     :return: 冗余长度。
     """
-    if int(math.isqrt(container)) ** 2 != container:
+    if math.isqrt(container) ** 2 != container:
         raise ValueError("container 必须是一个平方数")
     max_payload = math.floor(threshold * container)
     return container - max_payload

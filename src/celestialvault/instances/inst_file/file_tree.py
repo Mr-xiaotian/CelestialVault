@@ -11,7 +11,7 @@ from ...tools.FileOperations import (
     get_file_mtime,
     get_file_size,
 )
-from .file_node import BaseNode, DirNode, FileNode, ExcludedDirsNode, ExcludedFilesNode
+from .file_node import BaseNode, DirNode, ExcludedDirsNode, ExcludedFilesNode, FileNode
 
 
 class FileTree:

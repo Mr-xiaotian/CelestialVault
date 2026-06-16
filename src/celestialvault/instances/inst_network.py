@@ -222,7 +222,7 @@ class ActivationLayer(Layer):
 
         :param input_dim: 输入（同时也是输出）的维度。
         """
-        super(ActivationLayer, self).__init__()
+        super().__init__()
 
         self.input_dim = input_dim
         self.output_dim = input_dim
@@ -258,7 +258,7 @@ class DenseLayer(Layer):
         :param input_dim: 输入维度。
         :param output_dim: 输出维度。
         """
-        super(DenseLayer, self).__init__()
+        super().__init__()
 
         self.input_dim = input_dim
         self.output_dim = output_dim

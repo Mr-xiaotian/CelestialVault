@@ -82,11 +82,11 @@ TEXT_SUFFIXES = [
 ]
 
 FILE_ICONS = {}
-FILE_ICONS.update({img_suffix: "📷" for img_suffix in IMG_SUFFIXES})
-FILE_ICONS.update({video_suffix: "🎬" for video_suffix in VIDEO_SUFFIXES})
-FILE_ICONS.update({audio_suffix: "🎧" for audio_suffix in AUDIO_SUFFIXES})
-FILE_ICONS.update({zip_suffix: "📦" for zip_suffix in ZIP_SUFFIXES})
-FILE_ICONS.update({text_suffix: "📝" for text_suffix in TEXT_SUFFIXES})
+FILE_ICONS.update(dict.fromkeys(IMG_SUFFIXES, "📷"))
+FILE_ICONS.update(dict.fromkeys(VIDEO_SUFFIXES, "🎬"))
+FILE_ICONS.update(dict.fromkeys(AUDIO_SUFFIXES, "🎧"))
+FILE_ICONS.update(dict.fromkeys(ZIP_SUFFIXES, "📦"))
+FILE_ICONS.update(dict.fromkeys(TEXT_SUFFIXES, "📝"))
 FILE_ICONS.update(
     {
         # 文档文件

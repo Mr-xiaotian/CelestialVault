@@ -1,4 +1,3 @@
-# _*_ coding: utf-8 _*_
 
 # from .DocumentConversion import *
 # from .FileOperations import *

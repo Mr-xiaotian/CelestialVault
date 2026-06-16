@@ -1,4 +1,3 @@
-# _*_ coding: utf-8 _*_
 
 import io
 import json
@@ -7,6 +6,7 @@ import subprocess
 from pathlib import Path
 
 import pandas as pd
+
 from celestialflow import TaskChain, TaskStage
 
 from ..tools.ImageProcessing import binary_to_img, convert_img_format
@@ -31,7 +31,7 @@ def meta_get_content(fetcher: Fetcher):
     return get_content
 
 
-class Saver(object):
+class Saver:
     """文件保存器，支持文本、二进制、DataFrame、JSON、Pickle 等多种格式的保存和下载。"""
 
     def __init__(self, base_path=".", overwrite=False):

@@ -644,7 +644,7 @@ def combine_txt_files(source_dir: str | Path, target_file: str | Path):
     # 合并文件
     with open(target_file, "w", encoding="utf-8") as outfile:
         for txt_file in tqdm(text_files):
-            with open(txt_file, "r", encoding="utf-8") as infile:
+            with open(txt_file, encoding="utf-8") as infile:
                 content = infile.read()
                 # 写入文件名和内容
                 outfile.write(f"== {txt_file.name} ==\n\n")

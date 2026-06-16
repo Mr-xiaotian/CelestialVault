@@ -13,7 +13,7 @@ class SymmetricMap(Generic[T]):
     - x in m 表示 x 在任意一侧出现。
     """
 
-    __slots__ = ("pairs", "reverse", "_allow_self")
+    __slots__ = ("_allow_self", "pairs", "reverse")
 
     def __init__(self, allow_self: bool = False):
         """

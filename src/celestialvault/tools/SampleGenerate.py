@@ -154,7 +154,7 @@ def make_dirpair_fixture(base_path: str | Path):
 
 
 # ==== 测试数据生成函数 ====
-def random_values(length: int, data_types: str | list[str] = None) -> list:
+def random_values(length: int, data_types: str | list[str] | None = None) -> list:
     """
     生成测试数据
 

@@ -141,7 +141,7 @@ class DirNode(BaseNode):
         :param children: 子节点列表。
         """
         super().__init__(name, node_path, size, mtime, "📁", level)
-        self.children: list["BaseNode"] = children
+        self.children: list[BaseNode] = children
 
     @property
     def hash(self) -> str:
@@ -173,7 +173,7 @@ class DirNode(BaseNode):
             if not h:
                 continue
             tag = "D" if child.is_dir() else "F"
-            entry = f"{tag}:{child.name}:{h}".encode("utf-8")
+            entry = f"{tag}:{child.name}:{h}".encode()
             child_hashes.append(entry)
 
         if not child_hashes:
@@ -243,7 +243,7 @@ class ExcludedDirsNode(BaseNode):
         """
         super().__init__(f"[{count}项排除的目录]", node_path, size, mtime, "📁", level)
         self.count = count
-        self.children: list["BaseNode"] = []
+        self.children: list[BaseNode] = []
 
     @property
     def hash(self) -> str:

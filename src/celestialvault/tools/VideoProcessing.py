@@ -4,6 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import ffmpeg
+
 from celestialflow import TaskExecutor, TaskProgress
 
 
@@ -196,7 +197,7 @@ def rotate_video(video_path: str | Path, output_path, angle: int) -> Path:
     if angle not in valid_transpose and angle != 0:
         raise ValueError(f"不支持的旋转角度: {angle}，仅支持 0, 90, 180, 270")
 
-    transpose = valid_transpose.get(angle, None)
+    transpose = valid_transpose.get(angle)
     command = [
         "ffmpeg",
         "-i",

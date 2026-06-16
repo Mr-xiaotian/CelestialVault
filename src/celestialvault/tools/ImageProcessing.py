@@ -9,10 +9,11 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from celestialflow import TaskExecutor, TaskProgress
 from PIL import Image, ImageFile, PngImagePlugin
 from pillow_heif import register_heif_opener
 from tqdm import tqdm
+
+from celestialflow import TaskExecutor, TaskProgress
 
 from ..constants import IMAGE_SUFFIX_TO_FORMAT
 
@@ -702,9 +703,7 @@ def simulate_rectangle_damage(
         zero_val = (0, 0, 0, 0)
     elif img.mode == "RGB":
         zero_val = (0, 0, 0)
-    elif img.mode == "L":
-        zero_val = 0
-    elif img.mode == "P":
+    elif img.mode == "L" or img.mode == "P":
         zero_val = 0
     else:
         raise ValueError(f"Unsupported mode: {img.mode}")
@@ -735,9 +734,7 @@ def simulate_random_damage(img: Image.Image, damage_ratio: float) -> Image.Image
         zero_val = (0, 0, 0, 0)
     elif img.mode == "RGB":
         zero_val = (0, 0, 0)
-    elif img.mode == "L":
-        zero_val = 0
-    elif img.mode == "P":
+    elif img.mode == "L" or img.mode == "P":
         zero_val = 0
     else:
         raise ValueError(f"Unsupported mode: {img.mode}")
@@ -781,9 +778,7 @@ def ensure_capacity(
 
     # 避免 0 或负值
     required_bytes = max(1, required_bytes)
-    if required_bytes == current_capacity:
-        return ref_img
-    elif not min_able and required_bytes < current_capacity:
+    if required_bytes == current_capacity or (not min_able and required_bytes < current_capacity):
         return ref_img
 
     # 计算缩放因子（平方根是因为容量 ~ 面积）

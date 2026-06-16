@@ -1,4 +1,3 @@
-# _*_ coding: utf-8 _*_
 
 # from .inst_fetch import Fetcher
 # from .inst_findiff import Findiffer
