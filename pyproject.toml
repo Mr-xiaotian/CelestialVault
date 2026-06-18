@@ -46,7 +46,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-celestialflow = { path = "D:/Project/CelestialFlow" }
+celestialflow = { path = "D:/Project/CelestialFlow", editable = true }
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "loguru>=0.7"]
