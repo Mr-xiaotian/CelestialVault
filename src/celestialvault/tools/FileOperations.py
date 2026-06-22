@@ -3,7 +3,7 @@ import re
 import shutil
 import tarfile
 import zipfile
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -580,14 +580,14 @@ def detect_identical_files(
     scan_size_executor = TaskExecutor(
         "Scanning files size",
         get_file_size,
-        execution_mode,
+        execution_mode=execution_mode,
         log_level="INFO",
     )
     scan_size_executor.add_observer(TaskProgress())
     scan_hash_executor = TaskExecutor(
         "Calculating files hash",
         get_file_hash_wrapper,
-        execution_mode,
+        execution_mode=execution_mode,
         log_level="INFO",
     )
     scan_hash_executor.add_observer(TaskProgress())
@@ -645,14 +645,14 @@ def detect_identical_dirs(
     scan_size_executor = TaskExecutor(
         "Scanning dirs size",
         get_dir_size,
-        execution_mode,
+        execution_mode=execution_mode,
         log_level="INFO",
     )
     scan_size_executor.add_observer(TaskProgress())
     scan_hash_executor = TaskExecutor(
         "Calculating dirs hash",
         get_dir_hash_wrapper,
-        execution_mode,
+        execution_mode=execution_mode,
         log_level="INFO",
     )
     scan_hash_executor.add_observer(TaskProgress())
@@ -1069,7 +1069,7 @@ def find_pure_dirs(root: str | Path, only_nonempty: bool = False) -> list[Path]:
     find_pure_dir_executor = TaskExecutor(
         "Finding pure directories",
         _is_pure_dir_wrapper,
-        "thread",
+        execution_mode="thread",
     )
     find_pure_dir_executor.add_observer(TaskProgress())
     find_pure_dir_executor.start(subdirs)
