@@ -7,6 +7,7 @@ IMG_SUFFIXES = [
     ".tiff",
     ".webp",
     ".svg",
+    ".gif",
 ]
 
 VIDEO_SUFFIXES = [

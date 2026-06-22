@@ -691,6 +691,87 @@ def detect_identical_dirs(
     return identical_dict
 
 
+def compare_dir_hashes(
+    dir_a: str | Path,
+    dir_b: str | Path,
+    extensions: set[str] | None = None,
+) -> dict[str, Any]:
+    """
+    对比两个目录中的文件哈希，返回差异报告。
+    以相对路径作为文件标识，按 hash 统计两侧多出的文件份数。
+
+    :param dir_a: 第一个目录路径。
+    :param dir_b: 第二个目录路径。
+    :param extensions: 要对比的文件扩展名集合（含点，如 {".jpg"}）。
+                       默认为图片后缀 IMG_SUFFIXES。
+    :return: 包含摘要与两侧差异文件列表的报告字典。
+    """
+    extensions = {ext.lower() for ext in (extensions or IMG_SUFFIXES)}
+
+    def collect_hashes(
+        directory: Path,
+    ) -> tuple[dict[str, str], dict[str, list[str]]]:
+        file_to_hash: dict[str, str] = {}
+        hash_to_files: dict[str, list[str]] = defaultdict(list)
+
+        for file_path in directory.rglob("*"):
+            if not file_path.is_file():
+                continue
+            if file_path.suffix.lower() not in extensions:
+                continue
+
+            relative_path = str(file_path.relative_to(directory))
+            file_hash = get_file_hash(file_path)
+            file_to_hash[relative_path] = file_hash
+            hash_to_files[file_hash].append(relative_path)
+
+        return file_to_hash, dict(hash_to_files)
+
+    def flatten_extra_files(
+        extra_counter: Counter[str],
+        hash_to_files: dict[str, list[str]],
+    ) -> list[dict[str, str]]:
+        extra_files: list[dict[str, str]] = []
+        for file_hash, extra_count in extra_counter.items():
+            for relative_path in hash_to_files[file_hash][:extra_count]:
+                extra_files.append({"path": relative_path, "hash": file_hash})
+        extra_files.sort(key=lambda item: item["path"])
+        return extra_files
+
+    dir_a = Path(dir_a)
+    dir_b = Path(dir_b)
+
+    if not dir_a.exists():
+        raise FileNotFoundError(f"目录不存在: {dir_a}")
+    if not dir_b.exists():
+        raise FileNotFoundError(f"目录不存在: {dir_b}")
+
+    files_map, files_hash_to_paths = collect_hashes(dir_a)
+    copy_map, copy_hash_to_paths = collect_hashes(dir_b)
+
+    files_counter = Counter(files_map.values())
+    copy_counter = Counter(copy_map.values())
+
+    only_in_files_counter = files_counter - copy_counter
+    only_in_copy_counter = copy_counter - files_counter
+
+    only_in_files = flatten_extra_files(only_in_files_counter, files_hash_to_paths)
+    only_in_copy = flatten_extra_files(only_in_copy_counter, copy_hash_to_paths)
+
+    return {
+        "summary": {
+            "files_total": len(files_map),
+            "copy_total": len(copy_map),
+            "common_by_hash": sum((files_counter & copy_counter).values()),
+            "only_in_files_by_hash": len(only_in_files),
+            "only_in_copy_by_hash": len(only_in_copy),
+            "total_different": len(only_in_files) + len(only_in_copy),
+        },
+        "only_in_files": only_in_files,
+        "only_in_copy": only_in_copy,
+    }
+
+
 def duplicate_report(
     identical_dict: dict[tuple[str, HumanBytes], list[Path]],
 ) -> str:
