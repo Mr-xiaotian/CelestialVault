@@ -1,6 +1,6 @@
 # `celestialvault.tools.ImageProcessing`
 
-> 📅 最后更新日期: 2026/04/21
+> 📅 最后更新日期: 2026/06/28
 
 ## 源文件
 
@@ -8,7 +8,7 @@
 
 ## 模块说明
 
-图像处理工具模块，提供图片压缩、格式转换、Base64 编解码、调色板生成、图像扩展/恢复、像素提取为 GIF、SSIM 相似度比较、图像有效性检测、PNG 文本块读写、图像损坏模拟、容量自适应调整、像素差异分析等功能。
+图像处理工具模块，提供图片压缩、格式转换、Base64 编解码、调色板生成、图像扩展/恢复、像素提取为 GIF、SSIM 相似度比较、图像有效性检测、PNG 文本块读写、图像损坏模拟、容量自适应调整、像素差异分析、WebP/PNG 转 JPG 等功能。
 
 ## 导入依赖
 
@@ -17,14 +17,16 @@ import base64
 import io
 import math
 import random
+from collections.abc import Callable
 from colorsys import hsv_to_rgb
 from itertools import product
 from pathlib import Path
+from typing import Any, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from celestialflow import TaskExecutor
+from celestialflow import TaskExecutor, TaskProgress
 from PIL import Image, ImageFile, PngImagePlugin
 from pillow_heif import register_heif_opener
 from tqdm import tqdm
@@ -70,12 +72,12 @@ from ..constants import IMAGE_SUFFIX_TO_FORMAT
 
 ### `combine_imgs_to_pdf`
 
-- 签名: `def combine_imgs_to_pdf(root_path: str | Path, pdf_path: str | Path = None, special_keywords: dict = None)`
+- 签名: `def combine_imgs_to_pdf(root_path: str | Path, pdf_path: str | Path | None = None, special_keywords: dict[str, Any] | None = None)`
 - 说明: 将指定文件夹中的图片组合成单个 PDF 文件
 - 参数:
   - `root_path` (str | Path): 包含图片的文件夹路径
-  - `pdf_path` (str | Path): 输出的 PDF 文件路径，默认使用文件夹同名 PDF
-  - `special_keywords` (dict): 特殊关键词用于排序。例如 `{'番外': 1, '特典': 1, '原画': 2}`
+  - `pdf_path` (str | Path | None): 输出的 PDF 文件路径，默认使用文件夹同名 PDF
+  - `special_keywords` (dict[str, Any] | None): 特殊关键词用于排序。例如 `{'番外': 1, '特典': 1, '原画': 2}`
 - 返回值: 无
 - 用法示例:
   ```python
@@ -87,12 +89,12 @@ from ..constants import IMAGE_SUFFIX_TO_FORMAT
 
 ### `combine_imgs_dir`
 
-- 签名: `def combine_imgs_dir(dir_path: Path, special_keywords: dict = None)`
+- 签名: `def combine_imgs_dir(dir_path: Path, special_keywords: dict[str, Any] | None = None)`
 - 说明: 批量将多个子文件夹中的图片分别组合成 PDF 文件
 - 参数:
   - `dir_path` (Path): 包含图片子文件夹的路径
-  - `special_keywords` (dict): 特殊关键词用于排序
-- 返回值: 处理结果
+  - `special_keywords` (dict[str, Any] | None): 特殊关键词用于排序
+- 返回值: 处理结果字典
 - 用法示例:
   ```python
   from pathlib import Path
@@ -186,6 +188,51 @@ from ..constants import IMAGE_SUFFIX_TO_FORMAT
   ```
 - 关联: `img_to_binary`, `base64_to_img`
 
+### `convert_webp_to_png`
+
+- 签名: `def convert_webp_to_png(img_path: str | Path) -> str`
+- 说明: 将 webp 格式图片转换为 png 格式，验证转换结果有效后删除原图片
+- 参数:
+  - `img_path` (str | Path): webp 图片的路径
+- 返回值: 转换后的 png 图片路径
+- 用法示例:
+  ```python
+  from celestialvault.tools.ImageProcessing import convert_webp_to_png
+
+  png_path = convert_webp_to_png("image.webp")
+  ```
+- 关联: `is_image_valid`
+
+### `convert_webp_to_jpg`
+
+- 签名: `def convert_webp_to_jpg(img_path: str | Path) -> str`
+- 说明: 将 webp 格式图片转换为 jpg 格式，验证转换结果有效后删除原图片
+- 参数:
+  - `img_path` (str | Path): webp 图片的路径
+- 返回值: 转换后的 jpg 图片路径
+- 用法示例:
+  ```python
+  from celestialvault.tools.ImageProcessing import convert_webp_to_jpg
+
+  jpg_path = convert_webp_to_jpg("image.webp")
+  ```
+- 关联: `is_image_valid`
+
+### `convert_png_to_jpg`
+
+- 签名: `def convert_png_to_jpg(img_path: str | Path) -> str`
+- 说明: 将 png 格式图片转换为 jpg 格式，验证转换结果有效后删除原图片
+- 参数:
+  - `img_path` (str | Path): png 图片的路径
+- 返回值: 转换后的 jpg 图片路径
+- 用法示例:
+  ```python
+  from celestialvault.tools.ImageProcessing import convert_png_to_jpg
+
+  jpg_path = convert_png_to_jpg("image.png")
+  ```
+- 关联: `is_image_valid`
+
 ### `generate_palette`
 
 - 签名: `def generate_palette(color_num: int = 256, style: str = "morandi", mode: str = "random", random_seed: int = 0) -> list[int]`
@@ -208,10 +255,10 @@ from ..constants import IMAGE_SUFFIX_TO_FORMAT
 
 ### `palette_to_image`
 
-- 签名: `def palette_to_image(palette, block_size=50)`
+- 签名: `def palette_to_image(palette: list[int], block_size: int = 50) -> Image.Image`
 - 说明: 根据颜色列表生成调色板图像
 - 参数:
-  - `palette`: 一个包含 RGB 颜色的平铺列表，例如 [r, g, b, r, g, b, ...]
+  - `palette` (list[int]): 一个包含 RGB 颜色的平铺列表，例如 [r, g, b, r, g, b, ...]
   - `block_size` (int): 每个颜色块的像素大小，默认 50
 - 返回值: 生成的调色板图像
 - 用法示例:
@@ -261,7 +308,7 @@ from ..constants import IMAGE_SUFFIX_TO_FORMAT
 
 ### `extract_pixels_as_gif`
 
-- 签名: `def extract_pixels_as_gif(image: Image.Image, frame_size=200, duration=100, loop=0)`
+- 签名: `def extract_pixels_as_gif(image: Image.Image, frame_size: int = 200, duration: int = 100, loop: int = 0) -> io.BytesIO`
 - 说明: 将每个像素点提取出来作为 GIF 中的一帧
 - 参数:
   - `image` (Image.Image): 要处理的图像
@@ -313,7 +360,7 @@ from ..constants import IMAGE_SUFFIX_TO_FORMAT
   df = compare_images_by_ssim("original/", "compressed/")
   print(df)
   ```
-- 关联: `compare_ssim_by_path`, `CompareSSIMExecutor`
+- 关联: `compare_ssim_by_path`, `TaskExecutor`
 
 ### `is_image_valid`
 
@@ -328,7 +375,7 @@ from ..constants import IMAGE_SUFFIX_TO_FORMAT
 
   print(is_image_valid("photo.jpg"))  # True or False
   ```
-- 关联: `is_image_bytes_valid`
+- 关联: `is_image_bytes_valid`, `convert_webp_to_png`, `convert_webp_to_jpg`, `convert_png_to_jpg`
 
 ### `is_image_bytes_valid`
 
@@ -464,12 +511,12 @@ from ..constants import IMAGE_SUFFIX_TO_FORMAT
 
 ### `show_diff_heatmap`
 
-- 签名: `def show_diff_heatmap(ref_img: Image.Image, enc_img: Image.Image, save_path: str = None, show: bool = True)`
+- 签名: `def show_diff_heatmap(ref_img: Image.Image, enc_img: Image.Image, save_path: str | None = None, show: bool = True)`
 - 说明: 生成两张图像的像素差异热力图
 - 参数:
   - `ref_img` (Image.Image): 原图
   - `enc_img` (Image.Image): 编码图
-  - `save_path` (str): 保存路径（可选）
+  - `save_path` (str | None): 保存路径（可选）
   - `show` (bool): 是否显示结果
 - 返回值: 差异强度矩阵，每像素的平均通道差异值
 - 用法示例:
@@ -482,11 +529,3 @@ from ..constants import IMAGE_SUFFIX_TO_FORMAT
   diff = show_diff_heatmap(ref, enc, save_path="heatmap.png", show=False)
   ```
 - 关联: `ensure_capacity`
-
-## 类
-
-### `CompareSSIMExecutor`
-
-- 继承: `TaskExecutor` (from celestialflow)
-- 说明: SSIM 比较执行器，批量计算图像对的结构相似性并汇总结果
-- 关联: `compare_images_by_ssim`

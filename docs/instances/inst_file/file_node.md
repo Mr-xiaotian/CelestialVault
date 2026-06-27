@@ -1,12 +1,12 @@
 # `celestialvault.instances.inst_file.file_node`
 
-> 📅 最后更新日期: 2026/04/21
+> 📅 最后更新日期: 2026/06/28
 
 ## 源文件 - `src/celestialvault/instances/inst_file/file_node.py`
 
 ## 模块说明
 
-定义文件树的节点类型：基类 `BaseNode`、文件节点 `FileNode` 和目录节点 `DirNode`。节点包含名称、路径、大小、修改时间等元信息，支持惰性哈希计算和格式化打印。
+定义文件树的节点类型：基类 `BaseNode`、文件节点 `FileNode`、目录节点 `DirNode`，以及被排除项汇总节点 `ExcludedFilesNode` 和 `ExcludedDirsNode`。节点包含名称、路径、大小、修改时间等元信息，支持惰性哈希计算和格式化打印。
 
 ## 导入依赖
 
@@ -40,8 +40,20 @@
 
 - 方法:
 
+  #### `hash` (属性)
+  - 签名: `hash(self) -> str`
+  - 说明: 返回缓存的哈希值。基类默认返回 `_hash` 或空字符串，子类覆盖为惰性计算。
+
+  #### `is_dir(self)`
+  - 签名: `is_dir(self) -> bool`
+  - 说明: 返回节点是否为目录。基类默认返回 `False`，子类覆盖。
+
+  #### `children` (属性)
+  - 签名: `children(self) -> list[BaseNode]`
+  - 说明: 返回子节点列表。叶子节点返回空列表。
+
   #### `print(self, level=None, prefix=None, name=None, suffix=None, max_name_len=None)`
-  - 签名: `print(self, level: int = None, prefix: str = None, name: str = None, suffix: str = None, max_name_len: int = None) -> None`
+  - 签名: `print(self, level: int | None = None, prefix: str | None = None, name: str | None = None, suffix: str | None = None, max_name_len: int | None = None) -> None`
   - 说明: 打印节点信息，使用 `to_string` 格式化输出。
   - 参数:
     - `level` (`int | None`): 缩进级别，默认使用节点自身层级。
@@ -50,7 +62,7 @@
     - `suffix` (`str | None`): 后缀字符串，默认显示大小 `(size)`。
     - `max_name_len` (`int | None`): 名称对齐的最大长度。
 
-- 关联: 被 `FileNode` 和 `DirNode` 继承。
+- 关联: 被 `FileNode`、`DirNode`、`ExcludedFilesNode` 和 `ExcludedDirsNode` 继承。
 
 ---
 
@@ -112,6 +124,68 @@
   #### `is_dir(self)`
   - 签名: `is_dir(self) -> bool`
   - 说明: 返回 `True`，表示目录节点。
+
+- 关联: 被 `file_tree.FileTree` 构建和使用；被 `file_diff.compare_trees` 和 `file_diff.FileDiff` 使用；使用 `inst_units.HumanBytes` 和 `HumanTimestamp` 表示大小和时间；使用 `file_util.to_string` 格式化打印。
+
+---
+
+### `ExcludedFilesNode`
+
+- 继承: `BaseNode`
+- 说明: 被排除的文件汇总节点，记录被排除文件的数量和总大小。图标固定为 "📄"。
+
+- 构造函数: `__init__(self, count: int, node_path: Path, size: HumanBytes, mtime: HumanTimestamp, level: int)`
+  - 参数:
+    - `count` (`int`): 被排除的文件数量。
+    - `node_path` (`Path`): 所属目录路径。
+    - `size` (`HumanBytes`): 被排除文件的总大小。
+    - `mtime` (`HumanTimestamp`): 被排除文件中最晚的修改时间。
+    - `level` (`int`): 节点深度。
+  - 属性:
+    - `count` (`int`): 被排除的文件数量。
+
+- 方法:
+
+  #### `hash` (属性)
+  - 签名: `hash(self) -> str`
+  - 说明: 排除节点不计算哈希，返回空字符串。
+
+  #### `is_dir(self)`
+  - 签名: `is_dir(self) -> bool`
+  - 说明: 返回 `False`，文件汇总节点不是目录。
+
+- 关联: 由 `file_tree.FileTree.build_from_path` 在被排除文件存在时创建。
+
+---
+
+### `ExcludedDirsNode`
+
+- 继承: `BaseNode`
+- 说明: 被排除的目录汇总节点，记录被排除目录的数量和总大小。图标固定为 "📁"。
+
+- 构造函数: `__init__(self, count: int, node_path: Path, size: HumanBytes, mtime: HumanTimestamp, level: int)`
+  - 参数:
+    - `count` (`int`): 被排除的目录数量。
+    - `node_path` (`Path`): 所属目录路径。
+    - `size` (`HumanBytes`): 被排除目录的总大小。
+    - `mtime` (`HumanTimestamp`): 被排除目录中最晚的修改时间。
+    - `level` (`int`): 节点深度。
+  - 属性:
+    - `count` (`int`): 被排除的目录数量。
+
+- 方法:
+
+  #### `hash` (属性)
+  - 签名: `hash(self) -> str`
+  - 说明: 排除节点不计算哈希，返回空字符串。
+
+  #### `is_dir(self)`
+  - 签名: `is_dir(self) -> bool`
+  - 说明: 返回 `True`，目录汇总节点是目录。
+
+- 关联: 由 `file_tree.FileTree.build_from_path` 在被排除目录存在时创建。
+
+---
 
 - 用法示例:
 

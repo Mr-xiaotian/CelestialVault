@@ -1,6 +1,6 @@
 # `celestialvault.constants.image_format`
 
-> 📅 最后更新日期: 2026/04/22
+> 📅 最后更新日期: 2026/06/28
 
 ## 源文件
 - `src/celestialvault/constants/image_format.py`
@@ -15,7 +15,7 @@
 
 ### `IMAGE_SUFFIX_TO_FORMAT`
 - **类型**: `dict[str, str]`
-- **值**: 文件后缀名（含点号）到 Pillow 图片格式名称的映射，共 42 个条目
+- **值**: 文件后缀名（含点号）到 Pillow 图片格式名称的映射，共 40 个条目
 - **说明**: 支持以下格式：
 
 | 后缀 | 格式 | 后缀 | 格式 |

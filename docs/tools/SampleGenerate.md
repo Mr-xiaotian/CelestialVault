@@ -1,6 +1,6 @@
 # `celestialvault.tools.SampleGenerate`
 
-> 📅 最后更新日期: 2026/04/21
+> 📅 最后更新日期: 2026/06/28
 
 ## 源文件
 
@@ -14,9 +14,10 @@
 
 ```python
 import random
-import string
 import shutil
+import string
 from pathlib import Path
+from typing import Any
 
 import fitz  # PyMuPDF
 from PIL import Image, ImageDraw, ImageFont
@@ -73,7 +74,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ### `random_values`
 
-- 签名: `def random_values(length: int, data_types: str | list[str] = None) -> list`
+- 签名: `def random_values(length: int, data_types: str | list[str] | None = None) -> list[Any]`
 - 说明: 生成测试数据，支持多种数据类型
 - 参数:
   - `length` (int): 数据数量
@@ -110,12 +111,12 @@ from PIL import Image, ImageDraw, ImageFont
 
 ### `rand_int_matrix`
 
-- 签名: `def rand_int_matrix(size, min_val=1, max_val=9)`
+- 签名: `def rand_int_matrix(size: int, min_val: int = 1, max_val: int = 9) -> list[list[int]]`
 - 说明: 生成一个方形二维数组（矩阵），元素为随机正整数
 - 参数:
-  - `size`: 矩阵大小（行数 = 列数）
-  - `min_val`: 元素最小值
-  - `max_val`: 元素最大值
+  - `size` (int): 矩阵大小（行数 = 列数）
+  - `min_val` (int): 元素最小值
+  - `max_val` (int): 元素最大值
 - 返回值: 二维数组
 - 用法示例:
   ```python

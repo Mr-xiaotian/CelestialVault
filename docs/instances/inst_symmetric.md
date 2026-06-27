@@ -1,6 +1,6 @@
 # `celestialvault.instances.inst_symmetric`
 
-> 📅 最后更新日期: 2026/04/03
+> 📅 最后更新日期: 2026/06/28
 
 ## 源文件 - `src/celestialvault/instances/inst_symmetric.py`
 
@@ -22,7 +22,7 @@
 - 继承: `Generic[T]`
 - 说明: 一对一双向映射，通过 `pairs`（正向）和 `reverse`（反向）两个内部字典维护双向关系。赋值时若元素已有配对则先自动解绑。
 
-- `__slots__`: `('pairs', 'reverse', '_allow_self')`
+- `__slots__`: `('_allow_self', 'pairs', 'reverse')`
 
 - 构造函数: `__init__(self, allow_self: bool = False)`
   - 参数:

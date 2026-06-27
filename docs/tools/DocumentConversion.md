@@ -1,6 +1,6 @@
 # `celestialvault.tools.DocumentConversion`
 
-> 📅 最后更新日期: 2026/04/21
+> 📅 最后更新日期: 2026/06/28
 
 ## 源文件
 
@@ -77,12 +77,12 @@ from tqdm import tqdm
 
 ### `merge_pdfs_in_order`
 
-- 签名: `def merge_pdfs_in_order(dir_path: str | Path, special_keywords: dict = None) -> tuple[list[Path], dict[str, int]]`
+- 签名: `def merge_pdfs_in_order(dir_path: str | Path, special_keywords: dict = None) -> dict[str, int]`
 - 说明: 将指定文件夹及子文件夹中的所有 PDF 文件按顺序合并，并在输出 PDF 中用目录层级构建书签结构
 - 参数:
   - `dir_path` (str | Path): 文件夹路径
   - `special_keywords` (dict): 用于排序的特殊关键字字典
-- 返回值: bookmark_dict，包含书签名称与页码的字典
+- 返回值: `bookmark_dict`，包含书签名称与页码的字典
 - 用法示例:
   ```python
   from pathlib import Path
@@ -128,12 +128,12 @@ from tqdm import tqdm
 
 ### `resize_pdfs`
 
-- 签名: `def resize_pdfs(dir_path: Path, execution_mode: str = "serial")`
+- 签名: `def resize_pdfs(dir_path: Path, execution_mode: str = "serial") -> dict[tuple[str, str], list[Path]]`
 - 说明: 将文件夹中所有 PDF 文件的页面宽度统一调整为最大宽度
 - 参数:
   - `dir_path` (Path): 包含 PDF 文件的文件夹路径
   - `execution_mode` (str): 执行模式，默认 "serial"
-- 返回值: 处理结果列表
+- 返回值: 处理结果字典，键为错误类型与错误信息，值为出错文件路径列表
 - 用法示例:
   ```python
   from pathlib import Path

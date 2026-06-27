@@ -1,18 +1,18 @@
 # `celestialvault.instances.inst_file.file_diff`
 
-> 📅 最后更新日期: 2026/04/21
+> 📅 最后更新日期: 2026/06/28
 
 ## 源文件 - `src/celestialvault/instances/inst_file/file_diff.py`
 
 ## 模块说明
 
-提供目录差异比较功能，包含批量删除/复制执行器、差异结果数据类 `FileDiff` 和目录树对比函数 `compare_trees`。
+提供目录差异比较功能，包含差异结果数据类 `FileDiff` 和目录树对比函数 `compare_trees`。`FileDiff.sync_dirs` 内部使用 `celestialflow.TaskExecutor` 并行执行删除/复制任务。
 
 ## 导入依赖
 
 - `pathlib.Path` - 路径操作
-- `dataclasses.dataclass` - 数据类
-- `celestialflow.TaskExecutor` - 任务执行器
+- `dataclasses.dataclass`, `dataclasses.field` - 数据类
+- `celestialflow.TaskExecutor`, `celestialflow.TaskProgress` - 任务执行与进度观察
 - `wcwidth.wcswidth` - 宽字符宽度计算
 - `celestialvault.instances.inst_units.HumanBytes` - 人类可读字节大小
 - `celestialvault.instances.inst_units.HumanTimestamp` - 人类可读时间戳
@@ -22,55 +22,11 @@
 - `celestialvault.tools.TextTools.format_table` - 表格格式化
 - `celestialvault.instances.inst_file.file_node.BaseNode` - 基础节点
 - `celestialvault.instances.inst_file.file_node.DirNode` - 目录节点
+- `celestialvault.instances.inst_file.file_node.ExcludedFilesNode` - 被排除文件汇总节点
+- `celestialvault.instances.inst_file.file_node.ExcludedDirsNode` - 被排除目录汇总节点
 - `celestialvault.instances.inst_file.file_tree.FileTree` - 文件树
 
 ## 类
-
-### `DeleteExecutor`
-
-- 继承: `TaskExecutor` (from `celestialflow`)
-- 说明: 删除执行器，根据相对路径批量删除指定目录下的文件或文件夹。
-
-- 构造函数: `__init__(self, func, parent_dir: Path)`
-  - 参数:
-    - `func`: 删除函数（如 `delete_file_or_dir`）。
-    - `parent_dir` (`Path`): 父目录路径。
-
-- 方法:
-
-  #### `get_args(self, rel_path)`
-  - 签名: `get_args(self, rel_path: Path) -> tuple`
-  - 说明: 根据相对路径计算要删除的目标绝对路径。
-  - 参数: `rel_path` (`Path`): 文件的相对路径。
-  - 返回值: 包含目标绝对路径的元组 `(parent_dir / rel_path,)`。
-
-- 关联: 被 `FileDiff.sync_dirs` 使用。
-
----
-
-### `CopyExecutor`
-
-- 继承: `TaskExecutor` (from `celestialflow`)
-- 说明: 复制执行器，根据相对路径将文件从主目录批量复制到次目录。
-
-- 构造函数: `__init__(self, func, main_dir: Path, minor_dir: Path, copy_mode: str)`
-  - 参数:
-    - `func`: 复制函数（如 `copy_file_or_dir`）。
-    - `main_dir` (`Path`): 源目录。
-    - `minor_dir` (`Path`): 目标目录。
-    - `copy_mode` (`str`): 复制模式标识（用于进度显示）。
-
-- 方法:
-
-  #### `get_args(self, rel_path)`
-  - 签名: `get_args(self, rel_path: Path) -> tuple`
-  - 说明: 根据相对路径计算源文件和目标文件的绝对路径，并确保目标目录存在。
-  - 参数: `rel_path` (`Path`): 文件的相对路径。
-  - 返回值: `(source, target)` 元组。
-
-- 关联: 被 `FileDiff.sync_dirs` 使用。
-
----
 
 ### `FileDiff`
 
@@ -129,7 +85,7 @@ if not diff.is_identical():
     diff.sync_dirs(mode="->")
 ```
 
-- 关联: 使用 `file_node.BaseNode`/`DirNode` 构建差异树；使用 `file_tree.FileTree` 存储差异树；使用 `inst_units.HumanBytes`/`HumanTimestamp` 表示大小和时间。
+- 关联: 使用 `file_node.BaseNode`/`DirNode`/`ExcludedFilesNode`/`ExcludedDirsNode` 构建差异树；使用 `file_tree.FileTree` 存储差异树；使用 `inst_units.HumanBytes`/`HumanTimestamp` 表示大小和时间。
 
 ## 顶层函数
 

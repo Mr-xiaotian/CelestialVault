@@ -1,12 +1,12 @@
 # `celestialvault.constants.constant`
 
-> 📅 最后更新日期: 2026/04/22
+> 📅 最后更新日期: 2026/06/28
 
 ## 源文件
 - `src/celestialvault/constants/constant.py`
 
 ## 模块说明
-通用常量模块，包含 User-Agent 列表、HTTP 请求头示例、RGB 颜色常量、中国城市坐标数据以及康熙部首/CJK 部首映射字典。版本 1.01，作者：晓天。
+通用常量模块，包含 User-Agent 列表、HTTP 请求头示例、RGB 颜色常量、中国城市坐标数据以及康熙部首/CJK 部首映射字典。版本 1.0.1，作者：晓天。
 
 ## 导入依赖
 - 无
@@ -57,12 +57,12 @@
 
 ### `KangxiRadicalsDict`
 - **类型**: `dict[str, str]`
-- **值**: 康熙部首字符（U+2F00 - U+2FDF）到对应简体中文汉字的映射，共 226 个条目
+- **值**: 康熙部首字符（U+2F00 - U+2FDF）到对应简体中文汉字的映射，共 224 个条目
 - **说明**: 用于将康熙部首 Unicode 字符转换为对应的现代汉字
 
 ### `CJKRadicalsSupplementDict`
 - **类型**: `dict[str, str]`
-- **值**: CJK 部首补充字符（U+2E80 - U+2EFF）到对应简体中文汉字的映射，共 129 个条目
+- **值**: CJK 部首补充字符（U+2E80 - U+2EFF）到对应简体中文汉字的映射，共 128 个条目
 - **说明**: 用于将 CJK 部首补充区的 Unicode 字符转换为对应的现代汉字
 
 ## 用法示例

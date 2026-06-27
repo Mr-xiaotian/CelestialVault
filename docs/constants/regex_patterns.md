@@ -1,6 +1,6 @@
 # `celestialvault.constants.regex_patterns`
 
-> 📅 最后更新日期: 2026/04/22
+> 📅 最后更新日期: 2026/06/28
 
 ## 源文件
 - `src/celestialvault/constants/regex_patterns.py`
@@ -35,7 +35,7 @@
 | 常量名 | 类型 | 说明 |
 |--------|------|------|
 | `URL_REGEX_0` | `re.Pattern` | 匹配 http/https/ftp 协议 URL `(https?\|ftp)://[^\s/$.?#].[^\s]*` |
-| `URL_REGEX_1` | `re.Pattern` | 匹配任意协议 URL `[a-zA-z]+://\S*` |
+| `URL_REGEX_1` | `re.Pattern` | 匹配任意协议 URL `[a-zA-Z]+://\S*` |
 
 ### 电话号码匹配类
 
@@ -43,7 +43,7 @@
 |--------|------|------|
 | `PHONE_REGEX_0` | `re.Pattern` | 匹配国内电话号码（含区号）`(\(\d{3,4}\)\|\d{3,4}-\|\s)?\d{7,14}` |
 | `PHONE_REGEX_1` | `re.Pattern` | 匹配国际电话号码 `\+?1?\d{9,15}` |
-| `PHONE_REGEX_2` | `re.Pattern` | 匹配固定格式电话号码 `\d{3}-\d{8}\|\d{4}-\{7,8}` |
+| `PHONE_REGEX_2` | `re.Pattern` | 匹配固定格式电话号码 `\d{3}-\d{8}\|\d{4}-\d{7,8}` |
 
 ### 其他身份/地址类
 

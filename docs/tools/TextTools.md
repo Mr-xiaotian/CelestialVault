@@ -1,6 +1,6 @@
 # `celestialvault.tools.TextTools`
 
-> 📅 最后更新日期: 2026/04/21
+> 📅 最后更新日期: 2026/06/28
 
 ## 源文件
 
@@ -14,17 +14,17 @@
 
 ```python
 import base64
-import re
 import math
+import re
 import string
-import zlib
 import struct
-import reedsolo
+import zlib
 from itertools import zip_longest
 from pathlib import Path
 from pprint import pprint
 
 import charset_normalizer
+import reedsolo
 from tqdm import tqdm
 from wcwidth import wcswidth
 ```
@@ -130,21 +130,6 @@ from wcwidth import wcswidth
 
   parts = string_split("a\n\nb\nc")
   print(parts)  # ['a', 'b', 'c']
-  ```
-- 关联: 无
-
-### `language_fingerprint`
-
-- 签名: `def language_fingerprint(text: str) -> dict`
-- 说明: 根据文本生成语言指纹字典，包括词数、字符数、词长分布、停用词比例和高频词等信息（当前版本未启用，需要 jieba 依赖）
-- 参数:
-  - `text` (str): 待分析的文本
-- 返回值: 包含语言指纹信息的字典
-- 用法示例:
-  ```python
-  from celestialvault.tools.TextTools import language_fingerprint
-
-  fp = language_fingerprint("这是一个测试文本")
   ```
 - 关联: 无
 
@@ -577,12 +562,12 @@ from wcwidth import wcswidth
 
 ### `calculate_similarity`
 
-- 签名: `def calculate_similarity(str1: str, str2: str, lcs_parts: list = None) -> float`
+- 签名: `def calculate_similarity(str1: str, str2: str, lcs_parts: list[str] | None = None) -> float`
 - 说明: 计算两个字符串的相似度
 - 参数:
   - `str1` (str): 第一个字符串
   - `str2` (str): 第二个字符串
-  - `lcs_parts` (list): 最长公共子序列的字符部分列表，可选
+  - `lcs_parts` (list[str] | None): 最长公共子序列的字符部分列表，可选
 - 返回值: 相似度，范围在 0 到 1 之间
 - 用法示例:
   ```python
@@ -613,12 +598,12 @@ from wcwidth import wcswidth
 
 ### `format_table`
 
-- 签名: `def format_table(data: list, column_names: list = None, row_names: list = None, index_header: str = "#", fill_value: str = "N/A", align: str = "left") -> str`
+- 签名: `def format_table(data: list[list[object]], column_names: list[str] | None = None, row_names: list[str] | None = None, index_header: str = "#", fill_value: str = "N/A", align: str = "left") -> str`
 - 说明: 格式化并生成对齐的表格字符串
 - 参数:
-  - `data` (list): 表格数据，二维列表
-  - `column_names` (list): 自定义列名，默认使用 Excel 风格列名
-  - `row_names` (list): 自定义行号，默认使用数字索引
+  - `data` (list[list[object]]): 表格数据，二维列表
+  - `column_names` (list[str] | None): 自定义列名，默认使用 Excel 风格列名
+  - `row_names` (list[str] | None): 自定义行号，默认使用数字索引
   - `index_header` (str): 左上角名称，默认 "#"
   - `fill_value` (str): 空值填充，默认 "N/A"
   - `align` (str): 对齐方式，可选 "left"、"right"、"center"

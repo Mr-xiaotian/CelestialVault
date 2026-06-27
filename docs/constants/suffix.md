@@ -1,6 +1,6 @@
 # `celestialvault.constants.suffix`
 
-> 📅 最后更新日期: 2026/04/22
+> 📅 最后更新日期: 2026/06/28
 
 ## 源文件
 - `src/celestialvault/constants/suffix.py`
@@ -15,8 +15,8 @@
 
 ### `IMG_SUFFIXES`
 - **类型**: `list[str]`
-- **值**: `[".jpg", ".png", ".jpeg", ".heic", ".bmp", ".tiff", ".webp", ".svg"]`
-- **说明**: 常见图片文件后缀名列表，共 8 项
+- **值**: `[".jpg", ".png", ".jpeg", ".heic", ".bmp", ".tiff", ".webp", ".svg", ".gif"]`
+- **说明**: 常见图片文件后缀名列表，共 9 项
 
 ### `VIDEO_SUFFIXES`
 - **类型**: `list[str]`

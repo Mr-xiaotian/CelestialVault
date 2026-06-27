@@ -1,6 +1,6 @@
 # `celestialvault.constants.style_parameters`
 
-> 📅 最后更新日期: 2026/04/22
+> 📅 最后更新日期: 2026/06/28
 
 ## 源文件
 - `src/celestialvault/constants/style_parameters.py`
@@ -26,7 +26,7 @@
 
 ### `style_params`
 - **类型**: `dict[str, list[dict]]`
-- **值**: 风格名称到 HSV 参数列表的映射，共 20 种风格
+- **值**: 风格名称到 HSV 参数列表的映射，共 17 种风格
 - **说明**: 每个风格包含一个或多个色域字典，字典键包括：
   - `hue_range`: `tuple[float, float]` -- 色调范围 (0-1)
   - `saturation_range`: `tuple[float, float]` -- 饱和度范围 (0-1)

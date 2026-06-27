@@ -1,6 +1,6 @@
 # `celestialvault.tools.VideoProcessing`
 
-> 📅 最后更新日期: 2026/04/21
+> 📅 最后更新日期: 2026/06/28
 
 ## 源文件
 
@@ -16,10 +16,12 @@
 import re
 import subprocess
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import ffmpeg
-from celestialflow import TaskExecutor
+from celestialflow import TaskExecutor, TaskProgress
 ```
 
 ## 顶层函数
@@ -65,11 +67,11 @@ from celestialflow import TaskExecutor
 
 ### `transfer_gif_to_video`
 
-- 签名: `def transfer_gif_to_video(gif_path, output_path)`
+- 签名: `def transfer_gif_to_video(gif_path: str | Path, output_path: str | Path) -> None`
 - 说明: 将 GIF 文件转换为 MP4 视频文件
 - 参数:
-  - `gif_path`: GIF 文件路径
-  - `output_path`: 输出 MP4 文件路径
+  - `gif_path` (str | Path): GIF 文件路径
+  - `output_path` (str | Path): 输出 MP4 文件路径
 - 返回值: 无
 - 用法示例:
   ```python
@@ -96,11 +98,11 @@ from celestialflow import TaskExecutor
 
 ### `rotate_video`
 
-- 签名: `def rotate_video(video_path: str | Path, output_path, angle: int) -> Path`
+- 签名: `def rotate_video(video_path: str | Path, output_path: str | Path, angle: int) -> Path`
 - 说明: 旋转视频文件
 - 参数:
   - `video_path` (str | Path): 视频路径
-  - `output_path`: 输出文件路径
+  - `output_path` (str | Path): 输出文件路径
   - `angle` (int): 旋转角度（仅支持 0, 90, 180, 270）
 - 返回值: 输出文件路径（Path 对象）
 - 用法示例:
@@ -146,11 +148,11 @@ from celestialflow import TaskExecutor
 
 ### `get_videos_codec`
 
-- 签名: `def get_videos_codec(dir_path: Path, exclude_codecs: list[str] = ["h264"]) -> dict[str, list[Path]]`
+- 签名: `def get_videos_codec(dir_path: Path, exclude_codecs: list[str] | None = None) -> dict[str, list[Path]]`
 - 说明: 获取文件夹中所有视频文件的编码格式
 - 参数:
   - `dir_path` (Path): 文件夹路径
-  - `exclude_codecs` (list[str]): 需要排除的编码格式列表
+  - `exclude_codecs` (list[str] | None): 需要排除的编码格式列表，默认为 ["h264"]
 - 返回值: 编码格式字典，键为编码名，值为文件路径列表
 - 用法示例:
   ```python
@@ -161,14 +163,14 @@ from celestialflow import TaskExecutor
   for codec, files in codecs.items():
       print(f"{codec}: {len(files)} 个文件")
   ```
-- 关联: `get_video_codec`, `GetCodecExecutor`
+- 关联: `get_video_codec`, `TaskExecutor`
 
 ### `get_video_info`
 
-- 签名: `def get_video_info(video_path: str)`
+- 签名: `def get_video_info(video_path: str | Path) -> dict[str, int | str | None]`
 - 说明: 获取视频的分辨率和显示宽高比（容器宽高比）
 - 参数:
-  - `video_path` (str): 视频文件的路径
+  - `video_path` (str | Path): 视频文件的路径
 - 返回值: 一个字典，包含分辨率（width, height）和显示宽高比（DAR）
 - 用法示例:
   ```python
@@ -181,10 +183,10 @@ from celestialflow import TaskExecutor
 
 ### `is_container_ratio_matching_resolution`
 
-- 签名: `def is_container_ratio_matching_resolution(video_path)`
+- 签名: `def is_container_ratio_matching_resolution(video_path: str | Path) -> bool`
 - 说明: 检查视频容器的宽高比是否与分辨率比例一致
 - 参数:
-  - `video_path`: 视频文件路径
+  - `video_path` (str | Path): 视频文件路径
 - 返回值: 布尔值，表示是否一致
 - 用法示例:
   ```python
@@ -197,11 +199,11 @@ from celestialflow import TaskExecutor
 
 ### `set_container_ratio_to_resolution`
 
-- 签名: `def set_container_ratio_to_resolution(video_path, output_path)`
+- 签名: `def set_container_ratio_to_resolution(video_path: str | Path, output_path: str | Path) -> None`
 - 说明: 修改视频容器宽高比，使其与分辨率比例一致
 - 参数:
-  - `video_path`: 输入视频文件路径
-  - `output_path`: 输出视频文件路径
+  - `video_path` (str | Path): 输入视频文件路径
+  - `output_path` (str | Path): 输出视频文件路径
 - 返回值: 无
 - 用法示例:
   ```python
@@ -211,10 +213,3 @@ from celestialflow import TaskExecutor
   ```
 - 关联: `get_video_info`, `is_container_ratio_matching_resolution`
 
-## 类
-
-### `GetCodecExecutor`
-
-- 继承: `TaskExecutor` (from celestialflow)
-- 说明: 视频编码格式扫描执行器，批量获取视频编码并按编码类型分组
-- 关联: `get_videos_codec`

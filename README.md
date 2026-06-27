@@ -120,7 +120,7 @@ tasks = [
     ("https://example.com/a.jpg", "img_a", ".jpg"),
     ("https://example.com/b.jpg", "img_b", ".jpg"),
 ]
-saver.download_urls(tasks, chain_mode="serial", show_progress=True)
+saver.download_urls(tasks, stage_mode="serial")
 ```
 
 ## 文档
