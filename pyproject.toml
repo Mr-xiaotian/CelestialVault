@@ -39,10 +39,11 @@ dependencies = [
   "pydub>=0.25",
   "moviepy>=1.0",
   "ffmpeg-python>=0.2",
-  "PyMuPDF>=1.24",
+  "pymupdf>=1.24",
   "PyPDF2>=3.0",
   "ipywidgets>=8.1",
-  "ipython>=8.0"
+  "ipython>=8.0",
+  "pdf2image>=1.17.0",
 ]
 
 [tool.uv.sources]
