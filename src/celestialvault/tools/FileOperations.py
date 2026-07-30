@@ -10,7 +10,7 @@ from typing import Any
 
 import py7zr
 import rarfile
-from celestialflow import TaskExecutor, TaskProgress
+from celestialflow import TaskExecutor
 from tqdm import tqdm
 from wcwidth import wcswidth
 
@@ -116,7 +116,7 @@ def handle_dir_files(
         execution_mode=execution_mode,
         persist_result=True,
     )
-    handlefile_executor.add_observer(TaskProgress())
+    # handlefile_executor.add_observer(TaskProgress())
 
     file_path_iter = (
         file_path for file_path in dir_path.glob("**/*") if file_path.is_file()
@@ -583,14 +583,14 @@ def detect_identical_files(
         execution_mode=execution_mode,
         log_level="INFO",
     )
-    scan_size_executor.add_observer(TaskProgress())
+    # scan_size_executor.add_observer(TaskProgress())
     scan_hash_executor = TaskExecutor(
         "Calculating files hash",
         get_file_hash_wrapper,
         execution_mode=execution_mode,
         log_level="INFO",
     )
-    scan_hash_executor.add_observer(TaskProgress())
+    # scan_hash_executor.add_observer(TaskProgress())
 
     # 根据文件大小进行初步筛选
     file_path_iter = (
@@ -648,14 +648,14 @@ def detect_identical_dirs(
         execution_mode=execution_mode,
         log_level="INFO",
     )
-    scan_size_executor.add_observer(TaskProgress())
+    # scan_size_executor.add_observer(TaskProgress())
     scan_hash_executor = TaskExecutor(
         "Calculating dirs hash",
         get_dir_hash_wrapper,
         execution_mode=execution_mode,
         log_level="INFO",
     )
-    scan_hash_executor.add_observer(TaskProgress())
+    # scan_hash_executor.add_observer(TaskProgress())
 
     # 根据文件夹大小进行初步筛选
     dir_path_list = [
@@ -1152,7 +1152,7 @@ def find_pure_dirs(root: str | Path, only_nonempty: bool = False) -> list[Path]:
         _is_pure_dir_wrapper,
         execution_mode="thread",
     )
-    find_pure_dir_executor.add_observer(TaskProgress())
+    # find_pure_dir_executor.add_observer(TaskProgress())
     find_pure_dir_executor.start(subdirs)
     pure_dirs: list[Path] = []
     for task, is_pure in find_pure_dir_executor.get_success_pairs():

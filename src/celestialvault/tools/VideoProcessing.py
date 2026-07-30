@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import ffmpeg
-from celestialflow import TaskExecutor, TaskProgress
+from celestialflow import TaskExecutor
 
 
 def compress_video(old_video_path: Path | str, new_video_path: Path | str) -> None:
@@ -308,7 +308,7 @@ def get_videos_codec(
         get_video_codec,
         execution_mode="thread",
     )
-    get_codec_executor.add_observer(TaskProgress())
+    # get_codec_executor.add_observer(TaskProgress())
 
     file_path_iter = (
         file_path for file_path in dir_path.rglob("*.mp4") if file_path.is_file()

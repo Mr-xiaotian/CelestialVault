@@ -11,7 +11,7 @@ from typing import Any, cast
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from celestialflow import TaskExecutor, TaskProgress
+from celestialflow import TaskExecutor
 from PIL import Image, ImageFile, PngImagePlugin
 from pillow_heif import (
     register_heif_opener,  # pyright: ignore[reportUnknownVariableType]
@@ -557,7 +557,7 @@ def compare_images_by_ssim(dir1: Path | str, dir2: Path | str) -> pd.DataFrame:
         execution_mode="thread",
         max_workers=8,
     )
-    compare_executor.add_observer(TaskProgress())  # pyright: ignore[reportUnknownMemberType]
+    # compare_executor.add_observer(TaskProgress())  # pyright: ignore[reportUnknownMemberType]
     compare_executor.start(tasks)  # pyright: ignore[reportUnknownMemberType]
     data.clear()
     for (file1, _file2), ssim in compare_executor.get_success_pairs():  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]

@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from celestialflow import TaskExecutor, TaskProgress
+from celestialflow import TaskExecutor
 from wcwidth import wcswidth
 
 from ...instances.inst_units import HumanBytes, HumanTimestamp
@@ -138,8 +138,8 @@ class FileDiff:
             delete_executor = TaskExecutor("Deleting", delete_file_or_dir_wrapper)
             copy_executor = TaskExecutor(f"Copying({mode})", copy_file_or_dir_wrapper)
 
-            delete_executor.add_observer(TaskProgress())
-            copy_executor.add_observer(TaskProgress())
+            # delete_executor.add_observer(TaskProgress())
+            # copy_executor.add_observer(TaskProgress())
 
             delete_executor.start(minor_dir_diff)
             copy_executor.start(main_dir_diff)
@@ -172,8 +172,8 @@ class FileDiff:
             copy_a_to_b_executor = TaskExecutor("Copying(->)", copy_a_to_b_wrapper)
             copy_b_to_a_executor = TaskExecutor("Copying(<-)", copy_b_to_a_wrapper)
 
-            copy_a_to_b_executor.add_observer(TaskProgress())
-            copy_b_to_a_executor.add_observer(TaskProgress())
+            # copy_a_to_b_executor.add_observer(TaskProgress())
+            # copy_b_to_a_executor.add_observer(TaskProgress())
 
             copy_a_to_b_executor.start(self.only_in_left + diff_file_in_dir1)
             copy_b_to_a_executor.start(self.only_in_right + diff_file_in_dir2)

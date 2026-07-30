@@ -2,7 +2,7 @@ from itertools import product
 
 import matplotlib.pyplot as plt
 import numpy as np
-from celestialflow import TaskExecutor, TaskProgress
+from celestialflow import TaskExecutor
 from PIL import Image
 
 from celestialvault.instances.inst_imgcodecs import CODEC_REGISTRY, BaseCodec
@@ -94,8 +94,8 @@ def redundancy_heatmap(codec: BaseCodec, text: str):
         "thread",
         5,
     )
-    random_damage_executor.add_observer(TaskProgress())
-    rectangle_damage_executor.add_observer(TaskProgress())
+    # random_damage_executor.add_observer(TaskProgress())
+    # rectangle_damage_executor.add_observer(TaskProgress())
 
     rectangle_damage_executor.start(product(range(1, width + 1), range(1, height + 1)))
     rectangle_damage_result_dict = dict()
