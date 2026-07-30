@@ -2,18 +2,19 @@ import io
 import json
 import pickle
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
+import requests
 from celestialflow import TaskChain, TaskStage
 
 from ..tools.ImageProcessing import binary_to_img, convert_img_format
 from .inst_error import FFmpegError
-from .inst_fetch import Fetcher
 
 
-def meta_get_content(fetcher: Fetcher):
+def meta_get_content(fetcher: Callable[[str], bytes]):
     def get_content(task: tuple[str, str, str]) -> tuple[bytes, str, str]:
         """
         从抓取结果中提取内容。
@@ -22,7 +23,7 @@ def meta_get_content(fetcher: Fetcher):
         :return: (内容, 文件名, 后缀) 元组。
         """
         url, file_name, file_suffix = task
-        content: bytes = fetcher.getContent(url)  # type: ignore[reportUnknownMemberType]
+        content: bytes = fetcher(url)
         return content, file_name, file_suffix
 
     return get_content
@@ -50,6 +51,7 @@ class Saver:
 
         self.set_base_path(base_path)
         self.set_add_path("")
+        self.set_fetcher(lambda url: requests.get(url).content)
 
     def set_base_path(self, base_path: str | Path) -> None:
         """
@@ -66,6 +68,14 @@ class Saver:
         :param add_path: 附加子路径。
         """
         self.add_path = Path(add_path)
+
+    def set_fetcher(self, fetcher: Callable[[str], bytes|str]) -> None:
+        """
+        设置下载器。
+
+        :param fetcher: 下载器函数。
+        """
+        self.fetcher = fetcher
 
     def get_path(self, file_name: str, file_suffix: str | None) -> Path:
         """
@@ -384,8 +394,7 @@ class Saver:
         if not can_write:
             return path, None
 
-        fetcher = Fetcher()
-        text: str = fetcher.getText(url)  # type: ignore[reportUnknownMemberType]
+        text = cast(str, self.fetcher(url))
         return self._text_core(text, file_name, encoding, file_suffix)
 
     def download_content(
@@ -403,8 +412,7 @@ class Saver:
         if not can_write:
             return path, None
 
-        fetcher = Fetcher()
-        content: bytes = fetcher.getContent(url)  # type: ignore[reportUnknownMemberType]
+        content = cast(bytes, self.fetcher(url))
         return self._content_core(content, file_name, file_suffix)
 
     def download_image(
@@ -422,8 +430,7 @@ class Saver:
         if not can_write:
             return path, None
 
-        fetcher = Fetcher()
-        content: bytes = fetcher.getContent(url)  # type: ignore[reportUnknownMemberType]
+        content = cast(bytes, self.fetcher(url))
         image = binary_to_img(content)
         return self._image_core(image, file_name, file_suffix)
 
@@ -447,8 +454,7 @@ class Saver:
         if not can_write:
             return path, None
 
-        fetcher = Fetcher()
-        text: str = fetcher.getText(url)  # type: ignore[reportUnknownMemberType]
+        text = cast(str, self.fetcher(url))
         dataframe: pd.DataFrame = pd.read_csv(  # type: ignore[reportUnknownArgumentType, reportCallIssue]
             io.StringIO(text), **(read_kwargs or {})
         )
@@ -469,8 +475,7 @@ class Saver:
         if not can_write:
             return path, None
 
-        fetcher = Fetcher()
-        content: bytes = fetcher.getContent(url)  # type: ignore[reportUnknownMemberType]
+        content = cast(bytes, self.fetcher(url))
         obj = pickle.loads(content)
         return self._pickle_core(obj, file_name, file_suffix)
 
@@ -494,8 +499,7 @@ class Saver:
         if not can_write:
             return path, None
 
-        fetcher = Fetcher()
-        text: str = fetcher.getText(url)  # type: ignore[reportUnknownMemberType]
+        text = cast(str, self.fetcher(url))
         data = json.loads(text)
         return self._json_core(data, file_name, file_suffix, encoding)
 
@@ -517,10 +521,9 @@ class Saver:
                         - "process": 任务链将并行执行
         :return: 一个字典，包含每个任务的最终结果
         """
-        fetcher = Fetcher()  # 创建用于获取 URL 内容的 Fetcher 实例
         fetch_stage: TaskStage[Any, Any] = TaskStage(  # type: ignore[reportUnknownVariableType]
             "urlsFetchProcess",
-            meta_get_content(fetcher),
+            meta_get_content(self.fetcher),
             execution_mode="thread",
         )
         save_stage: TaskStage[Any, Any] = TaskStage(  # type: ignore[reportUnknownVariableType]
